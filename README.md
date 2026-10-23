@@ -37,6 +37,7 @@ The financial domain has a richer dedicated implementation. The remaining domain
 | Non-financial domain RAG | Implemented for procurement, travel/expense, competitive research, incident postmortem, and HR policy using the shared `scripts/domain_common/rag_agent.py` runtime. |
 | Agent orchestration | Implemented with LangGraph nodes for security, plain-text validation, planning, hybrid retrieval, evidence guard, answer generation, output filtering, citation criticism, and governance/HITL. |
 | Guardrails and HITL | Implemented for input filtering, evidence prompt-injection filtering, output content filtering, citation validation, and human-review routing. |
+| API backend and UI | Implemented with FastAPI backend endpoints plus Streamlit frontends, including an API-backed Streamlit app for the final architecture. |
 | Observability | Optional LangSmith tracing is implemented for agents and financial retrieval evaluation. |
 | Evaluation | Financial retrieval recall@k evaluation is implemented separately from answer generation. |
 
@@ -52,6 +53,8 @@ scripts/
   incident_postmortem/        Domain config, index CLI, agent CLI, Streamlit app
   hr_policy/                  Domain config, index CLI, agent CLI, Streamlit app
   download_domain_pdfs.py     Downloads PDFs for non-financial domains
+  api_app.py                  FastAPI backend for all domains
+  api_streamlit_app.py        Streamlit frontend that calls the FastAPI backend
   download_financial_report_pdfs.py
   index_financial_report_pdfs.py
   financial_prompting_agent.py
@@ -106,6 +109,13 @@ For a non-financial domain smoke test:
 python scripts\download_domain_pdfs.py --domains travel_expense
 python scripts\travel_expense\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
 python scripts\travel_expense\agent.py --query "What documentation is required for travel expenses?"
+```
+
+Start the final API-side demo stack:
+
+```powershell
+uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
+streamlit run scripts\api_streamlit_app.py
 ```
 
 ## Data Download
@@ -226,6 +236,13 @@ python scripts\hr_policy\agent.py --query "What does the FMLA guide say about re
 
 ## Streamlit Chat UIs
 
+API-backed Streamlit UI for the final architecture:
+
+```powershell
+uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
+streamlit run scripts\api_streamlit_app.py
+```
+
 Financial UI:
 
 ```powershell
@@ -241,6 +258,41 @@ streamlit run scripts\competitive_research\html_app.py
 streamlit run scripts\incident_postmortem\html_app.py
 streamlit run scripts\hr_policy\html_app.py
 ```
+
+## FastAPI Backend
+
+Run the backend:
+
+```powershell
+uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
+```
+
+Useful endpoints:
+
+```text
+GET  /health
+GET  /domains
+POST /chat/financial_report_qa
+POST /chat/{domain}
+POST /retrieve/financial_report_qa
+POST /retrieve/{domain}
+```
+
+Example request:
+
+```powershell
+$body = @{
+  query = "What documentation is required for travel expenses?"
+  llm_provider = "mock"
+  embedding_provider = "hashing"
+  enable_guardrails = $true
+  enable_human_review = $true
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/chat/travel_expense" -ContentType "application/json" -Body $body
+```
+
+Enable LangSmith for API calls by setting `LANGSMITH_API_KEY` and either passing `enable_langsmith=true` in the request body or setting `LANGSMITH_TRACING=true` in the environment.
 
 ## Execute By Domain
 
@@ -382,7 +434,8 @@ Before a final demo or report run:
 
 - Download enough PDFs to reach the required corpus size for the selected domain.
 - Rebuild indexes with hosted embeddings instead of hashing embeddings.
-- Use hosted chat mode for the final Agentic RAG answer path.
+- Use hosted chat mode for the final Agentic RAG answer path through FastAPI.
+- Run `uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000` and `streamlit run scripts\api_streamlit_app.py` for the final API-backed demo.
 - Run retrieval recall@k evaluation separately from answer-quality evaluation.
 - Capture LangSmith traces for at least representative successful, refused, and HITL-routed runs.
 - Keep generated data, indexes, HTML reports, and eval artifacts out of git.
