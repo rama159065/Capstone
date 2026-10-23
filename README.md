@@ -206,6 +206,37 @@ The agent flow includes:
 
 See `docs/financial_report_agent_design.md` and the domain design files under `docs/` for flow diagrams and governance details.
 
+## LangSmith Logging and Monitoring
+
+LangSmith tracing is optional and can be enabled for agent runs and retrieval evaluation.
+
+Set your LangSmith credentials:
+
+```powershell
+$env:LANGSMITH_API_KEY="your-langsmith-key"
+$env:LANGSMITH_PROJECT="capstone-financial-report-qa"
+```
+
+Run the financial agent with LangSmith tracing:
+
+```powershell
+python scripts\financial_prompting_agent.py --enable-langsmith --langsmith-project capstone-financial-report-qa --llm-provider mock --technique agentic_graph --query "What does Apple say can affect quarterly net sales?" --ticker AAPL
+```
+
+Run retrieval evaluation with LangSmith tracing:
+
+```powershell
+python scripts\evaluate_financial_rag.py --enable-langsmith --langsmith-project capstone-financial-rag-eval --embedding-provider hashing
+```
+
+Run any generic domain agent with LangSmith tracing:
+
+```powershell
+python scripts\hr_policy\agent.py --enable-langsmith --langsmith-project capstone-hr-policy --query "What does the FMLA employee guide say about requesting leave?"
+```
+
+Each trace includes tags and metadata for domain, retrieval mode, LLM provider, embedding provider, top-k settings, guardrail status, and HITL status. If `--enable-langsmith` is used without `LANGSMITH_API_KEY`, the run still completes locally and reports LangSmith as disabled in the JSON output.
+
 ## Retrieval Evaluation
 
 Generate a silver retrieval set and measure recall separately from answer quality:

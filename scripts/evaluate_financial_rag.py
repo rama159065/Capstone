@@ -20,6 +20,16 @@ from statistics import mean
 
 import chromadb
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.domain_common.langsmith_utils import (
+    add_langsmith_args,
+    maybe_enable_from_args,
+    run_traced,
+)
+
 
 DEFAULT_EVAL_FILE = Path("eval/financial_report_qa/retrieval_eval_silver.json")
 DEFAULT_RESULTS_FILE = Path("eval/financial_report_qa/retrieval_eval_results.json")
@@ -243,6 +253,8 @@ def evaluate(args: argparse.Namespace) -> dict:
             }
         )
 
+    miss_k = 10 if 10 in args.k_values else max(args.k_values)
+    miss_key = f"recall@{miss_k}"
     summary = {
         "eval_file": str(args.eval_file),
         "results_file": str(args.results_file),
@@ -256,9 +268,9 @@ def evaluate(args: argparse.Namespace) -> dict:
         },
         "mrr": mean(row["mrr"] for row in per_query),
         "source_type_counts": dict(Counter(str(row.get("source_type")) for row in per_query)),
-        "misses@10": [
+        f"misses@{miss_k}": [
             row for row in per_query
-            if not row.get("recall@10", False)
+            if not row.get(miss_key, False)
         ],
     }
     results = {"summary": summary, "per_query": per_query}
@@ -286,15 +298,44 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-silver-queries", type=int, default=100)
     parser.add_argument("--ignore-year-filter", action="store_true")
     parser.add_argument("--ignore-source-type-filter", action="store_true")
+    add_langsmith_args(parser, default_project="capstone-financial-rag-eval")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    langsmith_status = maybe_enable_from_args(args)
     if args.generate_silver or not args.eval_file.exists():
         generate_silver_eval(args.chunks, args.eval_file, args.num_silver_queries)
-    summary = evaluate(args)
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    summary = run_traced(
+        "financial_report_qa.retrieval_eval",
+        evaluate,
+        args,
+        run_type="chain",
+        tags=[
+            "capstone",
+            "financial_report_qa",
+            "retrieval_eval",
+            args.retrieval_mode,
+            args.embedding_provider,
+            *args.langsmith_tag,
+        ],
+        metadata={
+            "eval_file": str(args.eval_file),
+            "chunks": str(args.chunks),
+            "collection": args.collection,
+            "k_values": args.k_values,
+            "dense_top_k": args.dense_top_k,
+            "bm25_top_k": args.bm25_top_k,
+            "reranker": args.reranker,
+            "ignore_year_filter": args.ignore_year_filter,
+            "ignore_source_type_filter": args.ignore_source_type_filter,
+        },
+    )
+    summary["langsmith"] = langsmith_status
+    sys.stdout.buffer.write(
+        (json.dumps(summary, ensure_ascii=False, indent=2) + "\n").encode("utf-8", errors="replace")
+    )
     return 0
 
 

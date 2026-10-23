@@ -23,6 +23,12 @@ from pypdf import PdfReader
 from rank_bm25 import BM25Okapi
 from sklearn.feature_extraction.text import HashingVectorizer
 
+from scripts.domain_common.langsmith_utils import (
+    add_langsmith_args,
+    maybe_enable_from_args,
+    run_traced,
+)
+
 
 @dataclass(frozen=True)
 class DomainConfig:
@@ -839,9 +845,30 @@ def add_common_agent_args(parser: argparse.ArgumentParser, domain_config: Domain
 def agent_cli(domain_config: DomainConfig) -> int:
     parser = argparse.ArgumentParser(description=f"{domain_config.display_name} guarded RAG agent")
     add_common_agent_args(parser, domain_config)
+    add_langsmith_args(parser, default_project=f"capstone-{domain_config.domain}")
     args = parser.parse_args()
-    result = run_domain_agent(
+    langsmith_status = maybe_enable_from_args(args)
+    result = run_traced(
+        f"{domain_config.domain}.agent",
+        run_domain_agent,
         domain_config,
+        run_type="chain",
+        tags=[
+            "capstone",
+            domain_config.domain,
+            args.llm_provider,
+            args.embedding_provider,
+            *args.langsmith_tag,
+        ],
+        metadata={
+            "domain": domain_config.domain,
+            "top_k": args.top_k,
+            "dense_top_k": args.dense_top_k,
+            "bm25_top_k": args.bm25_top_k,
+            "source_type": args.source_type,
+            "guardrails_enabled": not args.disable_guardrails,
+            "human_review_enabled": not args.disable_human_review,
+        },
         query=args.query,
         llm_provider=args.llm_provider,
         embedding_provider=args.embedding_provider,
@@ -854,6 +881,7 @@ def agent_cli(domain_config: DomainConfig) -> int:
         enable_guardrails=not args.disable_guardrails,
         enable_human_review=not args.disable_human_review,
     )
+    result["langsmith"] = langsmith_status
     text = json.dumps(result, ensure_ascii=False, indent=2)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

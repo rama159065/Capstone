@@ -30,6 +30,16 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import END, StateGraph
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.domain_common.langsmith_utils import (
+    add_langsmith_args,
+    maybe_enable_from_args,
+    run_traced,
+)
+
 
 DEFAULT_CHUNKS = Path("data/processed/financial_report_qa/pdf_chunks.jsonl")
 DEFAULT_INDEX_DIR = Path("indexes/chroma/financial_report_qa_pdfs")
@@ -1008,11 +1018,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--disable-guardrails", action="store_true")
     parser.add_argument("--disable-human-review", action="store_true")
     parser.add_argument("--output", type=Path)
+    add_langsmith_args(parser, default_project="capstone-financial-report-qa")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    langsmith_status = maybe_enable_from_args(args)
     config = AgentConfig(
         query=args.query,
         ticker=args.ticker,
@@ -1044,8 +1056,37 @@ def main() -> int:
         "llm_provider": args.llm_provider,
         "embedding_provider": args.embedding_provider,
         "retrieval_mode": args.retrieval_mode,
+        "langsmith": langsmith_status,
         "results": [
-            summarize_result(run_technique(technique, args.llm_provider, config))
+            summarize_result(
+                run_traced(
+                    f"financial_report_qa.{technique}",
+                    run_technique,
+                    technique,
+                    args.llm_provider,
+                    config,
+                    run_type="chain",
+                    tags=[
+                        "capstone",
+                        "financial_report_qa",
+                        technique,
+                        args.llm_provider,
+                        args.embedding_provider,
+                        args.retrieval_mode,
+                        *args.langsmith_tag,
+                    ],
+                    metadata={
+                        "ticker": args.ticker,
+                        "year": args.year,
+                        "source_type": args.source_type,
+                        "top_k": args.top_k,
+                        "dense_top_k": args.dense_top_k,
+                        "bm25_top_k": args.bm25_top_k,
+                        "guardrails_enabled": not args.disable_guardrails,
+                        "human_review_enabled": not args.disable_human_review,
+                    },
+                )
+            )
             for technique in techniques
         ],
     }
