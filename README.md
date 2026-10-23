@@ -29,6 +29,17 @@ Implemented domains:
 
 The financial domain has a richer dedicated implementation. The remaining domains share a common LangGraph RAG and guarded-agent runtime in `scripts/domain_common/rag_agent.py`.
 
+## Implementation Status
+
+| Area | Status |
+|---|---|
+| Financial PDF RAG | Implemented with PDF verification, chunking, Chroma, BM25, RRF, reranking, optional table summaries, optional chart-summary chunks, and top-k query mode. |
+| Non-financial domain RAG | Implemented for procurement, travel/expense, competitive research, incident postmortem, and HR policy using the shared `scripts/domain_common/rag_agent.py` runtime. |
+| Agent orchestration | Implemented with LangGraph nodes for security, plain-text validation, planning, hybrid retrieval, evidence guard, answer generation, output filtering, citation criticism, and governance/HITL. |
+| Guardrails and HITL | Implemented for input filtering, evidence prompt-injection filtering, output content filtering, citation validation, and human-review routing. |
+| Observability | Optional LangSmith tracing is implemented for agents and financial retrieval evaluation. |
+| Evaluation | Financial retrieval recall@k evaluation is implemented separately from answer generation. |
+
 ## Repository Layout
 
 ```text
@@ -79,6 +90,24 @@ pip install -e .
 
 Optional OCR support for scanned pages, tables, or chart images requires Tesseract installed on the operating system. The current implementation can run without OCR for text-based PDFs.
 
+## Quick Start
+
+Run a small local smoke test with deterministic hashing embeddings:
+
+```powershell
+python scripts\download_financial_report_pdfs.py --target-pdfs 5
+python scripts\index_financial_report_pdfs.py --embedding-provider hashing --limit-pdfs 5 --max-pages-per-pdf 10 --reset
+python scripts\financial_prompting_agent.py --llm-provider mock --technique agentic_graph --query "What does Apple say can affect quarterly net sales?" --ticker AAPL
+```
+
+For a non-financial domain smoke test:
+
+```powershell
+python scripts\download_domain_pdfs.py --domains travel_expense
+python scripts\travel_expense\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
+python scripts\travel_expense\agent.py --query "What documentation is required for travel expenses?"
+```
+
 ## Data Download
 
 Download financial annual report PDFs:
@@ -91,6 +120,12 @@ Download the public PDF corpora for the other Track B domains:
 
 ```powershell
 python scripts\download_domain_pdfs.py
+```
+
+Optional raw JSON/API corpora for the recommended domains can also be downloaded for corpus analysis and future retrieval expansion:
+
+```powershell
+python scripts\download_rag_corpora.py --domains all --target-docs 500 --overwrite --sec-user-agent "capstone-rag/0.1 your_email@example.com"
 ```
 
 PDF manifests are written to:
@@ -145,7 +180,7 @@ python scripts\hr_policy\index.py --embedding-provider hashing --max-pages-per-p
 The RAG pipeline uses:
 
 - PDF text extraction with page-level metadata
-- Recursive character chunking with overlap
+- Recursive character chunking with overlap: financial defaults to `chunk_size=2000`, `chunk_overlap=250`; shared domain defaults are `chunk_size=1800`, `chunk_overlap=220`
 - ChromaDB vector index using cosine HNSW
 - BM25 lexical retrieval over `pdf_chunks.jsonl`
 - Reciprocal rank fusion of dense and BM25 results
@@ -153,6 +188,8 @@ The RAG pipeline uses:
 - Citation-grounded answers using chunk IDs
 
 For 500-2,000 PDFs, HNSW in ChromaDB is the recommended default. IVF/PQ or IVF-PQ is mainly useful when the vector count becomes much larger or memory pressure becomes the main bottleneck.
+
+The current shared non-financial runtime indexes PDF chunks from `data/raw/<domain>/pdf_manifest.jsonl`. The JSON/API corpora downloaded by `download_rag_corpora.py` are retained as raw data and can be merged into the same Chroma/BM25 pattern later.
 
 ## Run Agents
 
@@ -202,6 +239,70 @@ streamlit run scripts\procurement_vendor\html_app.py
 streamlit run scripts\travel_expense\html_app.py
 streamlit run scripts\competitive_research\html_app.py
 streamlit run scripts\incident_postmortem\html_app.py
+streamlit run scripts\hr_policy\html_app.py
+```
+
+## Execute By Domain
+
+Use hashing embeddings and mock LLM mode for local smoke tests. For final capstone runs, replace `--embedding-provider hashing` with `--embedding-provider hosted` after setting the embedding endpoint variables, and use `--llm-provider hosted` after setting the chat endpoint variables.
+
+### Financial Report QA
+
+```powershell
+python scripts\download_financial_report_pdfs.py --target-pdfs 100
+python scripts\index_financial_report_pdfs.py --embedding-provider hashing --reset
+python scripts\financial_prompting_agent.py --llm-provider mock --technique agentic_graph --query "What does Apple say can affect quarterly net sales?" --ticker AAPL
+streamlit run scripts\financial_streamlit_app.py
+```
+
+Optional top-k retrieval check:
+
+```powershell
+python scripts\index_financial_report_pdfs.py --embedding-provider hashing --query-only --retrieval-mode hybrid --query "What does Apple report about net sales and revenue?" --top-k 5 --filter-ticker AAPL
+```
+
+### Procurement And Vendor Review
+
+```powershell
+python scripts\download_domain_pdfs.py --domains procurement_vendor
+python scripts\procurement_vendor\index.py --embedding-provider hashing --reset
+python scripts\procurement_vendor\agent.py --query "What evidence describes vendor evaluation criteria?" --html-out output\procurement_vendor_agent.html
+streamlit run scripts\procurement_vendor\html_app.py
+```
+
+### Travel And Expense Policy
+
+```powershell
+python scripts\download_domain_pdfs.py --domains travel_expense
+python scripts\travel_expense\index.py --embedding-provider hashing --reset
+python scripts\travel_expense\agent.py --query "What documentation is required for travel expenses?" --html-out output\travel_expense_agent.html
+streamlit run scripts\travel_expense\html_app.py
+```
+
+### Competitive Research
+
+```powershell
+python scripts\download_domain_pdfs.py --domains competitive_research
+python scripts\competitive_research\index.py --embedding-provider hashing --reset
+python scripts\competitive_research\agent.py --query "Compare competitor risk language about market demand." --html-out output\competitive_research_agent.html
+streamlit run scripts\competitive_research\html_app.py
+```
+
+### Incident Postmortem
+
+```powershell
+python scripts\download_domain_pdfs.py --domains incident_postmortem
+python scripts\incident_postmortem\index.py --embedding-provider hashing --reset
+python scripts\incident_postmortem\agent.py --query "What should be included in an incident postmortem?" --html-out output\incident_postmortem_agent.html
+streamlit run scripts\incident_postmortem\html_app.py
+```
+
+### HR Policy Navigator
+
+```powershell
+python scripts\download_domain_pdfs.py --domains hr_policy
+python scripts\hr_policy\index.py --embedding-provider hashing --reset
+python scripts\hr_policy\agent.py --query "What does the FMLA guide say about requesting leave?" --html-out output\hr_policy_agent.html
 streamlit run scripts\hr_policy\html_app.py
 ```
 
@@ -274,6 +375,17 @@ python scripts\evaluate_financial_rag.py --embedding-provider hashing
 ```
 
 The evaluation reports recall@k and related retrieval metrics without calling the LLM.
+
+## Final Capstone Run Checklist
+
+Before a final demo or report run:
+
+- Download enough PDFs to reach the required corpus size for the selected domain.
+- Rebuild indexes with hosted embeddings instead of hashing embeddings.
+- Use hosted chat mode for the final Agentic RAG answer path.
+- Run retrieval recall@k evaluation separately from answer-quality evaluation.
+- Capture LangSmith traces for at least representative successful, refused, and HITL-routed runs.
+- Keep generated data, indexes, HTML reports, and eval artifacts out of git.
 
 ## Tests
 
