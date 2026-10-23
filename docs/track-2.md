@@ -75,6 +75,20 @@ Use **LangChain** for document loaders, splitters, embeddings, Chroma, BM25, ret
 
 The brief caps the agent at **10 steps per query**. Enforce the cap, tool timeout/retry policy, per-call and total token budgets, JSON/schema validation, bounded repair retries, and explicit handling for tool errors, malformed JSON, empty retrieval and loops. Treat retrieved documents and tool output as untrusted data; ignore instructions embedded in them. Use constrained decoding/schema response formats if the hosted endpoint supports them. Small models are error-prone at tool calls, so do not rely on free-form tool names or unvalidated arguments.
 
+### Current project LangGraph runtime
+
+The implemented capstone runtime uses LangGraph for both the dedicated financial-report agent and the shared non-financial domain agents. The active graph shape is:
+
+```text
+security_guard -> plain_text_classifier -> planner -> hybrid_retriever -> evidence_guard -> answer_agent -> output_filter -> citation_critic -> governance
+```
+
+Financial-report QA uses `scripts/financial_prompting_agent.py` and the non-financial domains use `scripts/domain_common/rag_agent.py` through each domain folder under `scripts/`. The graph applies input security checks, LLM/plain-text classification, hybrid retrieval, retrieved-evidence prompt-injection checks, output content filtering, citation validation, and governance/HITL routing before final release.
+
+The financial domain has the richest retrieval implementation: Chroma dense retrieval, BM25 over `pdf_chunks.jsonl`, reciprocal-rank fusion, simple reranking, table summaries, chart-summary hooks, OCR status, and separate recall@k evaluation. The remaining domains use the shared PDF-based Chroma + BM25 hybrid runtime today; downloaded JSON corpora are retained as raw data for future indexing expansion.
+
+LangSmith tracing is optional for agent runs and evaluation. When enabled with credentials, traces capture domain, retrieval mode, top-k settings, guardrail decisions, content-filter decisions, citation status, HITL status, and summarized evidence metadata.
+
 ## 8. Prompting, context construction and answer model
 
 Use only the provided hosted **≤8B chat model** for generation. The brief provides no guarantee of a particular model or weights, so document endpoint/model identifier, context length, supported structured output, quota, and version. No GPU, fine-tuning, or replacement with a larger/frontier model is in scope. The provided embeddings endpoint is for vector encoding, not answer generation.

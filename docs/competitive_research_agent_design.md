@@ -17,8 +17,9 @@ Example questions:
 |---|---|
 | Security Guardrail Agent | Blocks prompt injection, market-manipulation requests, secrets, and attempts to bypass citation rules. |
 | Plain-Text Validation Agent | Confirms plain-text competitive-research intent. |
+| LangGraph Orchestrator | Coordinates guardrails, planning, hybrid retrieval, evidence filtering, drafting, output filtering, citation checks, and HITL routing. |
 | Planner / Router | Routes to company comparison, risk-factor search, product/market search, or briefing draft. |
-| Retrieval Agent | Runs hybrid retrieval over competitor annual-report PDFs and SEC-derived JSON records. |
+| Retrieval Agent | Runs hybrid retrieval over indexed competitor annual-report PDFs. SEC-derived JSON records are available separately for future extension. |
 | Competitive Evidence Agent | Groups evidence by company, year, page, section, and chunk ID. |
 | Comparison Agent | Produces side-by-side summaries grounded in retrieved evidence. |
 | Citation Critic | Verifies citations and flags unsupported market claims. |
@@ -64,3 +65,12 @@ The system may draft competitive summaries but must not give investment advice.
 ## Evaluation
 
 Measure retrieval recall@k by gold relevant company/year/chunk IDs. Evaluate comparison quality, citation coverage, company grouping accuracy, and investment-advice refusals separately.
+
+## Implementation Status
+
+- Index CLI: `scripts/competitive_research/index.py`
+- Agent CLI: `scripts/competitive_research/agent.py`
+- Streamlit/HTML UI: `scripts/competitive_research/html_app.py`
+- Shared runtime: `scripts/domain_common/rag_agent.py`
+- Optional tracing: `--enable-langsmith --langsmith-project <project-name>`
+- Unit tests cover config wiring, indexing helpers, guarded LangGraph orchestration, citation validation, output filtering, and HITL routing.

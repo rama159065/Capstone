@@ -369,7 +369,7 @@ Evaluate retrieval separately from final answer quality.
 
 ## Prompting Implementation
 
-The runnable Track B prompting layer is in `scripts/financial_prompting_agent.py`. It uses the existing financial-report hybrid retriever, LangChain `ChatPromptTemplate` for prompt construction, and LangGraph for the bounded planner -> retrieve -> answer -> critic loop.
+The runnable Track B prompting layer is in `scripts/financial_prompting_agent.py`. It uses the existing financial-report hybrid retriever, LangChain `ChatPromptTemplate` for prompt construction, and LangGraph for the bounded guardrail -> planner -> retrieve -> evidence guard -> answer -> output filter -> citation critic -> governance loop.
 
 Implemented techniques:
 
@@ -379,7 +379,7 @@ Implemented techniques:
 | `structured_few_shot` | JSON-only answer prompt with an example output schema for small hosted models. |
 | `decomposition` | Splits the question into subquestions, then synthesizes a cited answer from retrieved evidence. |
 | `self_consistency` | Samples multiple answer drafts, then consolidates only claims supported by evidence. |
-| `agentic_graph` | LangGraph guardrail -> plain-text classifier -> planner -> retriever/tool executor -> evidence guard -> answer agent -> citation critic, with one repair pass. |
+| `agentic_graph` | LangGraph guardrail -> plain-text classifier -> planner -> retriever/tool executor -> evidence guard -> answer agent -> output content filter -> citation critic -> governance/HITL, with one citation repair pass. |
 
 Offline smoke run with hashing embeddings:
 
@@ -509,21 +509,16 @@ Expected outcomes:
 
 ## Implementation Sequence
 
-1. Keep the current financial PDF indexer as the retrieval backend.
-2. Add a `tools/financial_tools.py` wrapper around:
-   - hybrid retrieval
-   - table lookup
-   - chart lookup
-   - XBRL lookup
-   - calculator
-3. Add security guardrail and LLM plain-text classifier nodes before planning.
-4. Add human-review routing logic and `human_review_queue` state.
-5. Build a LangGraph guardrail -> plain-text classifier -> planner -> executor -> evidence guard -> answer -> critic -> human-review router graph.
-6. Add an evidence prompt-injection guard before answer generation.
-7. Add a Streamlit UI for question, answer, citations, evidence preview, guardrail labels, and human approval controls.
-8. Replace hashing embeddings with the hosted embedding endpoint.
-9. Create the human-authored 100-query gold eval set, 20-30 case security eval set, and 15-25 case human-review routing set.
-10. Run retrieval recall, answer-quality evaluation, guardrail evaluation, and human-review routing evaluation separately.
+1. Implemented financial PDF indexing with Chroma, BM25, RRF, reranking, table summaries, chart-summary hooks, and optional OCR status.
+2. Implemented financial prompting techniques: baseline RAG, structured few-shot, decomposition, self-consistency, and LangGraph `agentic_graph`.
+3. Implemented guardrail nodes before planning: deterministic input filter and hosted/mock LLM plain-text classifier.
+4. Implemented evidence prompt-injection guard before answer generation.
+5. Implemented output content filter before final release.
+6. Implemented citation validation and governance/HITL routing.
+7. Implemented Streamlit UI for question, answer, citations, evidence preview, guardrail labels, output filter state, HITL state, and raw trace inspection.
+8. Implemented optional LangSmith tracing for agent and retrieval-evaluation runs.
+9. Implemented unit tests for retrieval helpers, prompting techniques, guardrails, HITL, content filters, and LangSmith helpers.
+10. Remaining final-capstone work: replace hashing embeddings with the hosted embedding endpoint, create human-authored gold/security/HITL eval sets, and report retrieval recall separately from answer quality.
 
 ## Why This Agent Is Useful
 

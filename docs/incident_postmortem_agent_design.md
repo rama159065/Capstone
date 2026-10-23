@@ -17,8 +17,9 @@ Example questions:
 |---|---|
 | Security Guardrail Agent | Blocks prompt injection, exploit instructions, secrets, credentials, and requests to hide incident facts. |
 | Plain-Text Validation Agent | Confirms plain-text incident/postmortem intent. |
+| LangGraph Orchestrator | Coordinates guardrails, planning, hybrid retrieval, evidence filtering, drafting, output filtering, citation checks, and HITL routing. |
 | Planner / Router | Routes to incident handling, recovery, forensics, timeline, or action-item drafting. |
-| Retrieval Agent | Runs hybrid retrieval over incident-response PDFs and incident JSON records. |
+| Retrieval Agent | Runs hybrid retrieval over indexed incident-response PDFs. Incident JSON records are available separately for future extension. |
 | Incident Evidence Agent | Normalizes source guidance, public incident updates, timestamps, page numbers, and chunk IDs. |
 | Postmortem Drafting Agent | Drafts timeline, impact, root-cause hypotheses, detection, mitigation, and follow-up actions. |
 | Citation Critic | Verifies claims against retrieved evidence and removes blameful unsupported language. |
@@ -41,7 +42,7 @@ Seed PDF sources include NIST SP 800-61 Rev. 3, NIST SP 800-61 Rev. 2, NIST SP 8
 |---|---|
 | `deterministic_input_guard` | Blocks unsafe input, exploit requests, and secrets. |
 | `llm_plain_text_classifier` | Confirms incident/postmortem drafting intent. |
-| `hybrid_incident_search` | BM25 + dense retrieval over incident guidance and records. |
+| `hybrid_incident_search` | BM25 + dense retrieval over indexed incident-guidance PDF chunks. |
 | `timeline_builder` | Builds draft incident timelines from retrieved updates. |
 | `action_item_drafter` | Drafts preventive and corrective actions from evidence. |
 | `output_content_filter` | Blocks generated secrets/tool payloads and routes exploit, credential, or publishable outputs to review. |
@@ -63,4 +64,13 @@ The agent should draft, not publish or assign blame independently.
 
 ## Evaluation
 
-Evaluate retrieval recall@k separately from postmortem quality. Add red-team cases for credential leaks, exploit requests, hiding facts, and unsupported blame.
+Evaluate retrieval recall@k separately from postmortem quality. Security and HITL tests should cover credential leaks, exploit requests, hiding facts, and unsupported blame.
+
+## Implementation Status
+
+- Index CLI: `scripts/incident_postmortem/index.py`
+- Agent CLI: `scripts/incident_postmortem/agent.py`
+- Streamlit/HTML UI: `scripts/incident_postmortem/html_app.py`
+- Shared runtime: `scripts/domain_common/rag_agent.py`
+- Optional tracing: `--enable-langsmith --langsmith-project <project-name>`
+- Unit tests cover config wiring, indexing helpers, guarded LangGraph orchestration, citation validation, output filtering, and HITL routing.

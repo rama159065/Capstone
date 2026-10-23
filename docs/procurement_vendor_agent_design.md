@@ -17,8 +17,9 @@ Example questions:
 |---|---|
 | Security Guardrail Agent | Blocks prompt injection, executable payloads, secrets, and attempts to bypass procurement policy. |
 | Plain-Text Validation Agent | Confirms the message is plain text with procurement/vendor-review intent. |
+| LangGraph Orchestrator | Coordinates guardrails, planning, hybrid retrieval, evidence filtering, drafting, output filtering, citation checks, and HITL routing. |
 | Planner / Router | Routes to procurement regulation search, vendor evaluation search, contract-risk search, or drafting. |
-| Retrieval Agent | Runs hybrid retrieval over procurement PDFs and existing JSON/API records. |
+| Retrieval Agent | Runs hybrid retrieval over indexed procurement PDFs. The raw JSON corpus is available separately for future extension. |
 | Procurement Evidence Agent | Normalizes clauses, guidance sections, source PDFs, page numbers, and chunk IDs. |
 | Vendor Review Drafting Agent | Drafts vendor review notes only from retrieved evidence. |
 | Citation Critic | Verifies every policy claim cites retrieved evidence. |
@@ -41,7 +42,7 @@ Seed PDF sources include World Bank procurement regulations, Project Procurement
 |---|---|
 | `deterministic_input_guard` | Blocks unsafe or malicious input before retrieval. |
 | `llm_plain_text_classifier` | Confirms procurement/vendor-review plain-text intent. |
-| `hybrid_procurement_search` | BM25 + dense retrieval over procurement PDFs and records. |
+| `hybrid_procurement_search` | BM25 + dense retrieval over indexed procurement PDF chunks. |
 | `vendor_evaluation_lookup` | Retrieves rated criteria, bid/proposal evaluation, and vendor qualification evidence. |
 | `procurement_clause_lookup` | Retrieves FAR/World Bank clauses by topic. |
 | `output_content_filter` | Blocks generated secrets/tool payloads and routes vendor-award or sensitive outputs to review. |
@@ -63,4 +64,13 @@ The assistant may draft and summarize, but it must not make binding procurement 
 
 ## Evaluation
 
-Measure retrieval recall@k separately from answer quality. Add security and HITL test cases covering prompt injection, fake vendor secrets, bid-manipulation requests, and unsafe award recommendations.
+Measure retrieval recall@k separately from answer quality. Security and HITL tests should cover prompt injection, fake vendor secrets, bid-manipulation requests, and unsafe award recommendations.
+
+## Implementation Status
+
+- Index CLI: `scripts/procurement_vendor/index.py`
+- Agent CLI: `scripts/procurement_vendor/agent.py`
+- Streamlit/HTML UI: `scripts/procurement_vendor/html_app.py`
+- Shared runtime: `scripts/domain_common/rag_agent.py`
+- Optional tracing: `--enable-langsmith --langsmith-project <project-name>`
+- Unit tests cover config wiring, indexing helpers, guarded LangGraph orchestration, citation validation, output filtering, and HITL routing.

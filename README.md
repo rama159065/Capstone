@@ -2,7 +2,7 @@
 
 Agentic RAG system for the Track B capstone: **API-side Multi-Agent Operations Copilot built around hosted <=8B inference APIs**.
 
-The project implements citation-grounded RAG over public PDF corpora, hybrid retrieval, guarded agent workflows, human-in-the-loop routing, Streamlit chat UIs, and retrieval evaluation.
+The project implements citation-grounded Agentic RAG over public PDF corpora, hybrid retrieval, LangGraph-orchestrated guarded workflows, human-in-the-loop routing, Streamlit chat UIs, and retrieval evaluation.
 
 ## Domains
 
@@ -15,14 +15,14 @@ Implemented domains:
 - Incident postmortem drafter
 - HR policy navigator
 
-The financial domain has a richer dedicated implementation. The remaining domains share a common generic RAG and guarded-agent runtime in `scripts/domain_common/rag_agent.py`.
+The financial domain has a richer dedicated implementation. The remaining domains share a common LangGraph RAG and guarded-agent runtime in `scripts/domain_common/rag_agent.py`.
 
 ## Repository Layout
 
 ```text
 docs/                         Design notes and capstone documentation
 scripts/
-  domain_common/              Shared PDF RAG, guardrails, HITL, HTML rendering
+  domain_common/              Shared LangGraph PDF RAG, guardrails, HITL, HTML rendering
   procurement_vendor/         Domain config, index CLI, agent CLI, Streamlit app
   travel_expense/             Domain config, index CLI, agent CLI, Streamlit app
   competitive_research/       Domain config, index CLI, agent CLI, Streamlit app
@@ -197,6 +197,7 @@ streamlit run scripts\hr_policy\html_app.py
 
 The agent flow includes:
 
+- LangGraph orchestration for security, validation, planning, retrieval, evidence checks, answer generation, output filtering, citation criticism, and governance
 - Input guard for prompt injection, code/tool payloads, and secrets
 - LLM-backed plain-text/domain-intent classifier
 - Retrieval evidence guard against injected instructions inside retrieved chunks
@@ -276,8 +277,9 @@ Current coverage includes:
 - generic domain PDF downloader helpers
 - financial indexing helpers
 - hybrid retrieval and evaluation helpers
-- financial prompting agent guardrails and workflows
-- shared domain RAG guardrails, citation checks, and HITL routing
+- financial prompting agent guardrails, content filters, LangGraph workflows, and HITL routing
+- shared domain LangGraph RAG orchestration, guardrails, citation checks, output filters, and HITL routing
+- LangSmith optional tracing helpers
 - all domain configs and entrypoint wiring
 
 ## Notes

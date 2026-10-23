@@ -260,6 +260,21 @@ Run a guarded domain agent and write an HTML result:
 python scripts\procurement_vendor\agent.py --query "What evidence describes vendor evaluation criteria?" --html-out output\procurement_vendor_agent.html
 ```
 
+The non-financial domain agents use the shared LangGraph runtime in `scripts/domain_common/rag_agent.py`. The graph runs:
+
+```text
+security_guard -> plain_text_classifier -> planner -> hybrid_retriever -> evidence_guard -> answer_agent -> output_filter -> citation_critic -> governance
+```
+
+The JSON result includes `orchestration.engine=langgraph`, guardrail decisions, citation validation, output content filtering, HITL routing, and summarized evidence.
+
+Run a domain agent with optional LangSmith tracing:
+
+```powershell
+$env:LANGSMITH_API_KEY="your_langsmith_key"
+python scripts\travel_expense\agent.py --enable-langsmith --langsmith-project capstone-travel-expense --query "What documentation is required for travel expenses?"
+```
+
 Launch a domain HTML/Streamlit chat UI:
 
 ```powershell
@@ -271,3 +286,13 @@ Download a smoke-test corpus:
 ```powershell
 python scripts\download_rag_corpora.py --domains all --target-docs 25 --overwrite --sec-user-agent "capstone-rag/0.1 your_email@example.com"
 ```
+
+## Current implementation notes
+
+- Financial report QA uses a dedicated LangGraph `agentic_graph` plus baseline, structured few-shot, decomposition, and self-consistency prompting modes.
+- The remaining domains use the shared LangGraph domain runtime.
+- Current shared domain retrieval indexes PDF chunks from `data/raw/<domain>/pdf_manifest.jsonl`; the 500-document JSON corpora are downloaded and available as raw corpora, but they are not yet merged into the shared domain Chroma/BM25 retrieval path.
+- Content filtering is layered at input, retrieved evidence, and generated output.
+- `output_filter.decision=block` prevents release; `output_filter.decision=review` adds `output_content_filter_review` to HITL triggers when human review is enabled.
+- LangSmith tracing is optional and safe to enable without breaking local smoke tests. Without `LANGSMITH_API_KEY`, the run completes and reports tracing as disabled.
+- Unit tests currently cover downloader helpers, indexing helpers, retrieval/evaluation helpers, financial prompting workflows, shared LangGraph domain orchestration, content filters, HITL routing, LangSmith helpers, and domain entrypoints.

@@ -17,8 +17,9 @@ Example questions:
 |---|---|
 | Security Guardrail Agent | Blocks prompt injection, executable payloads, secrets, card numbers, or attempts to bypass reimbursement policy. |
 | Plain-Text Validation Agent | Confirms the request is plain-text travel/expense-policy intent. |
+| LangGraph Orchestrator | Coordinates guardrails, planning, hybrid retrieval, evidence filtering, drafting, output filtering, citation checks, and HITL routing. |
 | Planner / Router | Routes to tax travel expense, federal travel regulation, JTR, travel-card, or foreign-travel policy search. |
-| Retrieval Agent | Runs hybrid retrieval over travel PDFs and existing travel policy records. |
+| Retrieval Agent | Runs hybrid retrieval over indexed travel-policy PDFs. The raw JSON corpus is available separately for future extension. |
 | Expense Evidence Agent | Normalizes policy source, page, section, and chunk IDs. |
 | Expense Decision Drafting Agent | Produces evidence-grounded eligibility guidance and documentation requirements. |
 | Citation Critic | Verifies every reimbursement claim cites retrieved chunks. |
@@ -63,4 +64,13 @@ The agent can explain policy and draft a recommendation, but it must not approve
 
 ## Evaluation
 
-Evaluate recall@k for policy sections separately from end-to-end answer quality. Add red-team cases for card numbers, fake receipts, policy bypass requests, and ambiguous reimbursement scenarios.
+Evaluate recall@k for policy sections separately from end-to-end answer quality. Security and HITL tests should cover card numbers, fake receipts, policy bypass requests, and ambiguous reimbursement scenarios.
+
+## Implementation Status
+
+- Index CLI: `scripts/travel_expense/index.py`
+- Agent CLI: `scripts/travel_expense/agent.py`
+- Streamlit/HTML UI: `scripts/travel_expense/html_app.py`
+- Shared runtime: `scripts/domain_common/rag_agent.py`
+- Optional tracing: `--enable-langsmith --langsmith-project <project-name>`
+- Unit tests cover config wiring, indexing helpers, guarded LangGraph orchestration, citation validation, output filtering, and HITL routing.

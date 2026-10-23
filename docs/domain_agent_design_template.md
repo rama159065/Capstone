@@ -1,6 +1,6 @@
 # Domain Agent Design Template
 
-Use this structure for each non-financial Track B domain. Each domain follows the same core implementation pattern as the financial-report agent:
+Use this structure for each non-financial Track B domain. Each domain follows the same core implementation pattern as the financial-report agent and is orchestrated by LangGraph in `scripts/domain_common/rag_agent.py`:
 
 ```text
 security guardrail
@@ -15,7 +15,7 @@ security guardrail
 -> final cited answer or refusal
 ```
 
-The implementation can share the financial agent's guardrail, citation, HITL, and Streamlit patterns while swapping domain-specific tools, source filters, and review triggers.
+The shared implementation compiles a LangGraph state machine with explicit nodes for `security_guard`, `plain_text_classifier`, `planner`, `hybrid_retriever`, `evidence_guard`, `answer_agent`, `output_filter`, `citation_critic`, and `governance`. Each domain swaps domain-specific config, source filters, intent terms, and review triggers.
 
 ## Content Filtering Pattern
 

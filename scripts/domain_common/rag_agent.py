@@ -14,11 +14,12 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Literal, TypedDict
 
 import chromadb
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langgraph.graph import END, StateGraph
 from pypdf import PdfReader
 from rank_bm25 import BM25Okapi
 from sklearn.feature_extraction.text import HashingVectorizer
@@ -729,6 +730,21 @@ def human_review_router(
     }
 
 
+class DomainAgentState(TypedDict, total=False):
+    query: str
+    safe_query: str
+    final_status: str
+    answer: str
+    security: dict[str, Any]
+    plain_text: dict[str, Any]
+    plan: dict[str, Any]
+    evidence: list[dict[str, Any]]
+    evidence_guard: dict[str, Any]
+    output_filter: dict[str, Any]
+    citation_check: dict[str, Any]
+    human_review: dict[str, Any]
+
+
 def run_domain_agent(
     domain_config: DomainConfig,
     *,
@@ -746,108 +762,200 @@ def run_domain_agent(
 ) -> dict[str, Any]:
     started = time.time()
     llm = get_llm(llm_provider, domain_config)
-    security = input_guard(query) if enable_guardrails else {"decision": "allow", "risk_labels": [], "sanitized_query": query}
-    if security["decision"] == "block":
-        return {
-            "domain": domain_config.domain,
-            "display_name": domain_config.display_name,
-            "final_status": "refused",
-            "answer": "Request blocked by security guardrails.",
-            "security": security,
-            "evidence": [],
+
+    def security_node(state: DomainAgentState) -> DomainAgentState:
+        security = input_guard(state["query"]) if enable_guardrails else {
+            "decision": "allow",
+            "risk_labels": [],
+            "sanitized_query": state["query"],
         }
-    plain_text = plain_text_classifier(llm, domain_config, security["sanitized_query"]) if enable_guardrails else {
-        "allowed": True,
-        "safe_query": query,
-    }
-    if not plain_text.get("allowed"):
-        return {
-            "domain": domain_config.domain,
-            "display_name": domain_config.display_name,
-            "final_status": "refused",
-            "answer": "Request is not a safe plain-text question for this domain.",
-            "security": security,
-            "plain_text": plain_text,
-            "evidence": [],
+        if security["decision"] == "block":
+            return {
+                "security": security,
+                "final_status": "refused",
+                "answer": "Request blocked by security guardrails.",
+                "evidence": [],
+            }
+        return {"security": security, "safe_query": str(security["sanitized_query"])}
+
+    def plain_text_node(state: DomainAgentState) -> DomainAgentState:
+        if state.get("final_status") == "refused":
+            return {}
+        plain_text = plain_text_classifier(llm, domain_config, state["safe_query"]) if enable_guardrails else {
+            "allowed": True,
+            "safe_query": state["safe_query"],
         }
-    safe_query = str(plain_text["safe_query"])
-    plan = safe_json_loads(
-        invoke_prompt(
+        if not plain_text.get("allowed"):
+            return {
+                "plain_text": plain_text,
+                "final_status": "refused",
+                "answer": "Request is not a safe plain-text question for this domain.",
+                "evidence": [],
+            }
+        return {"plain_text": plain_text, "safe_query": str(plain_text["safe_query"])}
+
+    def planner_node(state: DomainAgentState) -> DomainAgentState:
+        if state.get("final_status") == "refused":
+            return {}
+        plan = safe_json_loads(
+            invoke_prompt(
+                llm,
+                f"You are a planner for {domain_config.display_name}. Plan JSON only.",
+                f"Question: {state['safe_query']}\nPlan JSON with keys: intent, tools, source_type, needs_human_review.",
+            ),
+            {"intent": domain_config.domain, "tools": ["hybrid_search"], "source_type": source_type},
+        )
+        return {"plan": plan}
+
+    def retrieval_node(state: DomainAgentState) -> DomainAgentState:
+        if state.get("final_status") == "refused":
+            return {}
+        plan = state.get("plan", {})
+        hits = retrieve_hybrid(
+            domain_config,
+            query=state["safe_query"],
+            top_k=top_k,
+            dense_top_k=dense_top_k,
+            bm25_top_k=bm25_top_k,
+            embedding_provider=embedding_provider,
+            hash_dimensions=hash_dimensions,
+            source_type=plan.get("source_type") or source_type,
+        )
+        return {"evidence": hits}
+
+    def evidence_guard_node(state: DomainAgentState) -> DomainAgentState:
+        if state.get("final_status") == "refused":
+            return {}
+        hits = state.get("evidence", [])
+        evidence_check = evidence_guard(hits) if enable_guardrails else {"safe": True, "flagged_chunks": []}
+        if not evidence_check["safe"]:
+            return {
+                "evidence_guard": evidence_check,
+                "final_status": "refused",
+                "answer": "Retrieved evidence contained unsafe instructions.",
+            }
+        return {"evidence_guard": evidence_check}
+
+    def answer_node(state: DomainAgentState) -> DomainAgentState:
+        if state.get("final_status") == "refused":
+            return {}
+        hits = state.get("evidence", [])
+        answer = invoke_prompt(
             llm,
-            f"You are a planner for {domain_config.display_name}. Plan JSON only.",
-            f"Question: {safe_query}\nPlan JSON with keys: intent, tools, source_type, needs_human_review.",
-        ),
-        {"intent": domain_config.domain, "tools": ["hybrid_search"], "source_type": source_type},
-    )
-    hits = retrieve_hybrid(
-        domain_config,
-        query=safe_query,
-        top_k=top_k,
-        dense_top_k=dense_top_k,
-        bm25_top_k=bm25_top_k,
-        embedding_provider=embedding_provider,
-        hash_dimensions=hash_dimensions,
-        source_type=plan.get("source_type") or source_type,
-    )
-    evidence_check = evidence_guard(hits) if enable_guardrails else {"safe": True, "flagged_chunks": []}
-    if not evidence_check["safe"]:
-        return {
-            "domain": domain_config.domain,
-            "display_name": domain_config.display_name,
-            "final_status": "refused",
-            "answer": "Retrieved evidence contained unsafe instructions.",
-            "security": security,
-            "plain_text": plain_text,
-            "plan": plan,
-            "evidence_guard": evidence_check,
-            "evidence": summarize_evidence(hits),
+            (
+                f"You are the answer agent for {domain_config.display_name}. "
+                "Answer only from evidence. Cite chunk_id values for every factual claim. "
+                "If evidence is insufficient, say so."
+            ),
+            f"Question: {state['safe_query']}\n\nEvidence:\n{evidence_context(hits, max_context_chars)}\n\nAnswer with citations.",
+        )
+        return {"answer": answer}
+
+    def output_filter_node(state: DomainAgentState) -> DomainAgentState:
+        if state.get("final_status") == "refused":
+            return {}
+        answer = str(state.get("answer", ""))
+        output_check = output_content_filter(answer, domain_config) if enable_guardrails else {
+            "decision": "allow",
+            "risk_labels": [],
+            "redacted_preview": answer[:800],
         }
-    answer = invoke_prompt(
-        llm,
-        (
-            f"You are the answer agent for {domain_config.display_name}. "
-            "Answer only from evidence. Cite chunk_id values for every factual claim. "
-            "If evidence is insufficient, say so."
-        ),
-        f"Question: {safe_query}\n\nEvidence:\n{evidence_context(hits, max_context_chars)}\n\nAnswer with citations.",
-    )
-    output_check = output_content_filter(answer, domain_config) if enable_guardrails else {
-        "decision": "allow",
-        "risk_labels": [],
-        "redacted_preview": answer[:800],
-    }
-    if output_check["decision"] == "block":
+        if output_check["decision"] == "block":
+            return {
+                "output_filter": output_check,
+                "final_status": "refused",
+                "answer": "Generated answer was blocked by the output content filter.",
+            }
+        return {"output_filter": output_check}
+
+    def citation_node(state: DomainAgentState) -> DomainAgentState:
+        if state.get("final_status") == "refused":
+            return {
+                "citation_check": {
+                    "valid": False,
+                    "cited_chunk_ids": [],
+                    "missing_chunk_ids": [],
+                    "allowed_chunk_ids": [str(hit.get("chunk_id")) for hit in state.get("evidence", [])],
+                }
+            }
+        return {"citation_check": validate_citations(str(state.get("answer", "")), state.get("evidence", []))}
+
+    def governance_node(state: DomainAgentState) -> DomainAgentState:
+        if state.get("final_status") == "refused":
+            return {
+                "human_review": {"required": False, "status": "not_required", "triggers": []},
+                "final_status": "refused",
+            }
+        human_review = human_review_router(
+            domain_config,
+            state.get("safe_query", query),
+            str(state.get("answer", "")),
+            state.get("evidence", []),
+            state.get("citation_check", {}),
+            state.get("security", {}),
+            state.get("evidence_guard", {}),
+            state.get("output_filter"),
+        ) if enable_human_review else {"required": False, "status": "disabled", "triggers": []}
         return {
-            "domain": domain_config.domain,
-            "display_name": domain_config.display_name,
-            "final_status": "refused",
-            "answer": "Generated answer was blocked by the output content filter.",
-            "security": security,
-            "plain_text": plain_text,
-            "plan": plan,
-            "evidence_guard": evidence_check,
-            "output_filter": output_check,
-            "evidence": summarize_evidence(hits),
+            "human_review": human_review,
+            "final_status": human_review["status"] if human_review.get("required") else "answered",
         }
-    citation_check = validate_citations(answer, hits)
-    human_review = human_review_router(
-        domain_config, safe_query, answer, hits, citation_check, security, evidence_check, output_check
-    ) if enable_human_review else {"required": False, "status": "disabled", "triggers": []}
+
+    def continue_or_end(state: DomainAgentState) -> Literal["continue", "end"]:
+        return "end" if state.get("final_status") == "refused" else "continue"
+
+    graph = StateGraph(DomainAgentState)
+    graph.add_node("security_guard_step", security_node)
+    graph.add_node("plain_text_classifier_step", plain_text_node)
+    graph.add_node("planner_step", planner_node)
+    graph.add_node("hybrid_retriever_step", retrieval_node)
+    graph.add_node("evidence_guard_step", evidence_guard_node)
+    graph.add_node("answer_agent_step", answer_node)
+    graph.add_node("output_filter_step", output_filter_node)
+    graph.add_node("citation_critic_step", citation_node)
+    graph.add_node("governance_step", governance_node)
+    graph.set_entry_point("security_guard_step")
+    graph.add_conditional_edges("security_guard_step", continue_or_end, {"continue": "plain_text_classifier_step", "end": "citation_critic_step"})
+    graph.add_conditional_edges("plain_text_classifier_step", continue_or_end, {"continue": "planner_step", "end": "citation_critic_step"})
+    graph.add_edge("planner_step", "hybrid_retriever_step")
+    graph.add_edge("hybrid_retriever_step", "evidence_guard_step")
+    graph.add_conditional_edges("evidence_guard_step", continue_or_end, {"continue": "answer_agent_step", "end": "citation_critic_step"})
+    graph.add_edge("answer_agent_step", "output_filter_step")
+    graph.add_conditional_edges("output_filter_step", continue_or_end, {"continue": "citation_critic_step", "end": "citation_critic_step"})
+    graph.add_edge("citation_critic_step", "governance_step")
+    graph.add_edge("governance_step", END)
+    final_state = graph.compile().invoke({"query": query})
+
+    hits = final_state.get("evidence", [])
     return {
         "domain": domain_config.domain,
         "display_name": domain_config.display_name,
-        "final_status": human_review["status"] if human_review.get("required") else "answered",
+        "final_status": final_state.get("final_status", "answered"),
         "query": query,
-        "safe_query": safe_query,
-        "answer": answer,
-        "security": security,
-        "plain_text": plain_text,
-        "plan": plan,
-        "evidence_guard": evidence_check,
-        "output_filter": output_check,
-        "citation_check": citation_check,
-        "human_review": human_review,
+        "safe_query": final_state.get("safe_query", query),
+        "answer": final_state.get("answer"),
+        "security": final_state.get("security"),
+        "plain_text": final_state.get("plain_text"),
+        "plan": final_state.get("plan"),
+        "evidence_guard": final_state.get("evidence_guard"),
+        "output_filter": final_state.get("output_filter"),
+        "citation_check": final_state.get("citation_check"),
+        "human_review": final_state.get("human_review"),
         "evidence": summarize_evidence(hits),
+        "orchestration": {
+            "engine": "langgraph",
+            "nodes": [
+                "security_guard",
+                "plain_text_classifier",
+                "planner",
+                "hybrid_retriever",
+                "evidence_guard",
+                "answer_agent",
+                "output_filter",
+                "citation_critic",
+                "governance",
+            ],
+        },
         "elapsed_seconds": round(time.time() - started, 3),
     }
 

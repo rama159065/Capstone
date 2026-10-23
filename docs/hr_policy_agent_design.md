@@ -17,8 +17,9 @@ Example questions:
 |---|---|
 | Security Guardrail Agent | Blocks prompt injection, secrets, employee PII, and requests to bypass HR/legal process. |
 | Plain-Text Validation Agent | Confirms the message is plain-text HR-policy intent. |
+| LangGraph Orchestrator | Coordinates guardrails, planning, hybrid retrieval, evidence filtering, drafting, output filtering, citation checks, and HITL routing. |
 | Planner / Router | Routes to leave, wage-hour, telework, workplace rights, safety, or policy summary search. |
-| Retrieval Agent | Runs hybrid retrieval over HR-policy PDFs and existing HR policy records. |
+| Retrieval Agent | Runs hybrid retrieval over indexed HR-policy PDFs. The raw JSON corpus is available separately for future extension. |
 | HR Evidence Agent | Normalizes source agency, policy topic, page, and chunk IDs. |
 | Policy Answer Agent | Produces cited HR-policy explanations and flags uncertainty. |
 | Citation Critic | Verifies citations and removes unsupported legal/HR conclusions. |
@@ -64,4 +65,13 @@ The assistant can explain policy and draft HR responses, but it must not make pe
 
 ## Evaluation
 
-Evaluate retrieval recall@k separately from HR answer quality. Add red-team cases for employee PII, retaliation, illegal discrimination requests, legal advice, and policy-bypass attempts.
+Evaluate retrieval recall@k separately from HR answer quality. Security and HITL tests should cover employee PII, retaliation, illegal discrimination requests, legal advice, and policy-bypass attempts.
+
+## Implementation Status
+
+- Index CLI: `scripts/hr_policy/index.py`
+- Agent CLI: `scripts/hr_policy/agent.py`
+- Streamlit/HTML UI: `scripts/hr_policy/html_app.py`
+- Shared runtime: `scripts/domain_common/rag_agent.py`
+- Optional tracing: `--enable-langsmith --langsmith-project <project-name>`
+- Unit tests cover config wiring, indexing helpers, guarded LangGraph orchestration, citation validation, output filtering, and HITL routing.
