@@ -25,6 +25,10 @@ Example questions:
 | Citation Critic | Verifies every reimbursement claim cites retrieved chunks. |
 | Human Review Agent | Routes high-value, ambiguous, or exception-based reimbursement decisions to a reviewer. |
 
+## Why This Is Agentic RAG
+
+This assistant is **Agentic RAG** because travel-policy retrieval is one tool inside a governed workflow. The graph validates the request, plans policy retrieval, combines dense and BM25 evidence, checks retrieved policy text for unsafe instructions, drafts a cited answer, filters generated payment/card/sensitive-data language, validates citations, and escalates reimbursement decisions that need human approval.
+
 ## RAG Corpus
 
 PDFs are downloaded under:

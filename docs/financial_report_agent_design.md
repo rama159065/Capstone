@@ -371,6 +371,12 @@ Evaluate retrieval separately from final answer quality.
 
 The runnable Track B prompting layer is in `scripts/financial_prompting_agent.py`. It uses the existing financial-report hybrid retriever, LangChain `ChatPromptTemplate` for prompt construction, and LangGraph for the bounded guardrail -> planner -> retrieve -> evidence guard -> answer -> output filter -> citation critic -> governance loop.
 
+### Why This Is Agentic RAG
+
+The financial-report implementation is **Agentic RAG** because the LLM does more than answer over retrieved chunks. The `agentic_graph` keeps structured state across guardrail, classification, planning, retrieval, evidence review, answer generation, output filtering, citation criticism, and governance/HITL routing. Retrieval is a tool used by the graph, not the whole application.
+
+The graph can refuse unsafe input, narrow the query plan, combine dense and BM25 evidence, block prompt-injected retrieved text, repair missing citations once, escalate investment-sensitive or low-confidence answers to human review, and emit audit metadata. Those decision points are what make it agentic while still remaining bounded and citation-grounded.
+
 Implemented techniques:
 
 | Technique | Purpose |

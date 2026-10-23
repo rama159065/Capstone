@@ -17,6 +17,12 @@ security guardrail
 
 The shared implementation compiles a LangGraph state machine with explicit nodes for `security_guard`, `plain_text_classifier`, `planner`, `hybrid_retriever`, `evidence_guard`, `answer_agent`, `output_filter`, `citation_critic`, and `governance`. Each domain swaps domain-specific config, source filters, intent terms, and review triggers.
 
+## Why This Is Agentic RAG
+
+These domain agents are **Agentic RAG** rather than simple RAG because retrieval is treated as a controlled tool call inside a larger reasoning and governance graph. The system does not directly answer from the top-k chunks. It first checks the request, classifies intent, plans the retrieval action, combines dense and BM25 results, inspects evidence for prompt injection, generates a cited answer, filters the generated output, validates citations, and decides whether to release, refuse, or route to HITL.
+
+The agentic behavior is intentionally bounded: each node has a narrow responsibility, tool inputs are structured, retrieved content is treated as untrusted evidence, and governance can override the answer when confidence, safety, citation, or domain-risk conditions require review.
+
 ## Content Filtering Pattern
 
 Each domain uses layered content filtering:

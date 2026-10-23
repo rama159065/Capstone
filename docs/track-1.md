@@ -2,6 +2,10 @@
 
 This design corresponds to **Track A — Model-Side** in `Capstone-Templates-GenAI-Agentic-AI.pdf`. The deliverable is a domain-adapted open model, evaluated against its untuned baseline, grounded with retrieval, and served from the team's own endpoint.
 
+## Relation to Agentic RAG
+
+Track 1 is included as a reference for the model-side capstone path, but the implemented project follows Track B. In this repository, **Agentic RAG** means the retriever is not the whole application: retrieval is a tool inside a guarded LangGraph workflow with planning, tool execution, evidence checks, output filtering, citation validation, observability, and human-review routing. Track 1 can use RAG for grounding, but it becomes agentic only if those stateful planning, tool-use, critic, and governance steps are added around retrieval.
+
 ## 1. Goal and scope
 
 Choose one narrow enterprise workflow (for example, IT helpdesk resolution, insurance claim triage, or SOP question answering). Build **800–2,000 instruction/response examples**, reserve **150–200 examples** for a never-trained-on test set, and use a separate domain corpus of **200–1,000 documents** for RAG. Keep the training examples and retrieval corpus conceptually separate: training teaches task behavior and format; RAG supplies changeable facts and evidence.

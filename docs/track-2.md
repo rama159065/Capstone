@@ -75,6 +75,10 @@ Use **LangChain** for document loaders, splitters, embeddings, Chroma, BM25, ret
 
 The brief caps the agent at **10 steps per query**. Enforce the cap, tool timeout/retry policy, per-call and total token budgets, JSON/schema validation, bounded repair retries, and explicit handling for tool errors, malformed JSON, empty retrieval and loops. Treat retrieved documents and tool output as untrusted data; ignore instructions embedded in them. Use constrained decoding/schema response formats if the hosted endpoint supports them. Small models are error-prone at tool calls, so do not rely on free-form tool names or unvalidated arguments.
 
+### Why Track B Is Agentic RAG
+
+Track B is **Agentic RAG** when the RAG retriever is used as one tool in a bounded operations copilot. The agent must decide what to retrieve, call approved tools, inspect the returned evidence, validate citations, enforce safety/governance rules, and decide whether to answer, refuse, ask for clarification, or route to a human reviewer. This is different from standard RAG, where the application usually retrieves top-k chunks and sends them directly to a single answer prompt.
+
 ### Current project LangGraph runtime
 
 The implemented capstone runtime uses LangGraph for both the dedicated financial-report agent and the shared non-financial domain agents. The active graph shape is:

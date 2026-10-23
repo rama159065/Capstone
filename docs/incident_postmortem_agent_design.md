@@ -25,6 +25,10 @@ Example questions:
 | Citation Critic | Verifies claims against retrieved evidence and removes blameful unsupported language. |
 | Human Review Agent | Requires approval for sensitive incident reports or external publication. |
 
+## Why This Is Agentic RAG
+
+This drafter is **Agentic RAG** because incident-response guidance is used by a controlled drafting agent rather than a direct answer chain. The graph validates safety, plans incident/postmortem retrieval, builds evidence-backed timelines and action items, filters exploit or credential-sensitive text, validates citations, and routes public or blame-sensitive postmortems to human review.
+
 ## RAG Corpus
 
 PDFs are downloaded under:

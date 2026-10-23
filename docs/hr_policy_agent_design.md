@@ -25,6 +25,10 @@ Example questions:
 | Citation Critic | Verifies citations and removes unsupported legal/HR conclusions. |
 | Human Review Agent | Requires review for personnel decisions, legal advice, discipline, termination, or sensitive employee data. |
 
+## Why This Is Agentic RAG
+
+This navigator is **Agentic RAG** because HR-policy retrieval is governed by agent decisions before any response is released. The graph validates that the request is safe plain text, plans the relevant HR-policy search, checks retrieved policy text for prompt injection, drafts a cited explanation, filters employee-specific or legal-risk language, validates citations, and routes consequential HR decisions to HITL.
+
 ## RAG Corpus
 
 PDFs are downloaded under:

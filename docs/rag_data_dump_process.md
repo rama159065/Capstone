@@ -4,6 +4,12 @@ This project follows Track B: API-side multi-agent operations copilot. The
 corpus is for retrieval, citations, evaluation, and tool grounding. It is not a
 training set and should not be used for fine-tuning.
 
+## Why The Built System Is Agentic RAG
+
+The downloaded corpora support RAG, but the implemented project is **Agentic RAG** because the indexed evidence is consumed by governed agents rather than by a single retrieve-and-answer prompt. The financial agent and the shared non-financial domain agents use LangGraph to coordinate input security, plain-text/domain validation, planning, hybrid retrieval, evidence filtering, answer generation, output filtering, citation validation, and HITL governance.
+
+In practice, the data dump feeds tools such as dense retrieval, BM25 retrieval, table/chart lookup, and citation validation. The agent decides when to use those tools, when evidence is insufficient, when output should be blocked, and when a human reviewer is required.
+
 ## Folder layout
 
 Run:

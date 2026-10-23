@@ -4,6 +4,18 @@ Agentic RAG system for the Track B capstone: **API-side Multi-Agent Operations C
 
 The project implements citation-grounded Agentic RAG over public PDF corpora, hybrid retrieval, LangGraph-orchestrated guarded workflows, human-in-the-loop routing, Streamlit chat UIs, and retrieval evaluation.
 
+## Why This Is Agentic RAG
+
+This is **Agentic RAG** because retrieval is only one step inside a stateful agent workflow. A plain RAG chain usually does `query -> retrieve -> answer`; this project adds LangGraph nodes that validate the request, plan retrieval, call hybrid search tools, inspect retrieved evidence, draft an answer, filter unsafe output, validate citations, and route risky cases to human review.
+
+The implemented agent loop has these decision-making stages:
+
+```text
+security_guard -> plain_text_classifier -> planner -> hybrid_retriever -> evidence_guard -> answer_agent -> output_filter -> citation_critic -> governance
+```
+
+That makes the system agentic in the capstone sense: it uses tools, maintains structured state, applies bounded decisions, checks its own evidence/citations, records observability metadata, and can stop or escalate instead of always answering.
+
 ## Domains
 
 Implemented domains:

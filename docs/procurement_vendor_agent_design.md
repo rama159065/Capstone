@@ -25,6 +25,10 @@ Example questions:
 | Citation Critic | Verifies every policy claim cites retrieved evidence. |
 | Human Review Agent | Requires analyst approval before vendor disqualification, award recommendation, or externally shared review. |
 
+## Why This Is Agentic RAG
+
+This assistant is **Agentic RAG** because the procurement corpus is accessed through an agent workflow, not a single retrieval prompt. The planner chooses procurement/vendor-review retrieval actions, the evidence guard treats retrieved clauses as untrusted text, the answer agent drafts only from cited evidence, the output filter catches unsafe award or rejection language, and governance can route consequential vendor decisions to HITL.
+
 ## RAG Corpus
 
 PDFs are downloaded under:

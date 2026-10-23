@@ -25,6 +25,10 @@ Example questions:
 | Citation Critic | Verifies citations and flags unsupported market claims. |
 | Human Review Agent | Requires review before investment advice, external publication, or market-sensitive claims. |
 
+## Why This Is Agentic RAG
+
+This analyst is **Agentic RAG** because the annual-report corpus is retrieved through a multi-step decision graph. The planner decides which company/year evidence is needed, hybrid retrieval gathers candidates, the evidence guard blocks injected instructions, the comparison agent drafts grounded claims, the citation critic checks support, and governance routes investment-sensitive or publishable outputs to HITL.
+
 ## RAG Corpus
 
 PDFs are downloaded under:
