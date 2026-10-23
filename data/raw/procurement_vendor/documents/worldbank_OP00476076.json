@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476076",
+  "title": "One Health for Pandemic Prevention, Food Systems Resilience, and Ecosystem Health in Central Asia",
+  "text": "bid_description: Procurement of 10 Motorcycles, 10 Quad Bikes and 4 Snowmobiles for Wildlife Monitoring and Patrol Activities of the State Institution “Specially Protected Natural Areas” of the Committee for Environmental Protection\nbid_reference_no: OHP/G/RFQ-2026/01\nid: OP00476076\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P181459-One Health for Pandemic Prevention, Food Systems Resilience, and Ecosystem Health in Central Asia Loan/Credit/TF Info: IDA-E4520 Bid/Contract Reference No: OHP/G/RFQ-2026/01 Procurement Method: RFQ-Request for Quotations Scope of Contract: Procurement of 10 Motorcycles, 10 Quad Bikes and 4 Snowmobiles for Wildlife Monitoring and Patrol Activities of the State Institution Specially Protected Natural Areas of the CEP Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/02 Duration of Contract 60 Day(s) Awarded Bidder(s): BUNYODJON (1135906) Tursunzoda Country: Tajikistan Bid Price at Opening TJS 1380000.00 Evaluated Bid Price TJS 1380000.00 Signed Contract price TJS 1380000.00 Rejected Bidder(s): NEKRUZ KHIZMATRASON (1081268) Sogd Region, Jabbor Rasulov district. s. Gulkhona, Rudaki Str. Country: Tajikistan Bid Price at Opening TJS Evaluated Bid Price TJS Reason for Rejection Non Responsive GULI BAHOR (1081595) Nurobod Districk, jamoat Sarband, 21 I. Somoni str. Country: Tajikistan Bid Price at Opening TJS Evaluated Bid Price TJS Reason for Rejection Non Responsive \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Central Asia\nproject_id: P181459\nproject_name: One Health for Pandemic Prevention, Food Systems Resilience, and Ecosystem Health in Central Asia\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476076",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Central Asia",
+      "project_id": "P181459",
+      "project_name": "One Health for Pandemic Prevention, Food Systems Resilience, and Ecosystem Health in Central Asia",
+      "bid_reference_no": "OHP/G/RFQ-2026/01",
+      "bid_description": "Procurement of 10 Motorcycles, 10 Quad Bikes and 4 Snowmobiles for Wildlife Monitoring and Patrol Activities of the State Institution “Specially Protected Natural Areas” of the Committee for Environmental Protection",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P181459-One Health for Pandemic Prevention, Food Systems Resilience, and Ecosystem Health in Central Asia<br/><b>Loan/Credit/TF Info:</b>IDA-E4520<br/><b>Bid/Contract Reference No:</b>OHP/G/RFQ-2026/01<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Procurement of 10 Motorcycles, 10 Quad Bikes and 4 Snowmobiles for Wildlife Monitoring and Patrol Activities of the State Institution Specially Protected Natural Areas of the CEP</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/02<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>60 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>BUNYODJON (1135906)</b><br/>Tursunzoda<br/>Country: Tajikistan<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>TJS 1380000.00<br/><br/>Evaluated Bid Price<br/>TJS 1380000.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>TJS 1380000.00</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Rejected Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>NEKRUZ KHIZMATRASON (1081268)</b><br/>Sogd Region, Jabbor Rasulov district. s. Gulkhona, Rudaki Str.<br/>Country: Tajikistan<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>TJS<br/><br/>Evaluated Bid Price<br/>TJS<br/><br/>Reason for Rejection<br/>Non Responsive<br/></div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>GULI BAHOR (1081595)</b><br/>Nurobod Districk, jamoat Sarband, 21 I. Somoni str.<br/>Country: Tajikistan<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>TJS<br/><br/>Evaluated Bid Price<br/>TJS<br/><br/>Reason for Rejection<br/>Non Responsive<br/></div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "e154d3dbb4e540b85dcf7a02b2410666d4f52cff844557dc1ceecf89865f39e1"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ForeignCurrencyDerivativeInstrumentsNotDesignatedAsHedgingInstrumentsLiabilityAtFairValue",
+  "title": "Apple Inc. - Foreign Currency Derivative Instruments Not Designated as Hedging Instruments, Liability at Fair Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ForeignCurrencyDerivativeInstrumentsNotDesignatedAsHedgingInstrumentsLiabilityAtFairValue\nLabel: Foreign Currency Derivative Instruments Not Designated as Hedging Instruments, Liability at Fair Value\nDescription: Fair value as of the balance sheet date of all foreign currency derivative liabilities not designated as hedging instruments.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 1000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 1000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 24000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 118000000\nUSD 2010 FY 10-K filed 2010-10-27: 118000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 21000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ForeignCurrencyDerivativeInstrumentsNotDesignatedAsHedgingInstrumentsLiabilityAtFairValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "c2b0238de93428a0d3eab3d08e8dfe6211ac66c402a1ce661183a55bfd4d6d90"
+}

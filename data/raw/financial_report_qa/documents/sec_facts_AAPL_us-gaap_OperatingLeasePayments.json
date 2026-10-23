@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OperatingLeasePayments",
+  "title": "Apple Inc. - Operating Lease, Payments",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OperatingLeasePayments\nLabel: Operating Lease, Payments\nDescription: Amount of cash outflow from operating lease, excluding payments to bring another asset to condition and location necessary for its intended use.\nRecent reported values:\nUSD 2021 FY 10-K filed 2021-10-29: 1400000000\nUSD 2022 FY 10-K filed 2022-10-28: 1400000000\nUSD 2023 FY 10-K filed 2023-11-03: 1400000000\nUSD 2022 FY 10-K filed 2022-10-28: 1800000000\nUSD 2023 FY 10-K filed 2023-11-03: 1800000000\nUSD 2024 FY 10-K filed 2024-11-01: 1800000000\nUSD 2023 FY 10-K filed 2023-11-03: 1900000000\nUSD 2024 FY 10-K filed 2024-11-01: 1900000000\nUSD 2025 FY 10-K filed 2025-10-31: 1900000000\nUSD 2024 FY 10-K filed 2024-11-01: 1900000000\nUSD 2025 FY 10-K filed 2025-10-31: 1900000000\nUSD 2025 FY 10-K filed 2025-10-31: 2100000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OperatingLeasePayments",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "90a05182e21552c0c2f2ec6224ef77b4e95121b54797a3aad6d69e65a29df0a3"
+}

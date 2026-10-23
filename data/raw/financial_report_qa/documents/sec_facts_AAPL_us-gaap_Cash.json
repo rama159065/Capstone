@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_Cash",
+  "title": "Apple Inc. - Cash",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: Cash\nLabel: Cash\nDescription: Amount of currency on hand as well as demand deposits with banks or financial institutions. Includes other kinds of accounts that have the general characteristics of demand deposits. Excludes cash and cash equivalents within disposal group and discontinued operation.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 1139000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 1139000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 1926000000\nUSD 2010 FY 10-K filed 2010-10-27: 1690000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "Cash",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "5c8772c9460a256923b1ddf348cf2a682f0506b5bc5ab714adb9f95904c5a59b"
+}

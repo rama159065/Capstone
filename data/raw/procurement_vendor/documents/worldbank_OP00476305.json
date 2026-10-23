@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476305",
+  "title": "Philippine Fisheries and Coastal Resiliency Project",
+  "text": "bid_description: FCU 7: Supplies of Labor and Materials for the Construction and Installation of 93.60 KWP Hybrid Solar Electrical System\nbid_reference_no: PH-BFAR RO 10 - FMA9-525755-CW-RFQ\nid: OP00476305\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P174137-Philippine Fisheries and Coastal Resiliency Project Loan/Credit/TF Info: IBRD-94800 Bid/Contract Reference No: PH-BFAR RO 10 - FMA9-525755-CW-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: FCU 7: Supplies of Labor and Materials for the Construction and Installation of 93.60 KWP Hybrid Solar Electrical System Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2025/12/22 Duration of Contract 120 Day(s) Awarded Bidder(s): ROSEJEL CONSTRUCTION (1122607) TANAY, RIZAL Country: Philippines Bid Price at Opening PHP 4590000.00 Evaluated Bid Price PHP 4590000.00 Signed Contract price PHP 4590000.00 Evaluated Bidder(s): JECO DISTRIBUTOR CO., INC. (1122632) VILLAMONTE, BACOLOD CITY Country: Philippines Bid Price at Opening PHP 4793900.00 Evaluated Bid Price PHP 4793900.00 G-RHINO CONSTRUCTION & SUPPLY (1122614) INABANGA, BOHOL Country: Philippines Bid Price at Opening PHP 4607268.02 Evaluated Bid Price PHP 4607268.02 \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: CW\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Philippines\nproject_id: P174137\nproject_name: Philippine Fisheries and Coastal Resiliency Project\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=100&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476305",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Philippines",
+      "project_id": "P174137",
+      "project_name": "Philippine Fisheries and Coastal Resiliency Project",
+      "bid_reference_no": "PH-BFAR RO 10 - FMA9-525755-CW-RFQ",
+      "bid_description": "FCU 7: Supplies of Labor and Materials for the Construction and Installation of 93.60 KWP Hybrid Solar Electrical System",
+      "procurement_group": "CW",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P174137-Philippine Fisheries and Coastal Resiliency Project<br/><b>Loan/Credit/TF Info:</b>IBRD-94800<br/><b>Bid/Contract Reference No:</b>PH-BFAR RO 10 - FMA9-525755-CW-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>FCU 7: Supplies of Labor and Materials for the Construction and Installation of 93.60 KWP Hybrid Solar Electrical System</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2025/12/22<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>120 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>ROSEJEL CONSTRUCTION (1122607)</b><br/>TANAY, RIZAL<br/>Country: Philippines<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PHP 4590000.00<br/><br/>Evaluated Bid Price<br/>PHP 4590000.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>PHP 4590000.00</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>JECO DISTRIBUTOR CO., INC. (1122632)</b><br/>VILLAMONTE, BACOLOD CITY<br/>Country: Philippines<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PHP 4793900.00<br/><br/>Evaluated Bid Price<br/>PHP 4793900.00</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>G-RHINO CONSTRUCTION & SUPPLY (1122614)</b><br/>INABANGA, BOHOL<br/>Country: Philippines<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PHP 4607268.02<br/><br/>Evaluated Bid Price<br/>PHP 4607268.02</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:11+00:00",
+  "content_sha256": "4ff362484c99d1007c80bac8c976bd0c02ac6cc641ea052d4bf9ed61b958f711"
+}

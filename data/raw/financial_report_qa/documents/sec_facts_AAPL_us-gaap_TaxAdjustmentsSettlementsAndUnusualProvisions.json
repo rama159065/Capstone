@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_TaxAdjustmentsSettlementsAndUnusualProvisions",
+  "title": "Apple Inc. - Tax Adjustments, Settlements, and Unusual Provisions",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: TaxAdjustmentsSettlementsAndUnusualProvisions\nLabel: Tax Adjustments, Settlements, and Unusual Provisions\nDescription: Amount of increase (decrease) to previously recorded tax expense. Includes, but is not limited to, significant settlements of income tax disputes, and unusual tax positions or infrequent actions taken by the entity, including tax assessment reversal, and IRS tax settlement.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 52000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 52000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "TaxAdjustmentsSettlementsAndUnusualProvisions",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b150bf7631eff75a05daf064ebd9732017f9dd23f092cba61906454a912f4deb"
+}

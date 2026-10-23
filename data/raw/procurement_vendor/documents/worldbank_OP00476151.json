@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476151",
+  "title": "Strengthening Early Childhood Development and Basic Education Systems to Support Human Capital Devel",
+  "text": "bid_description: Supply and Delivery of Dignity Packs for Boys and Girls' Clubs - Term 3 Girls Package\nbid_reference_no: SZ-MOET-561828-GO-RFQ\nid: OP00476151\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P173151-Strengthening Early Childhood Development and Basic Education Systems to Support Human Capital Development in Eswatini Project Loan/Credit/TF Info: IBRD-93750 Bid/Contract Reference No: SZ-MOET-561828-GO-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: SUPPLY AND DELIVERY OF DIGNITY PACKS FOR BOYS AND GIRLS CLUBS TERM 3 Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/09/28 Duration of Contract 6 Month(s) Awarded Bidder(s): CARNECIA INVESTMENTS (1072739) Plot No: 100 Mbabane Eswatini Country: Eswatini Bid Price at Opening SZL 2503133.70 Evaluated Bid Price SZL 1847846.00 Signed Contract price SZL 1847846.50 Evaluated Bidder(s): PROMPT RESPONSE (1131008) LENHLE BUILDING MBABANE SIDWASHINI Country: Eswatini Bid Price at Opening SZL 2765013.00 Evaluated Bid Price SZL 2765013.00 Rejected Bidder(s): MAURUSS GENERAL SUPPLIERS (1130995) LM BUILDING MBABANE ESWATINI Country: Eswatini Bid Price at Opening SZL Evaluated Bid Price SZL Reason for Rejection Non-compliance \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Eswatini\nproject_id: P173151\nproject_name: Strengthening Early Childhood Development and Basic Education Systems to Support Human Capital Devel\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=400&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476151",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Eswatini",
+      "project_id": "P173151",
+      "project_name": "Strengthening Early Childhood Development and Basic Education Systems to Support Human Capital Devel",
+      "bid_reference_no": "SZ-MOET-561828-GO-RFQ",
+      "bid_description": "Supply and Delivery of Dignity Packs for Boys and Girls' Clubs - Term 3 Girls Package",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P173151-Strengthening Early Childhood Development and Basic Education Systems to Support Human Capital Development in Eswatini Project<br/><b>Loan/Credit/TF Info:</b>IBRD-93750<br/><b>Bid/Contract Reference No:</b>SZ-MOET-561828-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>SUPPLY AND DELIVERY OF DIGNITY PACKS FOR BOYS AND GIRLS CLUBS  TERM 3</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/09/28<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>6 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>CARNECIA INVESTMENTS (1072739)</b><br/>Plot No: 100 Mbabane Eswatini<br/>Country: Eswatini<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>SZL 2503133.70<br/><br/>Evaluated Bid Price<br/>SZL 1847846.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>SZL 1847846.50</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>PROMPT RESPONSE (1131008)</b><br/>LENHLE BUILDING MBABANE SIDWASHINI<br/>Country: Eswatini<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>SZL 2765013.00<br/><br/>Evaluated Bid Price<br/>SZL 2765013.00</div></br></div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Rejected Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>MAURUSS GENERAL SUPPLIERS (1130995)</b><br/>LM BUILDING MBABANE ESWATINI<br/>Country: Eswatini<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>SZL<br/><br/>Evaluated Bid Price<br/>SZL<br/><br/>Reason for Rejection<br/>Non-compliance<br/></div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:21+00:00",
+  "content_sha256": "aa0d1f30ed2bd17b60149fbdf152f93f558e03a059de5f578e247663909b69aa"
+}

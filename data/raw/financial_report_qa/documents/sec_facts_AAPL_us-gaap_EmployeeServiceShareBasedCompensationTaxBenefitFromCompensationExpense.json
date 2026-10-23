@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_EmployeeServiceShareBasedCompensationTaxBenefitFromCompensationExpense",
+  "title": "Apple Inc. - Share-based Payment Arrangement, Expense, Tax Benefit",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: EmployeeServiceShareBasedCompensationTaxBenefitFromCompensationExpense\nLabel: Share-based Payment Arrangement, Expense, Tax Benefit\nDescription: Amount of tax benefit for recognition of expense of award under share-based payment arrangement.\nRecent reported values:\nUSD 2025 Q2 10-Q filed 2025-05-02: 743000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 743000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 2870000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 2870000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 795000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 795000000\nUSD 2025 FY 10-K filed 2025-10-31: 3602000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 1293000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 2095000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 802000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 3217000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 1122000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "EmployeeServiceShareBasedCompensationTaxBenefitFromCompensationExpense",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "616157f196592bee0f62a212df03f92c4eee6fda37c5ef0f709806a0c9a7185e"
+}

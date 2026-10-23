@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeUnrealizedGainLossOnDerivativesArisingDuringPeriodTax",
+  "title": "Apple Inc. - Other Comprehensive Income (Loss), Unrealized Gain (Loss) on Derivatives Arising During Period, Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeUnrealizedGainLossOnDerivativesArisingDuringPeriodTax\nLabel: Other Comprehensive Income (Loss), Unrealized Gain (Loss) on Derivatives Arising During Period, Tax\nDescription: Amount of tax expense (benefit), before reclassification adjustments, related to increase (decrease) in accumulated gain (loss) from derivative instruments designated and qualifying as the effective portion of cash flow hedges and an entity's share of an equity investee's increase (decrease) in deferred hedging gain (loss).\nRecent reported values:\nUSD 2017 Q3 10-Q filed 2017-08-02: 269000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 269000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 16000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 16000000\nUSD 2017 FY 10-K filed 2017-11-03: 478000000\nUSD 2018 FY 10-K filed 2018-11-05: 478000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 66000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 130000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 64000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 60000000\nUSD 2018 Q3 10-Q filed 2018-08-01: -70000000\nUSD 2018 FY 10-K filed 2018-11-05: 149000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeUnrealizedGainLossOnDerivativesArisingDuringPeriodTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "fb8f60755d2a077fd8d0d0346dd006878b2fd243bd4b24c731570143d3b1b46a"
+}

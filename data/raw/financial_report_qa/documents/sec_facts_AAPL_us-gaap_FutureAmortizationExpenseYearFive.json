@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_FutureAmortizationExpenseYearFive",
+  "title": "Apple Inc. - Future Amortization Expense, Year Five (Deprecated 2012-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: FutureAmortizationExpenseYearFive\nLabel: Future Amortization Expense, Year Five (Deprecated 2012-01-31)\nDescription: The amount of amortization expense expected to be recognized during year five of the five succeeding fiscal years.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 17000000\nUSD 2011 FY 10-K filed 2011-10-26: 426000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "FutureAmortizationExpenseYearFive",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "9db1c6bd0d2ba334e63eb483c65a0bc626670aa9399f78f2725a693031d58dea"
+}

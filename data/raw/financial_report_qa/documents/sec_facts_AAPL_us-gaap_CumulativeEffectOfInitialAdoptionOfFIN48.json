@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CumulativeEffectOfInitialAdoptionOfFIN48",
+  "title": "Apple Inc. - Cumulative Effect of Initial Adoption of FIN 48 (Deprecated 2011-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CumulativeEffectOfInitialAdoptionOfFIN48\nLabel: Cumulative Effect of Initial Adoption of FIN 48 (Deprecated 2011-01-31)\nDescription: Cumulative net-of-tax effect of initial adoption of FIN 48 - Accounting for Uncertainty in Income Taxes on the opening balance of retained earnings. The cumulative-effect adjustment does not include items that would not be recognized in earnings, such as the effect of adopting this Interpretation on tax positions related to business combinations. The amount of that cumulative-effect adjustment is the difference between the net amount of assets and liabilities recognized in the statement of financial position prior to the application of this Interpretation and the net amount of assets and liabilities recognized as a result of applying the provisions of this Interpretation.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 56000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CumulativeEffectOfInitialAdoptionOfFIN48",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "cfae25c3e2baad203b6fc4644402028d8922b0ad123a375a92c83f64dfeebe84"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CommonStockDividendsPerShareCashPaid",
+  "title": "Apple Inc. - Common Stock, Dividends, Per Share, Cash Paid",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CommonStockDividendsPerShareCashPaid\nLabel: Common Stock, Dividends, Per Share, Cash Paid\nDescription: Aggregate dividends paid during the period for each share of common stock outstanding.\nRecent reported values:\nUSD/shares 2013 Q2 10-Q filed 2013-04-24: 5.3",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CommonStockDividendsPerShareCashPaid",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "a6d167acbf21df2825fba047ec9c5bb184b2ad6e2dd09493f67504a67808ecdd"
+}

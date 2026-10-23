@@ -1,0 +1,17 @@
+{
+  "domain": "competitive_research",
+  "document_id": "sec_competitive_META_0001628280-26-066773",
+  "title": "Meta Platforms, Inc. 10-Q filed 2026-10-22",
+  "text": "Company: Meta Platforms, Inc.\nTicker: META\nCIK: 0001326801\nSIC: 7370 Services-Computer Programming, Data Processing, Etc.\nBusiness address: {'street1': '1 META WAY', 'street2': None, 'city': 'MENLO PARK', 'stateOrCountry': 'CA', 'zipCode': '94025', 'stateOrCountryDescription': 'CA', 'isForeignLocation': None, 'foreignStateTerritory': None, 'country': None, 'countryCode': None}\nForm: 10-Q\nFiling date: 2026-10-22\nAccession number: 0001628280-26-066773\nPrimary document: meta-20260930.htm\nPrimary document description: 10-Q\nFiling URL: https://www.sec.gov/Archives/edgar/data/1326801/000162828026066773/meta-20260930.htm",
+  "source_name": "SEC EDGAR submissions",
+  "source_url": "https://data.sec.gov/submissions/CIK0001326801.json",
+  "metadata": {
+    "ticker": "META",
+    "cik": "0001326801",
+    "form": "10-Q",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/1326801/000162828026066773/meta-20260930.htm",
+    "source_type": "sec_filing_metadata"
+  },
+  "downloaded_at": "2026-10-22T12:41:57+00:00",
+  "content_sha256": "1a5feb88d9020924620cf9d22d3ec8e478015536af4dbce9088e53f0dfa63911"
+}

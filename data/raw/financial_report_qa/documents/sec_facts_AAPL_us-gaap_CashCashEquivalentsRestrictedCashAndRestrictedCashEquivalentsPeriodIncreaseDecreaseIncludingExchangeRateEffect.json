@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalentsPeriodIncreaseDecreaseIncludingExchangeRateEffect",
+  "title": "Apple Inc. - Cash, Cash Equivalents, Restricted Cash and Restricted Cash Equivalents, Period Increase (Decrease), Including Exchange Rate Effect",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalentsPeriodIncreaseDecreaseIncludingExchangeRateEffect\nLabel: Cash, Cash Equivalents, Restricted Cash and Restricted Cash Equivalents, Period Increase (Decrease), Including Exchange Rate Effect\nDescription: Amount of increase (decrease) in cash, cash equivalents, and cash and cash equivalents restricted to withdrawal or usage; including effect from exchange rate change. Cash includes, but is not limited to, currency on hand, demand deposits with banks or financial institutions, and other accounts with general characteristics of demand deposits. Cash equivalents include, but are not limited to, short-term, highly liquid investments that are both readily convertible to known amounts of cash and so near their maturity that they present insignificant risk of changes in value because of changes in interest rates.\nRecent reported values:\nUSD 2024 FY 10-K filed 2024-11-01: -794000000\nUSD 2025 FY 10-K filed 2025-10-31: -794000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 356000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 356000000\nUSD 2025 Q2 10-Q filed 2025-05-02: -1781000000\nUSD 2026 Q2 10-Q filed 2026-05-01: -1781000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 6326000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 6326000000\nUSD 2025 FY 10-K filed 2025-10-31: 5991000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 9383000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 9638000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 3610000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalentsPeriodIncreaseDecreaseIncludingExchangeRateEffect",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "bd16e20625a7c3b6908c6cc27edc1eb2811496ab8149cba020f4b8d5322ac2c7"
+}

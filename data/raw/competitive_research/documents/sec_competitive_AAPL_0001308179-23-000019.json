@@ -1,0 +1,17 @@
+{
+  "domain": "competitive_research",
+  "document_id": "sec_competitive_AAPL_0001308179-23-000019",
+  "title": "Apple Inc. DEF 14A filed 2023-01-12",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nSIC: 3571 Electronic Computers\nBusiness address: {'street1': 'ONE APPLE PARK WAY', 'street2': None, 'city': 'CUPERTINO', 'stateOrCountry': 'CA', 'zipCode': '95014', 'stateOrCountryDescription': 'CA', 'isForeignLocation': None, 'foreignStateTerritory': None, 'country': None, 'countryCode': None}\nForm: DEF 14A\nFiling date: 2023-01-12\nAccession number: 0001308179-23-000019\nPrimary document: laap2023_def14a.htm\nPrimary document description: APPLE INC. - DEF 14A\nFiling URL: https://www.sec.gov/Archives/edgar/data/320193/000130817923000019/laap2023_def14a.htm",
+  "source_name": "SEC EDGAR submissions",
+  "source_url": "https://data.sec.gov/submissions/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "form": "DEF 14A",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/320193/000130817923000019/laap2023_def14a.htm",
+    "source_type": "sec_filing_metadata"
+  },
+  "downloaded_at": "2026-10-22T12:41:49+00:00",
+  "content_sha256": "0515220e12cc8099c9d0cab32250a5b5812b17095b2fb554e412ed6c31f3f231"
+}

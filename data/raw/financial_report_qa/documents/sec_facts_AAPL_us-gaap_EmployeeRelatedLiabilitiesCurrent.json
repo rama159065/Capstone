@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_EmployeeRelatedLiabilitiesCurrent",
+  "title": "Apple Inc. - Employee-related Liabilities, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: EmployeeRelatedLiabilitiesCurrent\nLabel: Employee-related Liabilities, Current\nDescription: Total of the carrying values as of the balance sheet date of obligations incurred through that date and payable for obligations related to services received from employees, such as accrued salaries and bonuses, payroll taxes and fringe benefits. Used to reflect the current portion of the liabilities (due within one year or within the normal operating cycle if longer).\nRecent reported values:\nUSD None None 8-K filed 2015-01-28: 959000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 1002000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 980000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 1234000000\nUSD 2014 FY 10-K filed 2014-10-27: 1209000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 1209000000\nUSD None None 8-K filed 2015-01-28: 1209000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 1209000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 1209000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 1316000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 1254000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 1551000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "EmployeeRelatedLiabilitiesCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "44951d50e7fec7b4bbdafeabc7e6f8ea9bd8d0572ebd6a42bb8f2d3ff02cd129"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ForeignCurrencyDerivativeAssetsAtFairValue",
+  "title": "Apple Inc. - Foreign Currency Derivative Assets at Fair Value (Deprecated 2014-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ForeignCurrencyDerivativeAssetsAtFairValue\nLabel: Foreign Currency Derivative Assets at Fair Value (Deprecated 2014-01-31)\nDescription: Fair value as of the balance sheet date of foreign currency derivative assets, which includes all such derivative instruments in hedging and nonhedging relationships that are recognized as assets on the balance sheet.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 37000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 37000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 206000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 107000000\nUSD 2010 FY 10-K filed 2010-10-27: 107000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 194000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ForeignCurrencyDerivativeAssetsAtFairValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "ffd45f20c172549964ffed78fba6aebc710c55e2cd4c3b56ade9c74fa02e28ef"
+}

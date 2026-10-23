@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DecreaseInUnrecognizedTaxBenefitsIsReasonablyPossible",
+  "title": "Apple Inc. - Decrease in Unrecognized Tax Benefits is Reasonably Possible",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DecreaseInUnrecognizedTaxBenefitsIsReasonablyPossible\nLabel: Decrease in Unrecognized Tax Benefits is Reasonably Possible\nDescription: Amount of decrease reasonably possible in the next twelve months for the unrecognized tax benefit.\nRecent reported values:\nUSD 2019 FY 10-K filed 2019-10-31: 2000000000\nUSD 2020 Q1 10-Q filed 2020-01-29: 2300000000\nUSD 2020 Q2 10-Q filed 2020-05-01: 2300000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 4800000000\nUSD 2020 FY 10-K filed 2020-10-30: 3900000000\nUSD 2021 Q1 10-Q filed 2021-01-28: 4100000000\nUSD 2021 Q2 10-Q filed 2021-04-29: 3100000000\nUSD 2021 Q3 10-Q filed 2021-07-28: 2400000000\nUSD 2021 FY 10-K filed 2021-10-29: 1200000000\nUSD 2022 FY 10-K filed 2022-10-28: 4800000000\nUSD 2023 FY 10-K filed 2023-11-03: 4500000000\nUSD 2025 FY 10-K filed 2025-10-31: 6000000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DecreaseInUnrecognizedTaxBenefitsIsReasonablyPossible",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "0627d231933c4e832f9e6a416b0fe484248278a0d74bf077803f370057007752"
+}

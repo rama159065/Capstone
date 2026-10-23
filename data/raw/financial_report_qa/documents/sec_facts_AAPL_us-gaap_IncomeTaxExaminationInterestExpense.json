@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncomeTaxExaminationInterestExpense",
+  "title": "Apple Inc. - Income Tax Examination, Interest Expense",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncomeTaxExaminationInterestExpense\nLabel: Income Tax Examination, Interest Expense\nDescription: The amount of estimated interest recognized in the period arising from income tax examinations.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 64000000\nUSD 2010 FY 10-K filed 2010-10-27: -43000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncomeTaxExaminationInterestExpense",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "6af415ac5cb18f7d076301a2877cb0a69b496171d4aa93ed16b48f05bf16060b"
+}

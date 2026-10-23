@@ -1,0 +1,99 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Cloudflare_Status_7hicc5bfkvx3",
+  "title": "Cloudflare Status - Elevated number of 5XX errors in PDX",
+  "text": "Service: Cloudflare Status\nIncident: Elevated number of 5XX errors in PDX\nStatus: resolved\nImpact: none\nStarted: 2026-10-14T04:40:32.403Z\nResolved: 2026-10-14T06:45:43.255Z\nUpdates:\n- 2026-10-14T06:45:43.255Z: resolved - Mitigations have been put in place to prevent recurrence.\n- 2026-10-14T04:54:34.852Z: monitoring - A fix has been implemented and we are monitoring the results.\n- 2026-10-14T04:40:32.403Z: investigating - Cloudflare is investigating increased numbers of 5XX errors in PDX. We are working to analyse and mitigate this problem. More updates to follow shortly.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://www.cloudflarestatus.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "7hicc5bfkvx3",
+      "name": "Elevated number of 5XX errors in PDX",
+      "status": "resolved",
+      "created_at": "2026-10-14T04:40:32.403Z",
+      "updated_at": "2026-10-14T06:45:43.255Z",
+      "monitoring_at": null,
+      "resolved_at": "2026-10-14T06:45:43.255Z",
+      "impact": "none",
+      "shortlink": "https://www.cloudflarestatus.com/incidents/7hicc5bfkvx3",
+      "started_at": "2026-10-14T04:40:32.403Z",
+      "page_id": "yh6f0r4529hb",
+      "incident_updates": [
+        {
+          "id": "shy2p61nbo59",
+          "status": "resolved",
+          "body": "Mitigations have been put in place to prevent recurrence.",
+          "incident_id": "7hicc5bfkvx3",
+          "created_at": "2026-10-14T06:45:43.255Z",
+          "updated_at": "2026-10-14T06:45:43.255Z",
+          "display_at": "2026-10-14T06:45:43.255Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "h8jjib4bdnun",
+          "status": "monitoring",
+          "body": "A fix has been implemented and we are monitoring the results.",
+          "incident_id": "7hicc5bfkvx3",
+          "created_at": "2026-10-14T04:54:34.852Z",
+          "updated_at": "2026-10-14T04:54:34.852Z",
+          "display_at": "2026-10-14T04:54:34.852Z",
+          "affected_components": [
+            {
+              "code": "9b9tyrd9x3xr",
+              "name": "North America - Portland, OR, United States - (PDX)",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "6ce9b2055fbu",
+          "status": "investigating",
+          "body": "Cloudflare is investigating increased numbers of 5XX errors in PDX. We are working to analyse and mitigate this problem. More updates to follow shortly.",
+          "incident_id": "7hicc5bfkvx3",
+          "created_at": "2026-10-14T04:40:32.403Z",
+          "updated_at": "2026-10-14T04:40:32.403Z",
+          "display_at": "2026-10-14T04:40:32.403Z",
+          "affected_components": [
+            {
+              "code": "9b9tyrd9x3xr",
+              "name": "North America - Portland, OR, United States - (PDX)",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "9b9tyrd9x3xr",
+          "name": "Portland, OR, United States - (PDX)",
+          "status": "operational",
+          "created_at": "2017-08-31T11:47:10.000Z",
+          "updated_at": "2026-09-15T13:10:54.000Z",
+          "position": 42,
+          "description": null,
+          "showcase": false,
+          "start_date": null,
+          "group_id": "4l01sk5cdn5c",
+          "page_id": "yh6f0r4529hb",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:22+00:00",
+  "content_sha256": "2debfb66b178189d2ebebb4716c29f81fa9c753b493cae6faaadad9583d4d8dc"
+}

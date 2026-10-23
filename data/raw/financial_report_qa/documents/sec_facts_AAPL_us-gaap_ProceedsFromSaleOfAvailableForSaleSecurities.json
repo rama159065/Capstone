@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ProceedsFromSaleOfAvailableForSaleSecurities",
+  "title": "Apple Inc. - Proceeds from Sale of Available-for-sale Securities",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ProceedsFromSaleOfAvailableForSaleSecurities\nLabel: Proceeds from Sale of Available-for-sale Securities\nDescription: The cash inflow associated with the sale of debt and equity securities classified as available-for-sale securities.\nRecent reported values:\nUSD 2017 Q1 10-Q filed 2017-02-01: 32166000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 32166000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 60454000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 60454000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 76747000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 76747000000\nUSD 2017 FY 10-K filed 2017-11-03: 94564000000\nUSD 2018 FY 10-K filed 2018-11-05: 94564000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 16801000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 38942000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 41614000000\nUSD 2018 FY 10-K filed 2018-11-05: 47838000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ProceedsFromSaleOfAvailableForSaleSecurities",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "80330deab769bd5d47d25e8722b53e82499d51fc190c33bf82c8d1f2df63b58b"
+}

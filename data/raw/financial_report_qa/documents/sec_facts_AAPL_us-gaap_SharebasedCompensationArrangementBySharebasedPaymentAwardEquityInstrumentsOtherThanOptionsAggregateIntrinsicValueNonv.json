@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_SharebasedCompensationArrangementBySharebasedPaymentAwardEquityInstrumentsOtherThanOptionsAggregateIntrinsicValueNonvested",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Aggregate Intrinsic Value, Nonvested",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: SharebasedCompensationArrangementBySharebasedPaymentAwardEquityInstrumentsOtherThanOptionsAggregateIntrinsicValueNonvested\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Aggregate Intrinsic Value, Nonvested\nDescription: Intrinsic value of nonvested award under share-based payment arrangement. Excludes share and unit options.\nRecent reported values:\nUSD 2014 Q1 10-Q filed 2014-01-28: 9543000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 9247000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 9850000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "SharebasedCompensationArrangementBySharebasedPaymentAwardEquityInstrumentsOtherThanOptionsAggregateIntrinsicValueNonvested",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "ee28532e3a7153e4ee1c176184f6a7ce4e3a87a7b1faaad369892033ef6bf755"
+}

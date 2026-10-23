@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_Revenues",
+  "title": "Apple Inc. - Revenues",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: Revenues\nLabel: Revenues\nDescription: Amount of revenue recognized from goods sold, services rendered, insurance premiums, or other activities that constitute an earning process. Includes, but is not limited to, investment and interest income before deduction of interest expense when recognized as a component of revenue, and sales and trading gain (loss).\nRecent reported values:\nUSD 2018 FY 10-K filed 2018-11-05: 215639000000\nUSD 2018 FY 10-K filed 2018-11-05: 78351000000\nUSD 2018 FY 10-K filed 2018-11-05: 52896000000\nUSD 2018 FY 10-K filed 2018-11-05: 45408000000\nUSD 2018 FY 10-K filed 2018-11-05: 229234000000\nUSD 2018 FY 10-K filed 2018-11-05: 52579000000\nUSD 2018 FY 10-K filed 2018-11-05: 88293000000\nUSD 2018 FY 10-K filed 2018-11-05: 61137000000\nUSD 2018 FY 10-K filed 2018-11-05: 53265000000\nUSD 2018 FY 10-K filed 2018-11-05: 265595000000\nUSD 2018 FY 10-K filed 2018-11-05: 62900000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "Revenues",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "800f4cced7e029b1c5c485bea07538323d7087816aff6afeaed75d8b84d0d59f"
+}

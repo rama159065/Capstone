@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ImpairmentOfIntangibleAssetsExcludingGoodwill",
+  "title": "Apple Inc. - Impairment of Intangible Assets (Excluding Goodwill)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ImpairmentOfIntangibleAssetsExcludingGoodwill\nLabel: Impairment of Intangible Assets (Excluding Goodwill)\nDescription: The amount of impairment loss recognized in the period resulting from the write-down of the carrying amount of an intangible asset (excluding goodwill) to fair value.\nRecent reported values:\nUSD 2012 FY 8-K filed 2013-04-24: 0\nUSD 2012 FY 10-K filed 2012-10-31: 0\nUSD 2011 FY 10-K filed 2011-10-26: 0\nUSD 2010 FY 10-K filed 2010-10-27: 0\nUSD 2013 FY 10-K filed 2013-10-30: 0\nUSD 2012 FY 8-K filed 2013-04-24: 0\nUSD 2012 FY 10-K filed 2012-10-31: 0\nUSD 2011 FY 10-K filed 2011-10-26: 0\nUSD 2013 FY 10-K filed 2013-10-30: 0\nUSD 2012 FY 8-K filed 2013-04-24: 0\nUSD 2012 FY 10-K filed 2012-10-31: 0\nUSD 2013 FY 10-K filed 2013-10-30: 0",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ImpairmentOfIntangibleAssetsExcludingGoodwill",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "486dab370cb0e40f650d8a25f76df1c7f4d9085730e4380ee19440ad5f20c672"
+}

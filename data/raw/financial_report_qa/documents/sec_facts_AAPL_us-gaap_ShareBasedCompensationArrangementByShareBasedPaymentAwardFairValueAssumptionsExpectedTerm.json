@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardFairValueAssumptionsExpectedTerm",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Fair Value Assumptions, Expected Term (Deprecated 2012-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardFairValueAssumptionsExpectedTerm\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Fair Value Assumptions, Expected Term (Deprecated 2012-01-31)\nDescription: The period of time an equity-based award is expected to be outstanding. An equity-based award's expected term is generally determined based on, among other factors, the instrument's contractual term and the effects of employees' expected exercise and post-vesting employment termination behavior.\nRecent reported values:\npure 2011 Q1 10-Q filed 2011-01-19: 6\npure 2011 Q1 10-Q filed 2011-01-19: 6",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardFairValueAssumptionsExpectedTerm",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "3d9eed1fdf96e3b36517daf1dfd652bf62940509e4fe782c029bc23e16cceeb8"
+}

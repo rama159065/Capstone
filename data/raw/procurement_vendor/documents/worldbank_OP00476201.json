@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476201",
+  "title": "Improving the Performance of Non-Criminal Justice Services",
+  "text": "bid_description: ADQUISICIÓN E INSTALACIÓN DE SISTEMA DE RED INALAMBRICA WIFI PARA DEL EDIFICIO DE LA SEDE SAN ISIDRO DEL TRIBUNAL CONSTITUCIONAL\nbid_reference_no: PE-MINJUS-549752-GO-RFB\nid: OP00476201\nnotice_lang_name: Spanish; Castilian\nnotice_status: Published\nnotice_text: Contract Award Project: P162833-Improving the Performance of Non-Criminal Justice Services Loan/Credit/TF Info: IBRD-89750 Bid/Contract Reference No: PE-MINJUS-549752-GO-RFB Procurement Method: RFB-Solicitud de ofertas Scope of Contract: ADQUISICIN E INSTALACIN DE SISTEMA DE RED INALAMBRICA WIFI PARA EL EDIFICIO DE LA SEDE SAN ISIDRO DEL TRIBUNAL CONSTITUCIONAL. Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/09/30 Duration of Contract 90 Day(s) Awarded Bidder(s): CONTROLES DIGITALES S.A.C. (1137007) Calle cerro negro 141 Urbanizacin San Ignacio de Monterrico Surco, Lima. Country: Per COMRED PERU S.A.C. (1137008) Jr. Villac Umu 844 Urbanizacin Zrate - San Juan deLurigancho - Lima Country: Per Bid Price at Opening PEN Evaluated Bid Price PEN 498712.00 Signed Contract price PEN 498712.00 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Peru\nproject_id: P162833\nproject_name: Improving the Performance of Non-Criminal Justice Services\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=400&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476201",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "Spanish; Castilian",
+      "notice_status": "Published",
+      "project_ctry_name": "Peru",
+      "project_id": "P162833",
+      "project_name": "Improving the Performance of Non-Criminal Justice Services",
+      "bid_reference_no": "PE-MINJUS-549752-GO-RFB",
+      "bid_description": "ADQUISICIÓN E INSTALACIÓN DE SISTEMA DE RED INALAMBRICA WIFI PARA DEL EDIFICIO DE LA SEDE SAN ISIDRO DEL TRIBUNAL CONSTITUCIONAL",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P162833-Improving the Performance of Non-Criminal Justice Services<br/><b>Loan/Credit/TF Info:</b>IBRD-89750<br/><b>Bid/Contract Reference No:</b>PE-MINJUS-549752-GO-RFB<br/><b>Procurement Method:</b>RFB-Solicitud de ofertas<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>ADQUISICIN E INSTALACIN DE SISTEMA DE RED INALAMBRICA WIFI PARA EL EDIFICIO DE LA SEDE SAN ISIDRO DEL TRIBUNAL CONSTITUCIONAL.</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/09/30<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>90 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>CONTROLES DIGITALES S.A.C. (1137007)</b><br/>Calle cerro negro 141 Urbanizacin San Ignacio de Monterrico Surco, Lima.<br/>Country: Per<br/></br></div><div class='row col-sm-12'><b>COMRED PERU S.A.C. (1137008)</b><br/>Jr. Villac Umu 844 Urbanizacin Zrate - San Juan deLurigancho - Lima<br/>Country: Per<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PEN<br/><br/>Evaluated Bid Price<br/>PEN 498712.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>PEN 498712.00</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:22+00:00",
+  "content_sha256": "8892fdd3929cf51818f61a7dbd2aa2e4fb4c8e4123bec51770e5eb9ee1427f38"
+}

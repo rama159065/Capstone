@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476638",
+  "title": "West Africa Food System Resilience Program (FSRP)",
+  "text": "bid_description: Achat de semences oignon/échalote au profit des bénéficiaires du Programme dans la Région Ségou.\nbid_reference_no: ML-FSRP-ML-361121-GO-RFQ\nid: OP00476638\nnotice_lang_name: French\nnotice_status: Published\nnotice_text: Contract Award Project: P172769-West Africa Food System Resilience Program (FSRP) Loan/Credit/TF Info: IDA-69970 Bid/Contract Reference No: ML-FSRP-ML-361121-GO-RFQ Procurement Method: RFQ-Demande de prix Scope of Contract: Achat de semences oignon/chalotes au profit des bnficiaires pour le Programme de Rsilience du Systme Alimentaire en Afrique de lOuest (PRSA-Mali), dans la Rgion de Sgou. Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2023/06/19 Duration of Contract 5 Day(s) Awarded Bidder(s): COTRANS SARL (1057896) Missabougougou SEMA prs de lHopital du Mali, Porte 121, Tl : 76 91 11 00, E-mail : cotrans.btp@gmail.com / ablohenri@yahoo.fr Country: Mali Bid Price at Opening XOF 179988288 Evaluated Bid Price XOF 179988288 Signed Contract price XOF 179988288 \nnotice_type: Contract Award\nnoticedate: 21-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Western and Central Africa\nproject_id: P172769\nproject_name: West Africa Food System Resilience Program (FSRP)\nsubmission_date: 2026-10-21T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=100&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476638",
+      "notice_type": "Contract Award",
+      "noticedate": "21-Oct-2026",
+      "notice_lang_name": "French",
+      "notice_status": "Published",
+      "project_ctry_name": "Western and Central Africa",
+      "project_id": "P172769",
+      "project_name": "West Africa Food System Resilience Program (FSRP)",
+      "bid_reference_no": "ML-FSRP-ML-361121-GO-RFQ",
+      "bid_description": "Achat de semences oignon/échalote au profit des bénéficiaires du Programme dans la Région Ségou.",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-21T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P172769-West Africa Food System Resilience Program (FSRP)<br/><b>Loan/Credit/TF Info:</b>IDA-69970<br/><b>Bid/Contract Reference No:</b>ML-FSRP-ML-361121-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Demande de prix<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Achat de semences oignon/chalotes au profit des bnficiaires pour le Programme de Rsilience du Systme Alimentaire en Afrique de lOuest (PRSA-Mali), dans la Rgion de Sgou.</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2023/06/19<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>5 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>COTRANS SARL (1057896)</b><br/>Missabougougou SEMA prs de lHopital du Mali, Porte 121, Tl : 76 91 11 00, E-mail : cotrans.btp@gmail.com / ablohenri@yahoo.fr<br/>Country: Mali<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>XOF 179988288<br/><br/>Evaluated Bid Price<br/>XOF 179988288</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>XOF 179988288</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:11+00:00",
+  "content_sha256": "69ee85ab92171a4286719ce94fdf3cf7c595bd7c23aca7d127afc007d8d79aaa"
+}

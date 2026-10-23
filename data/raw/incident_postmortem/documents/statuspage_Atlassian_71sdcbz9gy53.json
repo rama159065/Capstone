@@ -1,0 +1,121 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Atlassian_71sdcbz9gy53",
+  "title": "Atlassian - Delayed SCIM provisioning syncs of users and groups from Identity Providers",
+  "text": "Service: Atlassian\nIncident: Delayed SCIM provisioning syncs of users and groups from Identity Providers\nStatus: resolved\nImpact: none\nStarted: 2024-01-09T22:03:34.285Z\nResolved: 2024-01-12T17:13:28.840Z\nUpdates:\n- 2024-01-12T17:13:28.840Z: resolved - We experienced degraded SCIM provisioning from external Identity Providers for Confluence, Jira Work Management, Jira Service Management, Jira Software, and Atlassian Access. The issue has been resolved and the service is operating normally.\n- 2024-01-12T06:55:22.663Z: monitoring - A fix for the bottleneck identified in the Group synchronization process for SCIM Provisioning has been made. We are seeing processing start to return to normal levels and will be monitoring over the next few hours. The team is all hands on deck to keep improving the situation.\n- 2024-01-11T22:36:44.975Z: monitoring - The bottleneck in the Group synchronization process for SCIM Provisioning has seen considerable improvement due to recent changes, but it is still under work. The team is all hands on deck to keep improving the situation.\n- 2024-01-11T18:54:24.767Z: monitoring - The bottleneck in the Group synchronization process for SCIM Provisioning is still under work. The team is all hands on deck to improve the situation.\n- 2024-01-10T19:56:56.408Z: monitoring - The bottleneck in the Group synchronization process for SCIM Provisioning is still under work. We are closely monitoring the service.\n- 2024-01-10T03:17:02.774Z: monitoring - We have identified a bottleneck in the Group synchronisation process for SCIM Provisioning. We have increased the resources allocated to the process in order to mitigate the issue. We are now monitoring the service.\n- 2024-01-09T22:03:34.333Z: investigating - We are investigating cases of degraded performance when SCIM provisioning users/groups for Confluence, Jira Work Management, Jira Service Management, Jira Software, and Atlassian Access Cloud customers. \nWe will provide more details shortly.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.atlassian.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "71sdcbz9gy53",
+      "name": "Delayed SCIM provisioning syncs of users and groups from Identity Providers",
+      "status": "resolved",
+      "created_at": "2024-01-09T22:03:34.293Z",
+      "updated_at": "2024-01-12T17:13:28.854Z",
+      "monitoring_at": "2024-01-10T03:17:02.774Z",
+      "resolved_at": "2024-01-12T17:13:28.840Z",
+      "impact": "none",
+      "shortlink": "https://stspg.io/trcvys1bxjkn",
+      "started_at": "2024-01-09T22:03:34.285Z",
+      "page_id": "0f54fx204jpt",
+      "incident_updates": [
+        {
+          "id": "qt987j61mjbv",
+          "status": "resolved",
+          "body": "We experienced degraded SCIM provisioning from external Identity Providers for Confluence, Jira Work Management, Jira Service Management, Jira Software, and Atlassian Access. The issue has been resolved and the service is operating normally.",
+          "incident_id": "71sdcbz9gy53",
+          "created_at": "2024-01-12T17:13:28.840Z",
+          "updated_at": "2024-01-12T17:13:28.840Z",
+          "display_at": "2024-01-12T17:13:28.840Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "74xw87qh2kgl",
+          "status": "monitoring",
+          "body": "A fix for the bottleneck identified in the Group synchronization process for SCIM Provisioning has been made. We are seeing processing start to return to normal levels and will be monitoring over the next few hours. The team is all hands on deck to keep improving the situation.",
+          "incident_id": "71sdcbz9gy53",
+          "created_at": "2024-01-12T06:55:22.663Z",
+          "updated_at": "2024-01-12T06:55:22.663Z",
+          "display_at": "2024-01-12T06:55:22.663Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "7kgxn7s64zf6",
+          "status": "monitoring",
+          "body": "The bottleneck in the Group synchronization process for SCIM Provisioning has seen considerable improvement due to recent changes, but it is still under work. The team is all hands on deck to keep improving the situation.",
+          "incident_id": "71sdcbz9gy53",
+          "created_at": "2024-01-11T22:36:44.975Z",
+          "updated_at": "2024-01-11T22:36:44.975Z",
+          "display_at": "2024-01-11T22:36:44.975Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "zlnwfbd26qlr",
+          "status": "monitoring",
+          "body": "The bottleneck in the Group synchronization process for SCIM Provisioning is still under work. The team is all hands on deck to improve the situation.",
+          "incident_id": "71sdcbz9gy53",
+          "created_at": "2024-01-11T18:54:24.767Z",
+          "updated_at": "2024-01-11T18:54:24.767Z",
+          "display_at": "2024-01-11T18:54:24.767Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "9n2j1qvrfhnm",
+          "status": "monitoring",
+          "body": "The bottleneck in the Group synchronization process for SCIM Provisioning is still under work. We are closely monitoring the service.",
+          "incident_id": "71sdcbz9gy53",
+          "created_at": "2024-01-10T19:56:56.408Z",
+          "updated_at": "2024-01-10T19:56:56.408Z",
+          "display_at": "2024-01-10T19:56:56.408Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "v1pf4vxnxjj7",
+          "status": "monitoring",
+          "body": "We have identified a bottleneck in the Group synchronisation process for SCIM Provisioning. We have increased the resources allocated to the process in order to mitigate the issue. We are now monitoring the service.",
+          "incident_id": "71sdcbz9gy53",
+          "created_at": "2024-01-10T03:17:02.774Z",
+          "updated_at": "2024-01-10T03:17:02.774Z",
+          "display_at": "2024-01-10T03:17:02.774Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "9cp1f1dyrk3f",
+          "status": "investigating",
+          "body": "We are investigating cases of degraded performance when SCIM provisioning users/groups for Confluence, Jira Work Management, Jira Service Management, Jira Software, and Atlassian Access Cloud customers. \nWe will provide more details shortly.",
+          "incident_id": "71sdcbz9gy53",
+          "created_at": "2024-01-09T22:03:34.333Z",
+          "updated_at": "2024-01-09T22:03:34.333Z",
+          "display_at": "2024-01-09T22:03:34.333Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:48+00:00",
+  "content_sha256": "c247e159300449eaf6f72218c01079f4e9134596f763ef5be4154ccea4e59544"
+}

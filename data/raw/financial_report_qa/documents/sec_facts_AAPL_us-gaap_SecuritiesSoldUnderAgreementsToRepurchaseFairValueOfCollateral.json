@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_SecuritiesSoldUnderAgreementsToRepurchaseFairValueOfCollateral",
+  "title": "Apple Inc. - Securities Sold under Agreements to Repurchase, Fair Value of Collateral",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: SecuritiesSoldUnderAgreementsToRepurchaseFairValueOfCollateral\nLabel: Securities Sold under Agreements to Repurchase, Fair Value of Collateral\nDescription: Fair value of securities pledged as collateral against securities sold under agreement to repurchase.\nRecent reported values:\nUSD 2020 Q2 10-Q filed 2020-05-01: 2600000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 5300000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "SecuritiesSoldUnderAgreementsToRepurchaseFairValueOfCollateral",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e7e286be56565c331e5ad47c7e5cbda0ed3cf44ec2a5521981f867c6ab826261"
+}

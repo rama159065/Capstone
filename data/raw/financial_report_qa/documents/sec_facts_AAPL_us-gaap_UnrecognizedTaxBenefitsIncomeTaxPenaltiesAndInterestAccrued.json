@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_UnrecognizedTaxBenefitsIncomeTaxPenaltiesAndInterestAccrued",
+  "title": "Apple Inc. - Unrecognized Tax Benefits, Income Tax Penalties and Interest Accrued",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: UnrecognizedTaxBenefitsIncomeTaxPenaltiesAndInterestAccrued\nLabel: Unrecognized Tax Benefits, Income Tax Penalties and Interest Accrued\nDescription: Amount accrued for interest on an underpayment of income taxes and penalties related to a tax position claimed or expected to be claimed in the tax return.\nRecent reported values:\nUSD 2019 Q3 10-Q filed 2019-07-31: 1300000000\nUSD 2019 FY 10-K filed 2019-10-31: 1300000000\nUSD 2020 FY 10-K filed 2020-10-30: 1300000000\nUSD 2020 Q1 10-Q filed 2020-01-29: 1500000000\nUSD 2020 Q2 10-Q filed 2020-05-01: 1300000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 1300000000\nUSD 2020 FY 10-K filed 2020-10-30: 1400000000\nUSD 2021 FY 10-K filed 2021-10-29: 1400000000\nUSD 2021 Q1 10-Q filed 2021-01-28: 1600000000\nUSD 2021 Q2 10-Q filed 2021-04-29: 1600000000\nUSD 2021 Q3 10-Q filed 2021-07-28: 1600000000\nUSD 2021 FY 10-K filed 2021-10-29: 1500000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "UnrecognizedTaxBenefitsIncomeTaxPenaltiesAndInterestAccrued",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "ef5aaec3d911d02e3709fa50c41f67a962e8dac10e506981885a0a570df62dce"
+}

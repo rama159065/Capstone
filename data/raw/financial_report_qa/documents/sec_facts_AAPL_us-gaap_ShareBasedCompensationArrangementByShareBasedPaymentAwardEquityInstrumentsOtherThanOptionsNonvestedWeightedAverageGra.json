@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsNonvestedWeightedAverageGrantDateFairValue",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Nonvested, Weighted Average Grant Date Fair Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsNonvestedWeightedAverageGrantDateFairValue\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Nonvested, Weighted Average Grant Date Fair Value\nDescription: Per share or unit weighted-average fair value of nonvested award under share-based payment arrangement. Excludes share and unit options.\nRecent reported values:\nUSD/shares 2013 Q3 10-Q filed 2013-07-24: 344.87\nUSD/shares 2013 FY 10-K filed 2013-10-30: 344.87\nUSD/shares 2013 Q1 10-Q filed 2013-01-24: 417.42\nUSD/shares 2013 Q2 10-Q filed 2013-04-24: 419.79\nUSD/shares 2013 Q3 10-Q filed 2013-07-24: 432.42\nUSD/shares 2013 FY 10-K filed 2013-10-30: 435.7\nUSD/shares 2014 Q1 10-Q filed 2014-01-28: 435.7\nUSD/shares 2014 Q2 10-Q filed 2014-04-24: 435.7\nUSD/shares 2014 Q3 10-Q filed 2014-07-23: 62.24\nUSD/shares 2014 Q1 10-Q filed 2014-01-28: 463.23\nUSD/shares 2014 Q2 10-Q filed 2014-04-24: 467.61\nUSD/shares 2014 Q3 10-Q filed 2014-07-23: 68.12",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsNonvestedWeightedAverageGrantDateFairValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "88b1f274227a7efeaec4ddfea794f0d97746d10db9646853ba5a8077e5993efd"
+}

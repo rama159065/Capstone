@@ -1,0 +1,146 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_MongoDB_Cloud_5swmlx3k589x",
+  "title": "MongoDB Cloud - Trigger processing may be delayed globally",
+  "text": "Service: MongoDB Cloud\nIncident: Trigger processing may be delayed globally\nStatus: resolved\nImpact: major\nStarted: 2026-10-01T15:41:50.000Z\nResolved: 2026-10-01T20:54:48.800Z\nUpdates:\n- 2026-10-01T20:54:48.800Z: resolved - This incident has been resolved.\n- 2026-10-01T19:59:37.473Z: monitoring - Atlas Triggers are firing again, and trigger processing is operational. We are monitoring the service and verifying the status of triggers affected during the incident, including any delayed events. We will provide a further update once verification is complete.\n- 2026-10-01T19:51:05.088Z: investigating - Some users may find that their Atlas Triggers are not firing or are not visible in the Atlas UI. We are investigating both symptoms and working to restore trigger processing. We will provide another update as we learn more.\n- 2026-10-01T18:21:16.982Z: investigating - We are continuing to investigate this issue.\n- 2026-10-01T15:41:50.232Z: investigating - As of approximately 15:00 UTC, some users of MongoDB Atlas Triggers may experience delayed unordered trigger processing. We are investigating and working to restore normal processing.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.mongodb.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "5swmlx3k589x",
+      "name": "Trigger processing may be delayed globally",
+      "status": "resolved",
+      "created_at": "2026-10-01T15:41:50.000Z",
+      "updated_at": "2026-10-01T20:54:48.822Z",
+      "monitoring_at": "2026-10-01T19:59:37.473Z",
+      "resolved_at": "2026-10-01T20:54:48.800Z",
+      "impact": "major",
+      "shortlink": "https://stspg.io/bdghxhyf3hbd",
+      "started_at": "2026-10-01T15:41:50.000Z",
+      "page_id": "smhnl3lt74kc",
+      "incident_updates": [
+        {
+          "id": "hxl0t04qs2zw",
+          "status": "resolved",
+          "body": "This incident has been resolved.",
+          "incident_id": "5swmlx3k589x",
+          "created_at": "2026-10-01T20:54:48.800Z",
+          "updated_at": "2026-10-01T20:54:48.800Z",
+          "display_at": "2026-10-01T20:54:48.800Z",
+          "affected_components": [
+            {
+              "code": "crrq7qqlqfsh",
+              "name": "MongoDB Atlas App Services and Device Sync",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "vdz1fhd0rdn2",
+          "status": "monitoring",
+          "body": "Atlas Triggers are firing again, and trigger processing is operational. We are monitoring the service and verifying the status of triggers affected during the incident, including any delayed events. We will provide a further update once verification is complete.",
+          "incident_id": "5swmlx3k589x",
+          "created_at": "2026-10-01T19:59:37.473Z",
+          "updated_at": "2026-10-01T19:59:37.473Z",
+          "display_at": "2026-10-01T19:59:37.473Z",
+          "affected_components": [
+            {
+              "code": "crrq7qqlqfsh",
+              "name": "MongoDB Atlas App Services and Device Sync",
+              "old_status": "partial_outage",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "1jq4csfggvmw",
+          "status": "investigating",
+          "body": "Some users may find that their Atlas Triggers are not firing or are not visible in the Atlas UI. We are investigating both symptoms and working to restore trigger processing. We will provide another update as we learn more.",
+          "incident_id": "5swmlx3k589x",
+          "created_at": "2026-10-01T19:51:05.088Z",
+          "updated_at": "2026-10-01T19:51:05.088Z",
+          "display_at": "2026-10-01T19:51:05.088Z",
+          "affected_components": [
+            {
+              "code": "crrq7qqlqfsh",
+              "name": "MongoDB Atlas App Services and Device Sync",
+              "old_status": "degraded_performance",
+              "new_status": "partial_outage"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "mjtb0cj9h877",
+          "status": "investigating",
+          "body": "We are continuing to investigate this issue.",
+          "incident_id": "5swmlx3k589x",
+          "created_at": "2026-10-01T18:21:16.982Z",
+          "updated_at": "2026-10-01T18:21:16.982Z",
+          "display_at": "2026-10-01T18:21:16.982Z",
+          "affected_components": [
+            {
+              "code": "crrq7qqlqfsh",
+              "name": "MongoDB Atlas App Services and Device Sync",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "n8xkpyhgfrwx",
+          "status": "investigating",
+          "body": "As of approximately 15:00 UTC, some users of MongoDB Atlas Triggers may experience delayed unordered trigger processing. We are investigating and working to restore normal processing.",
+          "incident_id": "5swmlx3k589x",
+          "created_at": "2026-10-01T15:41:50.232Z",
+          "updated_at": "2026-10-01T18:20:40.565Z",
+          "display_at": "2026-10-01T15:41:50.000Z",
+          "affected_components": [
+            {
+              "code": "crrq7qqlqfsh",
+              "name": "MongoDB Atlas App Services and Device Sync",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "crrq7qqlqfsh",
+          "name": "MongoDB Atlas App Services and Device Sync",
+          "status": "operational",
+          "created_at": "2020-04-14T23:11:20.308Z",
+          "updated_at": "2026-10-01T19:59:37.425Z",
+          "position": 3,
+          "description": "This includes Atlas Triggers, Device Sync, and the Atlas Data API",
+          "showcase": false,
+          "start_date": null,
+          "group_id": null,
+          "page_id": "smhnl3lt74kc",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:12+00:00",
+  "content_sha256": "72c311d5015c16a6c76a9984ad50711927fc58cabaaca777c85946fbefe15768"
+}

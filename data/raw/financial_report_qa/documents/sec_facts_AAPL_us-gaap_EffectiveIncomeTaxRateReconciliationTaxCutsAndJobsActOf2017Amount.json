@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_EffectiveIncomeTaxRateReconciliationTaxCutsAndJobsActOf2017Amount",
+  "title": "Apple Inc. - Effective Income Tax Rate Reconciliation, Tax Cuts and Jobs Act, Amount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: EffectiveIncomeTaxRateReconciliationTaxCutsAndJobsActOf2017Amount\nLabel: Effective Income Tax Rate Reconciliation, Tax Cuts and Jobs Act, Amount\nDescription: Amount of reported income tax expense (benefit) in excess of (less than) expected income tax expense (benefit) computed by applying domestic federal statutory income tax rate to pretax income (loss) from continuing operations, attributable to Tax Cuts and Jobs Act.\nRecent reported values:\nUSD 2019 FY 10-K filed 2019-10-31: 0\nUSD 2019 FY 10-K filed 2019-10-31: 1515000000\nUSD 2020 FY 10-K filed 2020-10-30: 1515000000\nUSD 2019 FY 10-K filed 2019-10-31: 0\nUSD 2020 FY 10-K filed 2020-10-30: 0\nUSD 2021 FY 10-K filed 2021-10-29: 0\nUSD 2020 FY 10-K filed 2020-10-30: -582000000\nUSD 2021 FY 10-K filed 2021-10-29: -582000000\nUSD 2022 FY 10-K filed 2022-10-28: -582000000\nUSD 2021 FY 10-K filed 2021-10-29: 0\nUSD 2022 FY 10-K filed 2022-10-28: 0\nUSD 2022 FY 10-K filed 2022-10-28: 542000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "EffectiveIncomeTaxRateReconciliationTaxCutsAndJobsActOf2017Amount",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b4477639bd9c16d13888507abb952ec77c12578bfdce3bb00f6700ccba178876"
+}

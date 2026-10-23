@@ -1,0 +1,106 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Zoom_jbl3clyk91xs",
+  "title": "Zoom - Service Degradation Affecting Zoom Website in UK region",
+  "text": "Service: Zoom\nIncident: Service Degradation Affecting Zoom Website in UK region\nStatus: resolved\nImpact: minor\nStarted: 2026-10-19T06:32:56.013-07:00\nResolved: 2026-10-19T16:31:10.442-07:00\nUpdates:\n- 2026-10-19T16:31:10.442-07:00: resolved - This incident has been resolved and the affected services have been restored.\n- 2026-10-19T06:44:04.585-07:00: monitoring - The service degradation affecting Zoom Website in UK region has been successfully resolved.\n\nOur team will continue to monitor the situation closely and will keep you informed of any further updates.\n- 2026-10-19T06:32:56.271-07:00: investigating - We are currently investigating a service degradation affecting Zoom Website in UK region.\n\nOur team is actively working to identify the impact and root cause. We will provide an update as soon as more information becomes available.\n\nWe appreciate your patience as we work to resolve this issue.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.zoom.us/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "jbl3clyk91xs",
+      "name": "Service Degradation Affecting Zoom Website in UK region",
+      "status": "resolved",
+      "created_at": "2026-10-19T06:32:56.021-07:00",
+      "updated_at": "2026-10-19T16:31:10.487-07:00",
+      "monitoring_at": "2026-10-19T06:44:04.585-07:00",
+      "resolved_at": "2026-10-19T16:31:10.442-07:00",
+      "impact": "minor",
+      "shortlink": "https://stspg.io/n49f0v00l95f",
+      "started_at": "2026-10-19T06:32:56.013-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "723mxgr9ml5n",
+          "status": "resolved",
+          "body": "This incident has been resolved and the affected services have been restored.",
+          "incident_id": "jbl3clyk91xs",
+          "created_at": "2026-10-19T16:31:10.442-07:00",
+          "updated_at": "2026-10-19T16:31:10.442-07:00",
+          "display_at": "2026-10-19T16:31:10.442-07:00",
+          "affected_components": [
+            {
+              "code": "wm1bsqy8d9jv",
+              "name": "Zoom Website - Zoom Website",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "v6hkzp30b41q",
+          "status": "monitoring",
+          "body": "The service degradation affecting Zoom Website in UK region has been successfully resolved.\n\nOur team will continue to monitor the situation closely and will keep you informed of any further updates.",
+          "incident_id": "jbl3clyk91xs",
+          "created_at": "2026-10-19T06:44:04.585-07:00",
+          "updated_at": "2026-10-19T06:44:04.585-07:00",
+          "display_at": "2026-10-19T06:44:04.585-07:00",
+          "affected_components": [
+            {
+              "code": "wm1bsqy8d9jv",
+              "name": "Zoom Website - Zoom Website",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "l74tzk683d27",
+          "status": "investigating",
+          "body": "We are currently investigating a service degradation affecting Zoom Website in UK region.\n\nOur team is actively working to identify the impact and root cause. We will provide an update as soon as more information becomes available.\n\nWe appreciate your patience as we work to resolve this issue.",
+          "incident_id": "jbl3clyk91xs",
+          "created_at": "2026-10-19T06:32:56.271-07:00",
+          "updated_at": "2026-10-19T06:32:56.271-07:00",
+          "display_at": "2026-10-19T06:32:56.271-07:00",
+          "affected_components": [
+            {
+              "code": "wm1bsqy8d9jv",
+              "name": "Zoom Website - Zoom Website",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "wm1bsqy8d9jv",
+          "name": "Zoom Website",
+          "status": "operational",
+          "created_at": "2025-11-19T23:33:20.249-08:00",
+          "updated_at": "2026-10-19T06:44:04.532-07:00",
+          "position": 9,
+          "description": null,
+          "showcase": false,
+          "start_date": "2025-11-19",
+          "group_id": "1ndlrnp6r9js",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:00+00:00",
+  "content_sha256": "4cc4c358ffec487ddc30b244a04abd13e0b76737d8a6d5926d623c49c716146f"
+}

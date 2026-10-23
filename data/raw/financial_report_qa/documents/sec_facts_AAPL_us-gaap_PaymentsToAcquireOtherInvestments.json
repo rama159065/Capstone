@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_PaymentsToAcquireOtherInvestments",
+  "title": "Apple Inc. - Payments to Acquire Other Investments",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: PaymentsToAcquireOtherInvestments\nLabel: Payments to Acquire Other Investments\nDescription: Amount of cash outflow to acquire investments classified as other.\nRecent reported values:\nUSD 2020 Q2 10-Q filed 2020-05-01: 490000000\nUSD 2019 Q3 10-Q filed 2019-07-31: 632000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 632000000\nUSD 2019 FY 10-K filed 2019-10-31: 1001000000\nUSD 2020 FY 10-K filed 2020-10-30: 1001000000\nUSD 2021 FY 10-K filed 2021-10-29: 1001000000\nUSD 2020 Q1 10-Q filed 2020-01-29: 77000000\nUSD 2020 Q2 10-Q filed 2020-05-01: 146000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 210000000\nUSD 2020 FY 10-K filed 2020-10-30: 210000000\nUSD 2021 FY 10-K filed 2021-10-29: 210000000\nUSD 2021 FY 10-K filed 2021-10-29: 131000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "PaymentsToAcquireOtherInvestments",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "980d55b078644da697599ca748e8956423568722288ea087f0c7cac911658450"
+}

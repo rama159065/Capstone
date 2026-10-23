@@ -1,0 +1,43 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Atlassian_mx1wvlvbw23y",
+  "title": "Atlassian - Jira Imports are Failing",
+  "text": "Service: Atlassian\nIncident: Jira Imports are Failing\nStatus: resolved\nImpact: major\nStarted: 2019-05-07T09:45:37.229Z\nResolved: 2019-05-07T09:45:37.229Z\nUpdates:\n- 2019-05-07T12:56:14.319Z: resolved - Between 06/May/2019 06:00 AM UTC to 07/May/2019 09:10 AM UTC, we experienced issues with Jira imports. The issue has been resolved and the service is operating normally.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.atlassian.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "mx1wvlvbw23y",
+      "name": "Jira Imports are Failing",
+      "status": "resolved",
+      "created_at": "2019-05-07T07:30:37.229Z",
+      "updated_at": "2019-05-07T13:17:04.889Z",
+      "monitoring_at": null,
+      "resolved_at": "2019-05-07T09:45:37.229Z",
+      "impact": "major",
+      "shortlink": "http://stspg.io/06e0ed12a",
+      "started_at": "2019-05-07T09:45:37.229Z",
+      "page_id": "0f54fx204jpt",
+      "incident_updates": [
+        {
+          "id": "8fv01ycg8wkx",
+          "status": "resolved",
+          "body": "Between 06/May/2019 06:00 AM UTC to 07/May/2019 09:10 AM UTC, we experienced issues with Jira imports. The issue has been resolved and the service is operating normally.",
+          "incident_id": "mx1wvlvbw23y",
+          "created_at": "2019-05-07T12:56:14.319Z",
+          "updated_at": "2019-05-07T13:17:04.886Z",
+          "display_at": "2019-05-07T09:45:37.229Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:48+00:00",
+  "content_sha256": "82c34f4702a83de1db5f8d367a77c4129f9ad9e7e759f6eb27186ff6332668c9"
+}

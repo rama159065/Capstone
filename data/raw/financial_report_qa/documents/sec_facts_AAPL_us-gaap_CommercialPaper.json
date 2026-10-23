@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CommercialPaper",
+  "title": "Apple Inc. - Commercial Paper",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CommercialPaper\nLabel: Commercial Paper\nDescription: Carrying value as of the balance sheet date of short-term borrowings using unsecured obligations issued by banks, corporations and other borrowers to investors. The maturities of these money market securities generally do not exceed 270 days.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 9967000000\nUSD 2025 FY 10-K filed 2025-10-31: 9967000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 1995000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 5982000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 9923000000\nUSD 2025 FY 10-K filed 2025-10-31: 7979000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 7979000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 7979000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 7979000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 1997000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 1997000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 1997000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CommercialPaper",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b2cce6f2a9f6330223da1bd86e97828d62ad9f9ebb5e5e2d5a32830481562135"
+}

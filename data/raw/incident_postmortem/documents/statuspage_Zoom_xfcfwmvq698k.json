@@ -1,0 +1,86 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Zoom_xfcfwmvq698k",
+  "title": "Zoom - Service Degradation Affecting Zoom Tasks in US Region.",
+  "text": "Service: Zoom\nIncident: Service Degradation Affecting Zoom Tasks in US Region.\nStatus: resolved\nImpact: none\nStarted: 2026-09-22T18:55:36.863-07:00\nResolved: 2026-09-22T19:16:38.927-07:00\nUpdates:\n- 2026-09-22T19:16:38.927-07:00: resolved - This incident has been resolved and the affected services have been restored.\n- 2026-09-22T18:55:36.925-07:00: monitoring - On 09/23/2026, Between 00:42 UTC- 01:22 UTC, users may have experienced issues with Zoom Tasks in US Region. We have mitigated the issue and we will continue to monitor the situation closely and keep you informed of any further developments.\n\nThank you for your patience.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.zoom.us/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "xfcfwmvq698k",
+      "name": "Service Degradation Affecting Zoom Tasks in US Region.",
+      "status": "resolved",
+      "created_at": "2026-09-22T18:55:36.871-07:00",
+      "updated_at": "2026-09-22T19:16:38.943-07:00",
+      "monitoring_at": "2026-09-22T18:55:36.925-07:00",
+      "resolved_at": "2026-09-22T19:16:38.927-07:00",
+      "impact": "none",
+      "shortlink": "https://stspg.io/99jd3fpqyn4j",
+      "started_at": "2026-09-22T18:55:36.863-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "ykr3sbd4s5w8",
+          "status": "resolved",
+          "body": "This incident has been resolved and the affected services have been restored.",
+          "incident_id": "xfcfwmvq698k",
+          "created_at": "2026-09-22T19:16:38.927-07:00",
+          "updated_at": "2026-09-22T19:16:38.927-07:00",
+          "display_at": "2026-09-22T19:16:38.927-07:00",
+          "affected_components": [
+            {
+              "code": "40fjc1kq1jcb",
+              "name": "Zoom Tasks",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "40qfm0t4zrfc",
+          "status": "monitoring",
+          "body": "On 09/23/2026, Between 00:42 UTC- 01:22 UTC,  users may have experienced issues with Zoom Tasks in US Region. We have mitigated the issue and we will continue to monitor the situation closely and keep you informed of any further developments.\n\nThank you for your patience.",
+          "incident_id": "xfcfwmvq698k",
+          "created_at": "2026-09-22T18:55:36.925-07:00",
+          "updated_at": "2026-09-22T18:55:36.925-07:00",
+          "display_at": "2026-09-22T18:55:36.925-07:00",
+          "affected_components": [
+            {
+              "code": "40fjc1kq1jcb",
+              "name": "Zoom Tasks",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "40fjc1kq1jcb",
+          "name": "Zoom Tasks",
+          "status": "operational",
+          "created_at": "2025-11-07T20:30:22.365-08:00",
+          "updated_at": "2026-07-31T07:49:22.970-07:00",
+          "position": 34,
+          "description": null,
+          "showcase": false,
+          "start_date": "2025-11-07",
+          "group_id": null,
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:00+00:00",
+  "content_sha256": "5fed988ebfcaf4893caa8091bb95b47692c617a9b6b5f1f43fda7b53eb3df89a"
+}

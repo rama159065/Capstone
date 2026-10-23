@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncomeTaxReconciliationStateAndLocalIncomeTaxes",
+  "title": "Apple Inc. - Effective Income Tax Rate Reconciliation, State and Local Income Taxes, Amount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncomeTaxReconciliationStateAndLocalIncomeTaxes\nLabel: Effective Income Tax Rate Reconciliation, State and Local Income Taxes, Amount\nDescription: Amount of the difference between reported income tax expense (benefit) and expected income tax expense (benefit) computed by applying the domestic federal statutory income tax rates to pretax income (loss) from continuing operations attributable to state and local income tax expense (benefit).\nRecent reported values:\nUSD 2020 FY 10-K filed 2020-10-30: 423000000\nUSD 2021 FY 10-K filed 2021-10-29: 423000000\nUSD 2022 FY 10-K filed 2022-10-28: 423000000\nUSD 2021 FY 10-K filed 2021-10-29: 1151000000\nUSD 2022 FY 10-K filed 2022-10-28: 1151000000\nUSD 2023 FY 10-K filed 2023-11-03: 1151000000\nUSD 2022 FY 10-K filed 2022-10-28: 1518000000\nUSD 2023 FY 10-K filed 2023-11-03: 1518000000\nUSD 2024 FY 10-K filed 2024-11-01: 1518000000\nUSD 2023 FY 10-K filed 2023-11-03: 1124000000\nUSD 2024 FY 10-K filed 2024-11-01: 1124000000\nUSD 2024 FY 10-K filed 2024-11-01: 1162000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncomeTaxReconciliationStateAndLocalIncomeTaxes",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "654f4e8098ed6a9500d1803713c84b06bbb41894a2ad2b5973cafc9f50a083d7"
+}

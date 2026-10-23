@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_PaymentsToAcquirePropertyPlantAndEquipment",
+  "title": "Apple Inc. - Payments to Acquire Property, Plant, and Equipment",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: PaymentsToAcquirePropertyPlantAndEquipment\nLabel: Payments to Acquire Property, Plant, and Equipment\nDescription: The cash outflow associated with the acquisition of long-lived, physical assets that are used in the normal conduct of business to produce goods and services and not intended for resale; includes cash outflows to pay for construction of self-constructed assets.\nRecent reported values:\nUSD 2024 FY 10-K filed 2024-11-01: 9447000000\nUSD 2025 FY 10-K filed 2025-10-31: 9447000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 2940000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 2940000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 6011000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 6011000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 9473000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 9473000000\nUSD 2025 FY 10-K filed 2025-10-31: 12715000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 2373000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 4344000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 6799000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "PaymentsToAcquirePropertyPlantAndEquipment",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "a996925f58b1393efbcd0d48dfb2d68972e8497a6538fb0119983c1a75f03650"
+}

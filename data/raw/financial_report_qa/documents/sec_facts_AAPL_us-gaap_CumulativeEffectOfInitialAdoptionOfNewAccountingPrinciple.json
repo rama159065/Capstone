@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CumulativeEffectOfInitialAdoptionOfNewAccountingPrinciple",
+  "title": "Apple Inc. - Cumulative Effect of Initial Adoption of New Accounting Principle (Deprecated 2011-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CumulativeEffectOfInitialAdoptionOfNewAccountingPrinciple\nLabel: Cumulative Effect of Initial Adoption of New Accounting Principle (Deprecated 2011-01-31)\nDescription: Cumulative effect of initial adoption of new accounting principle on beginning retained earnings, net of tax. This element can be used, generally, for the adjustment to retained earnings of a new accounting principle.\nRecent reported values:\nUSD 2009 FY 10-K/A filed 2010-01-25: 56000000\nUSD 2009 FY 10-K filed 2009-10-27: 56000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CumulativeEffectOfInitialAdoptionOfNewAccountingPrinciple",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "8f854ce00fa9aa4bb346e5c9a00c23ff3f75a376dbc208454ba442748645068a"
+}

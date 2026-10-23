@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DebtInstrumentCarryingAmount",
+  "title": "Apple Inc. - Long-term Debt, Gross",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DebtInstrumentCarryingAmount\nLabel: Long-term Debt, Gross\nDescription: Amount, before unamortized (discount) premium and debt issuance costs, of long-term debt. Includes, but is not limited to, notes payable, bonds payable, commercial loans, mortgage loans, convertible debt, subordinated debt and other types of debt.\nRecent reported values:\nUSD 2021 Q1 10-Q filed 2021-01-28: 105863000000\nUSD 2021 Q2 10-Q filed 2021-04-29: 116005000000\nUSD 2021 Q3 10-Q filed 2021-07-28: 113193000000\nUSD 2021 FY 10-K filed 2021-10-29: 118063000000\nUSD 2022 FY 10-K filed 2022-10-28: 118063000000\nUSD 2022 FY 10-K filed 2022-10-28: 111824000000\nUSD 2023 FY 10-K filed 2023-11-03: 111824000000\nUSD 2023 FY 10-K filed 2023-11-03: 106572000000\nUSD 2024 FY 10-K filed 2024-11-01: 106572000000\nUSD 2024 FY 10-K filed 2024-11-01: 97341000000\nUSD 2025 FY 10-K filed 2025-10-31: 97341000000\nUSD 2025 FY 10-K filed 2025-10-31: 91281000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DebtInstrumentCarryingAmount",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "dd51dd577c90b0476cdae9c3243ad9203d4866f9feab385ac3b4090118c3fc9d"
+}

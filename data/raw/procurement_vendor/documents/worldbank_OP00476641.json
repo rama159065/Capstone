@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476641",
+  "title": "Access Governance & Reform for the Electricity and Water Sectors Project",
+  "text": "bid_description: Acquisition de 20 000 compteurs monophasés à prépaiement avec système STS\nbid_reference_no: ZR-UCM-451534-GO-DIR\nid: OP00476641\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P173506-Access Governance & Reform for the Electricity and Water Sectors Project Loan/Credit/TF Info: IDA-70660; IDA-D9890 Bid/Contract Reference No: ZR-UCM-451534-GO-DIR Procurement Method: DIR-Direct Selection Scope of Contract: MISE AU POINT DE 20000 COMPTEURS MONOPHASES A PREPAIEMENT A SYSTEMES STS ET ACCESSOIRES Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2024/02/07 Duration of Contract 3 Month(s) Awarded Bidder(s): HUAIHUA JIANNAN MACHINERY FACTORY CO., LTD (1045335) Adresse : Hongji Building, Longevity industrial Park, Industrial Concentration Zone, Mayang County, Huaihua, hunan, China Country: China Bid Price at Opening USD 1684119.00 Evaluated Bid Price USD 1566119.00 Signed Contract price USD 1566119.00 \nnotice_type: Contract Award\nnoticedate: 21-Oct-2026\nprocurement_group: GO\nprocurement_method_code: DIR\nprocurement_method_name: Direct Selection\nproject_ctry_name: Congo, Democratic Republic of\nproject_id: P173506\nproject_name: Access Governance & Reform for the Electricity and Water Sectors Project\nsubmission_date: 2026-10-21T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=100&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476641",
+      "notice_type": "Contract Award",
+      "noticedate": "21-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Congo, Democratic Republic of",
+      "project_id": "P173506",
+      "project_name": "Access Governance & Reform for the Electricity and Water Sectors Project",
+      "bid_reference_no": "ZR-UCM-451534-GO-DIR",
+      "bid_description": "Acquisition de 20 000 compteurs monophasés à prépaiement avec système STS",
+      "procurement_group": "GO",
+      "procurement_method_code": "DIR",
+      "procurement_method_name": "Direct Selection",
+      "submission_date": "2026-10-21T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P173506-Access Governance & Reform for the Electricity and Water Sectors Project<br/><b>Loan/Credit/TF Info:</b>IDA-70660; IDA-D9890<br/><b>Bid/Contract Reference No:</b>ZR-UCM-451534-GO-DIR<br/><b>Procurement Method:</b>DIR-Direct Selection<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>MISE AU POINT DE 20000 COMPTEURS MONOPHASES A PREPAIEMENT A SYSTEMES STS ET ACCESSOIRES</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2024/02/07<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>3 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>HUAIHUA JIANNAN MACHINERY FACTORY CO., LTD (1045335)</b><br/>Adresse : Hongji Building, Longevity industrial Park, Industrial Concentration Zone, Mayang County, Huaihua, hunan, China<br/>Country: China<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>USD 1684119.00<br/><br/>Evaluated Bid Price<br/>USD 1566119.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>USD 1566119.00</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:11+00:00",
+  "content_sha256": "2cbf172d1ed7de87646cc0e179fff588f43267ade1bfd606952023c1df8c3b06"
+}

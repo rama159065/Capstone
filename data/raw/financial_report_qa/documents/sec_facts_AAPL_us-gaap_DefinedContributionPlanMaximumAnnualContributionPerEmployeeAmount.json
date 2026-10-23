@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DefinedContributionPlanMaximumAnnualContributionPerEmployeeAmount",
+  "title": "Apple Inc. - Defined Contribution Plan, Maximum Annual Contribution Per Employee, Amount (Deprecated 2013-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DefinedContributionPlanMaximumAnnualContributionPerEmployeeAmount\nLabel: Defined Contribution Plan, Maximum Annual Contribution Per Employee, Amount (Deprecated 2013-01-31)\nDescription: Maximum amount per employee, by the terms of the plan, that the employer may contribute to a defined contribution plan.\nRecent reported values:\nUSD 2012 FY 8-K filed 2013-04-24: 17000\nUSD 2012 FY 10-K filed 2012-10-31: 17000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DefinedContributionPlanMaximumAnnualContributionPerEmployeeAmount",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "fe8210701eff2cae9f07f1e6db9e8ba2337cf5f7dfee2169560cb1dc30761bef"
+}

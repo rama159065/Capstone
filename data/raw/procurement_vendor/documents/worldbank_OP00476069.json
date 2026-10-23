@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476069",
+  "title": "Stormwater Management and Climate Change Adaptation Project 2",
+  "text": "bid_description: Maintenance et d'exploitation des ouvrages de drainage dans les Bassins versants de Mbeubeuss et de Mbao\nbid_reference_no: SN-ADM-538791-NC-RFB\nid: OP00476069\nnotice_lang_name: French\nnotice_status: Published\nnotice_text: Contract Award Project: P175830-Stormwater Management and Climate Change Adaptation Project 2 Loan/Credit/TF Info: IDA-68890 Bid/Contract Reference No: SN-ADM-538791-NC-RFB Procurement Method: RFB-Appel d'offres Scope of Contract: Maintenance et exploitation des ouvrages de drainage dans les bassins versants de Mbeubeuss et de Mbao Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/07/13 Duration of Contract 5 Month(s) Awarded Bidder(s): SAHE SARL (1106472) KM 12 Route de Rusfique 20178 Thiaroye Tl : 33 853 19 99 courriel : mor.fall@sahe.sn Country: Sngal Bid Price at Opening XOF Evaluated Bid Price XOF 217842302 Signed Contract price XOF 217842302 Evaluated Bidder(s): DELTA SA (696785) 9 LIBERTE 6 EXTENSION VDN DAKAR SENEGAL TEL 00221 33 867 23 76 / delta.sarl8@gmail.com Country: Sngal Bid Price at Opening XOF Evaluated Bid Price XOF 282996450 VICAS SARL (1136340) 06 Cit Assane DIOP Grand Yoff33 867 16 95Vicas.sarl@gmail.com Country: Sngal Bid Price at Opening XOF Evaluated Bid Price XOF 293383400 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: NC\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Senegal\nproject_id: P175830\nproject_name: Stormwater Management and Climate Change Adaptation Project 2\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476069",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "French",
+      "notice_status": "Published",
+      "project_ctry_name": "Senegal",
+      "project_id": "P175830",
+      "project_name": "Stormwater Management and Climate Change Adaptation Project 2",
+      "bid_reference_no": "SN-ADM-538791-NC-RFB",
+      "bid_description": "Maintenance et d'exploitation des ouvrages de drainage dans les Bassins versants de Mbeubeuss et de Mbao",
+      "procurement_group": "NC",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P175830-Stormwater Management and Climate Change Adaptation Project 2<br/><b>Loan/Credit/TF Info:</b>IDA-68890<br/><b>Bid/Contract Reference No:</b>SN-ADM-538791-NC-RFB<br/><b>Procurement Method:</b>RFB-Appel d'offres<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Maintenance et exploitation des ouvrages de drainage dans les bassins versants de Mbeubeuss et de Mbao</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/07/13<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>5 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>SAHE SARL (1106472)</b><br/>KM 12 Route de Rusfique 20178 Thiaroye Tl : 33 853 19 99 courriel : mor.fall@sahe.sn<br/>Country: Sngal<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>XOF<br/><br/>Evaluated Bid Price<br/>XOF 217842302</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>XOF 217842302</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>DELTA SA (696785)</b><br/>9 LIBERTE 6 EXTENSION VDN DAKAR SENEGAL TEL 00221 33 867 23 76 / delta.sarl8@gmail.com<br/>Country: Sngal<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>XOF<br/><br/>Evaluated Bid Price<br/>XOF 282996450</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>VICAS SARL (1136340)</b><br/>06 Cit Assane DIOP Grand Yoff33 867 16 95Vicas.sarl@gmail.com <br/>Country: Sngal<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>XOF<br/><br/>Evaluated Bid Price<br/>XOF 293383400</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "bd88c009451802988859f7a1e46c1b4f7b10d4160b1ed95f1012dbddc2ba8040"
+}

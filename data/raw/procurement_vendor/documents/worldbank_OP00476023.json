@@ -1,0 +1,38 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476023",
+  "title": "China Plastic Waste Reduction Project (Shaanxi)",
+  "text": "bid_description: Collection and transfer vehicles for 7 new mobile compression transfer stations (Fengyuan Town, Wangzhuang Town, Zhaozhuang Town, Chengguan Town, Jiaodao Town, Siqian Town, and Weizhuang Town)\nbid_reference_no: CPWRP-CC-G-01-2\ncontact_address: Xi'an, China\ncontact_ctry_name: China\ncontact_email: waidaiban@163.com\ncontact_name: Hongjiang Mou\ncontact_organization: Foreign Debt Management Office, Shaanxi Provincial DRC\ncontact_phone_no: 86-29-87293506\nid: OP00476023\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: https://bulletin.cebpubservice.com/bank/biddingBulletin/2026-10-19/6981.html https://www.sxggzyjy.cn/jydt/001001/001001001/001001001001/20261019/c5b78561-daf6-4193-b127-bc4318ac5434.html https://www.chinabidding.cn/public/bidagency/infoDetails?fid=2062353992884225 \nnotice_type: Invitation for Bids\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: China\nproject_id: P176989\nproject_name: China Plastic Waste Reduction Project (Shaanxi)\nsubmission_date: 2026-10-19T00:00:00Z\nsubmission_deadline_date: 2026-11-18T00:00:00Z\nsubmission_deadline_time: 09:30",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476023",
+      "notice_type": "Invitation for Bids",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "submission_deadline_date": "2026-11-18T00:00:00Z",
+      "submission_deadline_time": "09:30",
+      "project_ctry_name": "China",
+      "project_id": "P176989",
+      "project_name": "China Plastic Waste Reduction Project (Shaanxi)",
+      "bid_reference_no": "CPWRP-CC-G-01-2",
+      "bid_description": "Collection and transfer vehicles for 7 new mobile compression transfer stations (Fengyuan Town, Wangzhuang Town, Zhaozhuang Town, Chengguan Town, Jiaodao Town, Siqian Town, and Weizhuang Town)",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "contact_address": "Xi'an, China",
+      "contact_ctry_name": "China",
+      "contact_email": "waidaiban@163.com",
+      "contact_name": "Hongjiang Mou",
+      "contact_organization": "Foreign Debt Management Office, Shaanxi Provincial DRC",
+      "contact_phone_no": "86-29-87293506",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<ol><li><u><u>https://bulletin.cebpubservice.com/bank/biddingBulletin/2026-10-19/6981.html</u></u></li><li><u><u>https://www.sxggzyjy.cn/jydt/001001/001001001/001001001001/20261019/c5b78561-daf6-4193-b127-bc4318ac5434.html</u></u></li><li><u><u>https://www.chinabidding.cn/public/bidagency/infoDetails?fid=2062353992884225</u></u></li></ol>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "fcb9035e688519ab21c16e382f68422e7ca8f58d8ac5e0e0cabff488561420a6"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_PaymentsOfDividendsCommonStock",
+  "title": "Apple Inc. - Payments of Ordinary Dividends, Common Stock",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: PaymentsOfDividendsCommonStock\nLabel: Payments of Ordinary Dividends, Common Stock\nDescription: Amount of cash outflow in the form of ordinary dividends to common shareholders of the parent entity.\nRecent reported values:\nUSD 2017 Q3 10-Q filed 2017-08-02: 2988000000\nUSD 2017 FY 10-K filed 2017-11-03: 2988000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 2988000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 9311000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 3281000000\nUSD 2017 FY 10-K filed 2017-11-03: 3281000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 3281000000\nUSD 2017 FY 10-K filed 2017-11-03: 12563000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 12563000000\nUSD 2017 FY 10-K filed 2017-11-03: 3252000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 3252000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 3232000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "PaymentsOfDividendsCommonStock",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "c64ad6baea1310ae875fa5c7c6814cf99d9ca1786acdaec61ce608fe0f39cae1"
+}

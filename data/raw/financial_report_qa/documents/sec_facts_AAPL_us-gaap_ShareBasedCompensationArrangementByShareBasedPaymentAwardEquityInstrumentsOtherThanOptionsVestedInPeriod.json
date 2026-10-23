@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsVestedInPeriod",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Vested in Period",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsVestedInPeriod\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Vested in Period\nDescription: The number of equity-based payment instruments, excluding stock (or unit) options, that vested during the reporting period.\nRecent reported values:\nshares 2012 Q2 10-Q filed 2012-04-25: 3485000\nshares 2012 Q3 10-Q filed 2012-07-25: 5955000\nshares 2012 FY 10-K filed 2012-10-31: 6305000\nshares 2012 FY 8-K filed 2013-04-24: 6305000\nshares 2013 FY 10-K filed 2013-10-30: 6305000\nshares 2013 Q1 10-Q filed 2013-01-24: 2461000\nshares 2013 Q2 10-Q filed 2013-04-24: 2790000\nshares 2013 Q3 10-Q filed 2013-07-24: 5574000\nshares 2013 FY 10-K filed 2013-10-30: 6042000\nshares 2014 Q1 10-Q filed 2014-01-28: 2256000\nshares 2014 Q2 10-Q filed 2014-04-24: 2626000\nshares 2014 Q3 10-Q filed 2014-07-23: 35529000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsVestedInPeriod",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "3a46562088b2a023b271d07b309b57c8d9bd5049efb6af4a558cc71a21edeb24"
+}

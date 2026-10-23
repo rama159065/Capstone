@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DeferredTaxAssetsPropertyPlantAndEquipment",
+  "title": "Apple Inc. - Deferred Tax Assets, Property, Plant and Equipment",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DeferredTaxAssetsPropertyPlantAndEquipment\nLabel: Deferred Tax Assets, Property, Plant and Equipment\nDescription: Amount before allocation of valuation allowances of deferred tax asset attributable to deductible temporary differences from property, plant, and equipment.\nRecent reported values:\nUSD 2016 FY 10-K filed 2016-10-26: 2238000000\nUSD 2016 FY 10-K filed 2016-10-26: 2107000000\nUSD 2017 FY 10-K filed 2017-11-03: 2107000000\nUSD 2017 FY 10-K filed 2017-11-03: 1230000000\nUSD 2018 FY 10-K filed 2018-11-05: 1230000000\nUSD 2018 FY 10-K filed 2018-11-05: 137000000\nUSD 2019 FY 10-K filed 2019-10-31: 137000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DeferredTaxAssetsPropertyPlantAndEquipment",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4d44eb4138ae7c207e973f31d0b83ec6e6c5e3413aa5a5ab5c99169f43d68ce6"
+}

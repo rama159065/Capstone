@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_BusinessAcquisitionPurchasePriceAllocationAmortizableIntangibleAssets",
+  "title": "Apple Inc. - Business Acquisition, Purchase Price Allocation, Amortizable Intangible Assets (Deprecated 2013-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: BusinessAcquisitionPurchasePriceAllocationAmortizableIntangibleAssets\nLabel: Business Acquisition, Purchase Price Allocation, Amortizable Intangible Assets (Deprecated 2013-01-31)\nDescription: The amount of acquisition cost of a business combination allocated to an identifiable intangible asset that will be amortized.\nRecent reported values:\nUSD 2012 FY 8-K filed 2013-04-24: 77000000\nUSD 2012 FY 10-K filed 2012-10-31: 77000000\nUSD 2012 FY 8-K filed 2013-04-24: 113000000\nUSD 2012 FY 10-K filed 2012-10-31: 113000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "BusinessAcquisitionPurchasePriceAllocationAmortizableIntangibleAssets",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b809443955d3cdee8e8417002cf83db36d0695f26bfc75c5c2af5f604137aa7b"
+}

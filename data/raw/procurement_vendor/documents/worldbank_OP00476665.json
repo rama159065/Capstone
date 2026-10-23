@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476665",
+  "title": "DR Resilient Agriculture and Integrated Water Resources Management",
+  "text": "bid_description: Adquisición de Cloradores de Pastillas para las ASOCAR\nbid_reference_no: DO-RAWRM-496868-GO-RFQ\nid: OP00476665\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P163260-DR Resilient Agriculture and Integrated Water Resources Management Loan/Credit/TF Info: IBRD-89120 Bid/Contract Reference No: DO-RAWRM-496868-GO-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: Adquisicin de Cloradores de Pastillas para los Acueductos Rurales, adjudicado a RIMCO Ingeniera SRL, por un monto de RD$1,620.000.00 Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/20 Duration of Contract 30 Day(s) Awarded Bidder(s): RIMCO INGENIERIA, SRL (1033330) Apartamento D-2, Residencial Marcella, Residencial Estanza, Moca, Espaillat, Rep. Dom. Country: Dominican Republic Bid Price at Opening DOP 1620000.00 Evaluated Bid Price DOP 1620000.00 Signed Contract price DOP 1620000.00 \nnotice_type: Contract Award\nnoticedate: 21-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Dominican Republic\nproject_id: P163260\nproject_name: DR Resilient Agriculture and Integrated Water Resources Management\nsubmission_date: 2026-10-21T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=100&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476665",
+      "notice_type": "Contract Award",
+      "noticedate": "21-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Dominican Republic",
+      "project_id": "P163260",
+      "project_name": "DR Resilient Agriculture and Integrated Water Resources Management",
+      "bid_reference_no": "DO-RAWRM-496868-GO-RFQ",
+      "bid_description": "Adquisición de Cloradores de Pastillas para las ASOCAR",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-21T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P163260-DR Resilient Agriculture and Integrated Water Resources Management<br/><b>Loan/Credit/TF Info:</b>IBRD-89120<br/><b>Bid/Contract Reference No:</b>DO-RAWRM-496868-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Adquisicin de Cloradores de Pastillas para los Acueductos Rurales, adjudicado a RIMCO Ingeniera SRL, por un monto de RD$1,620.000.00</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/20<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>30 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>RIMCO INGENIERIA, SRL (1033330)</b><br/>Apartamento D-2, Residencial Marcella, Residencial Estanza, Moca, Espaillat, Rep. Dom.<br/>Country: Dominican Republic<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>DOP 1620000.00<br/><br/>Evaluated Bid Price<br/>DOP 1620000.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>DOP 1620000.00</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:11+00:00",
+  "content_sha256": "c710bb056d3944f6e72815ac7e2c306cc7eba310f79129eac0f88cbe47c8ceea"
+}

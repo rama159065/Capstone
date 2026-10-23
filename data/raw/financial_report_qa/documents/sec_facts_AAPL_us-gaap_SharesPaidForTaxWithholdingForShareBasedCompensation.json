@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_SharesPaidForTaxWithholdingForShareBasedCompensation",
+  "title": "Apple Inc. - Share-based Payment Arrangement, Shares Withheld for Tax Withholding Obligation",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: SharesPaidForTaxWithholdingForShareBasedCompensation\nLabel: Share-based Payment Arrangement, Shares Withheld for Tax Withholding Obligation\nDescription: Number of shares used to settle grantee's tax withholding obligation for award under share-based payment arrangement.\nRecent reported values:\nshares None None 8-K filed 2015-01-28: 15600000\nshares 2015 FY 10-K filed 2015-10-28: 15600000\nshares 2016 FY 10-K filed 2016-10-26: 15600000\nshares 2015 FY 10-K filed 2015-10-28: 14100000\nshares 2016 FY 10-K filed 2016-10-26: 14100000\nshares 2017 FY 10-K filed 2017-11-03: 14100000\nshares 2016 FY 10-K filed 2016-10-26: 15900000\nshares 2017 FY 10-K filed 2017-11-03: 15900000\nshares 2018 FY 10-K filed 2018-11-05: 15900000\nshares 2017 FY 10-K filed 2017-11-03: 15400000\nshares 2018 FY 10-K filed 2018-11-05: 15400000\nshares 2018 FY 10-K filed 2018-11-05: 16000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "SharesPaidForTaxWithholdingForShareBasedCompensation",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "df7774cbe10a3df63bde052945ae5745781d1d07f4381166da0299834e823d71"
+}

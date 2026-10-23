@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ProceedsFromSaleAndMaturityOfOtherInvestments",
+  "title": "Apple Inc. - Proceeds from Sale and Maturity of Other Investments",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ProceedsFromSaleAndMaturityOfOtherInvestments\nLabel: Proceeds from Sale and Maturity of Other Investments\nDescription: The cash inflow associated with the sale and maturity (principal being due) of other investments, prepayment and call (request of early payment) of other investments not otherwise defined in the taxonomy.\nRecent reported values:\nUSD 2018 FY 10-K filed 2018-11-05: 353000000\nUSD 2019 FY 10-K filed 2019-10-31: 353000000\nUSD 2020 FY 10-K filed 2020-10-30: 353000000\nUSD 2019 Q3 10-Q filed 2019-07-31: 1526000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 1526000000\nUSD 2019 FY 10-K filed 2019-10-31: 1634000000\nUSD 2020 FY 10-K filed 2020-10-30: 1634000000\nUSD 2021 FY 10-K filed 2021-10-29: 1634000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 58000000\nUSD 2020 FY 10-K filed 2020-10-30: 92000000\nUSD 2021 FY 10-K filed 2021-10-29: 92000000\nUSD 2021 FY 10-K filed 2021-10-29: 387000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ProceedsFromSaleAndMaturityOfOtherInvestments",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e9a66a5c18d98572c65ac29680349eb683fe4905f525b9035cfd6e9b7ad2a451"
+}

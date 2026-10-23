@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IntangibleAssetsNetExcludingGoodwill",
+  "title": "Apple Inc. - Intangible Assets, Net (Excluding Goodwill)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IntangibleAssetsNetExcludingGoodwill\nLabel: Intangible Assets, Net (Excluding Goodwill)\nDescription: Sum of the carrying amounts of all intangible assets, excluding goodwill, as of the balance sheet date, net of accumulated amortization and impairment charges.\nRecent reported values:\nUSD 2017 Q3 10-Q filed 2017-08-02: 3206000000\nUSD 2017 FY 10-K filed 2017-11-03: 3206000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 2848000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 2617000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 2444000000\nUSD 2017 FY 10-K filed 2017-11-03: 2298000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 2298000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 2149000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 13301000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 13301000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 25797000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 25417000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IntangibleAssetsNetExcludingGoodwill",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4d649e08fbbbe900e9bde37d8b0e3d0bf789e325211cd7a8ff2f85667c7ca485"
+}

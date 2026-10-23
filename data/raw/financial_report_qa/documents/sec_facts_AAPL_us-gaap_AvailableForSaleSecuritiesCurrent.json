@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AvailableForSaleSecuritiesCurrent",
+  "title": "Apple Inc. - Available-for-sale Securities, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AvailableForSaleSecuritiesCurrent\nLabel: Available-for-sale Securities, Current\nDescription: Amount of investment in debt and equity securities categorized neither as trading securities nor held-to-maturity securities and intended be sold or mature one year or operating cycle, if longer.\nRecent reported values:\nUSD 2017 Q1 10-Q filed 2017-02-01: 44081000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 51944000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 58188000000\nUSD 2017 FY 10-K filed 2017-11-03: 53892000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 53892000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 53892000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 53892000000\nUSD 2018 FY 10-K filed 2018-11-05: 53892000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 49662000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 42881000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 38999000000\nUSD 2018 FY 10-K filed 2018-11-05: 40388000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AvailableForSaleSecuritiesCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "fc4245e9ff6a2bdee6d4100839342564233ef819a2cc22b27ed73e5421224e1f"
+}

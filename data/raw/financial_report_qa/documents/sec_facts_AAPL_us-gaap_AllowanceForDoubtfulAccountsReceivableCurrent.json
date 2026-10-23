@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AllowanceForDoubtfulAccountsReceivableCurrent",
+  "title": "Apple Inc. - Accounts Receivable, Allowance for Credit Loss, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AllowanceForDoubtfulAccountsReceivableCurrent\nLabel: Accounts Receivable, Allowance for Credit Loss, Current\nDescription: Amount of allowance for credit loss on accounts receivable, classified as current.\nRecent reported values:\nUSD 2017 Q1 10-Q filed 2017-02-01: 53000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 53000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 53000000\nUSD 2017 FY 10-K filed 2017-11-03: 53000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 53000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 53000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 55000000\nUSD 2017 FY 10-K filed 2017-11-03: 58000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 58000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 58000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 59000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 60000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AllowanceForDoubtfulAccountsReceivableCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "07a63c121a8f6823cd662ea4a8afa99cbb90cd6c6291998a0b20d4327088e983"
+}

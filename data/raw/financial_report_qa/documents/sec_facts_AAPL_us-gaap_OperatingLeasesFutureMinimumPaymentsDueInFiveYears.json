@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OperatingLeasesFutureMinimumPaymentsDueInFiveYears",
+  "title": "Apple Inc. - Operating Leases, Future Minimum Payments, Due in Five Years",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OperatingLeasesFutureMinimumPaymentsDueInFiveYears\nLabel: Operating Leases, Future Minimum Payments, Due in Five Years\nDescription: Amount of required minimum rental payments for operating leases having an initial or remaining non-cancelable lease term in excess of one year due in the fifth fiscal year following the latest fiscal year. Excludes interim and annual periods when interim periods are reported on a rolling approach, from latest balance sheet date.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 226000000\nUSD 2011 FY 10-K filed 2011-10-26: 320000000\nUSD 2012 FY 10-K filed 2012-10-31: 486000000\nUSD 2012 FY 8-K filed 2013-04-24: 486000000\nUSD 2013 FY 10-K filed 2013-10-30: 505000000\nUSD 2014 FY 10-K filed 2014-10-27: 534000000\nUSD None None 8-K filed 2015-01-28: 534000000\nUSD 2015 FY 10-K filed 2015-10-28: 674000000\nUSD 2016 FY 10-K filed 2016-10-26: 836000000\nUSD 2017 FY 10-K filed 2017-11-03: 871000000\nUSD 2018 FY 10-K filed 2018-11-05: 800000000\nUSD 2019 FY 10-K filed 2019-10-31: 834000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OperatingLeasesFutureMinimumPaymentsDueInFiveYears",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "08a1d5d5d4ef3af3c3a5cd192582df013eb59a19149ad3f31f01b82a1c9c33c5"
+}

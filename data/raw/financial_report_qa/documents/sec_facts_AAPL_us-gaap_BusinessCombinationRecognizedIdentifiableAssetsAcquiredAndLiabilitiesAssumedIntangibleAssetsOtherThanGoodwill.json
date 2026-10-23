@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedIntangibleAssetsOtherThanGoodwill",
+  "title": "Apple Inc. - Business Combination, Recognized Identifiable Assets Acquired and Liabilities Assumed, Intangible Assets, Other than Goodwill",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedIntangibleAssetsOtherThanGoodwill\nLabel: Business Combination, Recognized Identifiable Assets Acquired and Liabilities Assumed, Intangible Assets, Other than Goodwill\nDescription: Amount of intangible assets, excluding goodwill, acquired at the acquisition date.\nRecent reported values:\nUSD 2014 Q3 10-Q filed 2014-07-23: 167000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 156000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 165000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 247000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "BusinessCombinationRecognizedIdentifiableAssetsAcquiredAndLiabilitiesAssumedIntangibleAssetsOtherThanGoodwill",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b04df26db8d98eecaa5dedb3f656db0a731c25c5f0bf4745ab7e5bab2af50c7a"
+}

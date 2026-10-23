@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsForfeitedInPeriod",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Forfeited in Period",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsForfeitedInPeriod\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Forfeited in Period\nDescription: The number of equity-based payment instruments, excluding stock (or unit) options, that were forfeited during the reporting period.\nRecent reported values:\nshares 2012 Q2 10-Q filed 2012-04-25: 632000\nshares 2012 Q3 10-Q filed 2012-07-25: 812000\nshares 2012 FY 10-K filed 2012-10-31: 935000\nshares 2012 FY 8-K filed 2013-04-24: 935000\nshares 2013 FY 10-K filed 2013-10-30: 935000\nshares 2013 Q1 10-Q filed 2013-01-24: 316000\nshares 2013 Q2 10-Q filed 2013-04-24: 509000\nshares 2013 Q3 10-Q filed 2013-07-24: 901000\nshares 2013 FY 10-K filed 2013-10-30: 1268000\nshares 2014 Q1 10-Q filed 2014-01-28: 216000\nshares 2014 Q2 10-Q filed 2014-04-24: 440000\nshares 2014 Q3 10-Q filed 2014-07-23: 4401000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsForfeitedInPeriod",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b28c3f18052dd3f5c45b15b82f15bbc24432745fe0b39e0601003951aff17b03"
+}

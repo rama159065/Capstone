@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_PrepaidExpenseOtherNoncurrent",
+  "title": "Apple Inc. - Prepaid Expense Other, Noncurrent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: PrepaidExpenseOtherNoncurrent\nLabel: Prepaid Expense Other, Noncurrent\nDescription: Carrying amount as of the balance sheet date of amounts paid in advance which will be charged against earnings in periods after one year or beyond the operating cycle, if longer.\nRecent reported values:\nUSD 2011 Q1 10-Q filed 2011-01-19: 1400000000\nUSD 2011 Q2 10-Q filed 2011-04-21: 2200000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 1700000000\nUSD 2011 FY 10-K filed 2011-10-26: 1600000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 2000000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 2600000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 3100000000\nUSD 2012 FY 8-K filed 2013-04-24: 3000000000\nUSD 2012 FY 10-K filed 2012-10-31: 3000000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 2600000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 2600000000\nUSD 2013 Q3 10-Q filed 2013-07-24: 2200000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "PrepaidExpenseOtherNoncurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "3c71a9f1137842aab4c627173128a38fc1d9b21b294cfeb469eec1efd188208a"
+}

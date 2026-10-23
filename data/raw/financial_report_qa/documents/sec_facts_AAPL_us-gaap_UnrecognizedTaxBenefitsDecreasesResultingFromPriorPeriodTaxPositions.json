@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_UnrecognizedTaxBenefitsDecreasesResultingFromPriorPeriodTaxPositions",
+  "title": "Apple Inc. - Unrecognized Tax Benefits, Decrease Resulting from Prior Period Tax Positions",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: UnrecognizedTaxBenefitsDecreasesResultingFromPriorPeriodTaxPositions\nLabel: Unrecognized Tax Benefits, Decrease Resulting from Prior Period Tax Positions\nDescription: Amount of decrease in unrecognized tax benefits resulting from tax positions taken in prior period tax returns.\nRecent reported values:\nUSD 2021 FY 10-K filed 2021-10-29: 1402000000\nUSD 2022 FY 10-K filed 2022-10-28: 1402000000\nUSD 2023 FY 10-K filed 2023-11-03: 1402000000\nUSD 2022 FY 10-K filed 2022-10-28: 1982000000\nUSD 2023 FY 10-K filed 2023-11-03: 1982000000\nUSD 2024 FY 10-K filed 2024-11-01: 1982000000\nUSD 2023 FY 10-K filed 2023-11-03: 1463000000\nUSD 2024 FY 10-K filed 2024-11-01: 1463000000\nUSD 2025 FY 10-K filed 2025-10-31: 1463000000\nUSD 2024 FY 10-K filed 2024-11-01: 386000000\nUSD 2025 FY 10-K filed 2025-10-31: 386000000\nUSD 2025 FY 10-K filed 2025-10-31: 71000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "UnrecognizedTaxBenefitsDecreasesResultingFromPriorPeriodTaxPositions",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "683738c74ed2c9a22b12fc1322a671a94647345259f2a64f1e2e094015a3522d"
+}

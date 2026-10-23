@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DebtInstrumentUnamortizedDiscount",
+  "title": "Apple Inc. - Debt Instrument, Unamortized Discount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DebtInstrumentUnamortizedDiscount\nLabel: Debt Instrument, Unamortized Discount\nDescription: Amount, after accumulated amortization, of debt discount.\nRecent reported values:\nUSD 2014 FY 10-K filed 2014-10-27: 52000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 52000000\nUSD None None 8-K filed 2015-01-28: 52000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 52000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 52000000\nUSD 2015 FY 10-K filed 2015-10-28: 52000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 69000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 80000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 97000000\nUSD 2015 FY 10-K filed 2015-10-28: 114000000\nUSD 2016 Q1 10-Q filed 2016-01-27: 114000000\nUSD 2016 Q1 10-Q filed 2016-01-27: 109000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DebtInstrumentUnamortizedDiscount",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "32de5fbc31c926ba76e5a9f2472cf7632e55a2b1fddaf41436c6a8618b2c8a5e"
+}

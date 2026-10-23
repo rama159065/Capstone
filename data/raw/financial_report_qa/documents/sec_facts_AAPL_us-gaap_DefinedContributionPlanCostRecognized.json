@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DefinedContributionPlanCostRecognized",
+  "title": "Apple Inc. - Defined Contribution Plan, Cost",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DefinedContributionPlanCostRecognized\nLabel: Defined Contribution Plan, Cost\nDescription: Amount of cost for defined contribution plan.\nRecent reported values:\nUSD 2012 FY 8-K filed 2013-04-24: 114000000\nUSD 2013 FY 10-K filed 2013-10-30: 114000000\nUSD 2014 FY 10-K filed 2014-10-27: 114000000\nUSD None None 8-K filed 2015-01-28: 114000000\nUSD 2013 FY 10-K filed 2013-10-30: 135000000\nUSD 2014 FY 10-K filed 2014-10-27: 135000000\nUSD None None 8-K filed 2015-01-28: 135000000\nUSD 2015 FY 10-K filed 2015-10-28: 135000000\nUSD 2014 FY 10-K filed 2014-10-27: 163000000\nUSD None None 8-K filed 2015-01-28: 163000000\nUSD 2015 FY 10-K filed 2015-10-28: 163000000\nUSD 2015 FY 10-K filed 2015-10-28: 200000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DefinedContributionPlanCostRecognized",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "5b2db9ed35e9351774581a061f9e0ca4ce7448427de3eb065bea8291117e8d36"
+}

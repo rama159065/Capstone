@@ -1,0 +1,17 @@
+{
+  "domain": "competitive_research",
+  "document_id": "sec_competitive_MSFT_0001193125-25-245150",
+  "title": "MICROSOFT CORP DEF 14A filed 2025-10-21",
+  "text": "Company: MICROSOFT CORP\nTicker: MSFT\nCIK: 0000789019\nSIC: 7372 Services-Prepackaged Software\nBusiness address: {'street1': 'ONE MICROSOFT WAY', 'street2': None, 'city': 'REDMOND', 'stateOrCountry': 'WA', 'zipCode': '98052-6399', 'stateOrCountryDescription': 'WA', 'isForeignLocation': None, 'foreignStateTerritory': None, 'country': None, 'countryCode': None}\nForm: DEF 14A\nFiling date: 2025-10-21\nAccession number: 0001193125-25-245150\nPrimary document: d908201ddef14a.htm\nPrimary document description: DEF 14A\nFiling URL: https://www.sec.gov/Archives/edgar/data/789019/000119312525245150/d908201ddef14a.htm",
+  "source_name": "SEC EDGAR submissions",
+  "source_url": "https://data.sec.gov/submissions/CIK0000789019.json",
+  "metadata": {
+    "ticker": "MSFT",
+    "cik": "0000789019",
+    "form": "DEF 14A",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312525245150/d908201ddef14a.htm",
+    "source_type": "sec_filing_metadata"
+  },
+  "downloaded_at": "2026-10-22T12:41:52+00:00",
+  "content_sha256": "3864b17561dc9f65b372fff9070281feed017d2dd9f252f7c2a2a0b71e012112"
+}

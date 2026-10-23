@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShortTermDebtWeightedAverageInterestRate",
+  "title": "Apple Inc. - Short-term Debt, Weighted Average Interest Rate, at Point in Time",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShortTermDebtWeightedAverageInterestRate\nLabel: Short-term Debt, Weighted Average Interest Rate, at Point in Time\nDescription: Weighted average interest rate of short-term debt outstanding calculated at point in time.\nRecent reported values:\npure 2019 Q1 10-Q filed 2019-01-30: 0.0218\npure 2019 Q2 10-Q filed 2019-05-01: 0.0218\npure 2019 Q3 10-Q filed 2019-07-31: 0.0218\npure 2019 FY 10-K filed 2019-10-31: 0.0218\npure 2019 Q1 10-Q filed 2019-01-30: 0.0239\npure 2019 Q2 10-Q filed 2019-05-01: 0.0256\npure 2019 Q3 10-Q filed 2019-07-31: 0.0249\npure 2019 FY 10-K filed 2019-10-31: 0.0224\npure 2020 Q1 10-Q filed 2020-01-29: 0.0224\npure 2020 FY 10-K filed 2020-10-30: 0.0224\npure 2020 Q1 10-Q filed 2020-01-29: 0.0188\npure 2020 FY 10-K filed 2020-10-30: 0.0062",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShortTermDebtWeightedAverageInterestRate",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "1ab99ccecbffa4e9a54f70110ebbe72c2eb034dd3f413a912eb146e80bb274be"
+}

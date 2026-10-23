@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_EffectiveIncomeTaxRateReconciliationForeignIncomeTaxRateDifferential",
+  "title": "Apple Inc. - Effective Income Tax Rate Reconciliation, Foreign Income Tax Rate Differential, Percent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: EffectiveIncomeTaxRateReconciliationForeignIncomeTaxRateDifferential\nLabel: Effective Income Tax Rate Reconciliation, Foreign Income Tax Rate Differential, Percent\nDescription: Percentage of the difference between reported income tax expense (benefit) and expected income tax expense (benefit) computed by applying the domestic federal statutory income tax rates to pretax income (loss) from continuing operations applicable to statutory income tax expense (benefit) outside of the country of domicile.\nRecent reported values:\npure 2013 FY 10-K filed 2013-10-30: 0.125\npure 2014 FY 10-K filed 2014-10-27: 0.125\npure None None 8-K filed 2015-01-28: 0.125\npure 2015 FY 10-K filed 2015-10-28: 0.125\npure 2016 FY 10-K filed 2016-10-26: 0.125\npure 2017 FY 10-K filed 2017-11-03: 0.125",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "EffectiveIncomeTaxRateReconciliationForeignIncomeTaxRateDifferential",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "1830a59e6a0a3485a4d261c1dde5720369ef75d924f07607d7b6a93ff1afced0"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_UnrecognizedTaxBenefitsThatWouldImpactEffectiveTaxRate",
+  "title": "Apple Inc. - Unrecognized Tax Benefits that Would Impact Effective Tax Rate",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: UnrecognizedTaxBenefitsThatWouldImpactEffectiveTaxRate\nLabel: Unrecognized Tax Benefits that Would Impact Effective Tax Rate\nDescription: The total amount of unrecognized tax benefits that, if recognized, would affect the effective tax rate.\nRecent reported values:\nUSD 2021 Q1 10-Q filed 2021-01-28: 9000000000\nUSD 2021 Q2 10-Q filed 2021-04-29: 8300000000\nUSD 2021 Q3 10-Q filed 2021-07-28: 7600000000\nUSD 2021 FY 10-K filed 2021-10-29: 6600000000\nUSD 2022 FY 10-K filed 2022-10-28: 6600000000\nUSD 2022 FY 10-K filed 2022-10-28: 8000000000\nUSD 2023 FY 10-K filed 2023-11-03: 8000000000\nUSD 2023 FY 10-K filed 2023-11-03: 9500000000\nUSD 2024 FY 10-K filed 2024-11-01: 9500000000\nUSD 2024 FY 10-K filed 2024-11-01: 10800000000\nUSD 2025 FY 10-K filed 2025-10-31: 10800000000\nUSD 2025 FY 10-K filed 2025-10-31: 10600000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "UnrecognizedTaxBenefitsThatWouldImpactEffectiveTaxRate",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b240f71b7403a4dfebe8190d9d2fa8a13bda4945936a9ea1fa1512dc497cd60e"
+}

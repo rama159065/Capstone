@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_EmployeeServiceShareBasedCompensationCashFlowEffectCashUsedToSettleAwards",
+  "title": "Apple Inc. - Share-based Payment Arrangement, Cash Used to Settle Award",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: EmployeeServiceShareBasedCompensationCashFlowEffectCashUsedToSettleAwards\nLabel: Share-based Payment Arrangement, Cash Used to Settle Award\nDescription: Aggregate cash paid by the entity during the period to settle equity instruments granted under equity-based payment arrangements.\nRecent reported values:\nUSD None None 8-K filed 2015-01-28: 1200000000\nUSD 2015 FY 10-K filed 2015-10-28: 1200000000\nUSD 2016 FY 10-K filed 2016-10-26: 1200000000\nUSD 2015 FY 10-K filed 2015-10-28: 1600000000\nUSD 2016 FY 10-K filed 2016-10-26: 1600000000\nUSD 2017 FY 10-K filed 2017-11-03: 1600000000\nUSD 2016 FY 10-K filed 2016-10-26: 1700000000\nUSD 2017 FY 10-K filed 2017-11-03: 1700000000\nUSD 2018 FY 10-K filed 2018-11-05: 1700000000\nUSD 2017 FY 10-K filed 2017-11-03: 2000000000\nUSD 2018 FY 10-K filed 2018-11-05: 2000000000\nUSD 2018 FY 10-K filed 2018-11-05: 2700000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "EmployeeServiceShareBasedCompensationCashFlowEffectCashUsedToSettleAwards",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "74a95e382f0ac103f822e9757c8fceac90399e8b468dc7dfce3bcc863ba36f91"
+}

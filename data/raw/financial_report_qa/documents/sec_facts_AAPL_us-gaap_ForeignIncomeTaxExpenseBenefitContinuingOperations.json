@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ForeignIncomeTaxExpenseBenefitContinuingOperations",
+  "title": "Apple Inc. - Foreign Income Tax Expense (Benefit), Continuing Operations",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ForeignIncomeTaxExpenseBenefitContinuingOperations\nLabel: Foreign Income Tax Expense (Benefit), Continuing Operations\nDescription: Amount of current and deferred foreign income tax expense (benefit) attributable to income (loss) from continuing operations.\nRecent reported values:\nUSD 2021 FY 10-K filed 2021-10-29: 12164000000\nUSD 2022 FY 10-K filed 2022-10-28: 12164000000\nUSD 2023 FY 10-K filed 2023-11-03: 12164000000\nUSD 2022 FY 10-K filed 2022-10-28: 12072000000\nUSD 2023 FY 10-K filed 2023-11-03: 12072000000\nUSD 2024 FY 10-K filed 2024-11-01: 12072000000\nUSD 2023 FY 10-K filed 2023-11-03: 9419000000\nUSD 2024 FY 10-K filed 2024-11-01: 9419000000\nUSD 2025 FY 10-K filed 2025-10-31: 9419000000\nUSD 2024 FY 10-K filed 2024-11-01: 25830000000\nUSD 2025 FY 10-K filed 2025-10-31: 25830000000\nUSD 2025 FY 10-K filed 2025-10-31: 9495000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ForeignIncomeTaxExpenseBenefitContinuingOperations",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "103860415a9ee03b6073b9d680ac481a630fa22c0607450c8ba0cf73eaefbce6"
+}

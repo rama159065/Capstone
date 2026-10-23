@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CapitalizedComputerSoftwareAdditions",
+  "title": "Apple Inc. - Capitalized Computer Software, Additions",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CapitalizedComputerSoftwareAdditions\nLabel: Capitalized Computer Software, Additions\nDescription: Additions made to capitalized computer software costs during the period.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 11000000\nUSD 2011 FY 10-K filed 2011-10-26: 71000000\nUSD 2010 FY 10-K filed 2010-10-27: 71000000\nUSD 2010 FY 10-K filed 2010-10-27: 0",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CapitalizedComputerSoftwareAdditions",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "ce04fb039a0f023ebcf6f251118baa0f963899b5ca8da85b2fe3b326020aa16a"
+}

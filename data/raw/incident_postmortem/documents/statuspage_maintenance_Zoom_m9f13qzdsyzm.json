@@ -1,0 +1,106 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Zoom_m9f13qzdsyzm",
+  "title": "Zoom - Zoom Phone India Maintenance (Hyderabad Data Center): October 09, 2026",
+  "text": "Service: Zoom\nMaintenance: Zoom Phone India Maintenance (Hyderabad Data Center): October 09, 2026\nStatus: completed\nImpact: maintenance\nScheduled for: 2026-10-09T04:30:00.000-07:00\nScheduled until: 2026-10-10T10:30:00.000-07:00\nUpdates:\n- 2026-10-10T10:30:12.213-07:00: completed - The scheduled maintenance has been completed.\n- 2026-10-09T04:30:10.076-07:00: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2026-10-09T03:30:12.111-07:00: scheduled - Maintenance will begin as scheduled in 60 minutes.\n- 2026-09-16T09:14:59.960-07:00: scheduled - Zoom Phone users registered to the India (Hyderabad) Data Center will be automatically registered in an alternative Data Center (Mumbai) starting at 09th October 2026 04:30 AM PDT (5:00 PM IST on 09th October 2026). During the maintenance window, a brief disconnection may be experienced and notifications may be missed. If you get disconnected, the system will attempt to reconnect you automatically. \n\nIf you are a BYOC (Bring Your Own Carrier) customer, please ensure that your Session Border Controller (SBC) is configured with alternate routing to alternate India (Mumbai) Data Center in addition to the India (Hyderabad) Data Center. During the maintenance window, connectivity to Zoom’s Hyderabad Data Center will be blocked which will force calls from the Session Border Controller (SBC) to failover to Zoom’s India (Mumbai) Data Center. Traffic will continue to be routed through the Zoom's India (Hyderabad) Data Center once the maintenance is completed. \n\nFor customers that use hardware phones, refer to this link for the devices support the alternative datacenter process as described above: https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0061373#h_01GNZ783VT6YXHES8NSXBA5M9A",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://status.zoom.us/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "m9f13qzdsyzm",
+      "name": "Zoom Phone India Maintenance (Hyderabad Data Center): October 09, 2026",
+      "status": "completed",
+      "created_at": "2026-09-16T09:14:59.859-07:00",
+      "updated_at": "2026-10-10T10:30:13.403-07:00",
+      "monitoring_at": null,
+      "resolved_at": "2026-10-10T10:30:12.213-07:00",
+      "impact": "maintenance",
+      "shortlink": "https://stspg.io/8kzrzqkw8vyq",
+      "started_at": "2026-09-16T09:14:59.845-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "b6mfm3v2zvhk",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "m9f13qzdsyzm",
+          "created_at": "2026-10-10T10:30:12.213-07:00",
+          "updated_at": "2026-10-10T10:30:12.213-07:00",
+          "display_at": "2026-10-10T10:30:12.213-07:00",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "4t4rwrzdvzxb",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "m9f13qzdsyzm",
+          "created_at": "2026-10-09T04:30:10.076-07:00",
+          "updated_at": "2026-10-09T04:30:10.076-07:00",
+          "display_at": "2026-10-09T04:30:10.076-07:00",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "g4qtmdgffq8r",
+          "status": "scheduled",
+          "body": "Maintenance will begin as scheduled in 60 minutes.",
+          "incident_id": "m9f13qzdsyzm",
+          "created_at": "2026-10-09T03:30:12.111-07:00",
+          "updated_at": "2026-10-09T03:30:12.111-07:00",
+          "display_at": "2026-10-09T03:30:12.111-07:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "p9rqb3sk1zkc",
+          "status": "scheduled",
+          "body": "Zoom Phone users registered to the India (Hyderabad) Data Center will be automatically registered in an alternative Data Center (Mumbai) starting at 09th October 2026 04:30 AM PDT (5:00 PM IST on 09th October 2026). During the maintenance window, a brief disconnection may be experienced and notifications may be missed. If you get disconnected, the system will attempt to reconnect you automatically. \n\nIf you are a BYOC (Bring Your Own Carrier) customer, please ensure that your Session Border Controller (SBC) is configured with alternate routing to alternate India (Mumbai) Data Center in addition to the India (Hyderabad) Data Center. During the maintenance window, connectivity to Zoom’s Hyderabad Data Center will be blocked which will force calls from the Session Border Controller (SBC) to failover to Zoom’s India (Mumbai) Data Center. Traffic will continue to be routed through the Zoom's India (Hyderabad) Data Center once the maintenance is completed. \n\nFor customers that use hardware phones, refer to this link for the devices support the alternative datacenter process as described above: https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0061373#h_01GNZ783VT6YXHES8NSXBA5M9A",
+          "incident_id": "m9f13qzdsyzm",
+          "created_at": "2026-09-16T09:14:59.960-07:00",
+          "updated_at": "2026-09-16T09:14:59.960-07:00",
+          "display_at": "2026-09-16T09:14:59.960-07:00",
+          "affected_components": [
+            {
+              "code": "glcgf4v63241",
+              "name": "Zoom Phone - APAC - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "glcgf4v63241",
+          "name": "Zoom Phone",
+          "status": "operational",
+          "created_at": "2022-05-03T10:45:58.970-07:00",
+          "updated_at": "2026-10-09T21:30:09.059-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "k4ymzkwr5c5f",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2026-10-09T04:30:00.000-07:00",
+      "scheduled_until": "2026-10-10T10:30:00.000-07:00"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:49:04+00:00",
+  "content_sha256": "30b28f26231cbb3ec4acc9f753edebecac35e2cc9a8df374b3724e92ca9893d4"
+}

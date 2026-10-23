@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476127",
+  "title": "MSME Competitiveness Project",
+  "text": "bid_description: IT equipment for inspection bodies\nbid_reference_no: MD-CEP-569577-GO-RFQ\nid: OP00476127\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P177895-MSME Competitiveness Project Loan/Credit/TF Info: IDA-71740 Bid/Contract Reference No: MD-CEP-569577-GO-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: Delivery of IT equipment for inspection bodies Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/16 Duration of Contract 120 Day(s) Awarded Bidder(s): FORS COMPUTER SRL (876458) mun. Chiinu, sec. Rcani, str. Calea Moilor, 28 Country: Moldova Bid Price at Opening USD 188859.60 Evaluated Bid Price USD 188859.60 Signed Contract price USD 188859.60 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Moldova\nproject_id: P177895\nproject_name: MSME Competitiveness Project\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476127",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Moldova",
+      "project_id": "P177895",
+      "project_name": "MSME Competitiveness Project",
+      "bid_reference_no": "MD-CEP-569577-GO-RFQ",
+      "bid_description": "IT equipment for inspection bodies",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P177895-MSME Competitiveness Project<br/><b>Loan/Credit/TF Info:</b>IDA-71740<br/><b>Bid/Contract Reference No:</b>MD-CEP-569577-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Delivery of IT equipment for inspection bodies</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/16<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>120 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>FORS COMPUTER SRL (876458)</b><br/>mun. Chiinu, sec. Rcani, str. Calea Moilor, 28<br/>Country: Moldova<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>USD 188859.60<br/><br/>Evaluated Bid Price<br/>USD 188859.60</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>USD 188859.60</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "a860c263f8dcac1072cba7059fdd64eab4fa9d5198a7c68d5f513d81d1db1103"
+}

@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476562",
+  "title": "One WASH—Consolidated Water Supply, Sanitation, and Hygiene Account Project (One WASH—CWA)",
+  "text": "bid_description: Construction of 2 separate blocks latrine (4 seats for boys and 4 seats for girls with urinals and hand washing), Water Supply Facility and MHM room for Channa Dika Primary School found in Yaballo woreda in Borena Zone by Oromia Education Bureau\nbid_reference_no: ET-OROMIA WERDB-564031-CW-RFQ\nid: OP00476562\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P167794-One WASHConsolidated Water Supply, Sanitation, and Hygiene Account Project (One WASHCWA) Loan/Credit/TF Info: IDA-64450 Bid/Contract Reference No: ET-OROMIA WERDB-564031-CW-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: Construction of 2 separate blocks latrine (4 seats for boys and 4 seats for girls with urinals and hand washing), Water Supply Facility and MHM room for Channa Dika Primary School found in Yaballo wor Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/08/24 Duration of Contract 60 Day(s) Awarded Bidder(s): MALICHA, DESTA & THEIR FRIENDS BUILDING CONTRACTOR SME (1057322) Yabello Country: Ethiopia Bid Price at Opening ETB 5987524.1 Evaluated Bid Price ETB 5987524.91 Signed Contract price ETB 5987524.91 Evaluated Bidder(s): TULU SGLAN SME (1120254) yabalo Country: Ethiopia Bid Price at Opening ETB 6459257.50 Evaluated Bid Price ETB 6459257.5 DHENGE, RAMADAN AND THEIR FRIENDS SME (1120253) yabalo Country: Ethiopia Bid Price at Opening ETB 6443188.26 Evaluated Bid Price ETB 6443188.26 \nnotice_type: Contract Award\nnoticedate: 21-Oct-2026\nprocurement_group: CW\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Ethiopia\nproject_id: P167794\nproject_name: One WASH—Consolidated Water Supply, Sanitation, and Hygiene Account Project (One WASH—CWA)\nsubmission_date: 2026-10-21T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=0&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476562",
+      "notice_type": "Contract Award",
+      "noticedate": "21-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Ethiopia",
+      "project_id": "P167794",
+      "project_name": "One WASH—Consolidated Water Supply, Sanitation, and Hygiene Account Project (One WASH—CWA)",
+      "bid_reference_no": "ET-OROMIA WERDB-564031-CW-RFQ",
+      "bid_description": "Construction of 2 separate blocks latrine (4 seats for boys and 4 seats for girls with urinals and hand washing), Water Supply Facility and MHM room for Channa Dika Primary School found in Yaballo woreda in Borena Zone by Oromia Education Bureau",
+      "procurement_group": "CW",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-21T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P167794-One WASHConsolidated Water Supply, Sanitation, and Hygiene Account Project (One WASHCWA)<br/><b>Loan/Credit/TF Info:</b>IDA-64450<br/><b>Bid/Contract Reference No:</b>ET-OROMIA WERDB-564031-CW-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Construction of 2 separate blocks latrine (4 seats for boys and 4 seats for girls with urinals and hand washing), Water Supply Facility and MHM room for Channa Dika Primary School found in Yaballo wor</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/08/24<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>60 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>MALICHA, DESTA & THEIR FRIENDS BUILDING CONTRACTOR SME (1057322)</b><br/>Yabello<br/>Country: Ethiopia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>ETB 5987524.1<br/><br/>Evaluated Bid Price<br/>ETB 5987524.91</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>ETB 5987524.91</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>TULU SGLAN SME (1120254)</b><br/>yabalo<br/>Country: Ethiopia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>ETB 6459257.50<br/><br/>Evaluated Bid Price<br/>ETB 6459257.5</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>DHENGE, RAMADAN AND THEIR FRIENDS SME (1120253)</b><br/>yabalo<br/>Country: Ethiopia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>ETB 6443188.26<br/><br/>Evaluated Bid Price<br/>ETB 6443188.26</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:08+00:00",
+  "content_sha256": "cd3a30a1d8f6cf1d74c695238885dd21f65e8fa4e9b96f08aa97174cad2f2d89"
+}

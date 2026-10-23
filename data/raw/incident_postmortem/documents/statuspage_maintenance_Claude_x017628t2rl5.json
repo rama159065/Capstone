@@ -1,0 +1,113 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Claude_x017628t2rl5",
+  "title": "Claude - Upgrades to Connector Auth Storage",
+  "text": "Service: Claude\nMaintenance: Upgrades to Connector Auth Storage\nStatus: completed\nImpact: maintenance\nScheduled for: 2025-08-29T01:25:00.000Z\nScheduled until: 2025-08-29T02:40:00.000Z\nUpdates:\n- 2025-08-29T02:40:21.277Z: completed - The scheduled maintenance has been completed.\n- 2025-08-29T02:14:00.733Z: verifying - Verification is currently underway for the maintenance items.\n- 2025-08-29T01:25:21.416Z: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2025-08-29T01:23:38.479Z: scheduled - We are currently applying updates to systems used to store Connector Authentication.",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://status.anthropic.com/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "x017628t2rl5",
+      "name": "Upgrades to Connector Auth Storage",
+      "status": "completed",
+      "created_at": "2025-08-29T01:23:38.417Z",
+      "updated_at": "2025-08-29T02:40:21.294Z",
+      "monitoring_at": "2025-08-29T02:14:00.733Z",
+      "resolved_at": "2025-08-29T02:40:21.277Z",
+      "impact": "maintenance",
+      "shortlink": "https://stspg.io/kzxt8ykxyx3j",
+      "started_at": "2025-08-29T01:23:38.412Z",
+      "page_id": "tymt9n04zgry",
+      "incident_updates": [
+        {
+          "id": "3qx5tz7c0jqk",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "x017628t2rl5",
+          "created_at": "2025-08-29T02:40:21.277Z",
+          "updated_at": "2025-08-29T02:40:21.277Z",
+          "display_at": "2025-08-29T02:40:21.277Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "rm3hbmfrv949",
+          "status": "verifying",
+          "body": "Verification is currently underway for the maintenance items.",
+          "incident_id": "x017628t2rl5",
+          "created_at": "2025-08-29T02:14:00.733Z",
+          "updated_at": "2025-08-29T02:14:00.733Z",
+          "display_at": "2025-08-29T02:14:00.733Z",
+          "affected_components": [
+            {
+              "code": "rwppv331jlwc",
+              "name": "claude.ai",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "9wb0pcykckj5",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "x017628t2rl5",
+          "created_at": "2025-08-29T01:25:21.416Z",
+          "updated_at": "2025-08-29T01:25:21.416Z",
+          "display_at": "2025-08-29T01:25:21.416Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "z8fbqfhw5wn5",
+          "status": "scheduled",
+          "body": "We are currently applying updates to systems used to store Connector Authentication.",
+          "incident_id": "x017628t2rl5",
+          "created_at": "2025-08-29T01:23:38.479Z",
+          "updated_at": "2025-08-29T01:23:38.479Z",
+          "display_at": "2025-08-29T01:23:38.479Z",
+          "affected_components": [
+            {
+              "code": "rwppv331jlwc",
+              "name": "claude.ai",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "rwppv331jlwc",
+          "name": "claude.ai",
+          "status": "operational",
+          "created_at": "2023-07-11T17:52:24.275Z",
+          "updated_at": "2026-10-22T08:07:03.810Z",
+          "position": 1,
+          "description": null,
+          "showcase": true,
+          "start_date": "2023-07-11",
+          "group_id": null,
+          "page_id": "tymt9n04zgry",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2025-08-29T01:25:00.000Z",
+      "scheduled_until": "2025-08-29T02:40:00.000Z"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:49:11+00:00",
+  "content_sha256": "41eb455aaad65e3edf70a755b975e9f87a7b75ed3a55c2d96d7c2f6059f178dc"
+}

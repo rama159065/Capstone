@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_EarningsPerShareBasic",
+  "title": "Apple Inc. - Earnings Per Share, Basic",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: EarningsPerShareBasic\nLabel: Earnings Per Share, Basic\nDescription: The amount of net income (loss) for the period per each share of common stock or unit outstanding during the reporting period.\nRecent reported values:\nUSD/shares 2025 Q2 10-Q filed 2025-05-02: 1.65\nUSD/shares 2026 Q2 10-Q filed 2026-05-01: 1.65\nUSD/shares 2025 Q3 10-Q filed 2025-08-01: 5.64\nUSD/shares 2026 Q3 10-Q filed 2026-07-31: 5.64\nUSD/shares 2025 Q3 10-Q filed 2025-08-01: 1.57\nUSD/shares 2026 Q3 10-Q filed 2026-07-31: 1.57\nUSD/shares 2025 FY 10-K filed 2025-10-31: 7.49\nUSD/shares 2026 Q1 10-Q filed 2026-01-30: 2.85\nUSD/shares 2026 Q2 10-Q filed 2026-05-01: 4.87\nUSD/shares 2026 Q2 10-Q filed 2026-05-01: 2.02\nUSD/shares 2026 Q3 10-Q filed 2026-07-31: 6.91\nUSD/shares 2026 Q3 10-Q filed 2026-07-31: 2.03",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "EarningsPerShareBasic",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "a42668917b89931aabf22f39226ef8ca342291daa7ba0fdc038493a2149c92b4"
+}

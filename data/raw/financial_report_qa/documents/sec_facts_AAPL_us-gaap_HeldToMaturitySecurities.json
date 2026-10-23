@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_HeldToMaturitySecurities",
+  "title": "Apple Inc. - Debt Securities, Held-to-maturity",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: HeldToMaturitySecurities\nLabel: Debt Securities, Held-to-maturity\nDescription: Amount of investment in debt security measured at amortized cost (held-to-maturity).\nRecent reported values:\nUSD 2019 Q1 10-Q filed 2019-01-30: 1500000000\nUSD 2019 Q2 10-Q filed 2019-05-01: 1500000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "HeldToMaturitySecurities",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "0681a8de48f1bdb7a3deee815efd3de48ba63dae991502d5bbe7db9cd0e9f17e"
+}

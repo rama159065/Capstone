@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsNonvestedNumber",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Nonvested, Number",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsNonvestedNumber\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Nonvested, Number\nDescription: The number of non-vested equity-based payment instruments, excluding stock (or unit) options, that validly exist and are outstanding as of the balance sheet date.\nRecent reported values:\nshares 2013 Q3 10-Q filed 2013-07-24: 15005000\nshares 2013 FY 10-K filed 2013-10-30: 15005000\nshares 2013 Q1 10-Q filed 2013-01-24: 15919000\nshares 2013 Q2 10-Q filed 2013-04-24: 15765000\nshares 2013 Q3 10-Q filed 2013-07-24: 13654000\nshares 2013 FY 10-K filed 2013-10-30: 13326000\nshares 2014 Q1 10-Q filed 2014-01-28: 13326000\nshares 2014 Q2 10-Q filed 2014-04-24: 13326000\nshares 2014 Q3 10-Q filed 2014-07-23: 93284000\nshares 2014 Q1 10-Q filed 2014-01-28: 17037000\nshares 2014 Q2 10-Q filed 2014-04-24: 17224000\nshares 2014 Q3 10-Q filed 2014-07-23: 107084000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsNonvestedNumber",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "40710f93e02b6a47aee387fd12af9f3d609f078dc860fd319ff791fb50b9c8e7"
+}

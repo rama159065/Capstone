@@ -1,0 +1,17 @@
+{
+  "domain": "competitive_research",
+  "document_id": "sec_competitive_AAPL_0001308179-25-000008",
+  "title": "Apple Inc. DEF 14A filed 2025-01-10",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nSIC: 3571 Electronic Computers\nBusiness address: {'street1': 'ONE APPLE PARK WAY', 'street2': None, 'city': 'CUPERTINO', 'stateOrCountry': 'CA', 'zipCode': '95014', 'stateOrCountryDescription': 'CA', 'isForeignLocation': None, 'foreignStateTerritory': None, 'country': None, 'countryCode': None}\nForm: DEF 14A\nFiling date: 2025-01-10\nAccession number: 0001308179-25-000008\nPrimary document: aapl4359751-def14a.htm\nPrimary document description: DEFINITIVE PROXY STATEMENT\nFiling URL: https://www.sec.gov/Archives/edgar/data/320193/000130817925000008/aapl4359751-def14a.htm",
+  "source_name": "SEC EDGAR submissions",
+  "source_url": "https://data.sec.gov/submissions/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "form": "DEF 14A",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/320193/000130817925000008/aapl4359751-def14a.htm",
+    "source_type": "sec_filing_metadata"
+  },
+  "downloaded_at": "2026-10-22T12:41:49+00:00",
+  "content_sha256": "df8e7c583588b16dbf3d83843efdea108712b00181208b2e21e6cb4a663d4cd0"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsVestedAndExpectedToVestOutstandingNumber",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Vested and Expected to Vest, Outstanding, Number",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsVestedAndExpectedToVestOutstandingNumber\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Vested and Expected to Vest, Outstanding, Number\nDescription: Number of fully vested and expected to vest options outstanding that can be converted into shares under option plan. Includes, but is not limited to, unvested options for which requisite service period has not been rendered but that are expected to vest based on achievement of performance condition, if forfeitures are recognized when they occur.\nRecent reported values:\nshares 2011 Q3 10-Q filed 2011-07-20: 1324000\nshares 2011 FY 10-K filed 2011-10-26: 777000\nshares 2012 Q1 10-Q filed 2012-01-25: 296000\nshares 2012 Q2 10-Q filed 2012-04-25: 206000\nshares 2012 Q3 10-Q filed 2012-07-25: 105000\nshares 2012 FY 8-K filed 2013-04-24: 40000\nshares 2012 FY 10-K filed 2012-10-31: 40000\nshares 2013 Q1 10-Q filed 2013-01-24: 43000\nshares 2013 Q2 10-Q filed 2013-04-24: 25000\nshares 2013 Q3 10-Q filed 2013-07-24: 27000\nshares 2013 FY 10-K filed 2013-10-30: 22000\nshares 2014 Q1 10-Q filed 2014-01-28: 19000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsVestedAndExpectedToVestOutstandingNumber",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "72ea530dcaca8c11abcc4bc81994b3b0f10f169872ba1609ca220e330627b789"
+}

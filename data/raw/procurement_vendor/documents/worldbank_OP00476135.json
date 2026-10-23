@@ -1,0 +1,38 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476135",
+  "title": "Gujarat Resilient Cities Partnership: Ahmedabad City Resilience Project",
+  "text": "bid_description: Appointment of the IEC cum Capacity Building Expert as part of CoE\nbid_reference_no: IN-GUDM-565341-CS-INDV\ncontact_address: GUDM Ground floor, Block A, Karmyogi Bhavan Sector 10, Gandhinagar – Gujarat - 382010\ncontact_ctry_name: India\ncontact_email: gmtech-gudm@gujarat.gov.in\ncontact_name: Mr. N L Patel\ncontact_organization: Gujarat Urban Development Mission (GUDM)\ncontact_phone_no: +91 9824197605\nid: OP00476135\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Expression of interest shall be available online on GUDM Website i.e., https://gudm.gujarat.gov.in/ from 14/08/2026. Interested Candidates must provide CVs in the CV format uploaded on GUDM website. Expression of interest along with the necessary documents must be delivered in a written form to the address given below (RPAD/ Speed Post) by 31/08/2026 by 6:10 PM. The documents will be opened publicly on 01/09/2026 at 11:00 AM at the below address. Chief Engineer & General Manager (Tech) Gujarat Urban Development Mission Ground floor, Block A, Karmyogi Bhavan Sector 10, Gandhinagar – 382010 Gujarat Email: amrut.gudm@gmail.com \nnotice_type: Request for Expression of Interest\nnoticedate: 19-Oct-2026\nprocurement_group: CS\nprocurement_method_code: INDV\nprocurement_method_name: Individual Consultant Selection\nproject_ctry_name: India\nproject_id: P175728\nproject_name: Gujarat Resilient Cities Partnership: Ahmedabad City Resilience Project\nsubmission_date: 2026-10-19T00:00:00Z\nsubmission_deadline_date: 2026-10-19T00:00:00Z\nsubmission_deadline_time: 18:15",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476135",
+      "notice_type": "Request for Expression of Interest",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "submission_deadline_date": "2026-10-19T00:00:00Z",
+      "submission_deadline_time": "18:15",
+      "project_ctry_name": "India",
+      "project_id": "P175728",
+      "project_name": "Gujarat Resilient Cities Partnership: Ahmedabad City Resilience Project",
+      "bid_reference_no": "IN-GUDM-565341-CS-INDV",
+      "bid_description": "Appointment of the IEC cum Capacity Building Expert as part of CoE",
+      "procurement_group": "CS",
+      "procurement_method_code": "INDV",
+      "procurement_method_name": "Individual Consultant Selection",
+      "contact_address": "GUDM Ground floor, Block A, Karmyogi Bhavan Sector 10, Gandhinagar – Gujarat - 382010",
+      "contact_ctry_name": "India",
+      "contact_email": "gmtech-gudm@gujarat.gov.in",
+      "contact_name": "Mr. N L Patel",
+      "contact_organization": "Gujarat Urban Development Mission (GUDM)",
+      "contact_phone_no": "+91 9824197605",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<p>Expression of interest shall be available online on GUDM Website i.e., https://gudm.gujarat.gov.in/ from 14/08/2026.</p><p>Interested Candidates must provide CVs in the CV format uploaded on GUDM website.</p><p>Expression of interest along with the necessary documents must be delivered in a written form to the address given below (RPAD/ Speed Post) by 31/08/2026 by 6:10 PM.</p><p>The documents will be opened publicly on 01/09/2026 at 11:00 AM at the below address.</p><p><strong>Chief Engineer &amp; General Manager (Tech)</strong></p><p><strong>Gujarat Urban Development Mission</strong></p><p>Ground floor, Block A, Karmyogi Bhavan</p><p>Sector 10, Gandhinagar &ndash; 382010</p><p>Gujarat</p><p>Email: amrut.gudm@gmail.com</p>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "460a923340e6431ac246b098a629f34e5b98511d39e14d433a85ccd6850bf534"
+}

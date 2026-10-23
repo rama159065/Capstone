@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476138",
+  "title": "South Sudan Resilient Livestock Sector Project",
+  "text": "bid_description: Supply and Delivery of ICT Equipment for the PCU\nbid_reference_no: SS-MLF-544586-GO-RFQ\nid: OP00476138\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P500553-South Sudan Resilient Livestock Sector Project Loan/Credit/TF Info: IDA-E4270 Bid/Contract Reference No: SS-MLF-544586-GO-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: Supply, Delivery and Installation of ICT Equipment for the Project Coordination Unit Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/05/13 Duration of Contract 90 Day(s) Awarded Bidder(s): DYNAMIC CONSULT LTD (1136828) Juba, South Sudan Country: South Sudan Bid Price at Opening USD 39356.00 Evaluated Bid Price USD 39356.00 Signed Contract price USD 39356.00 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: South Sudan\nproject_id: P500553\nproject_name: South Sudan Resilient Livestock Sector Project\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476138",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "South Sudan",
+      "project_id": "P500553",
+      "project_name": "South Sudan Resilient Livestock Sector Project",
+      "bid_reference_no": "SS-MLF-544586-GO-RFQ",
+      "bid_description": "Supply and Delivery of ICT Equipment for the PCU",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P500553-South Sudan Resilient Livestock Sector Project<br/><b>Loan/Credit/TF Info:</b>IDA-E4270<br/><b>Bid/Contract Reference No:</b>SS-MLF-544586-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Supply, Delivery and Installation of ICT Equipment for the Project Coordination Unit</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/05/13<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>90 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>DYNAMIC CONSULT LTD (1136828)</b><br/>Juba, South Sudan<br/>Country: South Sudan<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>USD 39356.00<br/><br/>Evaluated Bid Price<br/>USD 39356.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>USD 39356.00</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "884fa1704d01105077c58860fa9cd96ee74bbd3f05677768bfd02825977454f8"
+}

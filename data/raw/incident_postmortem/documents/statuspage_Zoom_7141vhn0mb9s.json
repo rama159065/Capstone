@@ -1,0 +1,165 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Zoom_7141vhn0mb9s",
+  "title": "Zoom - Service Degradation Affecting Zoom Phone and Zoom Contact Center Inbound calls in India",
+  "text": "Service: Zoom\nIncident: Service Degradation Affecting Zoom Phone and Zoom Contact Center Inbound calls in India\nStatus: resolved\nImpact: minor\nStarted: 2026-09-24T04:19:15.014-07:00\nResolved: 2026-09-24T06:42:38.323-07:00\nUpdates:\n- 2026-09-24T06:42:38.323-07:00: resolved - This incident has been resolved and the affected services have been restored.\n- 2026-09-24T06:14:35.678-07:00: monitoring - The service degradation affecting Zoom Phone and Zoom Contact Center Inbound calls in India has been successfully resolved. \n\nOur team will continue to monitor the situation closely and keep you informed of any further developments.\n- 2026-09-24T05:07:52.246-07:00: identified - We have identified the issue with our underlying carrier affecting a subset of Airtel subscribers, which is impacting inbound call connectivity to Zoom India phone numbers for Zoom Phone and Zoom Contact Center. Outbound calls continue to function normally.\n\nWe are actively working with our carrier partner to resolve the issue.\n\nWe will share updates as soon as they become available.\n- 2026-09-24T04:19:15.167-07:00: investigating - We are currently investigating a service degradation affecting a subset of Airtel subscribers for inbound call connectivity to Zoom India phone numbers for Zoom Phone and Zoom Contact Center. Outbound calls continue to function normally. \n\nOur team is actively working to identify the impact and root cause. We will provide an update as soon as more information becomes available.\n\nWe appreciate your patience as we work to resolve this issue.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.zoom.us/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "7141vhn0mb9s",
+      "name": "Service Degradation Affecting Zoom Phone and Zoom Contact Center Inbound calls in India",
+      "status": "resolved",
+      "created_at": "2026-09-24T04:19:15.029-07:00",
+      "updated_at": "2026-09-24T06:42:38.339-07:00",
+      "monitoring_at": "2026-09-24T06:14:35.678-07:00",
+      "resolved_at": "2026-09-24T06:42:38.323-07:00",
+      "impact": "minor",
+      "shortlink": "https://stspg.io/q2m1jkbvr4dg",
+      "started_at": "2026-09-24T04:19:15.014-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "rbsy49wzsgjk",
+          "status": "resolved",
+          "body": "This incident has been resolved and the affected services have been restored.",
+          "incident_id": "7141vhn0mb9s",
+          "created_at": "2026-09-24T06:42:38.323-07:00",
+          "updated_at": "2026-09-24T06:42:38.323-07:00",
+          "display_at": "2026-09-24T06:42:38.323-07:00",
+          "affected_components": [
+            {
+              "code": "jsk0584rpghr",
+              "name": "Zoom Phone - APAC - Calling (Inbound/Outbound)",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "dkz3yppqdg9h",
+              "name": "Zoom CX - APAC - Voice (Inbound/Outbound)",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "sxrv6mw4qwrr",
+          "status": "monitoring",
+          "body": "The service degradation affecting Zoom Phone and Zoom Contact Center Inbound calls in India has been successfully resolved. \n\nOur team will continue to monitor the situation closely and keep you informed of any further developments.",
+          "incident_id": "7141vhn0mb9s",
+          "created_at": "2026-09-24T06:14:35.678-07:00",
+          "updated_at": "2026-09-24T06:14:35.678-07:00",
+          "display_at": "2026-09-24T06:14:35.678-07:00",
+          "affected_components": [
+            {
+              "code": "jsk0584rpghr",
+              "name": "Zoom Phone - APAC - Calling (Inbound/Outbound)",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            },
+            {
+              "code": "dkz3yppqdg9h",
+              "name": "Zoom CX - APAC - Voice (Inbound/Outbound)",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "j7wn2l7rpztz",
+          "status": "identified",
+          "body": "We have identified the issue with our underlying carrier affecting a subset of Airtel subscribers, which is impacting inbound call connectivity to Zoom India phone numbers for Zoom Phone and Zoom Contact Center. Outbound calls continue to function normally.\n\nWe are actively working with our carrier partner to resolve the issue.\n\nWe will share updates as soon as they become available.",
+          "incident_id": "7141vhn0mb9s",
+          "created_at": "2026-09-24T05:07:52.246-07:00",
+          "updated_at": "2026-09-24T05:07:52.246-07:00",
+          "display_at": "2026-09-24T05:07:52.246-07:00",
+          "affected_components": [
+            {
+              "code": "jsk0584rpghr",
+              "name": "Zoom Phone - APAC - Calling (Inbound/Outbound)",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "dkz3yppqdg9h",
+              "name": "Zoom CX - APAC - Voice (Inbound/Outbound)",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "4g92vvp4xzyc",
+          "status": "investigating",
+          "body": "We are currently investigating a service degradation affecting a subset of Airtel subscribers for inbound call connectivity to Zoom India phone numbers for Zoom Phone and Zoom Contact Center. Outbound calls continue to function normally. \n\nOur team is actively working to identify the impact and root cause. We will provide an update as soon as more information becomes available.\n\nWe appreciate your patience as we work to resolve this issue.",
+          "incident_id": "7141vhn0mb9s",
+          "created_at": "2026-09-24T04:19:15.167-07:00",
+          "updated_at": "2026-09-24T04:19:15.167-07:00",
+          "display_at": "2026-09-24T04:19:15.167-07:00",
+          "affected_components": [
+            {
+              "code": "jsk0584rpghr",
+              "name": "Zoom Phone - APAC - Calling (Inbound/Outbound)",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "dkz3yppqdg9h",
+              "name": "Zoom CX - APAC - Voice (Inbound/Outbound)",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "jsk0584rpghr",
+          "name": "Calling (Inbound/Outbound)",
+          "status": "operational",
+          "created_at": "2022-05-03T10:46:24.019-07:00",
+          "updated_at": "2026-09-24T06:14:35.616-07:00",
+          "position": 2,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "k4ymzkwr5c5f",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "dkz3yppqdg9h",
+          "name": "Voice (Inbound/Outbound)",
+          "status": "operational",
+          "created_at": "2023-03-22T11:20:49.697-07:00",
+          "updated_at": "2026-09-24T06:14:35.635-07:00",
+          "position": 2,
+          "description": null,
+          "showcase": false,
+          "start_date": "2023-03-22",
+          "group_id": "23spl3b8jrnd",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:00+00:00",
+  "content_sha256": "f9f9802327afce22c26d4f3eaf3a5eab274fbdcb65426eef4ddfa8ea889a390b"
+}

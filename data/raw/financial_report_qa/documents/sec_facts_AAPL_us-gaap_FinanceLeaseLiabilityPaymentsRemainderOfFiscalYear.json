@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_FinanceLeaseLiabilityPaymentsRemainderOfFiscalYear",
+  "title": "Apple Inc. - Finance Lease, Liability, to be Paid, Remainder of Fiscal Year",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: FinanceLeaseLiabilityPaymentsRemainderOfFiscalYear\nLabel: Finance Lease, Liability, to be Paid, Remainder of Fiscal Year\nDescription: Amount of lessee's undiscounted obligation for lease payment for finance lease to be paid in remainder of current fiscal year.\nRecent reported values:\nUSD 2020 Q1 10-Q filed 2020-01-29: 23000000\nUSD 2020 Q2 10-Q filed 2020-05-01: 14000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 5000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "FinanceLeaseLiabilityPaymentsRemainderOfFiscalYear",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "802a6e8badde7cb82dfd0841064aa0059841202528e6f487f52f2a8d8b14d6eb"
+}

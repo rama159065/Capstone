@@ -1,0 +1,106 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Cloudflare_Status_8l5brrctbs9l",
+  "title": "Cloudflare Status - CGY (Cagayan de Oro) on 2026-10-21",
+  "text": "Service: Cloudflare Status\nMaintenance: CGY (Cagayan de Oro) on 2026-10-21\nStatus: completed\nImpact: maintenance\nScheduled for: 2026-10-21T18:00:00.000Z\nScheduled until: 2026-10-21T22:00:00.000Z\nUpdates:\n- 2026-10-21T22:00:08.010Z: completed - The scheduled maintenance has been completed.\n- 2026-10-21T18:01:17.627Z: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2026-10-21T17:00:20.934Z: scheduled - Maintenance will begin as scheduled in 60 minutes.\n- 2026-10-08T14:50:56.699Z: scheduled - We will be performing scheduled maintenance in CGY (Cagayan de Oro) datacenter on 2026-10-21 between 18:00 and 22:00 UTC.\n\nTraffic might be re-routed from this location, hence there is a possibility of a slight increase in latency during this maintenance window for end-users in the affected region. For PNI / CNI customers connecting with us in this location, please make sure you are expecting this traffic to fail over elsewhere during this maintenance window as network interfaces in this datacentre may become temporarily unavailable.\n\nYou can now subscribe to these notifications via Cloudflare dashboard and receive these updates directly via email, PagerDuty and webhooks (based on your plan): https://developers.cloudflare.com/notifications/notification-available/#cloudflare-status.",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://www.cloudflarestatus.com/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "8l5brrctbs9l",
+      "name": "CGY (Cagayan de Oro) on 2026-10-21",
+      "status": "completed",
+      "created_at": "2026-10-08T14:50:56.000Z",
+      "updated_at": "2026-10-21T22:00:08.547Z",
+      "monitoring_at": null,
+      "resolved_at": "2026-10-21T22:00:08.010Z",
+      "impact": "maintenance",
+      "shortlink": "https://www.cloudflarestatus.com/incidents/8l5brrctbs9l",
+      "started_at": "2026-10-08T14:50:56.629Z",
+      "page_id": "yh6f0r4529hb",
+      "incident_updates": [
+        {
+          "id": "x6w6z70dgp1t",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "8l5brrctbs9l",
+          "created_at": "2026-10-21T22:00:08.010Z",
+          "updated_at": "2026-10-21T22:00:08.010Z",
+          "display_at": "2026-10-21T22:00:08.010Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "hs53j31pgy05",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "8l5brrctbs9l",
+          "created_at": "2026-10-21T18:01:17.627Z",
+          "updated_at": "2026-10-21T18:01:17.627Z",
+          "display_at": "2026-10-21T18:01:17.627Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "d1bgsrs04j7g",
+          "status": "scheduled",
+          "body": "Maintenance will begin as scheduled in 60 minutes.",
+          "incident_id": "8l5brrctbs9l",
+          "created_at": "2026-10-21T17:00:20.934Z",
+          "updated_at": "2026-10-21T17:00:20.934Z",
+          "display_at": "2026-10-21T17:00:20.934Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "kqrkl515g6nk",
+          "status": "scheduled",
+          "body": "We will be performing scheduled maintenance in CGY (Cagayan de Oro) datacenter on 2026-10-21 between 18:00 and 22:00 UTC.\n\nTraffic might be re-routed from this location, hence there is a possibility of a slight increase in latency during this maintenance window for end-users in the affected region. For PNI / CNI customers connecting with us in this location, please make sure you are expecting this traffic to fail over elsewhere during this maintenance window as network interfaces in this datacentre may become temporarily unavailable.\n\nYou can now subscribe to these notifications via Cloudflare dashboard and receive these updates directly via email, PagerDuty and webhooks (based on your plan): https://developers.cloudflare.com/notifications/notification-available/#cloudflare-status.",
+          "incident_id": "8l5brrctbs9l",
+          "created_at": "2026-10-08T14:50:56.699Z",
+          "updated_at": "2026-10-08T14:50:56.699Z",
+          "display_at": "2026-10-08T14:50:56.699Z",
+          "affected_components": [
+            {
+              "code": "wyq8p07mvlkf",
+              "name": "Asia - Cagayan de Oro, Philippines - (CGY)",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "wyq8p07mvlkf",
+          "name": "Cagayan de Oro, Philippines - (CGY)",
+          "status": "operational",
+          "created_at": "2022-09-08T13:18:32.000Z",
+          "updated_at": "2026-10-21T19:54:49.000Z",
+          "position": 80,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-09-08",
+          "group_id": "77867vxkttgw",
+          "page_id": "yh6f0r4529hb",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2026-10-21T18:00:00.000Z",
+      "scheduled_until": "2026-10-21T22:00:00.000Z"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:48:24+00:00",
+  "content_sha256": "a7ececa5a8e291dcdf8168f92c483254cfb97969c64925e4295ed811ceedd3e9"
+}

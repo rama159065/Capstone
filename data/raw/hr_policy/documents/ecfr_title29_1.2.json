@@ -1,0 +1,16 @@
+{
+  "domain": "hr_policy",
+  "document_id": "ecfr_title29_1.2",
+  "title": "§ 1.2 Definitions.",
+  "text": "§ 1.2 Definitions.\n§ 1.2 Definitions.\nAdministrator.\nAgency.\n(1) \nFederal agency.\n(2) [Reserved]\n\nArea.\n(1) For highway projects, the area may be State department of transportation highway districts or other similar State geographic subdivisions.\n\n(2) Where a project requires work in multiple counties, the area may include all counties in which the work will be performed.\n\nDepartment of Labor-approved website for wage determinations (DOL-approved website).\nEmployed.\nPrevailing wage.\n(1) The wage paid to the majority (more than 50 percent) of the laborers or mechanics in the classification on similar projects in the area during the period in question;\n\n(2) If the same wage is not paid to a majority of those employed in the classification, the prevailing wage will be the wage paid to the greatest number, \nprovided\n(3) If no wage rate is paid to 30 percent or more of those so employed, the prevailing wage will be the average of the wages paid to those employed in the classification, weighted by the total employed in the classification.\n\nType of construction (or construction type).\nUnited States or the District of Columbia.",
+  "source_name": "eCFR Title 29 Labor",
+  "source_url": "https://www.govinfo.gov/bulkdata/ECFR/title-29/ECFR-title29.xml",
+  "metadata": {
+    "title_number": 29,
+    "section": "§ 1.2",
+    "heading_path": "§ 1.2 Definitions.",
+    "source_type": "regulatory_section"
+  },
+  "downloaded_at": "2026-10-22T12:48:10+00:00",
+  "content_sha256": "0fa57a46f561418845c94f2cd58dcd218a9cb45489fe479611167491122f27a9"
+}

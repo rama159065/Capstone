@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AccruedIncomeTaxesNoncurrent",
+  "title": "Apple Inc. - Accrued Income Taxes, Noncurrent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AccruedIncomeTaxesNoncurrent\nLabel: Accrued Income Taxes, Noncurrent\nDescription: Carrying amount as of the balance sheet date of the unpaid sum of the known and estimated amounts payable to satisfy all domestic and foreign income tax obligations due beyond one year or the operating cycle, whichever is longer. Alternate captions include income taxes payable, noncurrent.\nRecent reported values:\nUSD 2022 Q1 10-Q filed 2022-01-28: 24689000000\nUSD 2022 Q2 10-Q filed 2022-04-29: 24689000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 24689000000\nUSD 2022 FY 10-K filed 2022-10-28: 24689000000\nUSD 2022 Q1 10-Q filed 2022-01-28: 24689000000\nUSD 2022 Q2 10-Q filed 2022-04-29: 20711000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 20699000000\nUSD 2022 FY 10-K filed 2022-10-28: 16657000000\nUSD 2023 FY 10-K filed 2023-11-03: 16657000000\nUSD 2023 FY 10-K filed 2023-11-03: 15457000000\nUSD 2024 FY 10-K filed 2024-11-01: 15457000000\nUSD 2024 FY 10-K filed 2024-11-01: 9254000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AccruedIncomeTaxesNoncurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e50fa69f2fdefc68a6a4d5abf8a865fd3a6a5fa2602efe772173a920d7a7ac7a"
+}

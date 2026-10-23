@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_PaymentsToAcquireProductiveAssets",
+  "title": "Apple Inc. - Payments to Acquire Productive Assets",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: PaymentsToAcquireProductiveAssets\nLabel: Payments to Acquire Productive Assets\nDescription: The cash outflow for purchases of and capital improvements on property, plant and equipment (capital expenditures), software, and other intangible assets.\nRecent reported values:\nUSD 2013 Q2 10-Q filed 2013-04-24: 4325000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 4325000000\nUSD 2013 Q3 10-Q filed 2013-07-24: 6210000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 6210000000\nUSD 2013 FY 10-K filed 2013-10-30: 8165000000\nUSD 2014 FY 10-K filed 2014-10-27: 8165000000\nUSD None None 8-K filed 2015-01-28: 8165000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 1985000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 3367000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 5745000000\nUSD 2014 FY 10-K filed 2014-10-27: 9571000000\nUSD None None 8-K filed 2015-01-28: 9571000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "PaymentsToAcquireProductiveAssets",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "ea82d381dfbec553a54c89c328ca49a658395f76d89ce83f799828f987d2aa37"
+}

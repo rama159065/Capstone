@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ProceedsFromMaturitiesPrepaymentsAndCallsOfAvailableForSaleSecurities",
+  "title": "Apple Inc. - Proceeds from Maturities, Prepayments and Calls of Debt Securities, Available-for-sale",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ProceedsFromMaturitiesPrepaymentsAndCallsOfAvailableForSaleSecurities\nLabel: Proceeds from Maturities, Prepayments and Calls of Debt Securities, Available-for-sale\nDescription: Amount of cash inflow from maturity, prepayment and call of investment in debt security measured at fair value with change in fair value recognized in other comprehensive income (available-for-sale).\nRecent reported values:\nUSD 2024 FY 10-K filed 2024-11-01: 51211000000\nUSD 2025 FY 10-K filed 2025-10-31: 51211000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 15967000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 15967000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 26587000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 26587000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 35036000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 35036000000\nUSD 2025 FY 10-K filed 2025-10-31: 40907000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 7510000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 18691000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 26504000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ProceedsFromMaturitiesPrepaymentsAndCallsOfAvailableForSaleSecurities",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "35cf7f520d18de1d51e5cc2f5c1f3a474e6478af327219a70c4173a8c1c9e499"
+}

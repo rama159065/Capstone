@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ImpairmentOfIntangibleAssetsIndefinitelivedExcludingGoodwill",
+  "title": "Apple Inc. - Impairment of Intangible Assets, Indefinite-lived (Excluding Goodwill)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ImpairmentOfIntangibleAssetsIndefinitelivedExcludingGoodwill\nLabel: Impairment of Intangible Assets, Indefinite-lived (Excluding Goodwill)\nDescription: Amount of impairment loss resulting from write-down of assets, excluding financial assets and goodwill, lacking physical substance and having a projected indefinite period of benefit to fair value.\nRecent reported values:\nUSD None None 8-K filed 2015-01-28: 0\nUSD 2015 FY 10-K filed 2015-10-28: 0\nUSD 2014 FY 10-K filed 2014-10-27: 0\nUSD None None 8-K filed 2015-01-28: 0\nUSD 2015 FY 10-K filed 2015-10-28: 0\nUSD 2016 FY 10-K filed 2016-10-26: 0\nUSD 2015 FY 10-K filed 2015-10-28: 0\nUSD 2016 FY 10-K filed 2016-10-26: 0\nUSD 2017 FY 10-K filed 2017-11-03: 0\nUSD 2016 FY 10-K filed 2016-10-26: 0\nUSD 2017 FY 10-K filed 2017-11-03: 0\nUSD 2017 FY 10-K filed 2017-11-03: 0",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ImpairmentOfIntangibleAssetsIndefinitelivedExcludingGoodwill",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "bee756ecf046d95ce83e1d18969f7225b3850fb22d86c89f2ddf78a4f08fec26"
+}

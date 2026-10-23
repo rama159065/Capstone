@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeUnrealizedHoldingGainLossOnSecuritiesArisingDuringPeriodNetOfTax",
+  "title": "Apple Inc. - OCI, Debt Securities, Available-for-Sale, Unrealized Holding Gain (Loss), before Adjustment, after Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeUnrealizedHoldingGainLossOnSecuritiesArisingDuringPeriodNetOfTax\nLabel: OCI, Debt Securities, Available-for-Sale, Unrealized Holding Gain (Loss), before Adjustment, after Tax\nDescription: Amount, after tax and before adjustment, of unrealized holding gain (loss) on investment in debt security measured at fair value with change in fair value recognized in other comprehensive income (available-for-sale). Excludes unrealized gain (loss) on investment in debt security measured at amortized cost (held-to-maturity) from transfer to available-for-sale.\nRecent reported values:\nUSD 2025 Q2 10-Q filed 2025-05-02: 1097000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 1097000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 90000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 90000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 640000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 640000000\nUSD 2025 FY 10-K filed 2025-10-31: 817000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 424000000\nUSD 2026 Q2 10-Q filed 2026-05-01: -384000000\nUSD 2026 Q2 10-Q filed 2026-05-01: -808000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 57000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 441000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeUnrealizedHoldingGainLossOnSecuritiesArisingDuringPeriodNetOfTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "40c25ed19faa9eae6777ec9898dcf81f6b3be9ad5e68fa7d7b45fca856331258"
+}

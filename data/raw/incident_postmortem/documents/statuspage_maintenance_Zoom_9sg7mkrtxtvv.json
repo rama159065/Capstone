@@ -1,0 +1,179 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Zoom_9sg7mkrtxtvv",
+  "title": "Zoom - Zoom Support Maintenance - Search Function: September 17, 2026",
+  "text": "Service: Zoom\nMaintenance: Zoom Support Maintenance - Search Function: September 17, 2026\nStatus: completed\nImpact: maintenance\nScheduled for: 2026-09-17T13:00:00.000-07:00\nScheduled until: 2026-09-17T18:00:00.000-07:00\nUpdates:\n- 2026-09-17T18:00:11.983-07:00: completed - The scheduled maintenance has been completed.\n- 2026-09-17T15:37:12.345-07:00: in_progress - This maintenance has been extended to 6pm PDT.\n- 2026-09-17T13:00:07.817-07:00: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2026-09-17T12:00:25.952-07:00: scheduled - Maintenance will begin as scheduled in 60 minutes.\n- 2026-09-14T12:13:52.581-07:00: scheduled - We will be performing maintenance on http://support.zoom.com/. Users may experience issues with the search function during the maintenance window.",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://status.zoom.us/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "9sg7mkrtxtvv",
+      "name": "Zoom Support Maintenance - Search Function: September 17, 2026",
+      "status": "completed",
+      "created_at": "2026-09-14T12:13:52.428-07:00",
+      "updated_at": "2026-09-17T18:00:12.338-07:00",
+      "monitoring_at": null,
+      "resolved_at": "2026-09-17T18:00:11.983-07:00",
+      "impact": "maintenance",
+      "shortlink": "https://stspg.io/2y7g1kp9cd3f",
+      "started_at": "2026-09-14T12:13:52.411-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "g413lyhmmmkf",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "9sg7mkrtxtvv",
+          "created_at": "2026-09-17T18:00:11.983-07:00",
+          "updated_at": "2026-09-17T18:00:11.983-07:00",
+          "display_at": "2026-09-17T18:00:11.983-07:00",
+          "affected_components": [
+            {
+              "code": "yvbblg5f0rdt",
+              "name": "Zoom Support - Knowledge Base",
+              "old_status": "under_maintenance",
+              "new_status": "operational"
+            },
+            {
+              "code": "9mhsm7sbmhnr",
+              "name": "Zoom Support - Ticketing",
+              "old_status": "under_maintenance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "7ssf00drzllp",
+          "status": "in_progress",
+          "body": "This maintenance has been extended to 6pm PDT.",
+          "incident_id": "9sg7mkrtxtvv",
+          "created_at": "2026-09-17T15:37:12.345-07:00",
+          "updated_at": "2026-09-17T15:37:12.345-07:00",
+          "display_at": "2026-09-17T15:37:12.345-07:00",
+          "affected_components": [
+            {
+              "code": "yvbblg5f0rdt",
+              "name": "Zoom Support - Knowledge Base",
+              "old_status": "under_maintenance",
+              "new_status": "under_maintenance"
+            },
+            {
+              "code": "9mhsm7sbmhnr",
+              "name": "Zoom Support - Ticketing",
+              "old_status": "under_maintenance",
+              "new_status": "under_maintenance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "n85xt5cc6jqy",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "9sg7mkrtxtvv",
+          "created_at": "2026-09-17T13:00:07.817-07:00",
+          "updated_at": "2026-09-17T13:00:07.817-07:00",
+          "display_at": "2026-09-17T13:00:07.817-07:00",
+          "affected_components": [
+            {
+              "code": "yvbblg5f0rdt",
+              "name": "Zoom Support - Knowledge Base",
+              "old_status": "operational",
+              "new_status": "under_maintenance"
+            },
+            {
+              "code": "9mhsm7sbmhnr",
+              "name": "Zoom Support - Ticketing",
+              "old_status": "operational",
+              "new_status": "under_maintenance"
+            }
+          ],
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "ftzyvgj689cs",
+          "status": "scheduled",
+          "body": "Maintenance will begin as scheduled in 60 minutes.",
+          "incident_id": "9sg7mkrtxtvv",
+          "created_at": "2026-09-17T12:00:25.952-07:00",
+          "updated_at": "2026-09-17T12:00:25.952-07:00",
+          "display_at": "2026-09-17T12:00:25.952-07:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "h7bgyyh7vssx",
+          "status": "scheduled",
+          "body": "We will be performing maintenance on http://support.zoom.com/.  Users may experience issues with the search function during the maintenance window.",
+          "incident_id": "9sg7mkrtxtvv",
+          "created_at": "2026-09-14T12:13:52.581-07:00",
+          "updated_at": "2026-09-14T12:13:52.581-07:00",
+          "display_at": "2026-09-14T12:13:52.581-07:00",
+          "affected_components": [
+            {
+              "code": "yvbblg5f0rdt",
+              "name": "Zoom Support - Knowledge Base",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "9mhsm7sbmhnr",
+              "name": "Zoom Support - Ticketing",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "yvbblg5f0rdt",
+          "name": "Knowledge Base",
+          "status": "operational",
+          "created_at": "2022-05-03T11:26:39.112-07:00",
+          "updated_at": "2026-09-17T18:00:11.086-07:00",
+          "position": 2,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "gvz9h6tj2fg7",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "9mhsm7sbmhnr",
+          "name": "Ticketing",
+          "status": "operational",
+          "created_at": "2022-05-03T11:27:52.285-07:00",
+          "updated_at": "2026-09-17T18:00:11.534-07:00",
+          "position": 4,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "gvz9h6tj2fg7",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2026-09-17T13:00:00.000-07:00",
+      "scheduled_until": "2026-09-17T18:00:00.000-07:00"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:49:04+00:00",
+  "content_sha256": "83befd8c8bf71a4d560bc208b794cd676e8f8e32801516698536b832b2f68afa"
+}

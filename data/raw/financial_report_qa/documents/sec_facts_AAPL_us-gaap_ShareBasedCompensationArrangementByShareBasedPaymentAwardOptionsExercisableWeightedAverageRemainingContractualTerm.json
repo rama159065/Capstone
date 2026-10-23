@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsExercisableWeightedAverageRemainingContractualTerm",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Exercisable, Weighted Average Remaining Contractual Term (Deprecated 2012-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsExercisableWeightedAverageRemainingContractualTerm\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Exercisable, Weighted Average Remaining Contractual Term (Deprecated 2012-01-31)\nDescription: The weighted average period between the balance sheet date and expiration for all vested portions of options outstanding and currently exercisable (or convertible) under the plan, which may be expressed in a decimal value for number of years.\nRecent reported values:\npure 2010 Q3 10-Q filed 2010-07-21: 2.63\npure 2010 FY 10-K filed 2010-10-27: 2.57\npure 2011 Q1 10-Q filed 2011-01-19: 2.61\nYear 2011 Q2 10-Q filed 2011-04-21: 2.61\nYear 2011 Q3 10-Q filed 2011-07-20: 2.43\nYear 2011 FY 10-K filed 2011-10-26: 2.31\nYear 2012 Q1 10-Q filed 2012-01-25: 2.2",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsExercisableWeightedAverageRemainingContractualTerm",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "ba7715c3bbf50289d3780c35ca6d4b508bd2bf3baa833c06fa1bae1a86ea67ac"
+}

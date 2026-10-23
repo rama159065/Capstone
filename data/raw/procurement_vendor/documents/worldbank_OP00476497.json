@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476497",
+  "title": "Food Systems Resilience Program for Eastern and Southern Africa (Phase 3) FSRP",
+  "text": "bid_description: Procurement of veterinary medical drugs for livestock treatment in Galmudug State.\nbid_reference_no: SO-MOAI-GM-480516-GO-RFB\nid: OP00476497\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P177816-Food Systems Resilience Program for Eastern and Southern Africa (Phase 3) FSRP Loan/Credit/TF Info: IDA-E1850 Bid/Contract Reference No: SO-MOAI-GM-480516-GO-RFB Procurement Method: RFB-Request for Bids Scope of Contract: Procurement of Veterinary Medical Drugs for Livestock Treatment in Galmudug State Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/20 Duration of Contract 90 Day(s) Awarded Bidder(s): DARYEEL VETERINARY CLINICS AND PHARMACY CO (1079664) Somalia Country: Somalia, Federal Republic of Bid Price at Opening USD Evaluated Bid Price USD 478310.00 Signed Contract price USD 478310.00 \nnotice_type: Contract Award\nnoticedate: 21-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Eastern and Southern Africa\nproject_id: P177816\nproject_name: Food Systems Resilience Program for Eastern and Southern Africa (Phase 3) FSRP\nsubmission_date: 2026-10-21T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=0&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476497",
+      "notice_type": "Contract Award",
+      "noticedate": "21-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Eastern and Southern Africa",
+      "project_id": "P177816",
+      "project_name": "Food Systems Resilience Program for Eastern and Southern Africa (Phase 3) FSRP",
+      "bid_reference_no": "SO-MOAI-GM-480516-GO-RFB",
+      "bid_description": "Procurement of veterinary medical drugs for livestock treatment in Galmudug State.",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-21T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P177816-Food Systems Resilience Program for Eastern and Southern Africa (Phase 3) FSRP<br/><b>Loan/Credit/TF Info:</b>IDA-E1850<br/><b>Bid/Contract Reference No:</b>SO-MOAI-GM-480516-GO-RFB<br/><b>Procurement Method:</b>RFB-Request for Bids<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Procurement of Veterinary Medical Drugs for Livestock Treatment in Galmudug State</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/20<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>90 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>DARYEEL VETERINARY CLINICS AND PHARMACY CO (1079664)</b><br/>Somalia<br/>Country: Somalia, Federal Republic of<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>USD<br/><br/>Evaluated Bid Price<br/>USD 478310.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>USD 478310.00</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:08+00:00",
+  "content_sha256": "005de61c613591c8c787a10e22a360da3fda9c19fd4bb2eab0f33f9a9b8ce69e"
+}

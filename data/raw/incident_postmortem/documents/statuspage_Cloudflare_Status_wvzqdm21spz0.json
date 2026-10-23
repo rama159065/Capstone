@@ -1,0 +1,86 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Cloudflare_Status_wvzqdm21spz0",
+  "title": "Cloudflare Status - Increased Errors for Durable Objects and Downstream Services in Western Europe",
+  "text": "Service: Cloudflare Status\nIncident: Increased Errors for Durable Objects and Downstream Services in Western Europe\nStatus: resolved\nImpact: minor\nStarted: 2026-10-15T09:18:32.991Z\nResolved: 2026-10-15T10:02:23.199Z\nUpdates:\n- 2026-10-15T10:02:23.199Z: resolved - This incident has been resolved.\n- 2026-10-15T09:18:33.260Z: monitoring - Cloudflare is investigating issues causing an increase of errors for Durable Objects and downstream services in Western Europe from 09:00 UTC. This is currently recovering. More updates to follow shortly.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://www.cloudflarestatus.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "wvzqdm21spz0",
+      "name": "Increased Errors for Durable Objects and Downstream Services in Western Europe",
+      "status": "resolved",
+      "created_at": "2026-10-15T09:18:33.002Z",
+      "updated_at": "2026-10-15T10:02:23.231Z",
+      "monitoring_at": "2026-10-15T09:18:33.260Z",
+      "resolved_at": "2026-10-15T10:02:23.199Z",
+      "impact": "minor",
+      "shortlink": "https://www.cloudflarestatus.com/incidents/wvzqdm21spz0",
+      "started_at": "2026-10-15T09:18:32.991Z",
+      "page_id": "yh6f0r4529hb",
+      "incident_updates": [
+        {
+          "id": "0ctc2hhgxnf8",
+          "status": "resolved",
+          "body": "This incident has been resolved.",
+          "incident_id": "wvzqdm21spz0",
+          "created_at": "2026-10-15T10:02:23.199Z",
+          "updated_at": "2026-10-15T10:02:23.199Z",
+          "display_at": "2026-10-15T10:02:23.199Z",
+          "affected_components": [
+            {
+              "code": "bty1yz6dhh0v",
+              "name": "Cloudflare Sites and Services - Durable Objects",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "5h9fdlvdd4xq",
+          "status": "monitoring",
+          "body": "Cloudflare is investigating issues causing an increase of errors for Durable Objects and downstream services in Western Europe from 09:00 UTC. This is currently recovering. More updates to follow shortly.",
+          "incident_id": "wvzqdm21spz0",
+          "created_at": "2026-10-15T09:18:33.260Z",
+          "updated_at": "2026-10-15T09:18:33.260Z",
+          "display_at": "2026-10-15T09:18:33.260Z",
+          "affected_components": [
+            {
+              "code": "bty1yz6dhh0v",
+              "name": "Cloudflare Sites and Services - Durable Objects",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "bty1yz6dhh0v",
+          "name": "Durable Objects",
+          "status": "operational",
+          "created_at": "2023-06-12T14:55:22.000Z",
+          "updated_at": "2026-10-15T21:30:10.000Z",
+          "position": 47,
+          "description": "Durable Objects provide low-latency coordination and consistent permanent storage for the Workers platform.",
+          "showcase": false,
+          "start_date": "2023-06-12",
+          "group_id": "1km35smx8p41",
+          "page_id": "yh6f0r4529hb",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:22+00:00",
+  "content_sha256": "3c212a440aa6c765cd4330e29433d6e5062d5219f4fd303d830df851a711c7d6"
+}

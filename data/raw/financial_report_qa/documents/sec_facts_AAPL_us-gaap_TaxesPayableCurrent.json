@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_TaxesPayableCurrent",
+  "title": "Apple Inc. - Taxes Payable, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: TaxesPayableCurrent\nLabel: Taxes Payable, Current\nDescription: Carrying value as of the balance sheet date of obligations incurred and payable for statutory income, sales, use, payroll, excise, real, property and other taxes. Used to reflect the current portion of the liabilities (due within one year or within the normal operating cycle if longer).\nRecent reported values:\nUSD None None 8-K filed 2015-01-28: 1200000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 2083000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 2160000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 1437000000\nUSD 2014 FY 10-K filed 2014-10-27: 1209000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 1209000000\nUSD None None 8-K filed 2015-01-28: 1209000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 1209000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 1209000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 1642000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 2017000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 1566000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "TaxesPayableCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "db5aa9ab4ea890d177a1d457a9a29589b31ba81703931f4177a361483de033a5"
+}

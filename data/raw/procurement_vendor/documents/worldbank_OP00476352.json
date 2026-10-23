@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476352",
+  "title": "Support to Economic Recovery and Job Creation in the Agri-Food Sector and Rural Space",
+  "text": "bid_description: acquisition et installation des équipements photovoltaïques pour les centres de l'AVFA (NEXUS)\nbid_reference_no: TN-UTSS-478477-GO-RFQ\nid: OP00476352\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P174017-Support to Economic Recovery and Job Creation in the Agri-Food Sector and Rural Space Loan/Credit/TF Info: TF-B4165 Bid/Contract Reference No: TN-UTSS-478477-GO-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: INSTALLATION CLE EN MAIN DE 02 SYSTEMES PHTOVOLTAIQUES (>50 KWC)_C27-2026_Nexus Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/07 Duration of Contract 15 Month(s) Awarded Bidder(s): GREEN ENERGY COMPANY (899250) Avenue Carthage Immeuble Olivia , N54 - 3000 Sfax - Tunisie Country: Tunisia Bid Price at Opening TND 432780.200 Evaluated Bid Price TND 432780.200 Signed Contract price TND 432780.200 \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Tunisia\nproject_id: P174017\nproject_name: Support to Economic Recovery and Job Creation in the Agri-Food Sector and Rural Space\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=200&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476352",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Tunisia",
+      "project_id": "P174017",
+      "project_name": "Support to Economic Recovery and Job Creation in the Agri-Food Sector and Rural Space",
+      "bid_reference_no": "TN-UTSS-478477-GO-RFQ",
+      "bid_description": "acquisition et installation des équipements photovoltaïques pour les centres de l'AVFA (NEXUS)",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P174017-Support to Economic Recovery and Job Creation in the Agri-Food Sector and Rural Space<br/><b>Loan/Credit/TF Info:</b>TF-B4165<br/><b>Bid/Contract Reference No:</b>TN-UTSS-478477-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>INSTALLATION CLE EN MAIN DE 02 SYSTEMES PHTOVOLTAIQUES (>50 KWC)_C27-2026_Nexus</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/07<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>15 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>GREEN ENERGY COMPANY (899250)</b><br/>Avenue Carthage Immeuble Olivia , N54 - 3000 Sfax - Tunisie<br/>Country: Tunisia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>TND 432780.200<br/><br/>Evaluated Bid Price<br/>TND 432780.200</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>TND 432780.200</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:13+00:00",
+  "content_sha256": "100584a563dc2770129ad18deed99567cdc57996ecc1dc254ec662d1a49961da"
+}

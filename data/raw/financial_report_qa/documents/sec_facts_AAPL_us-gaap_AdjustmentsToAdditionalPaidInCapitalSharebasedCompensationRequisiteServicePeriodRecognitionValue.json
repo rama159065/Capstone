@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AdjustmentsToAdditionalPaidInCapitalSharebasedCompensationRequisiteServicePeriodRecognitionValue",
+  "title": "Apple Inc. - APIC, Share-based Payment Arrangement, Increase for Cost Recognition",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AdjustmentsToAdditionalPaidInCapitalSharebasedCompensationRequisiteServicePeriodRecognitionValue\nLabel: APIC, Share-based Payment Arrangement, Increase for Cost Recognition\nDescription: Amount of increase to additional paid-in capital (APIC) for recognition of cost for award under share-based payment arrangement.\nRecent reported values:\nUSD None None 8-K filed 2015-01-28: 2863000000\nUSD 2015 FY 10-K filed 2015-10-28: 2863000000\nUSD 2016 FY 10-K filed 2016-10-26: 2863000000\nUSD 2015 FY 10-K filed 2015-10-28: 3586000000\nUSD 2016 FY 10-K filed 2016-10-26: 3586000000\nUSD 2017 FY 10-K filed 2017-11-03: 3586000000\nUSD 2016 FY 10-K filed 2016-10-26: 4262000000\nUSD 2017 FY 10-K filed 2017-11-03: 4262000000\nUSD 2018 FY 10-K filed 2018-11-05: 4262000000\nUSD 2017 FY 10-K filed 2017-11-03: 4909000000\nUSD 2018 FY 10-K filed 2018-11-05: 4909000000\nUSD 2018 FY 10-K filed 2018-11-05: 5443000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AdjustmentsToAdditionalPaidInCapitalSharebasedCompensationRequisiteServicePeriodRecognitionValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b5a3738d702d6eb4a526466c77ee59db750d5e0d9f5a514b20907e0fa86aef61"
+}

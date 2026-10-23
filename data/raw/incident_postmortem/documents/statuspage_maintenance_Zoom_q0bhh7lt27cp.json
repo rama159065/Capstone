@@ -1,0 +1,106 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Zoom_q0bhh7lt27cp",
+  "title": "Zoom - Zoom Contact Center Update: September 19, 2026 (No Operational Impact)",
+  "text": "Service: Zoom\nMaintenance: Zoom Contact Center Update: September 19, 2026 (No Operational Impact)\nStatus: completed\nImpact: maintenance\nScheduled for: 2026-09-18T17:00:00.000-07:00\nScheduled until: 2026-09-19T02:00:00.000-07:00\nUpdates:\n- 2026-09-19T02:01:07.902-07:00: completed - The scheduled maintenance has been completed.\n- 2026-09-18T17:00:09.669-07:00: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2026-09-18T16:00:13.369-07:00: scheduled - Maintenance will begin as scheduled in 60 minutes.\n- 2026-09-15T04:43:31.843-07:00: scheduled - We will be providing an update to Zoom Contact Center. Please refer to https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0067626 for more details. This update includes the ability to access Zoom recordings directly from Epic patient records.\n\nThere is no operational impact. All services will be available during this scheduled update.",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://status.zoom.us/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "q0bhh7lt27cp",
+      "name": "Zoom Contact Center Update: September 19, 2026 (No Operational Impact)",
+      "status": "completed",
+      "created_at": "2026-09-15T04:43:31.632-07:00",
+      "updated_at": "2026-09-19T02:01:07.980-07:00",
+      "monitoring_at": null,
+      "resolved_at": "2026-09-19T02:01:07.902-07:00",
+      "impact": "maintenance",
+      "shortlink": "https://stspg.io/ctvskh4z1wn2",
+      "started_at": "2026-09-15T04:43:31.605-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "37bdqpj1ym6c",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "q0bhh7lt27cp",
+          "created_at": "2026-09-19T02:01:07.902-07:00",
+          "updated_at": "2026-09-19T02:01:07.902-07:00",
+          "display_at": "2026-09-19T02:01:07.902-07:00",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "6p7x041235pb",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "q0bhh7lt27cp",
+          "created_at": "2026-09-18T17:00:09.669-07:00",
+          "updated_at": "2026-09-18T17:00:09.669-07:00",
+          "display_at": "2026-09-18T17:00:09.669-07:00",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "23394n4jtlwr",
+          "status": "scheduled",
+          "body": "Maintenance will begin as scheduled in 60 minutes.",
+          "incident_id": "q0bhh7lt27cp",
+          "created_at": "2026-09-18T16:00:13.369-07:00",
+          "updated_at": "2026-09-18T16:00:13.369-07:00",
+          "display_at": "2026-09-18T16:00:13.369-07:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "qsb7v7d3895q",
+          "status": "scheduled",
+          "body": "We will be providing an update to Zoom Contact Center. Please refer to https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0067626 for more details. This update includes the ability to access Zoom recordings directly from Epic patient records.\n\nThere is no operational impact. All services will be available during this scheduled update.",
+          "incident_id": "q0bhh7lt27cp",
+          "created_at": "2026-09-15T04:43:31.843-07:00",
+          "updated_at": "2026-09-15T04:43:31.843-07:00",
+          "display_at": "2026-09-15T04:43:31.843-07:00",
+          "affected_components": [
+            {
+              "code": "s5s5m6flk56z",
+              "name": "Zoom CX - Global - Zoom Contact Center",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "s5s5m6flk56z",
+          "name": "Zoom Contact Center",
+          "status": "operational",
+          "created_at": "2024-03-21T13:14:33.314-07:00",
+          "updated_at": "2026-05-21T18:00:07.341-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": "2024-03-21",
+          "group_id": "1bmg0stx4mk0",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2026-09-18T17:00:00.000-07:00",
+      "scheduled_until": "2026-09-19T02:00:00.000-07:00"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:49:04+00:00",
+  "content_sha256": "fb9c79ee041d10fb787c6797ee5e61183e2353ae0053baf50de0879d4fda1330"
+}

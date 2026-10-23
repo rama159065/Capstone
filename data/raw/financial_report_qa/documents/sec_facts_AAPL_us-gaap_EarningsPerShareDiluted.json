@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_EarningsPerShareDiluted",
+  "title": "Apple Inc. - Earnings Per Share, Diluted",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: EarningsPerShareDiluted\nLabel: Earnings Per Share, Diluted\nDescription: The amount of net income (loss) for the period available to each share of common stock or common unit outstanding during the reporting period and to each share or unit that would have been outstanding assuming the issuance of common shares or units for all dilutive potential common shares or units outstanding during the reporting period.\nRecent reported values:\nUSD/shares 2025 Q2 10-Q filed 2025-05-02: 1.65\nUSD/shares 2026 Q2 10-Q filed 2026-05-01: 1.65\nUSD/shares 2025 Q3 10-Q filed 2025-08-01: 5.62\nUSD/shares 2026 Q3 10-Q filed 2026-07-31: 5.62\nUSD/shares 2025 Q3 10-Q filed 2025-08-01: 1.57\nUSD/shares 2026 Q3 10-Q filed 2026-07-31: 1.57\nUSD/shares 2025 FY 10-K filed 2025-10-31: 7.46\nUSD/shares 2026 Q1 10-Q filed 2026-01-30: 2.84\nUSD/shares 2026 Q2 10-Q filed 2026-05-01: 4.85\nUSD/shares 2026 Q2 10-Q filed 2026-05-01: 2.01\nUSD/shares 2026 Q3 10-Q filed 2026-07-31: 6.88\nUSD/shares 2026 Q3 10-Q filed 2026-07-31: 2.02",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "EarningsPerShareDiluted",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "027843acb249299f14d4fc753e6ed30404b2a560c195dce51a055e957a98d6a9"
+}

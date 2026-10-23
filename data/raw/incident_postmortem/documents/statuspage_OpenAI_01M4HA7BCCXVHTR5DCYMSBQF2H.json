@@ -1,0 +1,52 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_OpenAI_01M4HA7BCCXVHTR5DCYMSBQF2H",
+  "title": "OpenAI - Workspace admins may be unable to manage plugins",
+  "text": "Service: OpenAI\nIncident: Workspace admins may be unable to manage plugins\nStatus: resolved\nImpact: major\nStarted: None\nResolved: 2026-10-09T23:26:59Z\nUpdates:\n- 2026-10-09T23:26:59Z: resolved - All impacted services have now fully recovered.\n- 2026-10-09T22:52:35Z: monitoring - We are seeing recovery in workspace administrators’ ability to view and manage plugin availability and settings. We are monitoring to ensure service remains stable.\n- 2026-10-09T21:48:34Z: investigating - We are investigating an issue affecting some ChatGPT workspace administrators’ ability to view and manage plugin availability and settings. Some users may also see plugins as unavailable. We will provide another update as soon as we have more information.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.openai.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "01M4HA7BCCXVHTR5DCYMSBQF2H",
+      "name": "Workspace admins may be unable to manage plugins",
+      "status": "resolved",
+      "created_at": "2026-10-09T21:48:34Z",
+      "updated_at": "2026-10-09T23:26:59Z",
+      "resolved_at": "2026-10-09T23:26:59Z",
+      "impact": "major",
+      "page_id": "01JMDK9XYNY6RXSED6SDWW50WY",
+      "incident_updates": [
+        {
+          "id": "01M4HFVJ0PN2NVNK03T66TZC0T",
+          "body": "All impacted services have now fully recovered.",
+          "created_at": "2026-10-09T23:26:59Z",
+          "display_at": "2026-10-09T23:26:59Z",
+          "incident_id": "01M4HA7BCCXVHTR5DCYMSBQF2H",
+          "status": "resolved",
+          "updated_at": "2026-10-09T23:26:59Z"
+        },
+        {
+          "id": "01M4HDWHX7QCE0W5MCD456N295",
+          "body": "We are seeing recovery in workspace administrators’ ability to view and manage plugin availability and settings. We are monitoring to ensure service remains stable.",
+          "created_at": "2026-10-09T22:52:35Z",
+          "display_at": "2026-10-09T22:52:35Z",
+          "incident_id": "01M4HA7BCCXVHTR5DCYMSBQF2H",
+          "status": "monitoring",
+          "updated_at": "2026-10-09T22:52:35Z"
+        },
+        {
+          "id": "01M4HA7BCC9GN17VS1PHWZJGEG",
+          "body": "We are investigating an issue affecting some ChatGPT workspace administrators’ ability to view and manage plugin availability and settings. Some users may also see plugins as unavailable. We will provide another update as soon as we have more information.",
+          "created_at": "2026-10-09T21:48:34Z",
+          "display_at": "2026-10-09T21:48:34Z",
+          "incident_id": "01M4HA7BCCXVHTR5DCYMSBQF2H",
+          "status": "investigating",
+          "updated_at": "2026-10-09T21:48:34Z"
+        }
+      ]
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:25+00:00",
+  "content_sha256": "c2558a1936c2dc461282a60c30d3818daca15f3d3fe2d670b7e4776b32212608"
+}

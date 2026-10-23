@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00475905",
+  "title": "Uttarakhand Disaster Preparedness and Resilience Project",
+  "text": "bid_description: Supply of Water Tanker cum Sprinkler of 1250 Liter capacity on 4 * 4 Chassis. A Cenrifugal Pump driven by Petrol Engine for filling the tanks -33 Nos\nbid_reference_no: IN-DRINKING WATER-551951-GO-RFB\nid: OP00475905\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P179749-Uttarakhand Disaster Preparedness and Resilience Project Loan/Credit/TF Info: IBRD-96540 Bid/Contract Reference No: IN-DRINKING WATER-551951-GO-RFB Procurement Method: RFB-Request for Bids Scope of Contract: Supply of Water Tanker cum Sprinkler of 1250 Liter capacity on 4 * 4 Chassis. A Cenrifugal Pump driven by Petrol Engine for filling the tanks -33 Nos Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/16 Duration of Contract 180 Day(s) Awarded Bidder(s): USHA ENGINEERINGS (1131691) S70/71 Loni Road, Industrial area, Mohan Nagar Ghaziabad Country: India Evaluation Scores Bid Price at Opening INR Evaluated Bid Price INR 57436500.00 Signed Contract price INR 57436500.00 \nnotice_type: Contract Award\nnoticedate: 17-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: India\nproject_id: P179749\nproject_name: Uttarakhand Disaster Preparedness and Resilience Project\nsubmission_date: 2026-10-17T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=400&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00475905",
+      "notice_type": "Contract Award",
+      "noticedate": "17-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "India",
+      "project_id": "P179749",
+      "project_name": "Uttarakhand Disaster Preparedness and Resilience Project",
+      "bid_reference_no": "IN-DRINKING WATER-551951-GO-RFB",
+      "bid_description": "Supply of Water Tanker cum Sprinkler of 1250 Liter capacity on  4 * 4 Chassis. A Cenrifugal Pump driven by Petrol Engine for filling the tanks -33 Nos",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-17T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P179749-Uttarakhand Disaster Preparedness and Resilience Project<br/><b>Loan/Credit/TF Info:</b>IBRD-96540<br/><b>Bid/Contract Reference No:</b>IN-DRINKING WATER-551951-GO-RFB<br/><b>Procurement Method:</b>RFB-Request for Bids<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Supply of Water Tanker cum Sprinkler of 1250 Liter capacity on 4 * 4 Chassis. A Cenrifugal Pump driven by Petrol Engine for filling the tanks -33 Nos</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/16<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>180 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>USHA ENGINEERINGS (1131691)</b><br/>S70/71 Loni Road, Industrial area, Mohan Nagar Ghaziabad<br/>Country: India<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Evaluation Scores<br/><br/><br/>Bid Price at Opening<br/>INR<br/><br/>Evaluated Bid Price<br/>INR 57436500.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>INR 57436500.00</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:22+00:00",
+  "content_sha256": "ab0d00d7eb87c3a8d5536e3dcb209877ca172f2d06ab20c21d23f31bce8a4683"
+}

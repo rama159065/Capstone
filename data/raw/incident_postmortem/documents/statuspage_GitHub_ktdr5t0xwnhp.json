@@ -1,0 +1,146 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_GitHub_ktdr5t0xwnhp",
+  "title": "GitHub - Incident with Grok Copilot AI Model Provider",
+  "text": "Service: GitHub\nIncident: Incident with Grok Copilot AI Model Provider\nStatus: resolved\nImpact: minor\nStarted: 2026-09-03T14:17:27.478Z\nResolved: 2026-09-03T17:11:47.860Z\nUpdates:\n- 2026-09-03T17:11:47.860Z: resolved - Between 13:22 and 17:11 UTC on September 03, 2026, GitHub Copilot experienced degradation affecting several Grok models, including Grok 4.5 and Grok 4.6. Users encountered elevated error rates, but other models were not affected. The degradation was caused by an issue with an upstream model provider. GitHub engineers detected the issue through automated monitoring, displayed in-product warnings for the affected models, and coordinated with the provider. Service returned to normal after the provider implemented a mitigation.\n- 2026-09-03T17:11:39.081Z: investigating - The issues with our upstream model provider have been resolved, and Grok models are once again available in Copilot products and IDE surfaces. We will continue monitoring to ensure stability, but mitigation is complete.\n- 2026-09-03T14:22:44.366Z: investigating - The Grok 4.5 model has degraded availability as well. We are working with the upstream provider to resolve the issue.\n- 2026-09-03T14:20:35.378Z: investigating - We are experiencing degraded availability for the Grok 4.6 model in Copilot Chat, VS Code and other Copilot products. This is due to an issue with an upstream model provider. We are working with them to resolve the issue. \n- 2026-09-03T14:17:27.565Z: investigating - We are investigating reports of degraded performance for Copilot AI Model Providers",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://www.githubstatus.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "ktdr5t0xwnhp",
+      "name": "Incident with Grok Copilot AI Model Provider",
+      "status": "resolved",
+      "created_at": "2026-09-03T14:17:27.485Z",
+      "updated_at": "2026-09-09T17:12:18.653Z",
+      "monitoring_at": null,
+      "resolved_at": "2026-09-03T17:11:47.860Z",
+      "impact": "minor",
+      "shortlink": "https://stspg.io/p217h6l54208",
+      "started_at": "2026-09-03T14:17:27.478Z",
+      "page_id": "kctbh9vrtdwd",
+      "incident_updates": [
+        {
+          "id": "s3yq1d9xcdn4",
+          "status": "resolved",
+          "body": "Between 13:22 and 17:11 UTC on September 03, 2026, GitHub Copilot experienced degradation affecting several Grok models, including Grok 4.5 and Grok 4.6. Users encountered elevated error rates, but other models were not affected. The degradation was caused by an issue with an upstream model provider. GitHub engineers detected the issue through automated monitoring, displayed in-product warnings for the affected models, and coordinated with the provider. Service returned to normal after the provider implemented a mitigation.",
+          "incident_id": "ktdr5t0xwnhp",
+          "created_at": "2026-09-03T17:11:47.860Z",
+          "updated_at": "2026-09-09T17:12:18.647Z",
+          "display_at": "2026-09-03T17:11:47.860Z",
+          "affected_components": [
+            {
+              "code": "cnnb39dkkk82",
+              "name": "Copilot AI Model Providers",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "9gzmjbr9vkyl",
+          "status": "investigating",
+          "body": "The issues with our upstream model provider have been resolved, and Grok models are once again available in Copilot products and IDE surfaces.<br />We will continue monitoring to ensure stability, but mitigation is complete.",
+          "incident_id": "ktdr5t0xwnhp",
+          "created_at": "2026-09-03T17:11:39.081Z",
+          "updated_at": "2026-09-03T17:11:39.081Z",
+          "display_at": "2026-09-03T17:11:39.081Z",
+          "affected_components": [
+            {
+              "code": "cnnb39dkkk82",
+              "name": "Copilot AI Model Providers",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "w807g3y7xw2h",
+          "status": "investigating",
+          "body": "The Grok 4.5 model has degraded availability as well. We are working with the upstream provider to resolve the issue.",
+          "incident_id": "ktdr5t0xwnhp",
+          "created_at": "2026-09-03T14:22:44.366Z",
+          "updated_at": "2026-09-03T14:22:44.366Z",
+          "display_at": "2026-09-03T14:22:44.366Z",
+          "affected_components": [
+            {
+              "code": "cnnb39dkkk82",
+              "name": "Copilot AI Model Providers",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "n43c5dzt444q",
+          "status": "investigating",
+          "body": "We are experiencing degraded availability for the Grok 4.6 model in Copilot Chat, VS Code and other Copilot products. This is due to an issue with an upstream model provider. We are working with them to resolve the issue.<br />",
+          "incident_id": "ktdr5t0xwnhp",
+          "created_at": "2026-09-03T14:20:35.378Z",
+          "updated_at": "2026-09-03T14:20:35.378Z",
+          "display_at": "2026-09-03T14:20:35.378Z",
+          "affected_components": [
+            {
+              "code": "cnnb39dkkk82",
+              "name": "Copilot AI Model Providers",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "s9928ttc9107",
+          "status": "investigating",
+          "body": "We are investigating reports of degraded performance for Copilot AI Model Providers",
+          "incident_id": "ktdr5t0xwnhp",
+          "created_at": "2026-09-03T14:17:27.565Z",
+          "updated_at": "2026-09-03T14:17:27.565Z",
+          "display_at": "2026-09-03T14:17:27.565Z",
+          "affected_components": [
+            {
+              "code": "cnnb39dkkk82",
+              "name": "Copilot AI Model Providers",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "cnnb39dkkk82",
+          "name": "Copilot AI Model Providers",
+          "status": "operational",
+          "created_at": "2026-04-17T12:33:08.827Z",
+          "updated_at": "2026-09-16T11:45:34.336Z",
+          "position": 12,
+          "description": null,
+          "showcase": true,
+          "start_date": "2026-04-17",
+          "group_id": null,
+          "page_id": "kctbh9vrtdwd",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:18+00:00",
+  "content_sha256": "3e08e24bd0d0e48a32caa6973f20f9acee30203564b36cc4ee9059e275248389"
+}

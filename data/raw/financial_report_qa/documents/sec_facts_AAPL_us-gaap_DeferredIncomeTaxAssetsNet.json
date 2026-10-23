@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DeferredIncomeTaxAssetsNet",
+  "title": "Apple Inc. - Deferred Income Tax Assets, Net",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DeferredIncomeTaxAssetsNet\nLabel: Deferred Income Tax Assets, Net\nDescription: Amount, after allocation of valuation allowances and deferred tax liability, of deferred tax asset attributable to deductible differences and carryforwards, with jurisdictional netting.\nRecent reported values:\nUSD 2023 FY 10-K filed 2023-11-03: 15375000000\nUSD 2023 FY 10-K filed 2023-11-03: 17852000000\nUSD 2024 FY 10-K filed 2024-11-01: 17852000000\nUSD 2024 FY 10-K filed 2024-11-01: 19499000000\nUSD 2025 FY 10-K filed 2025-10-31: 19499000000\nUSD 2025 FY 10-K filed 2025-10-31: 20777000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DeferredIncomeTaxAssetsNet",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "7d6538ee242b652c70483a505f61e107bd97c68af518ca2196d16b2572239881"
+}

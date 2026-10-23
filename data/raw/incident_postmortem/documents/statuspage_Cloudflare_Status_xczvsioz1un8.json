@@ -1,0 +1,43 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Cloudflare_Status_xczvsioz1un8",
+  "title": "Cloudflare Status - Network Performance Issues in Kochi",
+  "text": "Service: Cloudflare Status\nIncident: Network Performance Issues in Kochi\nStatus: resolved\nImpact: minor\nStarted: 2026-10-08T14:00:00.000Z\nResolved: 2026-10-08T17:00:00.000Z\nUpdates:\n- 2026-10-08T17:14:40.718Z: resolved - Cloudflare resolved an issue with network performance for our Kochi (COK) facility which occurred today, 2026-10-08, between approximately 14:00 and 17:00 UTC. Customers may have observed elevated latency and/or error rates from this facility during this period.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://www.cloudflarestatus.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "xczvsioz1un8",
+      "name": "Network Performance Issues in Kochi",
+      "status": "resolved",
+      "created_at": "2026-10-08T17:14:40.718Z",
+      "updated_at": "2026-10-08T17:14:40.718Z",
+      "monitoring_at": null,
+      "resolved_at": "2026-10-08T17:00:00.000Z",
+      "impact": "minor",
+      "shortlink": "https://www.cloudflarestatus.com/incidents/xczvsioz1un8",
+      "started_at": "2026-10-08T14:00:00.000Z",
+      "page_id": "yh6f0r4529hb",
+      "incident_updates": [
+        {
+          "id": "1yhkqbv4lxnb",
+          "status": "resolved",
+          "body": "Cloudflare resolved an issue with network performance for our Kochi (COK) facility which occurred today, 2026-10-08, between approximately 14:00 and 17:00 UTC. Customers may have observed elevated latency and/or error rates from this facility during this period.",
+          "incident_id": "xczvsioz1un8",
+          "created_at": "2026-10-08T17:14:40.718Z",
+          "updated_at": "2026-10-08T17:14:40.718Z",
+          "display_at": "2026-10-08T17:00:00.000Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:22+00:00",
+  "content_sha256": "1581b14a42a3611bfc8902cec34543a6ecfc9a8199e084dff805198dd912c61e"
+}

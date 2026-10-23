@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_NumberOfStores",
+  "title": "Apple Inc. - Number of Stores",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: NumberOfStores\nLabel: Number of Stores\nDescription: Represents the number of stores.\nRecent reported values:\nStore 2015 Q1 10-Q filed 2015-01-28: 447\nStore 2015 Q2 10-Q filed 2015-04-28: 453\nStore 2015 Q3 10-Q filed 2015-07-22: 456\nStore 2015 FY 10-K filed 2015-10-28: 463\nStore 2016 Q1 10-Q filed 2016-01-27: 469\nStore 2016 Q2 10-Q filed 2016-04-27: 475",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "NumberOfStores",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "14ae07016d0477ffa2165a0bd0264ba83b7bab9166c5febf197f96100336748d"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_UnrecordedUnconditionalPurchaseObligationBalanceOnSecondAnniversary",
+  "title": "Apple Inc. - Unrecorded Unconditional Purchase Obligation, to be Paid, Year Two",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: UnrecordedUnconditionalPurchaseObligationBalanceOnSecondAnniversary\nLabel: Unrecorded Unconditional Purchase Obligation, to be Paid, Year Two\nDescription: Amount of fixed and determinable portion of unrecorded unconditional purchase obligation to be paid in second fiscal year following current fiscal year. Excludes interim and annual periods when interim periods are reported from current statement of financial position date (rolling approach).\nRecent reported values:\nUSD 2020 FY 10-K filed 2020-10-30: 2885000000\nUSD 2021 FY 10-K filed 2021-10-29: 2165000000\nUSD 2022 FY 10-K filed 2022-10-28: 4876000000\nUSD 2023 Q1 10-Q filed 2023-02-03: 1584000000\nUSD 2023 Q2 10-Q filed 2023-05-05: 2028000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 1990000000\nUSD 2023 FY 10-K filed 2023-11-03: 2674000000\nUSD 2024 FY 10-K filed 2024-11-01: 2440000000\nUSD 2025 FY 10-K filed 2025-10-31: 3708000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 7005000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 6130000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 6406000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "UnrecordedUnconditionalPurchaseObligationBalanceOnSecondAnniversary",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "1a238f1d7bf825cd83be7ee04141c8610ad91bf3c0064550af2984c05a093ec1"
+}

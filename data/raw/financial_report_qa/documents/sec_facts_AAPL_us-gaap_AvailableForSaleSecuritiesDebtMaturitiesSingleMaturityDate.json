@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AvailableForSaleSecuritiesDebtMaturitiesSingleMaturityDate",
+  "title": "Apple Inc. - Debt Securities, Available-for-sale, Maturity, Allocated and Single Maturity Date, Fair Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AvailableForSaleSecuritiesDebtMaturitiesSingleMaturityDate\nLabel: Debt Securities, Available-for-sale, Maturity, Allocated and Single Maturity Date, Fair Value\nDescription: Fair value of investment in debt security measured at fair value with change in fair value recognized in other comprehensive income (available-for-sale), with single maturity date and allocated without single maturity date.\nRecent reported values:\nUSD 2021 FY 10-K filed 2021-10-29: 127877000000\nUSD 2022 Q1 10-Q filed 2022-01-28: 138683000000\nUSD 2022 Q2 10-Q filed 2022-04-29: 141219000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 131077000000\nUSD 2022 FY 10-K filed 2022-10-28: 120805000000\nUSD 2023 Q1 10-Q filed 2023-02-03: 114095000000\nUSD 2023 Q2 10-Q filed 2023-05-05: 110461000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 104061000000\nUSD 2023 FY 10-K filed 2023-11-03: 100544000000\nUSD 2024 Q1 10-Q filed 2024-02-02: 99475000000\nUSD 2024 Q2 10-Q filed 2024-05-03: 95187000000\nUSD 2024 Q3 10-Q filed 2024-08-02: 91240000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AvailableForSaleSecuritiesDebtMaturitiesSingleMaturityDate",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e789f19fd8237b279c757155a4de13da1366d702e4537e994ee80e23916b6964"
+}

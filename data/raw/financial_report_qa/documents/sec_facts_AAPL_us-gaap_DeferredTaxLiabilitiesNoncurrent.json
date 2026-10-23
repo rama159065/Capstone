@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DeferredTaxLiabilitiesNoncurrent",
+  "title": "Apple Inc. - Deferred Tax Liabilities, Net, Noncurrent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DeferredTaxLiabilitiesNoncurrent\nLabel: Deferred Tax Liabilities, Net, Noncurrent\nDescription: Amount, after deferred tax asset, of deferred tax liability attributable to taxable differences, with jurisdictional netting and classified as noncurrent.\nRecent reported values:\nUSD 2017 Q1 10-Q filed 2017-02-01: 26948000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 28226000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 30191000000\nUSD 2017 FY 10-K filed 2017-11-03: 31504000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 31504000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 31504000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 31504000000\nUSD 2018 FY 10-K filed 2018-11-05: 31504000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 548000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 548000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 398000000\nUSD 2018 FY 10-K filed 2018-11-05: 426000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DeferredTaxLiabilitiesNoncurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "306171bc2dec29bf13ab87403f5f66b0a172328ff65b6ce05fc2c6d49388b921"
+}

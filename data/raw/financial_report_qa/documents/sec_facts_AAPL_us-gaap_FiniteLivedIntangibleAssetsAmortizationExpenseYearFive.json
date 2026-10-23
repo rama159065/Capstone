@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_FiniteLivedIntangibleAssetsAmortizationExpenseYearFive",
+  "title": "Apple Inc. - Finite-Lived Intangible Asset, Expected Amortization, Year Five",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: FiniteLivedIntangibleAssetsAmortizationExpenseYearFive\nLabel: Finite-Lived Intangible Asset, Expected Amortization, Year Five\nDescription: Amount of amortization for assets, excluding financial assets and goodwill, lacking physical substance with finite life expected to be recognized in fifth fiscal year following current fiscal year. Excludes interim and annual periods when interim periods are reported from current statement of financial position date (rolling approach).\nRecent reported values:\nUSD 2012 FY 10-K filed 2012-10-31: 635000000\nUSD 2012 FY 8-K filed 2013-04-24: 635000000\nUSD 2013 FY 10-K filed 2013-10-30: 434000000\nUSD 2014 FY 10-K filed 2014-10-27: 175000000\nUSD None None 8-K filed 2015-01-28: 175000000\nUSD 2015 FY 10-K filed 2015-10-28: 166000000\nUSD 2016 FY 10-K filed 2016-10-26: 175000000\nUSD 2017 FY 10-K filed 2017-11-03: 131000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "FiniteLivedIntangibleAssetsAmortizationExpenseYearFive",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "3e2927e9695db1ca04523edf15af39d660bafe5862dd89902f72188d221b224f"
+}

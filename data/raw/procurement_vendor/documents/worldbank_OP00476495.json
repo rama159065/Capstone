@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476495",
+  "title": "Balochistan Water Security and Productivity Improvement Project",
+  "text": "bid_description: Purchase of Office Furniture For PIU Office\nbid_reference_no: PK-BID-PIU-530052-GO-RFQ\nid: OP00476495\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P179227-Balochistan Water Security and Productivity Improvement Project Loan/Credit/TF Info: IDA-77900 Bid/Contract Reference No: PK-BID-PIU-530052-GO-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: Purchase of Office Furniture For PIU Office Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/09/01 Duration of Contract 30 Day(s) Awarded Bidder(s): SAEEDULLAH ENTERPRISES JV WITH AL KISWA CONSTRUCTION CO (1137073) Flat # 6 Lango Plaza, Toghi Road Quetta Country: Pakistan Bid Price at Opening PKR 6911500.00 Evaluated Bid Price PKR 6911500.00 Signed Contract price PKR 6911500.00 Evaluated Bidder(s): M ANAS & CO (1137068) Toghi Road near Cinema Quetta.Contact 03004943897 Country: Pakistan Bid Price at Opening PKR 7618900.00 Evaluated Bid Price PKR 7618900.00 ICON ENTERPRISES & GENERAL ORDER SUPPLIER (1137040) Jogezai Street near Ayub Stadium, near Quetta Balochistan.Cell 03201165755 Country: Pakistan Bid Price at Opening PKR 8059500.00 Evaluated Bid Price PKR 8059500.00 \nnotice_type: Contract Award\nnoticedate: 21-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Pakistan\nproject_id: P179227\nproject_name: Balochistan Water Security and Productivity Improvement Project\nsubmission_date: 2026-10-21T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=0&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476495",
+      "notice_type": "Contract Award",
+      "noticedate": "21-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Pakistan",
+      "project_id": "P179227",
+      "project_name": "Balochistan Water Security and Productivity Improvement Project",
+      "bid_reference_no": "PK-BID-PIU-530052-GO-RFQ",
+      "bid_description": "Purchase of Office Furniture For PIU Office",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-21T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P179227-Balochistan Water Security and Productivity Improvement Project<br/><b>Loan/Credit/TF Info:</b>IDA-77900<br/><b>Bid/Contract Reference No:</b>PK-BID-PIU-530052-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Purchase of Office Furniture For PIU Office</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/09/01<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>30 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>SAEEDULLAH ENTERPRISES JV WITH AL KISWA CONSTRUCTION CO (1137073)</b><br/>Flat # 6 Lango Plaza, Toghi Road Quetta<br/>Country: Pakistan<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PKR 6911500.00<br/><br/>Evaluated Bid Price<br/>PKR 6911500.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>PKR 6911500.00</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>M ANAS & CO (1137068)</b><br/>Toghi Road near Cinema Quetta.Contact 03004943897<br/>Country: Pakistan<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PKR 7618900.00<br/><br/>Evaluated Bid Price<br/>PKR 7618900.00</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>ICON ENTERPRISES & GENERAL ORDER SUPPLIER (1137040)</b><br/>Jogezai Street near Ayub Stadium, near Quetta Balochistan.Cell 03201165755<br/>Country: Pakistan<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PKR 8059500.00<br/><br/>Evaluated Bid Price<br/>PKR 8059500.00</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:08+00:00",
+  "content_sha256": "96f8a5a7a67cf4a74fce5fcbadeed9e80292ae1d35de77207b90bf57e978c84d"
+}

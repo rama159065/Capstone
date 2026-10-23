@@ -1,0 +1,17 @@
+{
+  "domain": "competitive_research",
+  "document_id": "sec_competitive_AAPL_0000320193-17-000070",
+  "title": "Apple Inc. 10-K filed 2017-11-03",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nSIC: 3571 Electronic Computers\nBusiness address: {'street1': 'ONE APPLE PARK WAY', 'street2': None, 'city': 'CUPERTINO', 'stateOrCountry': 'CA', 'zipCode': '95014', 'stateOrCountryDescription': 'CA', 'isForeignLocation': None, 'foreignStateTerritory': None, 'country': None, 'countryCode': None}\nForm: 10-K\nFiling date: 2017-11-03\nAccession number: 0000320193-17-000070\nPrimary document: a10-k20179302017.htm\nPrimary document description: 10-K\nFiling URL: https://www.sec.gov/Archives/edgar/data/320193/000032019317000070/a10-k20179302017.htm",
+  "source_name": "SEC EDGAR submissions",
+  "source_url": "https://data.sec.gov/submissions/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "form": "10-K",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019317000070/a10-k20179302017.htm",
+    "source_type": "sec_filing_metadata"
+  },
+  "downloaded_at": "2026-10-22T12:41:49+00:00",
+  "content_sha256": "5a5459c9ad723b1ff909e1fda9eea1d77a80f138e32e03187208a886da3276be"
+}

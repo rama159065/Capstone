@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CapitalizedComputerSoftwareAmortization",
+  "title": "Apple Inc. - Capitalized Computer Software, Amortization (Deprecated 2016-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CapitalizedComputerSoftwareAmortization\nLabel: Capitalized Computer Software, Amortization (Deprecated 2016-01-31)\nDescription: For each income statement presented, the amount charged to expense for amortization of capitalized computer software costs.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 27000000\nUSD 2011 FY 10-K filed 2011-10-26: 25000000\nUSD 2010 FY 10-K filed 2010-10-27: 25000000\nUSD 2011 FY 10-K filed 2011-10-26: 48000000\nUSD 2010 FY 10-K filed 2010-10-27: 48000000\nUSD 2011 FY 10-K filed 2011-10-26: 30000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CapitalizedComputerSoftwareAmortization",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "a2331cbe30d0034f7e32b97197c033151f51dadef2ba749fa5dff558f31d1490"
+}

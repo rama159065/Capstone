@@ -1,0 +1,52 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_OpenAI_01M4CBXZ62A9SVH8D74KVYQC8M",
+  "title": "OpenAI - Elevated errors with GPT-5.6 Instant in FedRAMP workspaces",
+  "text": "Service: OpenAI\nIncident: Elevated errors with GPT-5.6 Instant in FedRAMP workspaces\nStatus: resolved\nImpact: minor\nStarted: None\nResolved: 2026-10-08T00:03:18Z\nUpdates:\n- 2026-10-08T00:03:19Z: resolved - All impacted services have now fully recovered.\n- 2026-10-07T23:48:14Z: monitoring - We have applied the mitigation and are monitoring the recovery and no longer seeing any errors.\n- 2026-10-07T23:42:12Z: investigating - We have identified that users are experiencing elevated errors for the impacted services.\n\nWe are working on implementing a mitigation.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.openai.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "01M4CBXZ62A9SVH8D74KVYQC8M",
+      "name": "Elevated errors with GPT-5.6 Instant in FedRAMP workspaces",
+      "status": "resolved",
+      "created_at": "2026-10-07T23:42:12Z",
+      "updated_at": "2026-10-08T00:03:19Z",
+      "resolved_at": "2026-10-08T00:03:18Z",
+      "impact": "minor",
+      "page_id": "01JMDK9XYNY6RXSED6SDWW50WY",
+      "incident_updates": [
+        {
+          "id": "01M4CD4MA1G5ZW7MQN56H3DVWQ",
+          "body": "All impacted services have now fully recovered.",
+          "created_at": "2026-10-08T00:03:19Z",
+          "display_at": "2026-10-08T00:03:18Z",
+          "incident_id": "01M4CBXZ62A9SVH8D74KVYQC8M",
+          "status": "resolved",
+          "updated_at": "2026-10-08T00:03:19Z"
+        },
+        {
+          "id": "01M4CC91CM709P4M8VWS58HSJR",
+          "body": "We have applied the mitigation and are monitoring the recovery and no longer seeing any errors.",
+          "created_at": "2026-10-07T23:48:14Z",
+          "display_at": "2026-10-07T23:48:14Z",
+          "incident_id": "01M4CBXZ62A9SVH8D74KVYQC8M",
+          "status": "monitoring",
+          "updated_at": "2026-10-07T23:48:14Z"
+        },
+        {
+          "id": "01M4CBXZ624BVRG67MAGNB5ZAG",
+          "body": "We have identified that users are experiencing elevated errors for the impacted services.\n\nWe are working on implementing a mitigation.",
+          "created_at": "2026-10-07T23:42:12Z",
+          "display_at": "2026-10-07T23:42:12Z",
+          "incident_id": "01M4CBXZ62A9SVH8D74KVYQC8M",
+          "status": "investigating",
+          "updated_at": "2026-10-07T23:42:12Z"
+        }
+      ]
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:25+00:00",
+  "content_sha256": "6e1ac17ea6a883ac681851e060d898734bcadff507180a63835edf259021800c"
+}

@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476092",
+  "title": "Benin Youth Inclusion Project",
+  "text": "bid_description: Acquisition de dix (10) véhicules à quatre roues au profit du ProDIJ\nbid_reference_no: BJ-ANPE-BÉNIN-541104-GO-DIR\nid: OP00476092\nnotice_lang_name: French\nnotice_status: Published\nnotice_text: Contract Award Project: P170425-Benin Youth Inclusion Project Loan/Credit/TF Info: IDA-78870 Bid/Contract Reference No: BJ-ANPE-BNIN-541104-GO-DIR Procurement Method: DIR-Passation de march de gr gr Scope of Contract: Acquisition de dix vhicules Land Cruiser Prado BX 2.8 TD AUTO 7-Seater 4x4 au profit du ProDIJ Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/06/23 Duration of Contract 8 Month(s) Awarded Bidder(s): UNITED NATIONS OFFICE PROJECT SERVICES (UNOPS) (35295) Country: Monde Bid Price at Opening XOF 312563095 Evaluated Bid Price XOF 312563095 Signed Contract price USD 520938.49 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: DIR\nprocurement_method_name: Direct Selection\nproject_ctry_name: Benin\nproject_id: P170425\nproject_name: Benin Youth Inclusion Project\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476092",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "French",
+      "notice_status": "Published",
+      "project_ctry_name": "Benin",
+      "project_id": "P170425",
+      "project_name": "Benin Youth Inclusion Project",
+      "bid_reference_no": "BJ-ANPE-BÉNIN-541104-GO-DIR",
+      "bid_description": "Acquisition de dix (10) véhicules à quatre roues au profit du ProDIJ",
+      "procurement_group": "GO",
+      "procurement_method_code": "DIR",
+      "procurement_method_name": "Direct Selection",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P170425-Benin Youth Inclusion Project<br/><b>Loan/Credit/TF Info:</b>IDA-78870<br/><b>Bid/Contract Reference No:</b>BJ-ANPE-BNIN-541104-GO-DIR<br/><b>Procurement Method:</b>DIR-Passation de march de gr  gr<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Acquisition de dix vhicules Land Cruiser Prado BX 2.8 TD AUTO 7-Seater 4x4 au profit du ProDIJ</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/06/23<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>8 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>UNITED NATIONS OFFICE PROJECT SERVICES (UNOPS) (35295)</b><br/><br/>Country: Monde<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>XOF 312563095<br/><br/>Evaluated Bid Price<br/>XOF 312563095</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>USD 520938.49</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "075579fde356d39e27d211c7ad8d2a36f8ca6f0d92a15e7972ca5b47c5b3b3f4"
+}

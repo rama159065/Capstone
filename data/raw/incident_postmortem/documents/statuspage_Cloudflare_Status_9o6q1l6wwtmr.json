@@ -1,0 +1,56 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Cloudflare_Status_9o6q1l6wwtmr",
+  "title": "Cloudflare Status - Network Performance Issues in Sofia",
+  "text": "Service: Cloudflare Status\nIncident: Network Performance Issues in Sofia\nStatus: resolved\nImpact: minor\nStarted: 2026-10-08T21:35:00.000Z\nResolved: 2026-10-08T22:32:25.184Z\nUpdates:\n- 2026-10-08T22:32:25.184Z: resolved - Cloudflare resolved an issue with network performance for our Sofia (SOF) facility which occurred today, 2026-10-08, from approximately 21:35 to 21:50 UTC. Customers may have observed elevated latency and/or error rates from this facility during this period.\n- 2026-10-08T22:31:54.271Z: investigating - Cloudflare resolved an issue with network performance for our Sofia (SOF) facility which occurred today, 2026-10-08, from approximately 21:35 to 21:50 UTC. Customers may have observed elevated latency and/or error rates from this facility during this period.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://www.cloudflarestatus.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "9o6q1l6wwtmr",
+      "name": "Network Performance Issues in Sofia",
+      "status": "resolved",
+      "created_at": "2026-10-08T22:31:54.271Z",
+      "updated_at": "2026-10-08T22:32:43.739Z",
+      "monitoring_at": null,
+      "resolved_at": "2026-10-08T22:32:25.184Z",
+      "impact": "minor",
+      "shortlink": "https://www.cloudflarestatus.com/incidents/9o6q1l6wwtmr",
+      "started_at": "2026-10-08T21:35:00.000Z",
+      "page_id": "yh6f0r4529hb",
+      "incident_updates": [
+        {
+          "id": "wwfxkusly9yo",
+          "status": "resolved",
+          "body": "Cloudflare resolved an issue with network performance for our Sofia (SOF) facility which occurred today, 2026-10-08, from approximately 21:35 to 21:50 UTC. Customers may have observed elevated latency and/or error rates from this facility during this period.",
+          "incident_id": "9o6q1l6wwtmr",
+          "created_at": "2026-10-08T22:32:25.184Z",
+          "updated_at": "2026-10-08T22:32:43.739Z",
+          "display_at": "2026-10-08T22:32:25.184Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "wpsa0f6u7aor",
+          "status": "investigating",
+          "body": "Cloudflare resolved an issue with network performance for our Sofia (SOF) facility which occurred today, 2026-10-08, from approximately 21:35 to 21:50 UTC. Customers may have observed elevated latency and/or error rates from this facility during this period.",
+          "incident_id": "9o6q1l6wwtmr",
+          "created_at": "2026-10-08T22:31:54.271Z",
+          "updated_at": "2026-10-08T22:31:54.271Z",
+          "display_at": "2026-10-08T22:31:54.271Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:22+00:00",
+  "content_sha256": "9e555d44ded22672672d11b4bb5a658d4d6eeae90a5ff99f24d9a07af2c463a7"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DebtInstrumentUnamortizedDiscountPremiumNet",
+  "title": "Apple Inc. - Debt Instrument, Unamortized Discount (Premium), Net",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DebtInstrumentUnamortizedDiscountPremiumNet\nLabel: Debt Instrument, Unamortized Discount (Premium), Net\nDescription: Amount, after accumulated amortization, of debt discount (premium).\nRecent reported values:\nUSD 2016 Q2 10-Q filed 2016-04-27: 114000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 114000000\nUSD 2016 FY 10-K filed 2016-10-26: 248000000\nUSD 2016 Q2 10-Q filed 2016-04-27: -15000000\nUSD 2016 Q3 10-Q filed 2016-07-27: -14000000\nUSD 2016 FY 10-K filed 2016-10-26: 174000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DebtInstrumentUnamortizedDiscountPremiumNet",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e04b32ffdfbe52583afd797dd1b80ec3942ad3ac2fcc093177d5037b46cc56fb"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_MarketingExpense",
+  "title": "Apple Inc. - Marketing Expense",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: MarketingExpense\nLabel: Marketing Expense\nDescription: Expenditures for planning and executing the conception, pricing, promotion, and distribution of ideas, goods, and services. Costs of public relations and corporate promotions are typically considered to be marketing costs.\nRecent reported values:\nUSD 2012 FY 8-K filed 2013-04-24: 75000000\nUSD 2012 FY 10-K filed 2012-10-31: 75000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 49000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 25000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 75000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 26000000\nUSD 2012 FY 8-K filed 2013-04-24: 102000000\nUSD 2012 FY 10-K filed 2012-10-31: 102000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "MarketingExpense",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "df12ded2c76cf03ad7b3b45083860af38450f3aace5539fd9e9be419724a74a5"
+}

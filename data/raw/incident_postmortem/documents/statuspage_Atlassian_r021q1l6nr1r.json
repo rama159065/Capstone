@@ -1,0 +1,56 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Atlassian_r021q1l6nr1r",
+  "title": "Atlassian - User Management Syncs are affected across all products",
+  "text": "Service: Atlassian\nIncident: User Management Syncs are affected across all products\nStatus: resolved\nImpact: none\nStarted: 2021-02-12T02:28:07.614Z\nResolved: 2021-02-12T03:13:32.641Z\nUpdates:\n- 2021-02-12T03:13:32.641Z: resolved - Impact on User Management Syncs has been mitigated.\n- 2021-02-12T02:28:07.717Z: investigating - We continue investigating issues with syncing User Management changes to products. We will provide more details in an hour.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.atlassian.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "r021q1l6nr1r",
+      "name": "User Management Syncs are affected across all products",
+      "status": "resolved",
+      "created_at": "2021-02-12T02:28:07.620Z",
+      "updated_at": "2021-02-12T03:13:32.654Z",
+      "monitoring_at": null,
+      "resolved_at": "2021-02-12T03:13:32.641Z",
+      "impact": "none",
+      "shortlink": "https://stspg.io/tlr74xv5fd4g",
+      "started_at": "2021-02-12T02:28:07.614Z",
+      "page_id": "0f54fx204jpt",
+      "incident_updates": [
+        {
+          "id": "tjn9dgq709h0",
+          "status": "resolved",
+          "body": "Impact on User Management Syncs has been mitigated.",
+          "incident_id": "r021q1l6nr1r",
+          "created_at": "2021-02-12T03:13:32.641Z",
+          "updated_at": "2021-02-12T03:13:32.641Z",
+          "display_at": "2021-02-12T03:13:32.641Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "hcjcyj4dhxtp",
+          "status": "investigating",
+          "body": "We continue investigating issues with syncing User Management changes to products. We will provide more details in an hour.",
+          "incident_id": "r021q1l6nr1r",
+          "created_at": "2021-02-12T02:28:07.717Z",
+          "updated_at": "2021-02-12T02:28:07.717Z",
+          "display_at": "2021-02-12T02:28:07.717Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:48+00:00",
+  "content_sha256": "d7d50c85b17d86d19fb1acc1519dc88373296cf41d22a4b64dd573de90f43cca"
+}

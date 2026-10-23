@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncomeTaxReconciliationOtherReconcilingItems",
+  "title": "Apple Inc. - Effective Income Tax Rate Reconciliation, Other Reconciling Items, Amount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncomeTaxReconciliationOtherReconcilingItems\nLabel: Effective Income Tax Rate Reconciliation, Other Reconciling Items, Amount\nDescription: Amount of the difference between reported income tax expense (benefit) and expected income tax expense (benefit) computed by applying the domestic federal statutory income tax rates to pretax income (loss) from continuing operations attributable to tax exempt income, equity in earnings (loss) of an unconsolidated subsidiary, minority noncontrolling interest income (loss), tax holiday, disposition of a business, disposition of an asset, repatriation of foreign earnings, repatriation of foreign earnings jobs creation act of 2004, increase (decrease) in enacted tax rate, prior year income taxes, increase (decrease) in deferred tax asset valuation allowance, and other adjustments.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 1000000\nUSD 2011 FY 10-K filed 2011-10-26: 36000000\nUSD 2010 FY 10-K filed 2010-10-27: 0\nUSD 2012 FY 8-K filed 2013-04-24: -117000000\nUSD 2012 FY 10-K filed 2012-10-31: -117000000\nUSD 2011 FY 10-K filed 2011-10-26: -117000000\nUSD 2010 FY 10-K filed 2010-10-27: -165000000\nUSD 2012 FY 8-K filed 2013-04-24: -9000000\nUSD 2012 FY 10-K filed 2012-10-31: -9000000\nUSD 2011 FY 10-K filed 2011-10-26: -9000000\nUSD 2012 FY 8-K filed 2013-04-24: 162000000\nUSD 2012 FY 10-K filed 2012-10-31: 162000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncomeTaxReconciliationOtherReconcilingItems",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "842a60fa872a535430e271197b5a4ea4b37c7d44a35e8973c44eff75edb7f68b"
+}

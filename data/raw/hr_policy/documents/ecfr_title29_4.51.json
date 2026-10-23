@@ -1,0 +1,16 @@
+{
+  "domain": "hr_policy",
+  "document_id": "ecfr_title29_4.51",
+  "title": "§ 4.51 Prevailing in the locality determinations.",
+  "text": "§ 4.51 Prevailing in the locality determinations.\n§ 4.51 Prevailing in the locality determinations.\n(a) \nInformation considered.\n(b) \nDetermination of prevailing rates.\n(1) The number of workers studied for the job classification constitutes a relatively small sample and the computed median results in an actual rate that is paid to few of the studied workers in the class;\n\n(2) Statistical deviation such as a skewed (bimodal or multimodal) frequency distribution biases the median rate due to large concentrations of workers toward either end of the distribution curve and the computed median results in an actual rate that is paid to few of the studied workers in the class; or\n\n(3) The computed median rate distorts historic wage relationships between job levels within a classification family (i.e., Electronic Technician Classes A, B, and C levels within the Electronic technician classification family), between classifications of different skill levels (i.e., a maintenance electrician as compared with a maintenance carpenter), or, for example, yields a wage movement inconsistent with the pattern shown by the survey overall or with related and/or similarly skilled job classifications.\n\n(c) \nSlotting wage rates.\n(d) \nDue consideration.\ndue consideration",
+  "source_name": "eCFR Title 29 Labor",
+  "source_url": "https://www.govinfo.gov/bulkdata/ECFR/title-29/ECFR-title29.xml",
+  "metadata": {
+    "title_number": 29,
+    "section": "§ 4.51",
+    "heading_path": "§ 4.51 Prevailing in the locality determinations.",
+    "source_type": "regulatory_section"
+  },
+  "downloaded_at": "2026-10-22T12:48:10+00:00",
+  "content_sha256": "e8827e3ca385dc42df2fad5ba8b1c9565474feabfd777aceefb9a047cbbed07c"
+}

@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476661",
+  "title": "Guinea Support to Local Governance Project 2",
+  "text": "bid_description: Edition de 1 000 exemplaires du Guide de mobilisation des ressources\nbid_reference_no: GN-PAGL 2-543104-NC-RFQ\nid: OP00476661\nnotice_lang_name: French\nnotice_status: Published\nnotice_text: Contract Award Project: P177095-Guinea Support to Local Governance Project 2 Loan/Credit/TF Info: IDA-72740 Bid/Contract Reference No: GN-PAGL 2-543104-NC-RFQ Procurement Method: RFQ-Demande de prix Scope of Contract: Edition de 1000 exemplaires du manuel du FODEL. Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/04/23 Duration of Contract 10 Day(s) Awarded Bidder(s): AFRITRADE SARL (1137634) Camayenne- Commune de DixinnCourriel : fofanafatou97@yahoo.frTl : 627 25 97 58Rpublique de Guine Country: Guine Bid Price at Opening GNF 172000000 Evaluated Bid Price GNF 172000000 Signed Contract price GNF 172000000 Evaluated Bidder(s): NOUVELLE IMPRIMERIE DE KALOUM (NIK) (1137730) Manquepas 4eme avenue - Commune de Kaloum Courriel : contact@nikpl.comTl :627 40 71 53Rpublique de Guine Country: Guine Bid Price at Opening GNF 187500000 Evaluated Bid Price GNF 187500000 COMPLEXE INDUSTRIEL POLYGRAPHIQUE PATRICE LUMUNBA (CIPPL) SA (1137728) Colah route Niger Commune de Matam Tl : 657 20 00 70/ 657 20 0 68Rpublique de Guine Country: Guine Bid Price at Opening GNF 212400000 Evaluated Bid Price GNF 180000000 \nnotice_type: Contract Award\nnoticedate: 21-Oct-2026\nprocurement_group: NC\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Guinea\nproject_id: P177095\nproject_name: Guinea Support to Local Governance Project 2\nsubmission_date: 2026-10-21T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=100&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476661",
+      "notice_type": "Contract Award",
+      "noticedate": "21-Oct-2026",
+      "notice_lang_name": "French",
+      "notice_status": "Published",
+      "project_ctry_name": "Guinea",
+      "project_id": "P177095",
+      "project_name": "Guinea Support to Local Governance Project 2",
+      "bid_reference_no": "GN-PAGL 2-543104-NC-RFQ",
+      "bid_description": "Edition de 1 000 exemplaires du Guide de mobilisation des ressources",
+      "procurement_group": "NC",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-21T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P177095-Guinea Support to Local Governance Project 2<br/><b>Loan/Credit/TF Info:</b>IDA-72740<br/><b>Bid/Contract Reference No:</b>GN-PAGL 2-543104-NC-RFQ<br/><b>Procurement Method:</b>RFQ-Demande de prix<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Edition de 1000 exemplaires du manuel du FODEL.</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/04/23<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>10 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>AFRITRADE SARL (1137634)</b><br/>Camayenne- Commune de DixinnCourriel : fofanafatou97@yahoo.frTl : 627 25 97 58Rpublique de Guine<br/>Country: Guine<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>GNF 172000000<br/><br/>Evaluated Bid Price<br/>GNF 172000000</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>GNF 172000000</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>NOUVELLE IMPRIMERIE DE KALOUM (NIK) (1137730)</b><br/>Manquepas 4eme avenue - Commune de Kaloum Courriel : contact@nikpl.comTl :627 40 71 53Rpublique de Guine<br/>Country: Guine<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>GNF 187500000<br/><br/>Evaluated Bid Price<br/>GNF 187500000</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>COMPLEXE INDUSTRIEL POLYGRAPHIQUE PATRICE LUMUNBA (CIPPL) SA (1137728)</b><br/>Colah route Niger  Commune de Matam Tl : 657 20 00 70/ 657 20 0 68Rpublique de Guine<br/>Country: Guine<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>GNF 212400000<br/><br/>Evaluated Bid Price<br/>GNF 180000000</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:11+00:00",
+  "content_sha256": "3dd0c3affa22460a78e4342a796f24695eaec769a2fe1e4234836b78015a091b"
+}

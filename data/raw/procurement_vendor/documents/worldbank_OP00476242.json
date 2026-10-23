@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476242",
+  "title": "Lao PDR Pollution and Waste Management Project",
+  "text": "bid_description: Motorbikes: 5 for PMU and PIU\nbid_reference_no: PWMP-GO-001\nid: OP00476242\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P510198-Lao PDR Pollution and Waste Management Project Loan/Credit/TF Info: IDA-78490 Bid/Contract Reference No: PWMP-GO-001 Procurement Method: RFQ-Request for Quotations Scope of Contract: Supply of Motorbikes: 5 for PMU and PIU Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/20 Duration of Contract 90 Day(s) Awarded Bidder(s): KP COMPANY LIMITED (411106) Nahae Village, Sikhottabong District, Tel: + 856 21 219705, Fax: + 856 21 217586, www.kplaocompany.com Country: Lao People's Democratic Republic Bid Price at Opening LAK 276725000.00 Evaluated Bid Price LAK 276725000.00 Signed Contract price LAK 276725000.00 Evaluated Bidder(s): KE STAR IMPORT AND EXPORT SOLE CO., LTD. (1134235) Thatluang-Tai Village, Saysettha District, Vientiane Capital, Lao PDR. Country: Lao People's Democratic Republic Bid Price at Opening LAK 288825000.00 Evaluated Bid Price LAK 288825000.00 Rejected Bidder(s): KAOMAHASUB SHOP INDIVIDUAL (1134251) Viengjalern village, Saysettha District, Vientiane Capital, Lao PDR. Country: Lao People's Democratic Republic Bid Price at Opening LAK 285250000.00 Evaluated Bid Price LAK 285250000.00 Reason for Rejection Non Responsive \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Lao People's Democratic Republic\nproject_id: P510198\nproject_name: Lao PDR Pollution and Waste Management Project\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=100&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476242",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Lao People's Democratic Republic",
+      "project_id": "P510198",
+      "project_name": "Lao PDR Pollution and Waste Management Project",
+      "bid_reference_no": "PWMP-GO-001",
+      "bid_description": "Motorbikes: 5 for PMU and PIU",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P510198-Lao PDR Pollution and Waste Management Project<br/><b>Loan/Credit/TF Info:</b>IDA-78490<br/><b>Bid/Contract Reference No:</b>PWMP-GO-001<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Supply of Motorbikes: 5 for PMU and PIU</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/20<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>90 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>KP COMPANY LIMITED (411106)</b><br/>Nahae Village, Sikhottabong District, Tel: + 856 21 219705, Fax: + 856 21 217586, www.kplaocompany.com<br/>Country: Lao People's Democratic Republic<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>LAK 276725000.00<br/><br/>Evaluated Bid Price<br/>LAK 276725000.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>LAK 276725000.00</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>KE STAR IMPORT AND EXPORT SOLE CO., LTD. (1134235)</b><br/>Thatluang-Tai Village, Saysettha District, Vientiane Capital, Lao PDR.<br/>Country: Lao People's Democratic Republic<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>LAK 288825000.00<br/><br/>Evaluated Bid Price<br/>LAK 288825000.00</div></br></div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Rejected Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>KAOMAHASUB SHOP INDIVIDUAL (1134251)</b><br/>Viengjalern village, Saysettha District, Vientiane Capital, Lao PDR.<br/>Country: Lao People's Democratic Republic<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>LAK 285250000.00<br/><br/>Evaluated Bid Price<br/>LAK 285250000.00<br/><br/>Reason for Rejection<br/>Non Responsive<br/></div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:11+00:00",
+  "content_sha256": "aeefee0e12469a993046957d092a5e25330f0d7b7f6b215897493fcc8ed1dbeb"
+}

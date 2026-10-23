@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DebtSecuritiesAvailableForSaleRestricted",
+  "title": "Apple Inc. - Debt Securities, Available-for-sale, Restricted",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DebtSecuritiesAvailableForSaleRestricted\nLabel: Debt Securities, Available-for-sale, Restricted\nDescription: Amount of restricted investment in debt security measured at fair value with change in fair value recognized in other comprehensive income (available-for-sale).\nRecent reported values:\nUSD 2023 FY 10-K filed 2023-11-03: 12700000000\nUSD 2023 Q1 10-Q filed 2023-02-03: 13600000000\nUSD 2023 Q2 10-Q filed 2023-05-05: 13100000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 14100000000\nUSD 2023 FY 10-K filed 2023-11-03: 13800000000\nUSD 2024 Q1 10-Q filed 2024-02-02: 13800000000\nUSD 2024 Q2 10-Q filed 2024-05-03: 13800000000\nUSD 2024 Q3 10-Q filed 2024-08-02: 13800000000\nUSD 2024 FY 10-K filed 2024-11-01: 13800000000\nUSD 2024 Q1 10-Q filed 2024-02-02: 13900000000\nUSD 2024 Q2 10-Q filed 2024-05-03: 14000000000\nUSD 2024 Q3 10-Q filed 2024-08-02: 14100000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DebtSecuritiesAvailableForSaleRestricted",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "804d88fefea4faa368387dc4fdfba634a40ea11d3128f84b62b150977a294a5f"
+}

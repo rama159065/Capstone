@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_FiniteLivedIntangibleAssetsGross",
+  "title": "Apple Inc. - Finite-Lived Intangible Assets, Gross",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: FiniteLivedIntangibleAssetsGross\nLabel: Finite-Lived Intangible Assets, Gross\nDescription: Amount before amortization of assets, excluding financial assets and goodwill, lacking physical substance with a finite life.\nRecent reported values:\nUSD 2016 Q3 10-Q filed 2016-07-27: 8817000000\nUSD 2016 FY 10-K filed 2016-10-26: 8912000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 8912000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 8912000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 8912000000\nUSD 2017 FY 10-K filed 2017-11-03: 8912000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 7472000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 7258000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 7358000000\nUSD 2017 FY 10-K filed 2017-11-03: 7507000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 7507000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 7540000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "FiniteLivedIntangibleAssetsGross",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "ebd9487dcfa4b7cf65c10f11ce5c0b1192941001ba0f3809a9e23f8534e753aa"
+}

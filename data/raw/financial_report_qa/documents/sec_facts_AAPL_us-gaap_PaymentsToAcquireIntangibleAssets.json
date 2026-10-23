@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_PaymentsToAcquireIntangibleAssets",
+  "title": "Apple Inc. - Payments to Acquire Intangible Assets",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: PaymentsToAcquireIntangibleAssets\nLabel: Payments to Acquire Intangible Assets\nDescription: The cash outflow to acquire asset without physical form usually arising from contractual or other legal rights, excluding goodwill.\nRecent reported values:\nUSD 2016 Q2 10-Q filed 2016-04-27: 657000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 657000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 753000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 753000000\nUSD 2016 FY 10-K filed 2016-10-26: 814000000\nUSD 2017 FY 10-K filed 2017-11-03: 814000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 86000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 86000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 126000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 209000000\nUSD 2017 FY 10-K filed 2017-11-03: 344000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 154000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "PaymentsToAcquireIntangibleAssets",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "c0954a2a6850085d8e91c1c32b110c6748470da0f5b5d689daec5750623edb1a"
+}

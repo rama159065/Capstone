@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_dei_EntityCommonStockSharesOutstanding",
+  "title": "Apple Inc. - Entity Common Stock, Shares Outstanding",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: dei\nConcept: EntityCommonStockSharesOutstanding\nLabel: Entity Common Stock, Shares Outstanding\nDescription: Indicate number of shares or other units outstanding of each of registrant's classes of capital or common stock or other ownership interests, if and as stated on cover of related periodic report. Where multiple classes or units exist define each class/interest by adding class of stock items such as Common Class A [Member], Common Class B [Member] or Partnership Interest [Member] onto the Instrument [Domain] of the Entity Listings, Instrument.\nRecent reported values:\nshares 2023 FY 10-K filed 2023-11-03: 15552752000\nshares 2024 Q1 10-Q filed 2024-02-02: 15441881000\nshares 2024 Q2 10-Q filed 2024-05-03: 15334082000\nshares 2024 Q3 10-Q filed 2024-08-02: 15204137000\nshares 2024 FY 10-K filed 2024-11-01: 15115823000\nshares 2025 Q1 10-Q filed 2025-01-31: 15022073000\nshares 2025 Q2 10-Q filed 2025-05-02: 14935826000\nshares 2025 Q3 10-Q filed 2025-08-01: 14840390000\nshares 2025 FY 10-K filed 2025-10-31: 14776353000\nshares 2026 Q1 10-Q filed 2026-01-30: 14681140000\nshares 2026 Q2 10-Q filed 2026-05-01: 14687356000\nshares 2026 Q3 10-Q filed 2026-07-31: 14594180000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "dei",
+    "concept": "EntityCommonStockSharesOutstanding",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e31690348d0827dc524a8f585b1d1a6c9584887a4c494dae39df53da5b59ff80"
+}

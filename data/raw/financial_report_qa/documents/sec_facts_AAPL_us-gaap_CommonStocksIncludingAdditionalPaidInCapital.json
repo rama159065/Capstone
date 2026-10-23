@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CommonStocksIncludingAdditionalPaidInCapital",
+  "title": "Apple Inc. - Common Stocks, Including Additional Paid in Capital",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CommonStocksIncludingAdditionalPaidInCapital\nLabel: Common Stocks, Including Additional Paid in Capital\nDescription: Amount of par value plus amounts in excess of par value or issuance value for common stock issued.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 83276000000\nUSD 2025 FY 10-K filed 2025-10-31: 83276000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 84768000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 88711000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 89806000000\nUSD 2025 FY 10-K filed 2025-10-31: 93568000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 93568000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 93568000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 93568000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 95221000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 99507000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 100702000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CommonStocksIncludingAdditionalPaidInCapital",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "c7207b02cffbd3519e9fdce4a734625840afcf3d43a7474e9a8b740cbf8f44ea"
+}

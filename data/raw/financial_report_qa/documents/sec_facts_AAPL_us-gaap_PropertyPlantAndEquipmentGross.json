@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_PropertyPlantAndEquipmentGross",
+  "title": "Apple Inc. - Property, Plant and Equipment, Gross",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: PropertyPlantAndEquipmentGross\nLabel: Property, Plant and Equipment, Gross\nDescription: Amount before accumulated depreciation, depletion and amortization of physical assets used in the normal conduct of business and not intended for resale. Examples include, but are not limited to, land, buildings, machinery and equipment, office equipment, and furniture and fixtures.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 119128000000\nUSD 2025 FY 10-K filed 2025-10-31: 119128000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 120615000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 121179000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 124311000000\nUSD 2025 FY 10-K filed 2025-10-31: 125848000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 125848000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 125848000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 125848000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 127320000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 127557000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 128175000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "PropertyPlantAndEquipmentGross",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "0b8e36f7abc5f254df4e45823dfdf7b341714415774b60f1202388280c30c9a8"
+}

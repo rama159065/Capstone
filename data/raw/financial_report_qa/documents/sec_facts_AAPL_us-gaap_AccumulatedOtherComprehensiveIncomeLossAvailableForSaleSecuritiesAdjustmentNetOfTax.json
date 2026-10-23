@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AccumulatedOtherComprehensiveIncomeLossAvailableForSaleSecuritiesAdjustmentNetOfTax",
+  "title": "Apple Inc. - AOCI, Debt Securities, Available-for-sale, Adjustment, after Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AccumulatedOtherComprehensiveIncomeLossAvailableForSaleSecuritiesAdjustmentNetOfTax\nLabel: AOCI, Debt Securities, Available-for-sale, Adjustment, after Tax\nDescription: Amount, after tax, of accumulated unrealized gain (loss) on investment in debt security measured at fair value with change in fair value recognized in other comprehensive income (available-for-sale).\nRecent reported values:\nUSD 2012 Q2 10-Q filed 2012-04-25: 393000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 396000000\nUSD 2013 FY 10-K filed 2013-10-30: 731000000\nUSD 2013 Q3 10-Q filed 2013-07-24: 731000000\nUSD 2012 FY 8-K filed 2013-04-24: 731000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 731000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 731000000\nUSD 2012 FY 10-K filed 2012-10-31: 731000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 612000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 516000000\nUSD 2013 Q3 10-Q filed 2013-07-24: -413000000\nUSD 2013 FY 10-K filed 2013-10-30: -191000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AccumulatedOtherComprehensiveIncomeLossAvailableForSaleSecuritiesAdjustmentNetOfTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "be6066337ef688476c5a83a8f5de49c6cc81ad0c71dfeb6ce5ffba129bd24b04"
+}

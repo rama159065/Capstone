@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeLossReclassificationAdjustmentFromAOCIForSaleOfSecuritiesTax",
+  "title": "Apple Inc. - Other Comprehensive Income (Loss), Reclassification Adjustment from AOCI for Sale of Securities, Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeLossReclassificationAdjustmentFromAOCIForSaleOfSecuritiesTax\nLabel: Other Comprehensive Income (Loss), Reclassification Adjustment from AOCI for Sale of Securities, Tax\nDescription: Amount of tax expense (benefit) of reclassification adjustment from accumulated other comprehensive income for unrealized gain (loss) realized upon the sale of available-for-sale securities.\nRecent reported values:\nUSD 2017 Q3 10-Q filed 2017-08-02: 12000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 12000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 16000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 16000000\nUSD 2017 FY 10-K filed 2017-11-03: 35000000\nUSD 2018 FY 10-K filed 2018-11-05: 35000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 41000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 34000000\nUSD 2018 Q2 10-Q filed 2018-05-02: -7000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 27000000\nUSD 2018 Q3 10-Q filed 2018-08-01: -7000000\nUSD 2018 FY 10-K filed 2018-11-05: 21000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeLossReclassificationAdjustmentFromAOCIForSaleOfSecuritiesTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "90f8eb6edf8558c9e8740ad3e4c271a6820719cc49b133dbaab945eda024a46a"
+}

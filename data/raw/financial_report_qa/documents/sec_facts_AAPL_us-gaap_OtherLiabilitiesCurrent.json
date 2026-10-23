@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherLiabilitiesCurrent",
+  "title": "Apple Inc. - Other Liabilities, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherLiabilitiesCurrent\nLabel: Other Liabilities, Current\nDescription: Amount of liabilities classified as other, due within one year or the normal operating cycle, if longer.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 78304000000\nUSD 2025 FY 10-K filed 2025-10-31: 78304000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 61151000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 61849000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 62499000000\nUSD 2025 FY 10-K filed 2025-10-31: 66387000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 66387000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 66387000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 66387000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 68543000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 57654000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 62259000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherLiabilitiesCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "37a3e4f86b039a677255cac168860ea3b82f08708fc420df1b505e362c7925e0"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AccruedIncomeTaxesCurrent",
+  "title": "Apple Inc. - Accrued Income Taxes, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AccruedIncomeTaxesCurrent\nLabel: Accrued Income Taxes, Current\nDescription: Carrying amount as of the balance sheet date of the unpaid sum of the known and estimated amounts payable to satisfy all currently due domestic and foreign income tax obligations.\nRecent reported values:\nUSD 2010 Q3 10-Q filed 2010-07-21: 430000000\nUSD 2010 FY 10-K filed 2010-10-27: 430000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 56000000\nUSD 2010 FY 10-K filed 2010-10-27: 210000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 210000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 152000000\nUSD 2023 FY 10-K filed 2023-11-03: 6552000000\nUSD 2023 FY 10-K filed 2023-11-03: 8819000000\nUSD 2024 FY 10-K filed 2024-11-01: 8819000000\nUSD 2024 FY 10-K filed 2024-11-01: 26601000000\nUSD 2025 FY 10-K filed 2025-10-31: 26601000000\nUSD 2025 FY 10-K filed 2025-10-31: 13016000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AccruedIncomeTaxesCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "c6a918d2182474b8fc46b43c34707e9c207504c8f081541fce8f0c7bbc24227a"
+}

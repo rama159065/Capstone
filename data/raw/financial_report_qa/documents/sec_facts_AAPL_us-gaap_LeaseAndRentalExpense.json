@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_LeaseAndRentalExpense",
+  "title": "Apple Inc. - Operating Leases, Rent Expense",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: LeaseAndRentalExpense\nLabel: Operating Leases, Rent Expense\nDescription: Amount of rent expense incurred for leased assets, including but not limited to, furniture and equipment, that is not directly or indirectly associated with the manufacture, sale or creation of a product or product line.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 207000000\nUSD 2011 FY 10-K filed 2011-10-26: 231000000\nUSD 2010 FY 10-K filed 2010-10-27: 231000000\nUSD 2011 FY 10-K filed 2011-10-26: 271000000\nUSD 2010 FY 10-K filed 2010-10-27: 271000000\nUSD 2011 FY 10-K filed 2011-10-26: 338000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "LeaseAndRentalExpense",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4d11dc977b1f8409d3988a350b5bd5c96c23d475304d8cc1fe99faefe57622e1"
+}

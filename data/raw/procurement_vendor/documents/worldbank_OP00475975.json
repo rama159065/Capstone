@@ -1,0 +1,38 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00475975",
+  "title": "Bangladesh Sustainable Recovery, Emergency Preparedness and Response Project",
+  "text": "bid_description: Rehabilitation of 12.85 km emergency evacuation of Rural Roads including 11 m box culvert at Daganbhuiyan upazila under Feni District\nbid_reference_no: BSTRONG-LGED -FENI/RD-6\ncontact_address: RDEC Bhaban, Level 14\nAgargaon, Sher-e-Bangla Nagar, Dhaka-1207\ncontact_ctry_name: Bangladesh\ncontact_email: pdlged.bstrong@gmail.com\ncontact_name: Md. Hasan Ali\ncontact_organization: Local Government Engineering Department\ncontact_phone_no: +8801965805599\nid: OP00475975\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Government of the People's Republic of Bangladesh Local Government Engineering Department Office of the Executive Engineer District: Feni. www.lged.gov.bd Memo No-46.02.3000.000.07.001.25-1428 Date: 23/06/2026 e-Tender Notice No-50/2025-2026 (NOTM) e-Tender is invited in the National e-GP System Portal (http://www.eprocure.gov.bd) for the procurement of following works. Details are given below: SL No Package No Tender ID No. Description of Works Tender Security Last Submission (Date/Time) Tender Closing & Opening (Date/Time) 01 BSTRONG -LGED- 1279565 Rehabilitation of 13.408 km Emergency Evacuation Rural Road including re-construction of 23.30 m Box Culvert under B-STRONG project (LGED Part) at Chhagalnaiya and Daganbhuiyan Upazila, District: Feni. 27/07/2026 12.00 AM 27/07/2026 1.00 PM Feni/RD-6 This is an online Tender, where only e-Tender will be accepted in the National e-GP portal and no offline/hard copies will be accepted. To submit e-Tender, registration in the National e-GP System portal (http//www.eprocure.gov.bd) is required. The fees for downloading the e-Tender Documents from the National e-GP System portal have to be deposited online through any registered Bank's branches date up to 26-July-2026 4:00 PM Further information and guidelines aré available in the National e-GP System portal and from e-GP held desk (helpdesk@eprocure.gov.bd). (Mohammad Tasawor) Executive Engineer e-mail: xen.feni@lged.gov.bd \nnotice_type: Invitation for Bids\nnoticedate: 18-Oct-2026\nprocurement_group: CW\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Bangladesh\nproject_id: P508058\nproject_name: Bangladesh Sustainable Recovery, Emergency Preparedness and Response Project\nsubmission_date: 2026-10-18T00:00:00Z\nsubmission_deadline_date: 2026-10-19T00:00:00Z\nsubmission_deadline_time: 09:45",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=400&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00475975",
+      "notice_type": "Invitation for Bids",
+      "noticedate": "18-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "submission_deadline_date": "2026-10-19T00:00:00Z",
+      "submission_deadline_time": "09:45",
+      "project_ctry_name": "Bangladesh",
+      "project_id": "P508058",
+      "project_name": "Bangladesh Sustainable Recovery, Emergency Preparedness and Response Project",
+      "bid_reference_no": "BSTRONG-LGED -FENI/RD-6",
+      "bid_description": "Rehabilitation of 12.85 km emergency evacuation of Rural Roads including 11 m box culvert at Daganbhuiyan upazila under Feni District",
+      "procurement_group": "CW",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "contact_address": "RDEC Bhaban, Level 14\nAgargaon, Sher-e-Bangla Nagar, Dhaka-1207",
+      "contact_ctry_name": "Bangladesh",
+      "contact_email": "pdlged.bstrong@gmail.com",
+      "contact_name": "Md. Hasan Ali",
+      "contact_organization": "Local Government Engineering Department",
+      "contact_phone_no": "+8801965805599",
+      "submission_date": "2026-10-18T00:00:00Z",
+      "notice_text": "<p>Government of the People&#39;s Republic of Bangladesh<br />Local Government Engineering Department<br />Office of the Executive Engineer<br />District: Feni.<br />www.lged.gov.bd<br />Memo No-46.02.3000.000.07.001.25-1428<br />Date: 23/06/2026<br />e-Tender Notice No-50/2025-2026 (NOTM)<br />e-Tender is invited in the National e-GP System Portal (http://www.eprocure.gov.bd) for the procurement of following works. Details are given below:<br />SL No<br />Package No<br />Tender ID No.<br />Description of Works<br />Tender Security Last Submission (Date/Time)<br />Tender Closing &amp; Opening (Date/Time)<br />01<br />BSTRONG -LGED-<br />1279565<br />Rehabilitation of 13.408 km Emergency Evacuation Rural Road including re-construction of 23.30 m Box Culvert under B-STRONG project (LGED Part) at Chhagalnaiya and Daganbhuiyan Upazila, District: Feni.<br />27/07/2026 12.00 AM<br />27/07/2026<br />1.00 PM<br />Feni/RD-6<br />This is an online Tender, where only e-Tender will be accepted in the National e-GP portal and no offline/hard copies will be accepted.<br />To submit e-Tender, registration in the National e-GP System portal (http//www.eprocure.gov.bd) is required.<br />The fees for downloading the e-Tender Documents from the National e-GP System portal have to be deposited online through any registered Bank&#39;s branches date up to 26-July-2026 4:00 PM<br />Further information and guidelines ar&eacute; available in the National e-GP System portal and from e-GP held desk (helpdesk@eprocure.gov.bd).<br />(Mohammad Tasawor) Executive Engineer<br />e-mail: xen.feni@lged.gov.bd</p>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:22+00:00",
+  "content_sha256": "bd61d4cce95ebc36b144528cb6e8c54071c6cc34fc69fc523fbdfd8f4b7a9ac3"
+}

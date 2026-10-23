@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_FurnitureAndFixturesGross",
+  "title": "Apple Inc. - Furniture and Fixtures, Gross",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: FurnitureAndFixturesGross\nLabel: Furniture and Fixtures, Gross\nDescription: Amount before accumulated depreciation of equipment commonly used in offices and stores that have no permanent connection to the structure of a building or utilities. Examples include, but are not limited to, desks, chairs, tables, and bookcases.\nRecent reported values:\nUSD 2011 Q3 10-Q filed 2011-07-20: 172000000\nUSD 2012 FY 8-K filed 2013-04-24: 184000000\nUSD 2012 FY 10-K filed 2012-10-31: 184000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 184000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 184000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 184000000\nUSD 2011 FY 10-K filed 2011-10-26: 184000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 200000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 210000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 228000000\nUSD 2012 FY 8-K filed 2013-04-24: 241000000\nUSD 2012 FY 10-K filed 2012-10-31: 241000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "FurnitureAndFixturesGross",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "2329a8e56376badc3b4053f20179b9ec158a93b614395a65617a9ebe57bcbf51"
+}

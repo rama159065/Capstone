@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherAccruedLiabilitiesNoncurrent",
+  "title": "Apple Inc. - Other Accrued Liabilities, Noncurrent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherAccruedLiabilitiesNoncurrent\nLabel: Other Accrued Liabilities, Noncurrent\nDescription: Amount of expenses incurred but not yet paid classified as other, due after one year or the normal operating cycle, if longer.\nRecent reported values:\nUSD 2022 Q1 10-Q filed 2022-01-28: 28636000000\nUSD 2022 Q2 10-Q filed 2022-04-29: 28636000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 28636000000\nUSD 2022 FY 10-K filed 2022-10-28: 28636000000\nUSD 2022 Q1 10-Q filed 2022-01-28: 30367000000\nUSD 2022 Q2 10-Q filed 2022-04-29: 31721000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 32930000000\nUSD 2022 FY 10-K filed 2022-10-28: 32485000000\nUSD 2023 FY 10-K filed 2023-11-03: 32485000000\nUSD 2023 FY 10-K filed 2023-11-03: 34391000000\nUSD 2024 FY 10-K filed 2024-11-01: 34391000000\nUSD 2024 FY 10-K filed 2024-11-01: 36634000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherAccruedLiabilitiesNoncurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "d96c7ab275f8e22368d4a71c787a735298e1d6a77fde204f8d775a03b06d2dda"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_SignificantChangeInUnrecognizedTaxBenefitsIsReasonablyPossibleEstimatedRangeOfChangeUpperBound",
+  "title": "Apple Inc. - Significant (Increase) Decrease in Unrecognized Tax Benefits is Reasonably Possible, Estimated Range of Change, Upper Bound (Deprecated 2015-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: SignificantChangeInUnrecognizedTaxBenefitsIsReasonablyPossibleEstimatedRangeOfChangeUpperBound\nLabel: Significant (Increase) Decrease in Unrecognized Tax Benefits is Reasonably Possible, Estimated Range of Change, Upper Bound (Deprecated 2015-01-31)\nDescription: Amount of (increase) decrease reasonably possible in the estimated upper bound of the unrecognized tax benefit for a tax position taken or expected to be taken.\nRecent reported values:\nUSD 2012 Q3 10-Q filed 2012-07-25: 170000000\nUSD 2012 FY 10-K filed 2012-10-31: 170000000\nUSD 2012 FY 8-K filed 2013-04-24: 170000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 170000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 850000000\nUSD 2013 Q3 10-Q filed 2013-07-24: 225000000\nUSD 2013 FY 10-K filed 2013-10-30: 225000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 160000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 70000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 550000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "SignificantChangeInUnrecognizedTaxBenefitsIsReasonablyPossibleEstimatedRangeOfChangeUpperBound",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "6f67300112ab88ceb30bc1f0958191d653b2fba51d7751bf7ff03c5e92114671"
+}

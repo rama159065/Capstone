@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_WeightedAverageNumberOfSharesOutstandingBasic",
+  "title": "Apple Inc. - Weighted Average Number of Shares Outstanding, Basic",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: WeightedAverageNumberOfSharesOutstandingBasic\nLabel: Weighted Average Number of Shares Outstanding, Basic\nDescription: Number of [basic] shares or units, after adjustment for contingently issuable shares or units and other shares or units not deemed outstanding, determined by relating the portion of time within a reporting period that common shares or units have been outstanding to the total time in that period.\nRecent reported values:\nshares 2025 Q2 10-Q filed 2025-05-02: 14994082000\nshares 2026 Q2 10-Q filed 2026-05-01: 14994082000\nshares 2025 Q3 10-Q filed 2025-08-01: 14992898000\nshares 2026 Q3 10-Q filed 2026-07-31: 14992898000\nshares 2025 Q3 10-Q filed 2025-08-01: 14902886000\nshares 2026 Q3 10-Q filed 2026-07-31: 14902886000\nshares 2025 FY 10-K filed 2025-10-31: 14948500000\nshares 2026 Q1 10-Q filed 2026-01-30: 14748158000\nshares 2026 Q2 10-Q filed 2026-05-01: 14710718000\nshares 2026 Q2 10-Q filed 2026-05-01: 14673278000\nshares 2026 Q3 10-Q filed 2026-07-31: 14692515000\nshares 2026 Q3 10-Q filed 2026-07-31: 14656110000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "WeightedAverageNumberOfSharesOutstandingBasic",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e5d21fac400786ebd6adee1cb305652fd7173257a14b2fc22066c20b62ca207e"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncomeTaxReconciliationDeductionsQualifiedProductionActivities",
+  "title": "Apple Inc. - Effective Income Tax Rate Reconciliation, Deduction, Qualified Production Activity, Amount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncomeTaxReconciliationDeductionsQualifiedProductionActivities\nLabel: Effective Income Tax Rate Reconciliation, Deduction, Qualified Production Activity, Amount\nDescription: Amount of the difference between reported income tax expense (benefit) and the expected income tax expense (benefit) computed by applying the domestic federal statutory income tax rates to pretax income (loss) from continuing operations attributable to deduction for qualified production activity.\nRecent reported values:\nUSD None None 8-K filed 2015-01-28: 495000000\nUSD 2015 FY 10-K filed 2015-10-28: 495000000\nUSD 2016 FY 10-K filed 2016-10-26: 495000000\nUSD 2015 FY 10-K filed 2015-10-28: 426000000\nUSD 2016 FY 10-K filed 2016-10-26: 426000000\nUSD 2017 FY 10-K filed 2017-11-03: 426000000\nUSD 2016 FY 10-K filed 2016-10-26: 382000000\nUSD 2017 FY 10-K filed 2017-11-03: 382000000\nUSD 2018 FY 10-K filed 2018-11-05: 382000000\nUSD 2017 FY 10-K filed 2017-11-03: 209000000\nUSD 2018 FY 10-K filed 2018-11-05: 209000000\nUSD 2018 FY 10-K filed 2018-11-05: 195000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncomeTaxReconciliationDeductionsQualifiedProductionActivities",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "400d73a473d14cda6dc5d68e02d51c1f0b2b5e41ef95c6383844cbbbeab938be"
+}

@@ -1,0 +1,169 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Zoom_glg358678dmm",
+  "title": "Zoom - Announcing Updated IP Address Ranges: September 28, 2026 (No Operational Impact)",
+  "text": "Service: Zoom\nMaintenance: Announcing Updated IP Address Ranges: September 28, 2026 (No Operational Impact)\nStatus: completed\nImpact: maintenance\nScheduled for: 2026-09-28T23:59:00.000-07:00\nScheduled until: 2026-09-29T00:00:00.000-07:00\nUpdates:\n- 2026-09-29T00:00:08.904-07:00: completed - The scheduled maintenance has been completed.\n- 2026-09-28T23:59:07.331-07:00: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2026-09-28T22:59:07.800-07:00: scheduled - Maintenance will begin as scheduled in 60 minutes.\n- 2026-08-28T09:59:07.991-07:00: scheduled - The published IP range for Zoom Meeting and Zoom Phone services has been updated from 192.204.12.0/22 to 192.204.12.0/23. We recommend that network administrators, with Zoom-specific firewall or network rules, update their systems as soon as possible in preparation.\n\nMask change for Zoom Phone and Zoom Meetings service:\n192.204.12.0/22 changed to 192.204.12.0/23\n\nIn addition, Zoom has updated the published IP range files to remove redundant entries that were fully contained within larger, overlapping subnet blocks for the Zoom Phone and ZoomCDN. This does not introduce any new IP ranges or remove any active ranges from service. The following adjustments have been made:\n\nZoomPhone.txt:\nTwo redundant entries, 173.231.92.0/24 and 173.231.94.0/24, were removed, as both are fully contained within the existing 173.231.80.0/20 range already listed in the same file.\n\nZoomCDN-IPv6.txt: \nTwo adjacent entries, 2407:30c0:180::/48 and 2407:30c0:181::/48, were consolidated into a single 2407:30c0:180::/47.\n\nWhile the ranges have been consolidated for the ZoomPhone.txt file, additional files have been generated for the individual Zoom Phone rules, specifically:\nZoomPhone-TCP443.txt\nZoomPhone-TCP5091.txt\nZoomPhone-TCP390.txt\nZoomPhone-UDP3478.txt\nZoomPhone-UDP20000-64000.txt\n\nThese updates have no operational impact. Network administrators do not need to take any action unless they maintain custom scripts or automation that reference the previous redundant entries\n\nWe have also updated the Zoom CRC JSON file to reflect the current domains utilized for joining Zoom Meetings.\n\nFor a complete list, please see: \n\nhttps://assets.zoom.us/docs/ipranges/Zoom.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomMeetings.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomPhone.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomPhone-TCP443.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomPhone-TCP5091.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomPhone-TCP390.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomPhone-UDP3478.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomPhone-UDP20000-64000.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomCDN-IPv6.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomCRCDomains.json\n\nA complete list of network firewall IP ranges and domains for Zoom can be found on the Zoom Support site at:\nhttps://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0060548",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://status.zoom.us/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "glg358678dmm",
+      "name": "Announcing Updated IP Address Ranges: September 28, 2026 (No Operational Impact)",
+      "status": "completed",
+      "created_at": "2026-08-28T09:59:07.908-07:00",
+      "updated_at": "2026-09-29T00:00:10.169-07:00",
+      "monitoring_at": null,
+      "resolved_at": "2026-09-29T00:00:08.904-07:00",
+      "impact": "maintenance",
+      "shortlink": "https://stspg.io/xqkhrrg7g0w2",
+      "started_at": "2026-08-28T09:59:07.891-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "kcmhqlxqfj9x",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "glg358678dmm",
+          "created_at": "2026-09-29T00:00:08.904-07:00",
+          "updated_at": "2026-09-29T00:00:08.904-07:00",
+          "display_at": "2026-09-29T00:00:08.904-07:00",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "s1x48s1q0pjh",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "glg358678dmm",
+          "created_at": "2026-09-28T23:59:07.331-07:00",
+          "updated_at": "2026-09-28T23:59:07.331-07:00",
+          "display_at": "2026-09-28T23:59:07.331-07:00",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "vpr2kzwp8xnq",
+          "status": "scheduled",
+          "body": "Maintenance will begin as scheduled in 60 minutes.",
+          "incident_id": "glg358678dmm",
+          "created_at": "2026-09-28T22:59:07.800-07:00",
+          "updated_at": "2026-09-28T22:59:07.800-07:00",
+          "display_at": "2026-09-28T22:59:07.800-07:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "nwnnpmmpjysf",
+          "status": "scheduled",
+          "body": "The published IP range for Zoom Meeting and Zoom Phone services has been updated from 192.204.12.0/22 to 192.204.12.0/23. We recommend that network administrators, with Zoom-specific firewall or network rules, update their systems as soon as possible in preparation.\n\nMask change for Zoom Phone and Zoom Meetings service:\n192.204.12.0/22 changed to 192.204.12.0/23\n\nIn addition, Zoom has updated the published IP range files to remove redundant entries that were fully contained within larger, overlapping subnet blocks for the Zoom Phone and ZoomCDN. This does not introduce any new IP ranges or remove any active ranges from service. The following adjustments have been made:\n\nZoomPhone.txt:\nTwo redundant entries, 173.231.92.0/24 and 173.231.94.0/24, were removed, as both are fully contained within the existing 173.231.80.0/20 range already listed in the same file.\n\nZoomCDN-IPv6.txt: \nTwo adjacent entries, 2407:30c0:180::/48 and 2407:30c0:181::/48, were consolidated into a single 2407:30c0:180::/47.\n\nWhile the ranges have been consolidated for the ZoomPhone.txt file, additional files have been generated for the individual Zoom Phone rules, specifically:\nZoomPhone-TCP443.txt\nZoomPhone-TCP5091.txt\nZoomPhone-TCP390.txt\nZoomPhone-UDP3478.txt\nZoomPhone-UDP20000-64000.txt\n\nThese updates have no operational impact. Network administrators do not need to take any action unless they maintain custom scripts or automation that reference the previous redundant entries\n\nWe have also updated the Zoom CRC JSON file to reflect the current domains utilized for joining Zoom Meetings.\n\nFor a complete list, please see: \n\nhttps://assets.zoom.us/docs/ipranges/Zoom.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomMeetings.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomPhone.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomPhone-TCP443.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomPhone-TCP5091.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomPhone-TCP390.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomPhone-UDP3478.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomPhone-UDP20000-64000.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomCDN-IPv6.txt\nhttps://assets.zoom.us/docs/ipranges/ZoomCRCDomains.json\n\nA complete list of network firewall IP ranges and domains for Zoom can be found on the Zoom Support site at:\nhttps://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0060548",
+          "incident_id": "glg358678dmm",
+          "created_at": "2026-08-28T09:59:07.991-07:00",
+          "updated_at": "2026-08-28T09:59:07.991-07:00",
+          "display_at": "2026-08-28T09:59:07.991-07:00",
+          "affected_components": [
+            {
+              "code": "3z7b6jks10hm",
+              "name": "Zoom Meetings - Zoom Meetings",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "3ml2fn8g0psv",
+              "name": "Zoom Meetings - Zoom Conference Room Connector",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "q4msk5dl4bhm",
+              "name": "Zoom Meetings - Zoom Webinars",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "0842bncf5q9f",
+              "name": "Zoom Phone - Global - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "3z7b6jks10hm",
+          "name": "Zoom Meetings",
+          "status": "operational",
+          "created_at": "2015-01-26T15:04:39.101-08:00",
+          "updated_at": "2026-10-12T02:00:10.750-07:00",
+          "position": 1,
+          "description": "Access to meetings",
+          "showcase": false,
+          "start_date": null,
+          "group_id": "6np407v7v25g",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "0842bncf5q9f",
+          "name": "Zoom Phone",
+          "status": "operational",
+          "created_at": "2024-09-30T13:36:13.230-07:00",
+          "updated_at": "2026-09-20T02:00:07.620-07:00",
+          "position": 12,
+          "description": null,
+          "showcase": false,
+          "start_date": "2024-09-30",
+          "group_id": "fs7vxs27n4pn",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "3ml2fn8g0psv",
+          "name": "Zoom Conference Room Connector",
+          "status": "operational",
+          "created_at": "2015-01-26T15:08:04.212-08:00",
+          "updated_at": "2026-10-12T02:00:30.040-07:00",
+          "position": 14,
+          "description": "Access for H.323/SIP endpoints",
+          "showcase": false,
+          "start_date": null,
+          "group_id": "6np407v7v25g",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "q4msk5dl4bhm",
+          "name": "Zoom Webinars",
+          "status": "operational",
+          "created_at": "2015-01-26T15:04:39.115-08:00",
+          "updated_at": "2026-10-12T02:00:35.197-07:00",
+          "position": 20,
+          "description": "Access to video webinars",
+          "showcase": false,
+          "start_date": null,
+          "group_id": "6np407v7v25g",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2026-09-28T23:59:00.000-07:00",
+      "scheduled_until": "2026-09-29T00:00:00.000-07:00"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:49:04+00:00",
+  "content_sha256": "e8bb74d8c5ab97165455dcb47c53f5d732089e2f5eed5e6462f8f63b2071a3dc"
+}

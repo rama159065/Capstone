@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00475906",
+  "title": "Uttarakhand Disaster Preparedness and Resilience Project",
+  "text": "bid_description: PROCUREMENT OF MOBILE WATER TESTING LABORATORIES FOR GARWHAL AND KUMAUN REGION IN UTTARAKHAND (Qty: 2 Nos.)\nbid_reference_no: IN-DRINKING WATER-551974-GO-RFB\nid: OP00475906\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P179749-Uttarakhand Disaster Preparedness and Resilience Project Loan/Credit/TF Info: IBRD-96540 Bid/Contract Reference No: IN-DRINKING WATER-551974-GO-RFB Procurement Method: RFQ-Request for Quotations Scope of Contract: PROCUREMENT OF MOBILE WATER TESTING LABORATORIES FOR GARWHAL AND KUMAUN REGION IN UTTARAKHAND (Qty: 2 Nos.) Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/13 Duration of Contract 180 Day(s) Awarded Bidder(s): INDICUS GLOBAL VENTURE (1129724) New Delhi Country: India Bid Price at Opening INR 9476816.00 Evaluated Bid Price INR 9476816.00 Signed Contract price INR 9476816.00 Evaluated Bidder(s): PKN MOTORS PVT (1129718) Alwar Country: India Bid Price at Opening INR 9664200.00 Evaluated Bid Price INR 9664200.00 \nnotice_type: Contract Award\nnoticedate: 17-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: India\nproject_id: P179749\nproject_name: Uttarakhand Disaster Preparedness and Resilience Project\nsubmission_date: 2026-10-17T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=400&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00475906",
+      "notice_type": "Contract Award",
+      "noticedate": "17-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "India",
+      "project_id": "P179749",
+      "project_name": "Uttarakhand Disaster Preparedness and Resilience Project",
+      "bid_reference_no": "IN-DRINKING WATER-551974-GO-RFB",
+      "bid_description": "PROCUREMENT OF MOBILE WATER TESTING LABORATORIES FOR GARWHAL AND KUMAUN REGION  IN UTTARAKHAND (Qty: 2 Nos.)",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-17T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P179749-Uttarakhand Disaster Preparedness and Resilience Project<br/><b>Loan/Credit/TF Info:</b>IBRD-96540<br/><b>Bid/Contract Reference No:</b>IN-DRINKING WATER-551974-GO-RFB<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>PROCUREMENT OF MOBILE WATER TESTING LABORATORIES FOR GARWHAL AND KUMAUN REGION IN UTTARAKHAND (Qty: 2 Nos.)</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/13<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>180 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>INDICUS GLOBAL VENTURE (1129724)</b><br/>New Delhi<br/>Country: India<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>INR 9476816.00<br/><br/>Evaluated Bid Price<br/>INR 9476816.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>INR 9476816.00</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>PKN MOTORS PVT (1129718)</b><br/>Alwar<br/>Country: India<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>INR 9664200.00<br/><br/>Evaluated Bid Price<br/>INR 9664200.00</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:22+00:00",
+  "content_sha256": "172b1788710a057d07f2bac11eb6b0aee4da2b68769848dec8da1b4046e6d203"
+}

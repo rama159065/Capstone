@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_SharebasedCompensationArrangementBySharebasedPaymentAwardOptionsExercisableIntrinsicValue1",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Exercisable, Intrinsic Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: SharebasedCompensationArrangementBySharebasedPaymentAwardOptionsExercisableIntrinsicValue1\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Exercisable, Intrinsic Value\nDescription: Amount of difference between fair value of the underlying shares reserved for issuance and exercise price of vested portions of options outstanding and currently exercisable.\nRecent reported values:\nUSD 2011 Q3 10-Q filed 2011-07-20: 2818845000\nUSD 2011 FY 10-K filed 2011-10-26: 3319374000\nUSD 2012 Q1 10-Q filed 2012-01-25: 2967830000\nUSD 2012 Q2 10-Q filed 2012-04-25: 4073404000\nUSD 2012 Q3 10-Q filed 2012-07-25: 3652052000\nUSD 2012 FY 8-K filed 2013-04-24: 3507000000\nUSD 2012 FY 10-K filed 2012-10-31: 3507000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 2188000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 1611000000\nUSD 2013 Q3 10-Q filed 2013-07-24: 1212000000\nUSD 2013 FY 10-K filed 2013-10-30: 1396000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 1114000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "SharebasedCompensationArrangementBySharebasedPaymentAwardOptionsExercisableIntrinsicValue1",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "41729ba2671b89624d9f0a35e2a8d08415bf8573bac3ab9de0ffeff98075f830"
+}

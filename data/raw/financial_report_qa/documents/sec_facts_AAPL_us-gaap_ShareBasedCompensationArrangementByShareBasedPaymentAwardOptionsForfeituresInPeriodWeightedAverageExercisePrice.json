@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsForfeituresInPeriodWeightedAverageExercisePrice",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Forfeitures in Period, Weighted Average Exercise Price (Deprecated 2012-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsForfeituresInPeriodWeightedAverageExercisePrice\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Forfeitures in Period, Weighted Average Exercise Price (Deprecated 2012-01-31)\nDescription: The weighted average price at which grantees could have acquired the underlying shares with respect to stock options that were terminated during the reporting period due to noncompliance with plan terms during the reporting period.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 98.4\nUSD 2011 FY 10-K filed 2011-10-26: 122.98\nUSD 2010 FY 10-K filed 2010-10-27: 122.98\nUSD 2010 Q3 10-Q filed 2010-07-21: 137.61\nUSD 2011 FY 10-K filed 2011-10-26: 136.27\nUSD 2010 FY 10-K filed 2010-10-27: 136.27\nUSD 2011 Q1 10-Q filed 2011-01-19: 105.82\nUSD 2011 Q2 10-Q filed 2011-04-21: 119.05\nUSD 2011 Q3 10-Q filed 2011-07-20: 124.71\nUSD 2011 FY 10-K filed 2011-10-26: 128.42\nUSD 2012 Q1 10-Q filed 2012-01-25: 152.08",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsForfeituresInPeriodWeightedAverageExercisePrice",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "3d97ed36f63db80c3173f5d9c20c68c8f6f3ebd6ec814bdb923d863351b3cbf6"
+}

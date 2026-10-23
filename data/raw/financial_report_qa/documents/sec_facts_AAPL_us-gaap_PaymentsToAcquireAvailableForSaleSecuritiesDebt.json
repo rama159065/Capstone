@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_PaymentsToAcquireAvailableForSaleSecuritiesDebt",
+  "title": "Apple Inc. - Payments to Acquire Debt Securities, Available-for-sale",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: PaymentsToAcquireAvailableForSaleSecuritiesDebt\nLabel: Payments to Acquire Debt Securities, Available-for-sale\nDescription: Amount of cash outflow to acquire investment in debt security measured at fair value with change in fair value recognized in other comprehensive income (available-for-sale).\nRecent reported values:\nUSD 2024 FY 10-K filed 2024-11-01: 48656000000\nUSD 2025 FY 10-K filed 2025-10-31: 48656000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 6124000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 6124000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 12442000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 12442000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 17591000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 17591000000\nUSD 2025 FY 10-K filed 2025-10-31: 24407000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 12693000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 32432000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 48752000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "PaymentsToAcquireAvailableForSaleSecuritiesDebt",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "63a06b93c06f2f1631f1a90cec017c8dc3d1109daaf88ca226f09d3ddc6ba9c3"
+}

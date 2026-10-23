@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DebtSecuritiesAvailableForSaleUnrealizedLossPosition",
+  "title": "Apple Inc. - Debt Securities, Available-for-sale, Unrealized Loss Position",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DebtSecuritiesAvailableForSaleUnrealizedLossPosition\nLabel: Debt Securities, Available-for-sale, Unrealized Loss Position\nDescription: Amount of investment in debt security measured at fair value with change in fair value recognized in other comprehensive income (available-for-sale), in unrealized loss position without allowance for credit loss.\nRecent reported values:\nUSD 2019 Q1 10-Q filed 2019-01-30: 186837000000\nUSD 2019 Q2 10-Q filed 2019-05-01: 186837000000\nUSD 2019 Q3 10-Q filed 2019-07-31: 186837000000\nUSD 2019 FY 10-K filed 2019-10-31: 186837000000\nUSD 2019 Q1 10-Q filed 2019-01-30: 180342000000\nUSD 2019 Q2 10-Q filed 2019-05-01: 150207000000\nUSD 2019 Q3 10-Q filed 2019-07-31: 83837000000\nUSD 2019 FY 10-K filed 2019-10-31: 56318000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DebtSecuritiesAvailableForSaleUnrealizedLossPosition",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "093c1e2a17f9c3024f0d84dde89c452def0b6ae8c6eb69eb33d6df44043f99ce"
+}

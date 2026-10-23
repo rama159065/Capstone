@@ -1,0 +1,70 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_OpenAI_01M4XNQX7C6RCBNGX9H711WFSG",
+  "title": "OpenAI - Delayed Costs data in the Compliance API",
+  "text": "Service: OpenAI\nIncident: Delayed Costs data in the Compliance API\nStatus: resolved\nImpact: minor\nStarted: None\nResolved: 2026-10-16T10:44:58Z\nUpdates:\n- 2026-10-16T10:44:58Z: resolved - All impacted services have now fully recovered.\n- 2026-10-15T22:36:42Z: monitoring - We have deployed a fix and are monitoring recovery. Costs data in the Compliance API remains delayed while we process the backlog. We will provide further updates as processing catches up.\n- 2026-10-14T20:00:36Z: identified - We have identified an issue causing delays in publishing organization cost data through the Costs API. A fix is in progress and currently undergoing testing. API and ChatGPT usage are not affected, and other reporting channels remain available. We are continuing work to restore normal data freshness.\n- 2026-10-14T17:02:47Z: identified - We have identified an issue causing delays in publishing organization cost data through the Costs API. API and ChatGPT usage are not affected, and other reporting channels remain available. We are working to restore normal data freshness.\n- 2026-10-14T17:00:44Z: identified - We have identified an issue causing delays in publishing organization cost data through the Costs API. API and ChatGPT usage are not affected, and other reporting channels remain available. We are working to restore normal data freshness.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.openai.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "01M4XNQX7C6RCBNGX9H711WFSG",
+      "name": "Delayed Costs data in the Compliance API",
+      "status": "resolved",
+      "created_at": "2026-10-14T17:00:44Z",
+      "updated_at": "2026-10-16T10:44:58Z",
+      "resolved_at": "2026-10-16T10:44:58Z",
+      "impact": "minor",
+      "page_id": "01JMDK9XYNY6RXSED6SDWW50WY",
+      "incident_updates": [
+        {
+          "id": "01M52519QFQRNR6XNDV9Y0YCG5",
+          "body": "All impacted services have now fully recovered.",
+          "created_at": "2026-10-16T10:44:58Z",
+          "display_at": "2026-10-16T10:44:58Z",
+          "incident_id": "01M4XNQX7C6RCBNGX9H711WFSG",
+          "status": "resolved",
+          "updated_at": "2026-10-16T10:44:58Z"
+        },
+        {
+          "id": "01M50VBSWV00EENK3SBP8BXB6Z",
+          "body": "We have deployed a fix and are monitoring recovery. Costs data in the Compliance API remains delayed while we process the backlog. We will provide further updates as processing catches up.",
+          "created_at": "2026-10-15T22:36:42Z",
+          "display_at": "2026-10-15T22:36:42Z",
+          "incident_id": "01M4XNQX7C6RCBNGX9H711WFSG",
+          "status": "monitoring",
+          "updated_at": "2026-10-15T22:36:42Z"
+        },
+        {
+          "id": "01M4Y017SBZVNTAV6CNX15DVZG",
+          "body": "We have identified an issue causing delays in publishing organization cost data through the Costs API. A fix is in progress and currently undergoing testing. API and ChatGPT usage are not affected, and other reporting channels remain available. We are continuing work to restore normal data freshness.",
+          "created_at": "2026-10-14T20:00:36Z",
+          "display_at": "2026-10-14T20:00:36Z",
+          "incident_id": "01M4XNQX7C6RCBNGX9H711WFSG",
+          "status": "identified",
+          "updated_at": "2026-10-14T20:00:36Z"
+        },
+        {
+          "id": "01M4XNVN4QKEF7VQHDK9E2F03N",
+          "body": "We have identified an issue causing delays in publishing organization cost data through the Costs API. API and ChatGPT usage are not affected, and other reporting channels remain available. We are working to restore normal data freshness.",
+          "created_at": "2026-10-14T17:02:47Z",
+          "display_at": "2026-10-14T17:02:47Z",
+          "incident_id": "01M4XNQX7C6RCBNGX9H711WFSG",
+          "status": "identified",
+          "updated_at": "2026-10-14T17:02:47Z"
+        },
+        {
+          "id": "01M4XNQX7CGEK7WYR0TY2YS0HC",
+          "body": "We have identified an issue causing delays in publishing organization cost data through the Costs API. API and ChatGPT usage are not affected, and other reporting channels remain available. We are working to restore normal data freshness.",
+          "created_at": "2026-10-14T17:00:44Z",
+          "display_at": "2026-10-14T17:00:44Z",
+          "incident_id": "01M4XNQX7C6RCBNGX9H711WFSG",
+          "status": "identified",
+          "updated_at": "2026-10-14T17:00:44Z"
+        }
+      ]
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:25+00:00",
+  "content_sha256": "0719d194720f6f38a5f6c3cba8a378119d6014dda7b53d74fc761cdeba47c503"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_InventoryPartsAndComponentsNetOfReserves",
+  "title": "Apple Inc. - Inventory, Parts and Components, Net of Reserves",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: InventoryPartsAndComponentsNetOfReserves\nLabel: Inventory, Parts and Components, Net of Reserves\nDescription: Carrying amount, net of valuation reserves and adjustments, as of the balance sheet date for elements of machinery or equipment held for the purpose of replacing similar parts in the course of repair or maintenance.\nRecent reported values:\nUSD 2014 FY 10-K filed 2014-10-27: 471000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 471000000\nUSD None None 8-K filed 2015-01-28: 471000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 471000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 471000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 228000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 537000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 474000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 3025000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 3025000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 5186000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 4287000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "InventoryPartsAndComponentsNetOfReserves",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b765de8732aff3ae13707ef21d6fe094b810bf77cd6ee26f248318298cbb42fd"
+}

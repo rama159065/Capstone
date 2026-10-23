@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_MarketableSecuritiesRealizedGainLoss",
+  "title": "Apple Inc. - Marketable Securities, Realized Gain (Loss)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: MarketableSecuritiesRealizedGainLoss\nLabel: Marketable Securities, Realized Gain (Loss)\nDescription: Amount of realized gain (loss) on investment in marketable security, including other-than-temporary impairment (OTTI).\nRecent reported values:\nUSD 2011 Q2 10-Q filed 2011-04-21: 56000000\nUSD 2011 Q2 10-Q filed 2011-04-21: 41000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 70000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 14000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "MarketableSecuritiesRealizedGainLoss",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "417dc4191eff5e29b4a95a1a1e7dac5738f91a3f2a7ab1e3b8ea048887de15f7"
+}

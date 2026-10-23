@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476093",
+  "title": "Sustainable Rural Economy Program",
+  "text": "bid_description: Lot I- Conclusion of Construction of a Fish Market in the District of Tambara in Manica\nLot II- Construction of CCP Headquarter in the District of Tambara in Manica.\nbid_reference_no: MZ-PROAZUL-506566-CW-RFQ\nid: OP00476093\nnotice_lang_name: Portuguese\nnotice_status: Published\nnotice_text: Contract Award Project: P174002-Sustainable Rural Economy Program Loan/Credit/TF Info: IDA-D8120; IDA-E1290; TF-B9592 Bid/Contract Reference No: MZ-PROAZUL-506566-CW-RFQ Procurement Method: RFB-Solicitao de Ofertas Scope of Contract: Construo e Reabilitao de 200 Tanques Piscicolas ( Lote I)Piscicolas, para a construo de 5 tanques e reabilitao de 5 tanques pisccolas escavados- Nampula Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/03/13 Duration of Contract 9 Month(s) Awarded Bidder(s): DALTON CONSTRUES S.A (1086440) MOZAMBIQUE Country: Moambique Bid Price at Opening MZN Evaluated Bid Price MZN 1300931.50 Signed Contract price MZN 1300931.50 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: CW\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Mozambique\nproject_id: P174002\nproject_name: Sustainable Rural Economy Program\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476093",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "Portuguese",
+      "notice_status": "Published",
+      "project_ctry_name": "Mozambique",
+      "project_id": "P174002",
+      "project_name": "Sustainable Rural Economy Program",
+      "bid_reference_no": "MZ-PROAZUL-506566-CW-RFQ",
+      "bid_description": "Lot I- Conclusion of Construction of a Fish Market in the District of Tambara in Manica\nLot II- Construction of CCP Headquarter in the District of Tambara in Manica.",
+      "procurement_group": "CW",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P174002-Sustainable Rural Economy Program<br/><b>Loan/Credit/TF Info:</b>IDA-D8120; IDA-E1290; TF-B9592<br/><b>Bid/Contract Reference No:</b>MZ-PROAZUL-506566-CW-RFQ<br/><b>Procurement Method:</b>RFB-Solicitao de Ofertas<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Construo e Reabilitao de 200 Tanques Piscicolas ( Lote I)Piscicolas, para a construo de 5 tanques e reabilitao de 5 tanques pisccolas escavados- Nampula</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/03/13<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>9 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>DALTON CONSTRUES S.A (1086440)</b><br/>MOZAMBIQUE<br/>Country: Moambique<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>MZN<br/><br/>Evaluated Bid Price<br/>MZN 1300931.50</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>MZN 1300931.50</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "53794d7731261d8974fd4bc9adb7da22fc7229d6d953a5be04f593b2dd27d5bf"
+}

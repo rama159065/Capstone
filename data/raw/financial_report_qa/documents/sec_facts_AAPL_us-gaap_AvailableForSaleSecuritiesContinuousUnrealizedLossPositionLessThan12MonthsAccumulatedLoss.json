@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AvailableForSaleSecuritiesContinuousUnrealizedLossPositionLessThan12MonthsAccumulatedLoss",
+  "title": "Apple Inc. - Available-for-sale Securities, Continuous Unrealized Loss Position, Less than 12 Months, Accumulated Loss",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AvailableForSaleSecuritiesContinuousUnrealizedLossPositionLessThan12MonthsAccumulatedLoss\nLabel: Available-for-sale Securities, Continuous Unrealized Loss Position, Less than 12 Months, Accumulated Loss\nDescription: Amount of accumulated unrealized loss on investments in debt and equity securities classified as available-for-sale that have been in a continuous loss position for less than twelve months.\nRecent reported values:\nUSD 2018 Q2 10-Q filed 2018-05-02: 596000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 596000000\nUSD 2018 FY 10-K filed 2018-11-05: 596000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 2633000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 3134000000\nUSD 2018 FY 10-K filed 2018-11-05: 2400000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AvailableForSaleSecuritiesContinuousUnrealizedLossPositionLessThan12MonthsAccumulatedLoss",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "61a7d382ffce1eae50c9e619982be58ffefe2b59933f11dea15655213fce42ff"
+}

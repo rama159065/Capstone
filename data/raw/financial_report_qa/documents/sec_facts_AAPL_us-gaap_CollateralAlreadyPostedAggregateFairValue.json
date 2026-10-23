@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CollateralAlreadyPostedAggregateFairValue",
+  "title": "Apple Inc. - Collateral Already Posted, Aggregate Fair Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CollateralAlreadyPostedAggregateFairValue\nLabel: Collateral Already Posted, Aggregate Fair Value\nDescription: The aggregate fair value of assets that are already posted, at the end of the reporting period, as collateral for derivative instruments with credit-risk-related contingent features.\nRecent reported values:\nUSD 2012 FY 8-K filed 2013-04-24: 278000000\nUSD 2013 Q3 10-Q filed 2013-07-24: 278000000\nUSD 2013 FY 10-K filed 2013-10-30: 278000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 78000000\nUSD 2013 FY 10-K filed 2013-10-30: 164000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 164000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 164000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 164000000\nUSD 2014 FY 10-K filed 2014-10-27: 164000000\nUSD None None 8-K filed 2015-01-28: 164000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 3000000\nUSD 2021 Q1 10-Q filed 2021-01-28: 215000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CollateralAlreadyPostedAggregateFairValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "86b7c9b163a07b4fe464518e8463a7b3f8c7e505715d9b237b3f92b86cdad543"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeLossBeforeReclassificationsNetOfTax",
+  "title": "Apple Inc. - Other Comprehensive Income (Loss), before Reclassifications, Net of Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeLossBeforeReclassificationsNetOfTax\nLabel: Other Comprehensive Income (Loss), before Reclassifications, Net of Tax\nDescription: Amount after tax, before reclassification adjustments of other comprehensive income (loss).\nRecent reported values:\nUSD 2014 Q1 10-Q filed 2014-01-28: 103000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 319000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeLossBeforeReclassificationsNetOfTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "3bfbce9bffefaa874fa2f2e5277e63d6c67dbb16a515a1f0ed299db60daaae27"
+}

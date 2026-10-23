@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncomeTaxReconciliationNondeductibleExpenseShareBasedCompensationCost",
+  "title": "Apple Inc. - Effective Income Tax Rate Reconciliation, Nondeductible Expense, Share-based Payment Arrangement, Amount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncomeTaxReconciliationNondeductibleExpenseShareBasedCompensationCost\nLabel: Effective Income Tax Rate Reconciliation, Nondeductible Expense, Share-based Payment Arrangement, Amount\nDescription: Amount of reported income tax expense (benefit) in excess of (less than) expected income tax expense (benefit) computed by applying domestic federal statutory income tax rate to pretax income (loss) from continuing operation, attributable to nondeductible expense for award under share-based payment arrangement. Includes, but is not limited to, expense determined to be nondeductible upon grant or after for award under share-based payment arrangement.\nRecent reported values:\nUSD 2015 Q3 10-Q filed 2015-07-22: 948000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 948000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 286000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 286000000\nUSD 2015 FY 10-K filed 2015-10-28: 1200000000\nUSD 2016 FY 10-K filed 2016-10-26: 1200000000\nUSD 2016 Q1 10-Q filed 2016-01-27: 413000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 760000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 347000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 1100000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 321000000\nUSD 2016 FY 10-K filed 2016-10-26: 1400000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncomeTaxReconciliationNondeductibleExpenseShareBasedCompensationCost",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e5aef02e86e641bddf5e67c2fddb789b49b4b67adc9edc22f1c7ba670212bf78"
+}

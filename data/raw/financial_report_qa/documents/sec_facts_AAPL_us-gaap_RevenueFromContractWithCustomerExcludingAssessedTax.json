@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax",
+  "title": "Apple Inc. - Revenue from Contract with Customer, Excluding Assessed Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: RevenueFromContractWithCustomerExcludingAssessedTax\nLabel: Revenue from Contract with Customer, Excluding Assessed Tax\nDescription: Amount, excluding tax collected from customer, of revenue from satisfaction of performance obligation by transferring promised good or service to customer. Tax collected from customer is tax assessed by governmental authority that is both imposed on and concurrent with specific revenue-producing transaction, including, but not limited to, sales, use, value added and excise.\nRecent reported values:\nUSD 2025 Q2 10-Q filed 2025-05-02: 95359000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 95359000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 313695000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 313695000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 94036000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 94036000000\nUSD 2025 FY 10-K filed 2025-10-31: 416161000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 143756000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 254940000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 111184000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 364357000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 109417000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "2901aac76469935987401a07016c9365e018b5194e732491b417c1c067a07ba6"
+}

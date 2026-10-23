@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeDerivativesQualifyingAsHedgesNetOfTaxPeriodIncreaseDecrease",
+  "title": "Apple Inc. - Other Comprehensive Income (Loss), Derivatives Qualifying as Hedges, Net of Tax (Deprecated 2012-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeDerivativesQualifyingAsHedgesNetOfTaxPeriodIncreaseDecrease\nLabel: Other Comprehensive Income (Loss), Derivatives Qualifying as Hedges, Net of Tax (Deprecated 2012-01-31)\nDescription: Net of tax effect change in accumulated gains and losses from derivative instruments designated and qualifying as the effective portion of cash flow hedges after taxes. A cash flow hedge is a hedge of the exposure to variability in the cash flows of a recognized asset or liability or a forecasted transaction that is attributable to a particular risk. The change includes an entity's share of an equity investee's increase or decrease in deferred hedging gains or losses. While for technical reasons this element has no balance attribute, the default assumption is a credit balance consistent with its label.\nRecent reported values:\nUSD 2011 Q3 10-Q filed 2011-07-20: 13000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 13000000\nUSD 2011 FY 10-K filed 2011-10-26: -253000000\nUSD 2010 FY 10-K filed 2010-10-27: -253000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 243000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 243000000\nUSD 2011 Q2 10-Q filed 2011-04-21: 161000000\nUSD 2011 Q2 10-Q filed 2011-04-21: -82000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 273000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 112000000\nUSD 2011 FY 10-K filed 2011-10-26: 542000000\nUSD 2012 Q1 10-Q filed 2012-01-25: -67000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeDerivativesQualifyingAsHedgesNetOfTaxPeriodIncreaseDecrease",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "ff7dd546eb5dea3550e65722f2889686a15603846569518d6eda7383e077b83c"
+}

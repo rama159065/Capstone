@@ -1,0 +1,86 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Zoom_blhq9k8p1tl1",
+  "title": "Zoom - Service Degradation Affecting File Uploads and Downloads in Zoom Chat",
+  "text": "Service: Zoom\nIncident: Service Degradation Affecting File Uploads and Downloads in Zoom Chat\nStatus: resolved\nImpact: none\nStarted: 2026-10-10T01:54:23.622-07:00\nResolved: 2026-10-10T02:10:07.408-07:00\nUpdates:\n- 2026-10-10T02:10:07.408-07:00: resolved - This incident has been resolved and the affected services have been restored.\n- 2026-10-10T01:54:23.717-07:00: monitoring - On 10/10/2026, Between 06:12 UTC to 07:39 UTC, Users may have experienced issues with file upload and download functionality in Zoom chat\n\nThis incident has been resolved and the affected services have been restored.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.zoom.us/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "blhq9k8p1tl1",
+      "name": "Service Degradation Affecting File Uploads and Downloads in Zoom Chat",
+      "status": "resolved",
+      "created_at": "2026-10-10T01:54:23.638-07:00",
+      "updated_at": "2026-10-10T02:10:07.434-07:00",
+      "monitoring_at": "2026-10-10T01:54:23.717-07:00",
+      "resolved_at": "2026-10-10T02:10:07.408-07:00",
+      "impact": "none",
+      "shortlink": "https://stspg.io/0zzy0ctgl74w",
+      "started_at": "2026-10-10T01:54:23.622-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "855krf3zq9h5",
+          "status": "resolved",
+          "body": "This incident has been resolved and the affected services have been restored.",
+          "incident_id": "blhq9k8p1tl1",
+          "created_at": "2026-10-10T02:10:07.408-07:00",
+          "updated_at": "2026-10-10T02:10:07.408-07:00",
+          "display_at": "2026-10-10T02:10:07.408-07:00",
+          "affected_components": [
+            {
+              "code": "5nb7nq17c6g5",
+              "name": "Zoom Chat - File Transfers: File, Video, Pictures, Voice",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "0gm8d263233v",
+          "status": "monitoring",
+          "body": "On 10/10/2026, Between 06:12 UTC to 07:39 UTC, Users may have experienced issues with file upload and download functionality in Zoom chat\n\nThis incident has been resolved and the affected services have been restored.",
+          "incident_id": "blhq9k8p1tl1",
+          "created_at": "2026-10-10T01:54:23.717-07:00",
+          "updated_at": "2026-10-10T01:54:23.717-07:00",
+          "display_at": "2026-10-10T01:54:23.717-07:00",
+          "affected_components": [
+            {
+              "code": "5nb7nq17c6g5",
+              "name": "Zoom Chat - File Transfers: File, Video, Pictures, Voice",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "5nb7nq17c6g5",
+          "name": "File Transfers: File, Video, Pictures, Voice",
+          "status": "operational",
+          "created_at": "2022-05-03T11:01:15.868-07:00",
+          "updated_at": "2026-03-22T16:15:08.084-07:00",
+          "position": 4,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "6zvc1tw9rpfm",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:00+00:00",
+  "content_sha256": "0bf1d3b38dfd17ced70041c2977b16a01cb5aa374c7cf268f9861b9bf77af8a6"
+}

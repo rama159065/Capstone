@@ -1,0 +1,43 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Claude_vmys9qn874h4",
+  "title": "Claude - Issue with spend limits",
+  "text": "Service: Claude\nIncident: Issue with spend limits\nStatus: resolved\nImpact: none\nStarted: 2026-10-07T21:23:29.599Z\nResolved: 2026-10-07T21:23:29.656Z\nUpdates:\n- 2026-10-07T21:23:29.656Z: resolved - We have identified an issue which resulted in some organizations to be incorrectly paused for having reached their spend limit, resulting in refused requests on the Claude API, Claude.ai, Claude Code, Claude Security, and Claude Cowork. This is now resolved.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.anthropic.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "vmys9qn874h4",
+      "name": "Issue with spend limits",
+      "status": "resolved",
+      "created_at": "2026-10-07T21:23:29.603Z",
+      "updated_at": "2026-10-07T21:23:29.665Z",
+      "monitoring_at": null,
+      "resolved_at": "2026-10-07T21:23:29.656Z",
+      "impact": "none",
+      "shortlink": "https://stspg.io/frlrjsqqn605",
+      "started_at": "2026-10-07T21:23:29.599Z",
+      "page_id": "tymt9n04zgry",
+      "incident_updates": [
+        {
+          "id": "p4pg9q0fk9t0",
+          "status": "resolved",
+          "body": "We have identified an issue which resulted in some organizations to be incorrectly paused for having reached their spend limit, resulting in refused requests on the Claude API, Claude.ai, Claude Code, Claude Security, and Claude Cowork. This is now resolved.",
+          "incident_id": "vmys9qn874h4",
+          "created_at": "2026-10-07T21:23:29.656Z",
+          "updated_at": "2026-10-07T21:23:29.656Z",
+          "display_at": "2026-10-07T21:23:29.656Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:09+00:00",
+  "content_sha256": "f03fb2f90a2dbedefb0c1f6c194715c068e6a0cc85e60470e5d2b0817e8015cd"
+}

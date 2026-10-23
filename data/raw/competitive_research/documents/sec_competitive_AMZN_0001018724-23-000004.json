@@ -1,0 +1,17 @@
+{
+  "domain": "competitive_research",
+  "document_id": "sec_competitive_AMZN_0001018724-23-000004",
+  "title": "AMAZON COM INC 10-K filed 2023-02-03",
+  "text": "Company: AMAZON COM INC\nTicker: AMZN\nCIK: 0001018724\nSIC: 5961 Retail-Catalog & Mail-Order Houses\nBusiness address: {'street1': '410 TERRY AVENUE NORTH', 'street2': None, 'city': 'SEATTLE', 'stateOrCountry': 'WA', 'zipCode': '98109', 'stateOrCountryDescription': 'WA', 'isForeignLocation': None, 'foreignStateTerritory': None, 'country': None, 'countryCode': None}\nForm: 10-K\nFiling date: 2023-02-03\nAccession number: 0001018724-23-000004\nPrimary document: amzn-20221231.htm\nPrimary document description: 10-K\nFiling URL: https://www.sec.gov/Archives/edgar/data/1018724/000101872423000004/amzn-20221231.htm",
+  "source_name": "SEC EDGAR submissions",
+  "source_url": "https://data.sec.gov/submissions/CIK0001018724.json",
+  "metadata": {
+    "ticker": "AMZN",
+    "cik": "0001018724",
+    "form": "10-K",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872423000004/amzn-20221231.htm",
+    "source_type": "sec_filing_metadata"
+  },
+  "downloaded_at": "2026-10-22T12:41:54+00:00",
+  "content_sha256": "3735cfd8c5efb6d706ed31b2f5e688ea1ba521dfd4a8e39516903a88165da6fc"
+}

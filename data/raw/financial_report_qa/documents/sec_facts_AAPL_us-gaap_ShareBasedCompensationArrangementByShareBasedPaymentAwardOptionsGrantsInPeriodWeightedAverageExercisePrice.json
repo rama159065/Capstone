@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsGrantsInPeriodWeightedAverageExercisePrice",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Grants in Period, Weighted Average Exercise Price (Deprecated 2012-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsGrantsInPeriodWeightedAverageExercisePrice\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Grants in Period, Weighted Average Exercise Price (Deprecated 2012-01-31)\nDescription: The weighted average price as of the balance sheet date at which grantees can acquire the shares reserved for issuance on stock options awarded under the plan during the reporting period.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 171.36\nUSD 2011 FY 10-K filed 2011-10-26: 106.84\nUSD 2010 FY 10-K filed 2010-10-27: 106.84\nUSD 2010 Q3 10-Q filed 2010-07-21: 202\nUSD 2011 FY 10-K filed 2011-10-26: 202\nUSD 2010 FY 10-K filed 2010-10-27: 202\nUSD 2011 Q1 10-Q filed 2011-01-19: 0\nUSD 2011 Q2 10-Q filed 2011-04-21: 342.62\nUSD 2011 Q3 10-Q filed 2011-07-20: 342.62\nUSD 2011 FY 10-K filed 2011-10-26: 342.62\nUSD 2012 Q1 10-Q filed 2012-01-25: 0",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsGrantsInPeriodWeightedAverageExercisePrice",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "1701d1322ff70af5c08ec4fb64f0a89b176f259614ddf723db9d5925d6c4532d"
+}

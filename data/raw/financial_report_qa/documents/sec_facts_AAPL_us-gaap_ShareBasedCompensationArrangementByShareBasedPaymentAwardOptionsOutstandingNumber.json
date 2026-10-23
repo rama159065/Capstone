@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOutstandingNumber",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Outstanding, Number",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOutstandingNumber\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Outstanding, Number\nDescription: Number of options outstanding, including both vested and non-vested options.\nRecent reported values:\nshares 2014 Q1 10-Q filed 2014-01-28: 2787000\nshares 2014 Q2 10-Q filed 2014-04-24: 2400000\nshares 2014 Q3 10-Q filed 2014-07-23: 13100000\nshares 2014 FY 10-K filed 2014-10-27: 6600000\nshares None None 8-K filed 2015-01-28: 6600000\nshares 2015 Q1 10-Q filed 2015-01-28: 3500000\nshares 2015 Q2 10-Q filed 2015-04-28: 2300000\nshares 2015 Q3 10-Q filed 2015-07-22: 1600000\nshares 2015 FY 10-K filed 2015-10-28: 1200000\nshares 2016 Q1 10-Q filed 2016-01-27: 1100000\nshares 2016 Q2 10-Q filed 2016-04-27: 1100000\nshares 2016 Q3 10-Q filed 2016-07-27: 1100000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOutstandingNumber",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "43dcc6b19b938ca8314208ffadfaa2ef86b0b8d58dc8f7c5a27b653d0741fda7"
+}

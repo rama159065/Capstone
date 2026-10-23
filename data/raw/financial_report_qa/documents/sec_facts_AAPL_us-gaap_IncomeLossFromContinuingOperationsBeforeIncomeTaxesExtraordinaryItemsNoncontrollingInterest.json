@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+  "title": "Apple Inc. - Income (Loss) from Continuing Operations before Income Taxes, Noncontrolling Interest",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest\nLabel: Income (Loss) from Continuing Operations before Income Taxes, Noncontrolling Interest\nDescription: Amount of income (loss) from continuing operations, including income (loss) from equity method investments, before deduction of income tax expense (benefit), and income (loss) attributable to noncontrolling interest.\nRecent reported values:\nUSD 2025 Q2 10-Q filed 2025-05-02: 29310000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 29310000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 99925000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 99925000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 28031000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 28031000000\nUSD 2025 FY 10-K filed 2025-10-31: 132729000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 51002000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 86835000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 35833000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 123102000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 36267000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4fc0961ad961aa727e940043c899daf89a913019130334c1716219bba42229db"
+}

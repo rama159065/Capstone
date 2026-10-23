@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_Goodwill",
+  "title": "Apple Inc. - Goodwill",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: Goodwill\nLabel: Goodwill\nDescription: Amount after accumulated impairment loss of an asset representing future economic benefits arising from other assets acquired in a business combination that are not individually identified and separately recognized.\nRecent reported values:\nUSD 2016 Q3 10-Q filed 2016-07-27: 5261000000\nUSD 2016 FY 10-K filed 2016-10-26: 5414000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 5414000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 5414000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 5414000000\nUSD 2017 FY 10-K filed 2017-11-03: 5414000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 5423000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 5473000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 5661000000\nUSD 2017 FY 10-K filed 2017-11-03: 5717000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 5717000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 5889000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "Goodwill",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "27caab4abaa526d2e1d959895baafbdeea93567e96acfcda6bcb92e96a277cf8"
+}

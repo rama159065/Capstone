@@ -1,0 +1,17 @@
+{
+  "domain": "competitive_research",
+  "document_id": "sec_competitive_NVDA_0001045810-25-000095",
+  "title": "NVIDIA CORP DEF 14A filed 2025-05-13",
+  "text": "Company: NVIDIA CORP\nTicker: NVDA\nCIK: 0001045810\nSIC: 3674 Semiconductors & Related Devices\nBusiness address: {'street1': '2788 SAN TOMAS EXPRESSWAY', 'street2': None, 'city': 'SANTA CLARA', 'stateOrCountry': 'CA', 'zipCode': '95051', 'stateOrCountryDescription': 'CA', 'isForeignLocation': None, 'foreignStateTerritory': None, 'country': None, 'countryCode': None}\nForm: DEF 14A\nFiling date: 2025-05-13\nAccession number: 0001045810-25-000095\nPrimary document: nvda-20250512.htm\nPrimary document description: DEF 14A\nFiling URL: https://www.sec.gov/Archives/edgar/data/1045810/000104581025000095/nvda-20250512.htm",
+  "source_name": "SEC EDGAR submissions",
+  "source_url": "https://data.sec.gov/submissions/CIK0001045810.json",
+  "metadata": {
+    "ticker": "NVDA",
+    "cik": "0001045810",
+    "form": "DEF 14A",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000095/nvda-20250512.htm",
+    "source_type": "sec_filing_metadata"
+  },
+  "downloaded_at": "2026-10-22T12:41:53+00:00",
+  "content_sha256": "ce161bf79be4c6b5e96f08772eca86065a14c023ca44d4ad36cca3dd30518975"
+}

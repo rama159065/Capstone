@@ -1,0 +1,246 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_GitHub_2dpbcq5j165n",
+  "title": "GitHub - Actions Job Delays",
+  "text": "Service: GitHub\nIncident: Actions Job Delays\nStatus: resolved\nImpact: minor\nStarted: 2026-10-01T14:47:48.132Z\nResolved: 2026-10-01T17:56:54.260Z\nUpdates:\n- 2026-10-01T17:56:54.260Z: resolved - On October 1, 2026, GitHub Actions experienced two periods of delayed and failed job starts on GitHub-hosted runners, beginning at approximately 14:15 UTC. Across the 14:15–17:56 UTC incident-response window, approximately 0.68% of workflow runs experienced start delays, and 0.196% of jobs failed to start. A routing change at our cloud provider concentrated API traffic on a single backend, causing an increase in rate-limit errors. Incorrect retry behavior in the provider’s inventory service added load to the affected APIs, compounding the rate limiting. This disrupted runner provisioning and reduced available capacity in affected regions. The resulting increase in demand in unaffected regions exposed a concurrency limit in our job-assignment system, delaying jobs even where runners were available. During the response, we increased job-assignment concurrency, scaled runner capacity, and worked with our cloud provider to reduce API load by excluding our runner subscriptions from its inventory service. By approximately 16:15 UTC, jobs were starting and executing as expected. We continued mitigation and monitoring until the incident was resolved at 17:56 UTC. Our cloud provider has since increased resource-management API rate limits for our workloads. To reduce the likelihood and impact of similar incidents, we are also adding more granular rate-limiting alerts and updating our job-assignment system to handle increased demand across fewer available regions.\n- 2026-10-01T17:50:54.351Z: investigating - GitHub Actions experienced degraded performance for some hosted runners due to throttling within an upstream Azure dependency. Service capacity has recovered, and we are continuing to monitor while working with Azure on the underlying condition.\n- 2026-10-01T16:48:51.025Z: investigating - We are currently applying a mitigation and anticipate recovery within thirty minutes.\n- 2026-10-01T16:10:24.539Z: investigating - We have identified an issue with our upstream provider which is causing Actions requests to 429 which is creating the delays. We have escalated to the owning team and are investigating how to mitigate the 429s.\n- 2026-10-01T15:29:46.969Z: investigating - We are seeing a reoccurrence in run-start delays, and are continuing to investigate to issue. Customers will potentially experience delays of up to ten minutes.\n- 2026-10-01T15:20:46.089Z: investigating - Actions is experiencing degraded performance. We are continuing to investigate.\n- 2026-10-01T15:10:52.227Z: monitoring - The degradation affecting Actions has been mitigated. We are monitoring to ensure stability.\n- 2026-10-01T15:02:41.043Z: investigating - Run-start delays on Ubuntu runners have been resolved. We are investigating run-start delays on Windows runners and will share more information as it becomes available.\n- 2026-10-01T14:54:13.101Z: investigating - We have identified the cause of increased Actions run start delays on Ubuntu runners and are actively deploying a fix. Customers may continue to experience intermittent delays while the mitigation rolls out and service metrics return to normal.\n- 2026-10-01T14:47:48.228Z: investigating - We are investigating reports of degraded performance for Actions",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://www.githubstatus.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "2dpbcq5j165n",
+      "name": "Actions Job Delays",
+      "status": "resolved",
+      "created_at": "2026-10-01T14:47:48.138Z",
+      "updated_at": "2026-10-09T21:52:10.203Z",
+      "monitoring_at": "2026-10-01T15:10:52.227Z",
+      "resolved_at": "2026-10-01T17:56:54.260Z",
+      "impact": "minor",
+      "shortlink": "https://stspg.io/kdqxfjn5qg6q",
+      "started_at": "2026-10-01T14:47:48.132Z",
+      "page_id": "kctbh9vrtdwd",
+      "incident_updates": [
+        {
+          "id": "x5hd07s6r4mh",
+          "status": "resolved",
+          "body": "On October 1, 2026, GitHub Actions experienced two periods of delayed and failed job starts on GitHub-hosted runners, beginning at approximately 14:15 UTC. Across the 14:15–17:56 UTC incident-response window, approximately 0.68% of workflow runs experienced start delays, and 0.196% of jobs failed to start. <br /><br />A routing change at our cloud provider concentrated API traffic on a single backend, causing an increase in rate-limit errors. Incorrect retry behavior in the provider’s inventory service added load to the affected APIs, compounding the rate limiting. This disrupted runner provisioning and reduced available capacity in affected regions. The resulting increase in demand in unaffected regions exposed a concurrency limit in our job-assignment system, delaying jobs even where runners were available. <br /><br />During the response, we increased job-assignment concurrency, scaled runner capacity, and worked with our cloud provider to reduce API load by excluding our runner subscriptions from its inventory service. By approximately 16:15 UTC, jobs were starting and executing as expected. We continued mitigation and monitoring until the incident was resolved at 17:56 UTC. <br /><br />Our cloud provider has since increased resource-management API rate limits for our workloads. To reduce the likelihood and impact of similar incidents, we are also adding more granular rate-limiting alerts and updating our job-assignment system to handle increased demand across fewer available regions.",
+          "incident_id": "2dpbcq5j165n",
+          "created_at": "2026-10-01T17:56:54.260Z",
+          "updated_at": "2026-10-09T21:52:10.197Z",
+          "display_at": "2026-10-01T17:56:54.260Z",
+          "affected_components": [
+            {
+              "code": "br0l2tvcx85d",
+              "name": "Actions",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "w75t1tps2d9r",
+          "status": "investigating",
+          "body": "GitHub Actions experienced degraded performance for some hosted runners due to throttling within an upstream Azure dependency. Service capacity has recovered, and we are continuing to monitor while working with Azure on the underlying condition.",
+          "incident_id": "2dpbcq5j165n",
+          "created_at": "2026-10-01T17:50:54.351Z",
+          "updated_at": "2026-10-01T17:50:54.351Z",
+          "display_at": "2026-10-01T17:50:54.351Z",
+          "affected_components": [
+            {
+              "code": "br0l2tvcx85d",
+              "name": "Actions",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "4nl77h1pzjl6",
+          "status": "investigating",
+          "body": "We are currently applying a mitigation and anticipate recovery within thirty minutes.",
+          "incident_id": "2dpbcq5j165n",
+          "created_at": "2026-10-01T16:48:51.025Z",
+          "updated_at": "2026-10-01T16:48:51.025Z",
+          "display_at": "2026-10-01T16:48:51.025Z",
+          "affected_components": [
+            {
+              "code": "br0l2tvcx85d",
+              "name": "Actions",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "0h075hpxvs70",
+          "status": "investigating",
+          "body": "We have identified an issue with our upstream provider which is causing Actions requests to 429 which is creating the delays. We have escalated to the owning team and are investigating how to mitigate the 429s.",
+          "incident_id": "2dpbcq5j165n",
+          "created_at": "2026-10-01T16:10:24.539Z",
+          "updated_at": "2026-10-01T16:10:24.539Z",
+          "display_at": "2026-10-01T16:10:24.539Z",
+          "affected_components": [
+            {
+              "code": "br0l2tvcx85d",
+              "name": "Actions",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "mscgswc68m9h",
+          "status": "investigating",
+          "body": "We are seeing a reoccurrence in run-start delays, and are continuing to investigate to issue. Customers will potentially experience delays of up to ten minutes.",
+          "incident_id": "2dpbcq5j165n",
+          "created_at": "2026-10-01T15:29:46.969Z",
+          "updated_at": "2026-10-01T15:29:46.969Z",
+          "display_at": "2026-10-01T15:29:46.969Z",
+          "affected_components": [
+            {
+              "code": "br0l2tvcx85d",
+              "name": "Actions",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "cz8w7f6ss4wx",
+          "status": "investigating",
+          "body": "Actions is experiencing degraded performance. We are continuing to investigate.",
+          "incident_id": "2dpbcq5j165n",
+          "created_at": "2026-10-01T15:20:46.089Z",
+          "updated_at": "2026-10-01T15:20:46.089Z",
+          "display_at": "2026-10-01T15:20:46.089Z",
+          "affected_components": [
+            {
+              "code": "br0l2tvcx85d",
+              "name": "Actions",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "snzrhgh05tjd",
+          "status": "monitoring",
+          "body": "The degradation affecting Actions has been mitigated. We are monitoring to ensure stability.",
+          "incident_id": "2dpbcq5j165n",
+          "created_at": "2026-10-01T15:10:52.227Z",
+          "updated_at": "2026-10-01T15:10:52.227Z",
+          "display_at": "2026-10-01T15:10:52.227Z",
+          "affected_components": [
+            {
+              "code": "br0l2tvcx85d",
+              "name": "Actions",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "q2qxq3swpv6v",
+          "status": "investigating",
+          "body": "Run-start delays on Ubuntu runners have been resolved. We are investigating run-start delays on Windows runners and will share more information as it becomes available.",
+          "incident_id": "2dpbcq5j165n",
+          "created_at": "2026-10-01T15:02:41.043Z",
+          "updated_at": "2026-10-01T15:02:41.043Z",
+          "display_at": "2026-10-01T15:02:41.043Z",
+          "affected_components": [
+            {
+              "code": "br0l2tvcx85d",
+              "name": "Actions",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "nn05nqxkjyb7",
+          "status": "investigating",
+          "body": "We have identified the cause of increased Actions run start delays on Ubuntu runners and are actively deploying a fix. Customers may continue to experience intermittent delays while the mitigation rolls out and service metrics return to normal.",
+          "incident_id": "2dpbcq5j165n",
+          "created_at": "2026-10-01T14:54:13.101Z",
+          "updated_at": "2026-10-01T14:54:13.101Z",
+          "display_at": "2026-10-01T14:54:13.101Z",
+          "affected_components": [
+            {
+              "code": "br0l2tvcx85d",
+              "name": "Actions",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "kzfh6qs28nnb",
+          "status": "investigating",
+          "body": "We are investigating reports of degraded performance for Actions",
+          "incident_id": "2dpbcq5j165n",
+          "created_at": "2026-10-01T14:47:48.228Z",
+          "updated_at": "2026-10-01T14:47:48.228Z",
+          "display_at": "2026-10-01T14:47:48.228Z",
+          "affected_components": [
+            {
+              "code": "br0l2tvcx85d",
+              "name": "Actions",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "br0l2tvcx85d",
+          "name": "Actions",
+          "status": "operational",
+          "created_at": "2019-11-13T18:02:19.432Z",
+          "updated_at": "2026-10-21T16:57:42.116Z",
+          "position": 7,
+          "description": "Workflows, Compute and Orchestration for GitHub Actions",
+          "showcase": true,
+          "start_date": null,
+          "group_id": null,
+          "page_id": "kctbh9vrtdwd",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:18+00:00",
+  "content_sha256": "ba6d41b77103d77ad8010209d3684f379de2157ab65ebd95d218dc401854ae60"
+}

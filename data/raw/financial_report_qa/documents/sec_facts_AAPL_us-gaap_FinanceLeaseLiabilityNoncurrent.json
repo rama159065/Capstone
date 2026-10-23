@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_FinanceLeaseLiabilityNoncurrent",
+  "title": "Apple Inc. - Finance Lease, Liability, Noncurrent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: FinanceLeaseLiabilityNoncurrent\nLabel: Finance Lease, Liability, Noncurrent\nDescription: Present value of lessee's discounted obligation for lease payments from finance lease, classified as noncurrent.\nRecent reported values:\nUSD 2020 FY 10-K filed 2020-10-30: 637000000\nUSD 2021 FY 10-K filed 2021-10-29: 637000000\nUSD 2021 FY 10-K filed 2021-10-29: 769000000\nUSD 2022 FY 10-K filed 2022-10-28: 769000000\nUSD 2022 FY 10-K filed 2022-10-28: 812000000\nUSD 2023 FY 10-K filed 2023-11-03: 812000000\nUSD 2023 FY 10-K filed 2023-11-03: 859000000\nUSD 2024 FY 10-K filed 2024-11-01: 859000000\nUSD 2024 FY 10-K filed 2024-11-01: 752000000\nUSD 2025 FY 10-K filed 2025-10-31: 752000000\nUSD 2025 FY 10-K filed 2025-10-31: 692000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "FinanceLeaseLiabilityNoncurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "c94e5b2a9dece7becb0befb6d87d576cfd908c89c27e33d4d0590296a658d44d"
+}

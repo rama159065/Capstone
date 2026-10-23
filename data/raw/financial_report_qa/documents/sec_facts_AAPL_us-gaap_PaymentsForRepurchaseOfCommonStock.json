@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_PaymentsForRepurchaseOfCommonStock",
+  "title": "Apple Inc. - Payments for Repurchase of Common Stock",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: PaymentsForRepurchaseOfCommonStock\nLabel: Payments for Repurchase of Common Stock\nDescription: The cash outflow to reacquire common stock during the period.\nRecent reported values:\nUSD 2024 FY 10-K filed 2024-11-01: 94949000000\nUSD 2025 FY 10-K filed 2025-10-31: 94949000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 23606000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 23606000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 49504000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 49504000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 70579000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 70579000000\nUSD 2025 FY 10-K filed 2025-10-31: 90711000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 24701000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 36989000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 62094000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "PaymentsForRepurchaseOfCommonStock",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "9c4d0efac0df960b31b5a4a38d0b65cb37d5be550f9018a5b4f10830885347bb"
+}

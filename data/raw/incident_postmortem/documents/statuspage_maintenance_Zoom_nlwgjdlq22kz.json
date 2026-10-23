@@ -1,0 +1,353 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Zoom_nlwgjdlq22kz",
+  "title": "Zoom - Zoom Push Notification Service Release: October, 2026 (No Operational Impact)",
+  "text": "Service: Zoom\nMaintenance: Zoom Push Notification Service Release: October, 2026 (No Operational Impact)\nStatus: in_progress\nImpact: maintenance\nScheduled for: 2026-10-15T09:00:00.000-07:00\nScheduled until: 2026-10-23T09:00:00.000-07:00\nUpdates:\n- 2026-10-15T09:00:10.737-07:00: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2026-10-13T06:11:34.380-07:00: scheduled - We will be performing maintenance for Zoom Push Notification Service. No operational impact is expected.\n\nThis maintenance includes the following enhancements and improvements:\n- Activity center enhancement\n- Presence enhancement\n- Bug fix\n\nAll services are expected to operate normally during the maintenance window.",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://status.zoom.us/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "nlwgjdlq22kz",
+      "name": "Zoom Push Notification Service Release: October, 2026 (No Operational Impact)",
+      "status": "in_progress",
+      "created_at": "2026-10-13T06:11:34.074-07:00",
+      "updated_at": "2026-10-15T09:00:10.802-07:00",
+      "monitoring_at": null,
+      "resolved_at": null,
+      "impact": "maintenance",
+      "shortlink": "https://stspg.io/dy7y1j20cdj5",
+      "started_at": "2026-10-13T06:11:34.013-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "3dd6v9vyq7m4",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "nlwgjdlq22kz",
+          "created_at": "2026-10-15T09:00:10.737-07:00",
+          "updated_at": "2026-10-15T09:00:10.737-07:00",
+          "display_at": "2026-10-15T09:00:10.737-07:00",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "b2ngsd3w845n",
+          "status": "scheduled",
+          "body": "We will be performing maintenance for Zoom Push Notification Service. No operational impact is expected.\n\nThis maintenance includes the following enhancements and improvements:\n- Activity center enhancement\n- Presence enhancement\n- Bug fix\n\nAll services are expected to operate normally during the maintenance window.",
+          "incident_id": "nlwgjdlq22kz",
+          "created_at": "2026-10-13T06:11:34.380-07:00",
+          "updated_at": "2026-10-13T06:11:34.380-07:00",
+          "display_at": "2026-10-13T06:11:34.380-07:00",
+          "affected_components": [
+            {
+              "code": "8gftm750nwzm",
+              "name": "Zoom Website - Web Portal",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "503cqbhcpvzx",
+              "name": "Zoom Website - Web Client",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "08fp2rr1spx0",
+              "name": "Zoom Website - Integrations/Calendar/Plug-In/Add-In",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "rmphw6f34qk9",
+              "name": "Zoom Developer Platform - Marketplace",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "3mgjlwf5953y",
+              "name": "Zoom Events",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "3z7b6jks10hm",
+              "name": "Zoom Meetings - Zoom Meetings",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "q4msk5dl4bhm",
+              "name": "Zoom Meetings - Zoom Webinars",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "0842bncf5q9f",
+              "name": "Zoom Phone - Global - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "t2jk6yrqbp4j",
+              "name": "Zoom Chat - Zoom Chat",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "xtgr15yv6hbn",
+              "name": "Zoom Rooms - Zoom Rooms",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "s5s5m6flk56z",
+              "name": "Zoom CX - Global - Zoom Contact Center",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "hybzp260h3n2",
+              "name": "Zoom Mail - Calendar",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "03szj78zknyt",
+              "name": "Zoom Mail - Mail",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "880tc1scvmp2",
+              "name": "Zoom Virtual Agent - Global - Zoom Virtual Agent",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "3z7b6jks10hm",
+          "name": "Zoom Meetings",
+          "status": "operational",
+          "created_at": "2015-01-26T15:04:39.101-08:00",
+          "updated_at": "2026-10-12T02:00:10.750-07:00",
+          "position": 1,
+          "description": "Access to meetings",
+          "showcase": false,
+          "start_date": null,
+          "group_id": "6np407v7v25g",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "t2jk6yrqbp4j",
+          "name": "Zoom Chat",
+          "status": "operational",
+          "created_at": "2015-01-26T15:08:19.770-08:00",
+          "updated_at": "2026-06-01T07:04:56.340-07:00",
+          "position": 1,
+          "description": "Access to Group Chats",
+          "showcase": false,
+          "start_date": null,
+          "group_id": "6zvc1tw9rpfm",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "xtgr15yv6hbn",
+          "name": "Zoom Rooms",
+          "status": "operational",
+          "created_at": "2021-05-18T07:12:19.400-07:00",
+          "updated_at": "2026-10-12T02:00:14.040-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": "2021-05-18",
+          "group_id": "xxngg08dxtpq",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "880tc1scvmp2",
+          "name": "Zoom Virtual Agent",
+          "status": "operational",
+          "created_at": "2023-01-25T04:56:01.486-08:00",
+          "updated_at": "2026-01-17T02:00:21.300-08:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": "2023-01-25",
+          "group_id": "58cfzcvm6j00",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "hybzp260h3n2",
+          "name": "Calendar",
+          "status": "operational",
+          "created_at": "2023-03-23T09:35:24.809-07:00",
+          "updated_at": "2026-10-06T20:46:22.591-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": "2023-03-23",
+          "group_id": "thrn29k311lc",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "s5s5m6flk56z",
+          "name": "Zoom Contact Center",
+          "status": "operational",
+          "created_at": "2024-03-21T13:14:33.314-07:00",
+          "updated_at": "2026-05-21T18:00:07.341-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": "2024-03-21",
+          "group_id": "1bmg0stx4mk0",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "03szj78zknyt",
+          "name": "Mail",
+          "status": "operational",
+          "created_at": "2023-03-23T09:35:58.650-07:00",
+          "updated_at": "2026-06-21T10:52:58.340-07:00",
+          "position": 2,
+          "description": null,
+          "showcase": false,
+          "start_date": "2023-03-23",
+          "group_id": "thrn29k311lc",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "rmphw6f34qk9",
+          "name": "Marketplace",
+          "status": "operational",
+          "created_at": "2020-04-06T15:25:48.555-07:00",
+          "updated_at": "2026-05-20T14:13:54.716-07:00",
+          "position": 3,
+          "description": null,
+          "showcase": false,
+          "start_date": null,
+          "group_id": "dhtlfcvrh3qh",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "8gftm750nwzm",
+          "name": "Web Portal",
+          "status": "operational",
+          "created_at": "2020-03-17T15:28:43.573-07:00",
+          "updated_at": "2026-06-24T23:44:32.512-07:00",
+          "position": 4,
+          "description": null,
+          "showcase": false,
+          "start_date": null,
+          "group_id": "1ndlrnp6r9js",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "503cqbhcpvzx",
+          "name": "Web Client",
+          "status": "operational",
+          "created_at": "2022-05-03T11:23:21.561-07:00",
+          "updated_at": "2025-11-23T00:00:21.372-08:00",
+          "position": 5,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "1ndlrnp6r9js",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "08fp2rr1spx0",
+          "name": "Integrations/Calendar/Plug-In/Add-In",
+          "status": "operational",
+          "created_at": "2023-01-31T21:55:23.273-08:00",
+          "updated_at": "2026-10-01T09:05:26.928-07:00",
+          "position": 7,
+          "description": null,
+          "showcase": false,
+          "start_date": "2023-01-31",
+          "group_id": "1ndlrnp6r9js",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "0842bncf5q9f",
+          "name": "Zoom Phone",
+          "status": "operational",
+          "created_at": "2024-09-30T13:36:13.230-07:00",
+          "updated_at": "2026-09-20T02:00:07.620-07:00",
+          "position": 12,
+          "description": null,
+          "showcase": false,
+          "start_date": "2024-09-30",
+          "group_id": "fs7vxs27n4pn",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "3mgjlwf5953y",
+          "name": "Zoom Events",
+          "status": "operational",
+          "created_at": "2021-07-21T08:43:31.354-07:00",
+          "updated_at": "2026-05-20T14:13:54.748-07:00",
+          "position": 14,
+          "description": "Access to Events at zoomevents.com",
+          "showcase": false,
+          "start_date": "2021-07-21",
+          "group_id": null,
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "q4msk5dl4bhm",
+          "name": "Zoom Webinars",
+          "status": "operational",
+          "created_at": "2015-01-26T15:04:39.115-08:00",
+          "updated_at": "2026-10-12T02:00:35.197-07:00",
+          "position": 20,
+          "description": "Access to video webinars",
+          "showcase": false,
+          "start_date": null,
+          "group_id": "6np407v7v25g",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2026-10-15T09:00:00.000-07:00",
+      "scheduled_until": "2026-10-23T09:00:00.000-07:00"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:49:04+00:00",
+  "content_sha256": "63381d0cd03fe46d8ac9fb14603d6fad538970698c439724336d98c3d094075c"
+}

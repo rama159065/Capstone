@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_NetCashProvidedByUsedInFinancingActivitiesContinuingOperations",
+  "title": "Apple Inc. - Net Cash Provided by (Used in) Financing Activities, Continuing Operations",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: NetCashProvidedByUsedInFinancingActivitiesContinuingOperations\nLabel: Net Cash Provided by (Used in) Financing Activities, Continuing Operations\nDescription: Amount of cash inflow (outflow) of financing activities, excluding discontinued operations. Financing activity cash flows include obtaining resources from owners and providing them with a return on, and a return of, their investment; borrowing money and repaying amounts borrowed, or settling the obligation; and obtaining and paying for other resources obtained from creditors on long-term credit.\nRecent reported values:\nUSD 2015 Q2 10-Q filed 2015-04-28: -8662000000\nUSD 2016 Q2 10-Q filed 2016-04-27: -8662000000\nUSD 2015 Q3 10-Q filed 2015-07-22: -11417000000\nUSD 2016 Q3 10-Q filed 2016-07-27: -11417000000\nUSD 2015 FY 10-K filed 2015-10-28: -17716000000\nUSD 2016 FY 10-K filed 2016-10-26: -17716000000\nUSD 2016 Q1 10-Q filed 2016-01-27: -11444000000\nUSD 2017 Q1 10-Q filed 2017-02-01: -11444000000\nUSD 2016 Q2 10-Q filed 2016-04-27: -4560000000\nUSD 2016 Q3 10-Q filed 2016-07-27: -14001000000\nUSD 2016 FY 10-K filed 2016-10-26: -20483000000\nUSD 2017 Q1 10-Q filed 2017-02-01: -12047000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "NetCashProvidedByUsedInFinancingActivitiesContinuingOperations",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "94b232aeb8e3f9daf0c65eb4841c0075b7148b44a64cb4e9b6c15261a0f048a2"
+}

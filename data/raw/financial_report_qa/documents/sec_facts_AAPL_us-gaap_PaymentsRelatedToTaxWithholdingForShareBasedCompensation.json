@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_PaymentsRelatedToTaxWithholdingForShareBasedCompensation",
+  "title": "Apple Inc. - Payment, Tax Withholding, Share-based Payment Arrangement",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: PaymentsRelatedToTaxWithholdingForShareBasedCompensation\nLabel: Payment, Tax Withholding, Share-based Payment Arrangement\nDescription: Amount of cash outflow to satisfy grantee's tax withholding obligation for award under share-based payment arrangement.\nRecent reported values:\nUSD 2024 FY 10-K filed 2024-11-01: 5441000000\nUSD 2025 FY 10-K filed 2025-10-31: 5441000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 2921000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 2921000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 3205000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 3205000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 5719000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 5719000000\nUSD 2025 FY 10-K filed 2025-10-31: 5960000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 2922000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 3252000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 6462000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "PaymentsRelatedToTaxWithholdingForShareBasedCompensation",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "8febe69477c6dad18d131882088c847fca8e834ebbe1a01d0834837aeaba9e27"
+}

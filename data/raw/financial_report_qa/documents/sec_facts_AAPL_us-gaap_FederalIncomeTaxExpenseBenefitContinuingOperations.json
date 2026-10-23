@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_FederalIncomeTaxExpenseBenefitContinuingOperations",
+  "title": "Apple Inc. - Federal Income Tax Expense (Benefit), Continuing Operations",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: FederalIncomeTaxExpenseBenefitContinuingOperations\nLabel: Federal Income Tax Expense (Benefit), Continuing Operations\nDescription: Amount of current and deferred federal income tax expense (benefit) attributable to income (loss) from continuing operations.\nRecent reported values:\nUSD 2021 FY 10-K filed 2021-10-29: 1081000000\nUSD 2022 FY 10-K filed 2022-10-28: 1081000000\nUSD 2023 FY 10-K filed 2023-11-03: 1081000000\nUSD 2022 FY 10-K filed 2022-10-28: 5625000000\nUSD 2023 FY 10-K filed 2023-11-03: 5625000000\nUSD 2024 FY 10-K filed 2024-11-01: 5625000000\nUSD 2023 FY 10-K filed 2023-11-03: 5801000000\nUSD 2024 FY 10-K filed 2024-11-01: 5801000000\nUSD 2025 FY 10-K filed 2025-10-31: 5801000000\nUSD 2024 FY 10-K filed 2024-11-01: 2491000000\nUSD 2025 FY 10-K filed 2025-10-31: 2491000000\nUSD 2025 FY 10-K filed 2025-10-31: 9683000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "FederalIncomeTaxExpenseBenefitContinuingOperations",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b6a6ef070f4b6a5e32e7e1c95ee30817b10f1218fe4edf96afc3a64e7bfcb89d"
+}

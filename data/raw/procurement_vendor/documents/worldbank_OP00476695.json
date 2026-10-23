@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476695",
+  "title": "Urban Youth Employment Project II",
+  "text": "bid_description: Catering Services - To Supply Lunch for UWS Youth Trainees\nbid_reference_no: PG-LCA-568096-GO-RFQ\nid: OP00476695\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P166420-Urban Youth Employment Project II Loan/Credit/TF Info: IDA-64050 Bid/Contract Reference No: PG-LCA-568096-GO-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: Catering Services To Supply Lunch for UWS Trainees Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/09/21 Duration of Contract 7 Month(s) Awarded Bidder(s): GEMINI MEALMOVE SOLUTIONS (1127758) GEMINI MEALMOVE SOLUTIONSSection 130, Allotment 28, Eriku StreetP.O Box 359, LAE MPPh: 76707924Email: rphiliphatuyan@gmail.com Country: Papua New Guinea Bid Price at Opening PGK 168516.00 Evaluated Bid Price PGK 150088.50 Signed Contract price PGK 150088.50 Rejected Bidder(s): GANGZA SALES (1127759) Gangza SalesP.O. Box 3033LAE 411, Bumbu Stage 2LAE, MP PNGPh: 72384384 Country: Papua New Guinea Bid Price at Opening PGK 183960.00 Evaluated Bid Price PGK 159570.00 Reason for Rejection Does not meet Eligibility Requirements \nnotice_type: Contract Award\nnoticedate: 21-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Papua New Guinea\nproject_id: P166420\nproject_name: Urban Youth Employment Project II\nsubmission_date: 2026-10-21T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=100&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476695",
+      "notice_type": "Contract Award",
+      "noticedate": "21-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Papua New Guinea",
+      "project_id": "P166420",
+      "project_name": "Urban Youth Employment Project II",
+      "bid_reference_no": "PG-LCA-568096-GO-RFQ",
+      "bid_description": "Catering Services - To Supply Lunch for UWS Youth Trainees",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-21T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P166420-Urban Youth Employment Project II<br/><b>Loan/Credit/TF Info:</b>IDA-64050<br/><b>Bid/Contract Reference No:</b>PG-LCA-568096-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Catering Services To Supply Lunch for UWS Trainees</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/09/21<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>7 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>GEMINI MEALMOVE SOLUTIONS (1127758)</b><br/>GEMINI MEALMOVE SOLUTIONSSection 130, Allotment 28, Eriku StreetP.O Box 359, LAE MPPh: 76707924Email: rphiliphatuyan@gmail.com<br/>Country: Papua New Guinea<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PGK 168516.00<br/><br/>Evaluated Bid Price<br/>PGK 150088.50</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>PGK 150088.50</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Rejected Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>GANGZA SALES (1127759)</b><br/>Gangza SalesP.O. Box 3033LAE 411, Bumbu Stage 2LAE, MP PNGPh: 72384384<br/>Country: Papua New Guinea<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PGK 183960.00<br/><br/>Evaluated Bid Price<br/>PGK 159570.00<br/><br/>Reason for Rejection<br/>Does not meet Eligibility Requirements<br/></div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:11+00:00",
+  "content_sha256": "5d5c6805567280f629fd6078c0fd5c75d7d89dcd988aa1f01860efb065be5187"
+}

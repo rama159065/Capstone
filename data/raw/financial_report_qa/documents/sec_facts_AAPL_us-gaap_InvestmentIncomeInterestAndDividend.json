@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_InvestmentIncomeInterestAndDividend",
+  "title": "Apple Inc. - Investment Income, Interest and Dividend",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: InvestmentIncomeInterestAndDividend\nLabel: Investment Income, Interest and Dividend\nDescription: Amount before accretion (amortization) of purchase discount (premium) of interest income and dividend income on nonoperating securities.\nRecent reported values:\nUSD 2022 Q3 10-Q filed 2022-07-29: 2072000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 2072000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 722000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 722000000\nUSD 2022 FY 10-K filed 2022-10-28: 2825000000\nUSD 2023 FY 10-K filed 2023-11-03: 2825000000\nUSD 2023 Q1 10-Q filed 2023-02-03: 868000000\nUSD 2023 Q2 10-Q filed 2023-05-05: 1786000000\nUSD 2023 Q2 10-Q filed 2023-05-05: 918000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 2766000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 980000000\nUSD 2023 FY 10-K filed 2023-11-03: 3750000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "InvestmentIncomeInterestAndDividend",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "0f06c201049a057b6a424016b1018c106099426a5d2a35c60991aab8fc1ad5ff"
+}

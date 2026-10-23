@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_GrossProfit",
+  "title": "Apple Inc. - Gross Profit",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: GrossProfit\nLabel: Gross Profit\nDescription: Aggregate revenue less cost of goods and services sold or operating expenses directly attributable to the revenue generation activity.\nRecent reported values:\nUSD 2025 Q2 10-Q filed 2025-05-02: 44867000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 44867000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 146860000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 146860000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 43718000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 43718000000\nUSD 2025 FY 10-K filed 2025-10-31: 195201000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 69231000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 124012000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 54781000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 178782000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 54770000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "GrossProfit",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "eea1a9f811b5d00d14a0c3ea30ab4f53455f4f14ea9927f764189f897aaaca2f"
+}

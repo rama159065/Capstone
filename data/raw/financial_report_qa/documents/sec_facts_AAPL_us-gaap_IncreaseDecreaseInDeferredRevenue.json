@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncreaseDecreaseInDeferredRevenue",
+  "title": "Apple Inc. - Increase (Decrease) in Deferred Revenue",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncreaseDecreaseInDeferredRevenue\nLabel: Increase (Decrease) in Deferred Revenue\nDescription: Amount of increase (decrease) in deferred income and obligation to transfer product and service to customer for which consideration has been received or is receivable.\nRecent reported values:\nUSD 2017 Q1 10-Q filed 2017-02-01: 42000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 42000000\nUSD 2017 Q2 10-Q filed 2017-05-03: -221000000\nUSD 2018 Q2 10-Q filed 2018-05-02: -221000000\nUSD 2017 Q3 10-Q filed 2017-08-02: -418000000\nUSD 2018 Q3 10-Q filed 2018-08-01: -418000000\nUSD 2017 FY 10-K filed 2017-11-03: -626000000\nUSD 2018 FY 10-K filed 2018-11-05: -626000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 791000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 478000000\nUSD 2018 Q3 10-Q filed 2018-08-01: -103000000\nUSD 2018 FY 10-K filed 2018-11-05: -44000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncreaseDecreaseInDeferredRevenue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "35a041f2dff07886bdd077e973ffc7e2c193f0a003ae4ba3ecb5072fa73a7553"
+}

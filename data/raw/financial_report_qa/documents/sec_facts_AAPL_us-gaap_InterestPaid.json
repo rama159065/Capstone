@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_InterestPaid",
+  "title": "Apple Inc. - Interest Paid, Including Capitalized Interest, Operating and Investing Activities",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: InterestPaid\nLabel: Interest Paid, Including Capitalized Interest, Operating and Investing Activities\nDescription: Amount of cash paid for interest, including, but not limited to, capitalized interest and payment to settle zero-coupon bond attributable to accreted interest of debt discount and debt instrument with insignificant coupon interest rate in relation to effective interest rate of borrowing attributable to accreted interest of debt discount; classified as operating and investing activities.\nRecent reported values:\nUSD 2016 FY 10-K filed 2016-10-26: 1316000000\nUSD 2017 FY 10-K filed 2017-11-03: 1316000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 497000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 497000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 1007000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 1007000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 1456000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 1456000000\nUSD 2017 FY 10-K filed 2017-11-03: 2092000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 623000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 1356000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 2120000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "InterestPaid",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "d6ad29444256233245661c0bfca2345effed8b425f9f2e679153e8bd8aa20f95"
+}

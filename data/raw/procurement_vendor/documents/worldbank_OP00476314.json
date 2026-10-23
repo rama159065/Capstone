@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476314",
+  "title": "Georgia Resilient Agriculture, Irrigation, and Land Project",
+  "text": "bid_description: Data Identification, Assessment, and Methodology Development for Land Mass Valuation in Georgia, Phases 1 and 2\nbid_reference_no: GR/CS/CQS/14\nid: OP00476314\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P175629-Georgia Resilient Agriculture, Irrigation, and Land Project Loan/Credit/TF Info: IBRD-95040 Bid/Contract Reference No: GR/CS/CQS/14 Procurement Method: CQS-Consultant Qualification Selection Scope of Contract: Consulting Services for Data Identification, Assessment, and Methodology Development for Land Mass Valuation in Georgia Phase 1 and Phase 2 (GRAIL) Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/07/14 Duration of Contract 10 Month(s) Minimum Qualifying Score 70 Awarded Firm(s): AAM CONSULTING (1094430) 1133 Budapest, Capital Square Irodahz, Vci t 76., Hungary Country: Hungary Scores Technical: 0.00 Consultant Specific Experience: 0 Methodology: 0 Key Personnel: 0 Financial: 0 Combined: 0 Rank: 1 Final Evaluation Price USD 262797.80 Signed Contract Price USD 262797.80 Price: Currency: Amount: United States Dollars (United States Dollars) 262797.80 \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: CS\nprocurement_method_code: CQS\nprocurement_method_name: Consultant Qualification Selection\nproject_ctry_name: Georgia\nproject_id: P175629\nproject_name: Georgia Resilient Agriculture, Irrigation, and Land Project\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=100&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476314",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Georgia",
+      "project_id": "P175629",
+      "project_name": "Georgia Resilient Agriculture, Irrigation, and Land Project",
+      "bid_reference_no": "GR/CS/CQS/14",
+      "bid_description": "Data Identification, Assessment, and Methodology Development for Land Mass Valuation in Georgia, Phases 1 and 2",
+      "procurement_group": "CS",
+      "procurement_method_code": "CQS",
+      "procurement_method_name": "Consultant Qualification  Selection",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P175629-Georgia Resilient Agriculture, Irrigation, and Land Project<br/><b>Loan/Credit/TF Info:</b>IBRD-95040<br/><b>Bid/Contract Reference No:</b>GR/CS/CQS/14<br/><b>Procurement Method:</b>CQS-Consultant Qualification Selection<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Consulting Services for Data Identification, Assessment, and Methodology Development for Land Mass Valuation in Georgia Phase 1 and Phase 2 (GRAIL)</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/07/14<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>10 Month(s)<br/></div><div class='col-sm-4'><b>Minimum Qualifying Score</b><br/><br/>70</div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Firm(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='row col-sm-12'><div class='col-sm-6'><b>AAM CONSULTING (1094430)</b><br/>1133 Budapest, Capital Square Irodahz, Vci t 76., Hungary<br/>Country: Hungary<br/></div></div><br/><div class='col-sm-6'><b>Scores</b><table width='100%'><tbody><tr><td colspan='2' width='50%'>Technical:</td><td width='30%'>0.00</td></tr><tr><td width='10%'></td><td>Consultant Specific Experience:</td><td>0</td></tr><tr><td></td><td>Methodology:</td><td>0</td></tr><tr><td></td><td>Key Personnel:</td><td>0</td></tr><tr><td colspan='2'>Financial:</td><td>0</td></tr><tr><td colspan='2'>Combined:</td><td>0</td></tr><tr><td colspan='2'>Rank:</td><td>1</td></tr></tbody></table></div><div class='col-sm-6'><p></p><b>Final Evaluation Price</b><br/>USD 262797.80<br/><p></p><b>Signed Contract Price</b><br/>USD 262797.80</div><div class='row col-sm-12'><div class='col-xs-12'><b>Price:</b><br/></div></div><div class='row col-sm-12'><div class='col-xs-4'>Currency:</div><div class='col-xs-4'>Amount:</div></div><div class='row col-sm-12'><div class='col-xs-4'>United States Dollars (United States Dollars)</div><div class='col-xs-4'>262797.80</div></div></div><div class='spacing'></div><div class='spacing'></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:11+00:00",
+  "content_sha256": "7ea06a9211a37207781638d4488bf05fbadd104863abd7ed9679a7819e47759d"
+}

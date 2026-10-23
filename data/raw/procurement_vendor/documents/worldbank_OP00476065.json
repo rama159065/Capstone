@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476065",
+  "title": "Djibouti Economic Diversification PforR",
+  "text": "bid_description: Acquisition de véhicules pour l'opérationnalisation de l'UGP dans le cadre de la mise en œuvre du programme PforR.\nbid_reference_no: DJ-MEFI-566216-GO-RFB\nid: OP00476065\nnotice_lang_name: French\nnotice_status: Published\nnotice_text: Contract Award Project: P182067-Djibouti Economic Diversification PforR Loan/Credit/TF Info: IDA-E5600 Bid/Contract Reference No: DJ-MEFI-566216-GO-RFB Procurement Method: RFB-Appel d'offres Scope of Contract: Acquisition des trois vhicule pour l'oprationnalisation de l'UGP dans le cadre de prparation.(lot1MARILL: PRADO 4X4: 11283000 et STCD pour le LOT2: 6550000 ET LOT3: 4143771). Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/05 Duration of Contract 1 Month(s) Awarded Bidder(s): SOCIT DE TRANSPORT EN COMMUN DE DJIBOUTI (STCD) (985084) Adresse : Djibouti E-mail : contact@stcd.dj Country: Djibouti Bid Price at Opening DJF Evaluated Bid Price DJF 10663771 Signed Contract price DJF 10693771 Evaluated Bidder(s): MARILL AUTOMATIVE (1136752) DJIBOUTI ZONE INDUSTRIEL Country: Djibouti Bid Price at Opening DJF Evaluated Bid Price DJF 11283000 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Djibouti\nproject_id: P182067\nproject_name: Djibouti Economic Diversification PforR\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476065",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "French",
+      "notice_status": "Published",
+      "project_ctry_name": "Djibouti",
+      "project_id": "P182067",
+      "project_name": "Djibouti Economic Diversification PforR",
+      "bid_reference_no": "DJ-MEFI-566216-GO-RFB",
+      "bid_description": "Acquisition de véhicules pour l'opérationnalisation de l'UGP dans le cadre de la mise en œuvre du programme PforR.",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P182067-Djibouti Economic Diversification PforR<br/><b>Loan/Credit/TF Info:</b>IDA-E5600<br/><b>Bid/Contract Reference No:</b>DJ-MEFI-566216-GO-RFB<br/><b>Procurement Method:</b>RFB-Appel d'offres<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Acquisition des trois vhicule pour l'oprationnalisation de l'UGP dans le cadre de prparation.(lot1MARILL: PRADO 4X4: 11283000 et STCD pour le LOT2: 6550000 ET LOT3: 4143771).</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/05<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>1 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>SOCIT DE TRANSPORT EN COMMUN DE DJIBOUTI (STCD) (985084)</b><br/>Adresse : Djibouti E-mail : contact@stcd.dj<br/>Country: Djibouti<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>DJF<br/><br/>Evaluated Bid Price<br/>DJF 10663771</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>DJF 10693771</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>MARILL AUTOMATIVE (1136752)</b><br/>DJIBOUTI ZONE INDUSTRIEL<br/>Country: Djibouti<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>DJF<br/><br/>Evaluated Bid Price<br/>DJF 11283000</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "f69dd1f4554033e42f038092ef62f15ea98b9ea42e0bb71e058992ff06a23322"
+}

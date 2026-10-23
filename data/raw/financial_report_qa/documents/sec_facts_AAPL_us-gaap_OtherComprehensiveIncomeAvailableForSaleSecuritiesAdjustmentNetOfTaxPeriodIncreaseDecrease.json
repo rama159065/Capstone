@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeAvailableForSaleSecuritiesAdjustmentNetOfTaxPeriodIncreaseDecrease",
+  "title": "Apple Inc. - Other Comprehensive Income (Loss), Available-for-sale Securities Adjustment, Net of Tax (Deprecated 2012-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeAvailableForSaleSecuritiesAdjustmentNetOfTaxPeriodIncreaseDecrease\nLabel: Other Comprehensive Income (Loss), Available-for-sale Securities Adjustment, Net of Tax (Deprecated 2012-01-31)\nDescription: Gross appreciation or the gross loss in value of the total unsold securities. While for technical reasons this element has no balance attribute, the default assumption is a credit balance consistent with its label.\nRecent reported values:\nUSD 2011 Q3 10-Q filed 2011-07-20: 24000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 24000000\nUSD 2011 FY 10-K filed 2011-10-26: 123000000\nUSD 2010 FY 10-K filed 2010-10-27: 123000000\nUSD 2012 Q1 10-Q filed 2012-01-25: -99000000\nUSD 2011 Q1 10-Q filed 2011-01-19: -99000000\nUSD 2011 Q2 10-Q filed 2011-04-21: -79000000\nUSD 2011 Q2 10-Q filed 2011-04-21: 20000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 61000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 140000000\nUSD 2011 FY 10-K filed 2011-10-26: -41000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 14000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeAvailableForSaleSecuritiesAdjustmentNetOfTaxPeriodIncreaseDecrease",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "42a19695a526fe431e4694cff0b7c4ba0752b31100ebb6bf68826ef44f058f01"
+}

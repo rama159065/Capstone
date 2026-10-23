@@ -1,0 +1,69 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_GitHub_bk7zgdcq7s9t",
+  "title": "GitHub - Disruption with some GitHub services",
+  "text": "Service: GitHub\nIncident: Disruption with some GitHub services\nStatus: resolved\nImpact: minor\nStarted: 2026-09-15T19:11:31.334Z\nResolved: 2026-09-15T20:00:50.512Z\nUpdates:\n- 2026-09-15T20:00:50.512Z: resolved - On September 15, 2026 between 15:30 and 20:00 UTC, some Copilot code reviews on pull requests failed to complete. The cause was increased latency in an internal caching service that GitHub Copilot Code Review relies on to coordinate its review jobs. This caused a timeout in lock acquisition, which interrupted the job. We reverted the change to the internal caching service and restored normal operation by 20:00 UTC. We sincerely apologize for the disruption.\n- 2026-09-15T19:48:02.813Z: monitoring - The degradation has been mitigated. We are monitoring to ensure stability.\n- 2026-09-15T19:11:31.396Z: investigating - We are investigating reports of impacted performance for some GitHub services.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://www.githubstatus.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "bk7zgdcq7s9t",
+      "name": "Disruption with some GitHub services",
+      "status": "resolved",
+      "created_at": "2026-09-15T19:11:31.344Z",
+      "updated_at": "2026-09-18T17:08:48.328Z",
+      "monitoring_at": "2026-09-15T19:48:02.813Z",
+      "resolved_at": "2026-09-15T20:00:50.512Z",
+      "impact": "minor",
+      "shortlink": "https://stspg.io/tbh60vgxfxj6",
+      "started_at": "2026-09-15T19:11:31.334Z",
+      "page_id": "kctbh9vrtdwd",
+      "incident_updates": [
+        {
+          "id": "hf9yb7lhfh88",
+          "status": "resolved",
+          "body": "On September 15, 2026 between 15:30 and 20:00 UTC, some Copilot code reviews on pull requests failed to complete. The cause was increased latency in an internal caching service that GitHub Copilot Code Review relies on to coordinate its review jobs. This caused a timeout in lock acquisition, which interrupted the job. We reverted the change to the internal caching service and restored normal operation by 20:00 UTC.<br /><br />We sincerely apologize for the disruption.",
+          "incident_id": "bk7zgdcq7s9t",
+          "created_at": "2026-09-15T20:00:50.512Z",
+          "updated_at": "2026-09-18T17:08:48.325Z",
+          "display_at": "2026-09-15T20:00:50.512Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "y03f7t24mwq4",
+          "status": "monitoring",
+          "body": "The degradation has been mitigated. We are monitoring to ensure stability.",
+          "incident_id": "bk7zgdcq7s9t",
+          "created_at": "2026-09-15T19:48:02.813Z",
+          "updated_at": "2026-09-15T19:48:02.813Z",
+          "display_at": "2026-09-15T19:48:02.813Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "dqhh3qb5jv9p",
+          "status": "investigating",
+          "body": "We are investigating reports of impacted performance for some GitHub services.",
+          "incident_id": "bk7zgdcq7s9t",
+          "created_at": "2026-09-15T19:11:31.396Z",
+          "updated_at": "2026-09-15T19:11:31.396Z",
+          "display_at": "2026-09-15T19:11:31.396Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:18+00:00",
+  "content_sha256": "d2542456253808001d9ee705daed8178f0b93295ac5d6061d3dc140d6b0c5bd3"
+}

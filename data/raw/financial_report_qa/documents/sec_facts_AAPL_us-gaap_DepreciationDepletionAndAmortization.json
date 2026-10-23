@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DepreciationDepletionAndAmortization",
+  "title": "Apple Inc. - Depreciation, Depletion and Amortization",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DepreciationDepletionAndAmortization\nLabel: Depreciation, Depletion and Amortization\nDescription: The aggregate expense recognized in the current period that allocates the cost of tangible assets, intangible assets, or depleting assets to periods that benefit from use of the assets.\nRecent reported values:\nUSD 2024 FY 10-K filed 2024-11-01: 11445000000\nUSD 2025 FY 10-K filed 2025-10-31: 11445000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 3080000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 3080000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 5741000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 5741000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 8571000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 8571000000\nUSD 2025 FY 10-K filed 2025-10-31: 11698000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 3214000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 6653000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 9973000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DepreciationDepletionAndAmortization",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "6acd6c843d1ee40866339f0a468fb23d6100e3c9c1d78aced95cd43824e80b1b"
+}

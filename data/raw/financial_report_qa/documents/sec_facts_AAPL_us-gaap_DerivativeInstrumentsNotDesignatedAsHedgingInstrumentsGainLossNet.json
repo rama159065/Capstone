@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DerivativeInstrumentsNotDesignatedAsHedgingInstrumentsGainLossNet",
+  "title": "Apple Inc. - Derivative Instruments Not Designated as Hedging Instruments, Gain (Loss), Net",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DerivativeInstrumentsNotDesignatedAsHedgingInstrumentsGainLossNet\nLabel: Derivative Instruments Not Designated as Hedging Instruments, Gain (Loss), Net\nDescription: Amount of realized and unrealized gain (loss) of derivative instruments not designated or qualifying as hedging instruments.\nRecent reported values:\nUSD 2011 Q3 10-Q filed 2011-07-20: 15000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 15000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 25000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 25000000\nUSD 2011 FY 10-K filed 2011-10-26: -123000000\nUSD 2010 FY 10-K filed 2010-10-27: -123000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 29000000\nUSD 2011 Q2 10-Q filed 2011-04-21: -55000000\nUSD 2011 Q2 10-Q filed 2011-04-21: -84000000\nUSD 2011 Q3 10-Q filed 2011-07-20: -100000000\nUSD 2011 Q3 10-Q filed 2011-07-20: -45000000\nUSD 2011 FY 10-K filed 2011-10-26: -158000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DerivativeInstrumentsNotDesignatedAsHedgingInstrumentsGainLossNet",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4cb1056ef27b8e35818d4421a841e3994427c32736e415f418a996195559a0a8"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DeferredTaxLiabilitiesUndistributedForeignEarnings",
+  "title": "Apple Inc. - Deferred Tax Liabilities, Undistributed Foreign Earnings",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DeferredTaxLiabilitiesUndistributedForeignEarnings\nLabel: Deferred Tax Liabilities, Undistributed Foreign Earnings\nDescription: Amount of deferred tax liability attributable to taxable temporary differences from undistributed earnings of subsidiary and other recognized entity not within country of domicile. Includes, but is not limited to, other basis differences.\nRecent reported values:\nUSD 2015 FY 10-K filed 2015-10-28: 26868000000\nUSD 2016 FY 10-K filed 2016-10-26: 26868000000\nUSD 2016 FY 10-K filed 2016-10-26: 31436000000\nUSD 2017 FY 10-K filed 2017-11-03: 31436000000\nUSD 2017 FY 10-K filed 2017-11-03: 36355000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 36400000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 36400000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 36400000000\nUSD 2018 FY 10-K filed 2018-11-05: 36355000000\nUSD 2018 FY 10-K filed 2018-11-05: 275000000\nUSD 2019 FY 10-K filed 2019-10-31: 275000000\nUSD 2019 FY 10-K filed 2019-10-31: 330000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DeferredTaxLiabilitiesUndistributedForeignEarnings",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "1647896c88953f2a1363c9961ca0261ab552b856a8371998a11f50f11b05a276"
+}

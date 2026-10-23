@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_GainLossFromComponentsExcludedFromAssessmentOfFairValueHedgeEffectivenessNet",
+  "title": "Apple Inc. - Gain (Loss) from Components Excluded from Assessment of Fair Value Hedge Effectiveness, Net",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: GainLossFromComponentsExcludedFromAssessmentOfFairValueHedgeEffectivenessNet\nLabel: Gain (Loss) from Components Excluded from Assessment of Fair Value Hedge Effectiveness, Net\nDescription: Net gain (loss) relating to components of the gain (loss) on the fair value hedging instrument excluded from the assessment of fair value hedge effectiveness. Recognized in earnings.\nRecent reported values:\nUSD 2020 Q2 10-Q filed 2020-05-01: 126000000\nUSD 2021 Q2 10-Q filed 2021-04-29: 126000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 373000000\nUSD 2021 Q3 10-Q filed 2021-07-28: 373000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 119000000\nUSD 2021 Q3 10-Q filed 2021-07-28: 119000000\nUSD 2020 FY 10-K filed 2020-10-30: 465000000\nUSD 2021 Q1 10-Q filed 2021-01-28: 82000000\nUSD 2021 Q2 10-Q filed 2021-04-29: 142000000\nUSD 2021 Q2 10-Q filed 2021-04-29: 60000000\nUSD 2021 Q3 10-Q filed 2021-07-28: 199000000\nUSD 2021 Q3 10-Q filed 2021-07-28: 57000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "GainLossFromComponentsExcludedFromAssessmentOfFairValueHedgeEffectivenessNet",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "f0f6be9d723650f90f21b592633d0ee37456ea031d4abc29e88dabd9686cd33d"
+}

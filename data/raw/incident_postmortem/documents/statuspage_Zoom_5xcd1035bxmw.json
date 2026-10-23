@@ -1,0 +1,113 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Zoom_5xcd1035bxmw",
+  "title": "Zoom - Service Degradation Affecting Zoom Phone in the EU01 cluster.",
+  "text": "Service: Zoom\nIncident: Service Degradation Affecting Zoom Phone in the EU01 cluster.\nStatus: resolved\nImpact: maintenance\nStarted: 2026-09-29T18:07:06.693-07:00\nResolved: 2026-09-29T18:20:41.771-07:00\nUpdates:\n- 2026-09-29T18:20:41.771-07:00: resolved - This incident has been resolved.\n- 2026-09-29T18:07:06.947-07:00: monitoring - On 09/29/2026 - 09/30/2026, Between 21:08 UTC to 00:44 UTC, A subset of users may have experienced issues with Zoom Phone in the EU01 cluster.\n\nThis incident has been resolved and the affected services have been restored.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.zoom.us/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "5xcd1035bxmw",
+      "name": "Service Degradation Affecting Zoom Phone in the EU01 cluster.",
+      "status": "resolved",
+      "created_at": "2026-09-29T18:07:06.856-07:00",
+      "updated_at": "2026-09-29T18:20:41.795-07:00",
+      "monitoring_at": "2026-09-29T18:07:06.947-07:00",
+      "resolved_at": "2026-09-29T18:20:41.771-07:00",
+      "impact": "maintenance",
+      "shortlink": "https://stspg.io/9pzhzmf13rs4",
+      "started_at": "2026-09-29T18:07:06.693-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "003ffpmtg558",
+          "status": "resolved",
+          "body": "This incident has been resolved.",
+          "incident_id": "5xcd1035bxmw",
+          "created_at": "2026-09-29T18:20:41.771-07:00",
+          "updated_at": "2026-09-29T18:20:41.771-07:00",
+          "display_at": "2026-09-29T18:20:41.771-07:00",
+          "affected_components": [
+            {
+              "code": "773zkp1jzkgl",
+              "name": "Zoom Phone - EMEA - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "hx06zxqdrsxl",
+              "name": "Zoom Phone - EMEA - Calling (Inbound/Outbound)",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "z3vxdnjd4srw",
+          "status": "monitoring",
+          "body": "On 09/29/2026 - 09/30/2026, Between 21:08 UTC to 00:44 UTC, A subset of users may have experienced issues with Zoom Phone in the EU01 cluster.\n\nThis incident has been resolved and the affected services have been restored.",
+          "incident_id": "5xcd1035bxmw",
+          "created_at": "2026-09-29T18:07:06.947-07:00",
+          "updated_at": "2026-09-29T18:07:06.947-07:00",
+          "display_at": "2026-09-29T18:07:06.947-07:00",
+          "affected_components": [
+            {
+              "code": "773zkp1jzkgl",
+              "name": "Zoom Phone - EMEA - Zoom Phone",
+              "old_status": "under_maintenance",
+              "new_status": "operational"
+            },
+            {
+              "code": "hx06zxqdrsxl",
+              "name": "Zoom Phone - EMEA - Calling (Inbound/Outbound)",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "773zkp1jzkgl",
+          "name": "Zoom Phone",
+          "status": "operational",
+          "created_at": "2022-05-03T10:43:27.197-07:00",
+          "updated_at": "2026-10-21T21:30:07.366-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "8sq44v6xhj9v",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "hx06zxqdrsxl",
+          "name": "Calling (Inbound/Outbound)",
+          "status": "operational",
+          "created_at": "2022-05-03T10:43:45.536-07:00",
+          "updated_at": "2026-01-30T22:29:43.323-08:00",
+          "position": 2,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "8sq44v6xhj9v",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:00+00:00",
+  "content_sha256": "29fba5da88c2742b7ddbb1d6fd12c805b384e76cbb41bcff1bffd1caa5a0fbdc"
+}

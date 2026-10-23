@@ -1,0 +1,16 @@
+{
+  "domain": "travel_expense",
+  "document_id": "ecfr_title41_301-71.2",
+  "title": "§ 301-71.2 Standard data elements for travel accounting system.",
+  "text": "§ 301-71.2 Standard data elements for travel accounting system.\n§ 301-71.2 Standard data elements for travel accounting system.\nThe data elements are listed at \nhttps://ussm.gsa.gov/fibf-travel/\ntravelpolicy@gsa.gov;",
+  "source_name": "eCFR Title 41 Public Contracts and Property Management",
+  "source_url": "https://www.govinfo.gov/bulkdata/ECFR/title-41/ECFR-title41.xml",
+  "metadata": {
+    "title_number": 41,
+    "section": "§ 301-71.2",
+    "heading_path": "§ 301-71.2 Standard data elements for travel accounting system.",
+    "source_type": "regulatory_section"
+  },
+  "downloaded_at": "2026-10-22T12:46:24+00:00",
+  "content_sha256": "adea74b3c4195fedf6ab467bc59c97b6a14dd5151bbc7c7a2e556b9db679f44c"
+}

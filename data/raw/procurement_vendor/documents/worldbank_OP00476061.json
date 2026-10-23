@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476061",
+  "title": "Climate Resilience Multi-Phase Programmatic Approach",
+  "text": "bid_description: Improvements of Uyanwatta canal and Bunds in uyanwaththa scheme\nbid_reference_no: CRESMPA-1/RP/WORKS/ID-KAL/NCB/066\nid: OP00476061\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P160005-Climate Resilience Multi-Phase Programmatic Approach Loan/Credit/TF Info: IBRD-89960 Bid/Contract Reference No: CRESMPA-1/RP/WORKS/ID-KAL/NCB/066 Procurement Method: RFB-Request for Bids Scope of Contract: CRESMPA-1/RP/WORKS/ID-KAL/NCB/066 / Improvements of Uyanwatta canal and Bunds in uyanwaththa scheme Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/03/19 Duration of Contract 210 Day(s) Awarded Bidder(s): MTR ENGINEERING (PVT) LTD (1080087) 312/78, Yahampath mawatha, Godigamuwa, Maharagama Country: Sri Lanka Bid Price at Opening LKR Evaluated Bid Price LKR 29604740.34 Signed Contract price LKR 29604740.34 Evaluated Bidder(s): GREENWAVE CONSTRUCTION (PVT) (844559) Srilanka Country: Sri Lanka Bid Price at Opening LKR Evaluated Bid Price LKR 38653506.59 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: CW\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Sri Lanka\nproject_id: P160005\nproject_name: Climate Resilience Multi-Phase Programmatic Approach\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476061",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Sri Lanka",
+      "project_id": "P160005",
+      "project_name": "Climate Resilience Multi-Phase Programmatic Approach",
+      "bid_reference_no": "CRESMPA-1/RP/WORKS/ID-KAL/NCB/066",
+      "bid_description": "Improvements of Uyanwatta canal and Bunds in uyanwaththa scheme",
+      "procurement_group": "CW",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P160005-Climate Resilience Multi-Phase Programmatic Approach<br/><b>Loan/Credit/TF Info:</b>IBRD-89960<br/><b>Bid/Contract Reference No:</b>CRESMPA-1/RP/WORKS/ID-KAL/NCB/066<br/><b>Procurement Method:</b>RFB-Request for Bids<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>CRESMPA-1/RP/WORKS/ID-KAL/NCB/066 / Improvements of Uyanwatta canal and Bunds in uyanwaththa scheme</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/03/19<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>210 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>MTR ENGINEERING (PVT) LTD (1080087)</b><br/>312/78, Yahampath mawatha, Godigamuwa, Maharagama<br/>Country: Sri Lanka<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>LKR<br/><br/>Evaluated Bid Price<br/>LKR 29604740.34</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>LKR 29604740.34</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>GREENWAVE CONSTRUCTION (PVT) (844559)</b><br/>Srilanka<br/>Country: Sri Lanka<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>LKR<br/><br/>Evaluated Bid Price<br/>LKR 38653506.59</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "a8a860d56f591ae48dba99a466f9e11fb88cea6320c91d1bb830fd422a4d1245"
+}

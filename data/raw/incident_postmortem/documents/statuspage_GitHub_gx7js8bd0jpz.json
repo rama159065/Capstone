@@ -1,0 +1,56 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_GitHub_gx7js8bd0jpz",
+  "title": "GitHub - Incident with Actions",
+  "text": "Service: GitHub\nIncident: Incident with Actions\nStatus: resolved\nImpact: major\nStarted: 2026-08-18T09:36:40.316Z\nResolved: 2026-08-18T10:23:23.000Z\nUpdates:\n- 2026-08-18T10:23:23.437Z: resolved - On August 18, 2026, between 05:02 UTC and 11:30 UTC, customers were unable to run jobs on Actions Larger Runners and were unable to view or manage Actions Runners and Runner Groups through the GitHub UI and API. These issues were caused by failures in backend requests resolving essential metadata for starting Larger Runner workflow runs and for reading runner and runner group data. The failures were caused by an expired authentication certificate unique to this service. The certificate had been rotated in KeyVault, but a step to enable use at runtime had been paused to prevent recurrence of previous incidents that had been triggered by this operation. We mitigated the issues by completing the enablement of the new certificate in the backend system. We have added additional monitoring to this and other certificates. The relevant service is also in the process of being replaced as part of our availability and scale work, bringing this authentication path and secret management in line with patterns across all GitHub services.\n- 2026-08-18T09:36:40.354Z: investigating - We are investigating reports of impacted performance for some GitHub services.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://www.githubstatus.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "gx7js8bd0jpz",
+      "name": "Incident with Actions",
+      "status": "resolved",
+      "created_at": "2026-08-18T09:36:40.322Z",
+      "updated_at": "2026-08-24T05:55:48.063Z",
+      "monitoring_at": null,
+      "resolved_at": "2026-08-18T10:23:23.000Z",
+      "impact": "major",
+      "shortlink": "https://stspg.io/q3ck88mqw08z",
+      "started_at": "2026-08-18T09:36:40.316Z",
+      "page_id": "kctbh9vrtdwd",
+      "incident_updates": [
+        {
+          "id": "gc3j6429pg28",
+          "status": "resolved",
+          "body": "On August 18, 2026, between 05:02 UTC and 11:30 UTC, customers were unable to run jobs on Actions Larger Runners and were unable to view or manage Actions Runners and Runner Groups through the GitHub UI and API. <br /><br />These issues were caused by failures in backend requests resolving essential metadata for starting Larger Runner workflow runs and for reading runner and runner group data. The failures were caused by an expired authentication certificate unique to this service. The certificate had been rotated in KeyVault, but a step to enable use at runtime had been paused to prevent recurrence of previous incidents that had been triggered by this operation. <br /><br />We mitigated the issues by completing the enablement of the new certificate in the backend system. We have added additional monitoring to this and other certificates. The relevant service is also in the process of being replaced as part of our availability and scale work, bringing this authentication path and secret management in line with patterns across all GitHub services.",
+          "incident_id": "gx7js8bd0jpz",
+          "created_at": "2026-08-18T10:23:23.437Z",
+          "updated_at": "2026-08-24T05:55:48.057Z",
+          "display_at": "2026-08-18T10:23:23.000Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "7t2kpljytph6",
+          "status": "investigating",
+          "body": "We are investigating reports of impacted performance for some GitHub services.",
+          "incident_id": "gx7js8bd0jpz",
+          "created_at": "2026-08-18T09:36:40.354Z",
+          "updated_at": "2026-08-18T09:36:40.354Z",
+          "display_at": "2026-08-18T09:36:40.354Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:18+00:00",
+  "content_sha256": "0d29f55abdf2740d516984c0726111589954409120d8d4236772bc76865432b9"
+}

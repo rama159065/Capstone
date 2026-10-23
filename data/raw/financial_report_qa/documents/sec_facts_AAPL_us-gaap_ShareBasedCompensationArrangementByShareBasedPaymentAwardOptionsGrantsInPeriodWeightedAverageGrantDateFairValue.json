@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsGrantsInPeriodWeightedAverageGrantDateFairValue",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Grants in Period, Weighted Average Grant Date Fair Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsGrantsInPeriodWeightedAverageGrantDateFairValue\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Grants in Period, Weighted Average Grant Date Fair Value\nDescription: The weighted average grant-date fair value of options granted during the reporting period as calculated by applying the disclosed option pricing methodology.\nRecent reported values:\nUSD/shares 2013 Q2 10-Q filed 2013-04-24: 400.79\nUSD/shares 2012 Q2 10-Q filed 2012-04-25: 400.79\nUSD/shares 2013 Q2 10-Q filed 2013-04-24: 400.79\nUSD/shares 2012 Q2 10-Q filed 2012-04-25: 400.79\nUSD/shares 2012 Q3 10-Q filed 2012-07-25: 400.79\nUSD/shares 2014 Q1 10-Q filed 2014-01-28: 0\nUSD/shares 2013 Q1 10-Q filed 2013-01-24: 407.8\nUSD/shares 2013 Q2 10-Q filed 2013-04-24: 407.8\nUSD/shares 2013 Q3 10-Q filed 2013-07-24: 294.84\nUSD/shares 2013 Q3 10-Q filed 2013-07-24: 294.84\nUSD/shares 2013 FY 10-K filed 2013-10-30: 294.84\nUSD/shares 2014 Q1 10-Q filed 2014-01-28: 333.26",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsGrantsInPeriodWeightedAverageGrantDateFairValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "fddad86d0975bf1455950d977c761d80c2bd69f20abdeb16efcc82456305f6d2"
+}

@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476427",
+  "title": "West Africa Food System Resilience Program (FSRP)",
+  "text": "bid_description: Achat de semences riz au profit des bénéficiaires du Programme dans la Région de Sikasso.\nbid_reference_no: ML-FSRP-ML-361067-GO-RFQ\nid: OP00476427\nnotice_lang_name: French\nnotice_status: Published\nnotice_text: Contract Award Project: P172769-West Africa Food System Resilience Program (FSRP) Loan/Credit/TF Info: IDA-69970 Bid/Contract Reference No: ML-FSRP-ML-361067-GO-RFQ Procurement Method: RFQ-Demande de prix Scope of Contract: Achat de semences riz au profit des bnficiaires pour le Programme de Rsilience du Systme Alimentaire en Afrique de lOuest (PRSA-Mali), dans la Rgion de Sikasso Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2023/06/16 Duration of Contract 5 Day(s) Awarded Bidder(s): SOCIETE GENERALE DE BUSINESS AGRICOLES (874375) sema prs de la tour Afrique Country: Mali Bid Price at Opening XOF 359948850 Evaluated Bid Price XOF 359948850 Signed Contract price XOF 359948850 \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Western and Central Africa\nproject_id: P172769\nproject_name: West Africa Food System Resilience Program (FSRP)\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=200&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476427",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "French",
+      "notice_status": "Published",
+      "project_ctry_name": "Western and Central Africa",
+      "project_id": "P172769",
+      "project_name": "West Africa Food System Resilience Program (FSRP)",
+      "bid_reference_no": "ML-FSRP-ML-361067-GO-RFQ",
+      "bid_description": "Achat de semences riz au profit des bénéficiaires du Programme dans la Région de Sikasso.",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P172769-West Africa Food System Resilience Program (FSRP)<br/><b>Loan/Credit/TF Info:</b>IDA-69970<br/><b>Bid/Contract Reference No:</b>ML-FSRP-ML-361067-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Demande de prix<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Achat de semences riz au profit des bnficiaires pour le Programme de Rsilience du Systme Alimentaire en Afrique de lOuest (PRSA-Mali), dans la Rgion de Sikasso</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2023/06/16<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>5 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>SOCIETE GENERALE DE BUSINESS AGRICOLES (874375)</b><br/>sema prs de la tour Afrique<br/>Country: Mali<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>XOF 359948850<br/><br/>Evaluated Bid Price<br/>XOF 359948850</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>XOF 359948850</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:14+00:00",
+  "content_sha256": "127784a8c7b13c6b0f417396e96bdb2bddf7af1fb726efee2c17f81b5572c79c"
+}

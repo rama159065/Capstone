@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ProductWarrantyAccrualWarrantiesIssued",
+  "title": "Apple Inc. - Standard and Extended Product Warranty Accrual, Increase for Warranties Issued",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ProductWarrantyAccrualWarrantiesIssued\nLabel: Standard and Extended Product Warranty Accrual, Increase for Warranties Issued\nDescription: Amount of increase in the standard and extended product warranty accrual from warranties issued.\nRecent reported values:\nUSD 2012 Q2 10-Q filed 2012-04-25: 448000000\nUSD 2011 Q2 10-Q filed 2011-04-21: 448000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 1219000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 1219000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 375000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 375000000\nUSD 2011 FY 10-K filed 2011-10-26: 1626000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 837000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 1303000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 466000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 1626000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 323000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ProductWarrantyAccrualWarrantiesIssued",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "0fc6d4418479d2c5425eef6d24799a4a6dac28f6e25dfb203653c04d853471bc"
+}

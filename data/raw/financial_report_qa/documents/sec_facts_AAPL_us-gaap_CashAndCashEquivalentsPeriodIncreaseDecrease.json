@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CashAndCashEquivalentsPeriodIncreaseDecrease",
+  "title": "Apple Inc. - Cash and Cash Equivalents, Period Increase (Decrease)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CashAndCashEquivalentsPeriodIncreaseDecrease\nLabel: Cash and Cash Equivalents, Period Increase (Decrease)\nDescription: Amount of increase (decrease) in cash and cash equivalents. Cash and cash equivalents are the amount of currency on hand as well as demand deposits with banks or financial institutions. Includes other kinds of accounts that have the general characteristics of demand deposits. Also includes short-term, highly liquid investments that are both readily convertible to known amounts of cash and so near their maturity that they present insignificant risk of changes in value because of changes in interest rates. Includes effect from exchange rate changes.\nRecent reported values:\nUSD 2017 Q2 10-Q filed 2017-05-03: -5327000000\nUSD 2018 Q2 10-Q filed 2018-05-02: -5327000000\nUSD 2017 Q3 10-Q filed 2017-08-02: -1913000000\nUSD 2018 Q3 10-Q filed 2018-08-01: -1913000000\nUSD 2017 FY 10-K filed 2017-11-03: -195000000\nUSD 2018 FY 10-K filed 2018-11-05: -195000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 7202000000\nUSD 2019 Q1 10-Q filed 2019-01-30: 7202000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 24770000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 11682000000\nUSD 2018 FY 10-K filed 2018-11-05: 5624000000\nUSD 2019 Q1 10-Q filed 2019-01-30: 18858000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CashAndCashEquivalentsPeriodIncreaseDecrease",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4a2e166b24fe12aedce4e7a40139e76edbb61ea4f96c115c279a265c32839126"
+}

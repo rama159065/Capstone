@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CommonStockSharesAuthorized",
+  "title": "Apple Inc. - Common Stock, Shares Authorized",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CommonStockSharesAuthorized\nLabel: Common Stock, Shares Authorized\nDescription: The maximum number of common shares permitted to be issued by an entity's charter and bylaws.\nRecent reported values:\nshares 2025 Q3 10-Q filed 2025-08-01: 50400000000\nshares 2025 FY 10-K filed 2025-10-31: 50400000000\nshares 2025 Q1 10-Q filed 2025-01-31: 50400000000\nshares 2025 Q2 10-Q filed 2025-05-02: 50400000000\nshares 2025 Q3 10-Q filed 2025-08-01: 50400000000\nshares 2025 FY 10-K filed 2025-10-31: 50400000000\nshares 2026 Q1 10-Q filed 2026-01-30: 50400000000\nshares 2026 Q2 10-Q filed 2026-05-01: 50400000000\nshares 2026 Q3 10-Q filed 2026-07-31: 50400000000\nshares 2026 Q1 10-Q filed 2026-01-30: 50400000000\nshares 2026 Q2 10-Q filed 2026-05-01: 50400000000\nshares 2026 Q3 10-Q filed 2026-07-31: 50400000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CommonStockSharesAuthorized",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "fe33e661239bb624ac411ba8a1426daa81913493cb6142c5aef714b3113254b5"
+}

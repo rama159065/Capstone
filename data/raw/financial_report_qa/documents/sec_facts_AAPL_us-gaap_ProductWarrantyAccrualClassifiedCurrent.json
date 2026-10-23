@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ProductWarrantyAccrualClassifiedCurrent",
+  "title": "Apple Inc. - Product Warranty Accrual, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ProductWarrantyAccrualClassifiedCurrent\nLabel: Product Warranty Accrual, Current\nDescription: Carrying value as of the balance sheet date of obligations incurred through that date and payable for estimated claims under standard and extended warranty protection rights granted to customers. For classified balance sheets, represents the current portion of the liabilities (due within one year or within the normal operating cycle if longer).\nRecent reported values:\nUSD 2011 Q2 10-Q filed 2011-04-21: 1103000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 1190000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 1190000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 1240000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 1240000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 1240000000\nUSD 2011 FY 10-K filed 2011-10-26: 1240000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 1676000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 1676000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 1678000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 1678000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 1565000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ProductWarrantyAccrualClassifiedCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "5a830625b457c3905c32b0294a9d11ec9b993d8c11f771a00097fbe35df266b3"
+}

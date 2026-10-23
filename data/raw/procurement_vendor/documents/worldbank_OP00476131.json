@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476131",
+  "title": "Gazetted Forests Management Project",
+  "text": "bid_description: Réaliser les travaux d'ouverture et d'aménagement des pistes d'accès aux plantations dans la forêt classée de Akpaka.\nbid_reference_no: BJ-WACA -536374-CW-RFQ\nid: OP00476131\nnotice_lang_name: French\nnotice_status: Published\nnotice_text: Contract Award Project: P167678-Gazetted Forests Management Project Loan/Credit/TF Info: IDA-D4770 Bid/Contract Reference No: BJ-WACA -536374-CW-RFQ Procurement Method: RFQ-Demande de prix Scope of Contract: Ralisation des travaux douverture et damnagement des pistes daccs aux plantations de la fort classe de Akpaka. Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/06/26 Duration of Contract 3 Month(s) Awarded Bidder(s): SOCOTRAME (1136838) Tl : 01 95 22 21 27 Country: Bnin Bid Price at Opening XOF 233813649 Evaluated Bid Price XOF 233813649 Signed Contract price XOF 233813649 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: CW\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Benin\nproject_id: P167678\nproject_name: Gazetted Forests Management Project\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476131",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "French",
+      "notice_status": "Published",
+      "project_ctry_name": "Benin",
+      "project_id": "P167678",
+      "project_name": "Gazetted Forests Management Project",
+      "bid_reference_no": "BJ-WACA -536374-CW-RFQ",
+      "bid_description": "Réaliser les travaux d'ouverture et d'aménagement des pistes d'accès aux plantations  dans la forêt classée de Akpaka.",
+      "procurement_group": "CW",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P167678-Gazetted Forests Management Project<br/><b>Loan/Credit/TF Info:</b>IDA-D4770<br/><b>Bid/Contract Reference No:</b>BJ-WACA -536374-CW-RFQ<br/><b>Procurement Method:</b>RFQ-Demande de prix<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Ralisation des travaux douverture et damnagement des pistes daccs aux plantations de la fort classe de Akpaka.</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/06/26<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>3 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>SOCOTRAME (1136838)</b><br/>Tl : 01 95 22 21 27<br/>Country: Bnin<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>XOF 233813649<br/><br/>Evaluated Bid Price<br/>XOF 233813649</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>XOF 233813649</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "230d58a0cb43a452fdcf4cc437657849fd93b0b8a94d282dfc064638398616bf"
+}

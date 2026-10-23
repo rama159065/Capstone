@@ -1,0 +1,69 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Atlassian_w81fyrpz5qcl",
+  "title": "Atlassian - App switcher not loading in Jira and Confluence for some customers",
+  "text": "Service: Atlassian\nIncident: App switcher not loading in Jira and Confluence for some customers\nStatus: resolved\nImpact: major\nStarted: 2019-07-01T09:03:21.590Z\nResolved: 2019-07-01T11:03:40.319Z\nUpdates:\n- 2019-07-01T11:03:40.319Z: resolved - The issue has been resolved and the service is operating normally.\n- 2019-07-01T10:04:20.497Z: investigating - We are continuing to investigate this issue.\n- 2019-07-01T09:03:21.658Z: investigating - We are investigating an issue with app switcher that is impacting some Atlassian Cloud customers. We will provide more details within the next hour.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.atlassian.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "w81fyrpz5qcl",
+      "name": "App switcher not loading in Jira and Confluence for some customers",
+      "status": "resolved",
+      "created_at": "2019-07-01T09:03:21.600Z",
+      "updated_at": "2019-07-01T11:03:40.334Z",
+      "monitoring_at": null,
+      "resolved_at": "2019-07-01T11:03:40.319Z",
+      "impact": "major",
+      "shortlink": "http://stspg.io/d2bfd779a",
+      "started_at": "2019-07-01T09:03:21.590Z",
+      "page_id": "0f54fx204jpt",
+      "incident_updates": [
+        {
+          "id": "8hljmggs853m",
+          "status": "resolved",
+          "body": "The issue has been resolved and the service is operating normally.",
+          "incident_id": "w81fyrpz5qcl",
+          "created_at": "2019-07-01T11:03:40.319Z",
+          "updated_at": "2019-07-01T11:03:40.319Z",
+          "display_at": "2019-07-01T11:03:40.319Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "bb8yq8pv5tyk",
+          "status": "investigating",
+          "body": "We are continuing to investigate this issue.",
+          "incident_id": "w81fyrpz5qcl",
+          "created_at": "2019-07-01T10:04:20.497Z",
+          "updated_at": "2019-07-01T10:04:20.497Z",
+          "display_at": "2019-07-01T10:04:20.497Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "mst1t4f5f68n",
+          "status": "investigating",
+          "body": "We are investigating an issue with app switcher that is impacting some Atlassian Cloud customers. We will provide more details within the next hour.",
+          "incident_id": "w81fyrpz5qcl",
+          "created_at": "2019-07-01T09:03:21.658Z",
+          "updated_at": "2019-07-01T10:05:22.720Z",
+          "display_at": "2019-07-01T09:03:21.658Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:48+00:00",
+  "content_sha256": "2b3a89f8afeefacbabd7290ebf16fdf8a6d041fd5a56ef30b8c65642d3384ba4"
+}

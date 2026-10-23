@@ -1,0 +1,17 @@
+{
+  "domain": "competitive_research",
+  "document_id": "sec_competitive_AMZN_0001104659-25-033442",
+  "title": "AMAZON COM INC DEF 14A filed 2025-04-10",
+  "text": "Company: AMAZON COM INC\nTicker: AMZN\nCIK: 0001018724\nSIC: 5961 Retail-Catalog & Mail-Order Houses\nBusiness address: {'street1': '410 TERRY AVENUE NORTH', 'street2': None, 'city': 'SEATTLE', 'stateOrCountry': 'WA', 'zipCode': '98109', 'stateOrCountryDescription': 'WA', 'isForeignLocation': None, 'foreignStateTerritory': None, 'country': None, 'countryCode': None}\nForm: DEF 14A\nFiling date: 2025-04-10\nAccession number: 0001104659-25-033442\nPrimary document: tm252295-1_def14a.htm\nPrimary document description: DEF 14A\nFiling URL: https://www.sec.gov/Archives/edgar/data/1018724/000110465925033442/tm252295-1_def14a.htm",
+  "source_name": "SEC EDGAR submissions",
+  "source_url": "https://data.sec.gov/submissions/CIK0001018724.json",
+  "metadata": {
+    "ticker": "AMZN",
+    "cik": "0001018724",
+    "form": "DEF 14A",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/1018724/000110465925033442/tm252295-1_def14a.htm",
+    "source_type": "sec_filing_metadata"
+  },
+  "downloaded_at": "2026-10-22T12:41:54+00:00",
+  "content_sha256": "73452db3289f9dff0220914fdb38d5bfdf7006841cdd13f35669bad72120cadc"
+}

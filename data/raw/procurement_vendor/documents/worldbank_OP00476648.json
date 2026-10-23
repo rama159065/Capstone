@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476648",
+  "title": "Uttarakhand Disaster Preparedness and Resilience Project",
+  "text": "bid_description: Repairing of damaged sewer line and cleaning of sewer line and manhole at Mayur Vihar Bridge to Kandli Bridge area, Dehradun and its appurtenant works (MH.124-125)\nbid_reference_no: 04 RF 3289-343-118\nid: OP00476648\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P179749-Uttarakhand Disaster Preparedness and Resilience Project Loan/Credit/TF Info: IBRD-96540 Bid/Contract Reference No: 04 RF 3289-343-118 Procurement Method: RFQ-Request for Quotations Scope of Contract: Repairing of damaged sewer line and cleaning of sewer line and manhole at Mayur Vihar Bridge to Kandli Bridge area, Dehradun and its appurtenant works (MH.124-125) Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/01/15 Duration of Contract 3 Month(s) Awarded Bidder(s): DISHA ASSOCIATE (1137467) durga enclave dehradun Country: India Bid Price at Opening INR 782550.00 Evaluated Bid Price INR 782550.00 Signed Contract price INR 782550.00 Evaluated Bidder(s): M R ENGINEERS AND CONTRACTORS (1137466) Doon vihar Jakhan Dehradun Country: India Bid Price at Opening INR 792220.00 Evaluated Bid Price INR 792220.00 S E AND C SERVIC (1137694) Laxmi Vihar Haridwar Country: India Bid Price at Opening INR 793740.00 Evaluated Bid Price INR 793740.00 \nnotice_type: Contract Award\nnoticedate: 21-Oct-2026\nprocurement_group: CW\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: India\nproject_id: P179749\nproject_name: Uttarakhand Disaster Preparedness and Resilience Project\nsubmission_date: 2026-10-21T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=100&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476648",
+      "notice_type": "Contract Award",
+      "noticedate": "21-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "India",
+      "project_id": "P179749",
+      "project_name": "Uttarakhand Disaster Preparedness and Resilience Project",
+      "bid_reference_no": "04 RF 3289-343-118",
+      "bid_description": "Repairing of damaged sewer line and cleaning of sewer line and manhole at Mayur Vihar Bridge to Kandli Bridge area, Dehradun and its appurtenant works (MH.124-125)",
+      "procurement_group": "CW",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-21T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P179749-Uttarakhand Disaster Preparedness and Resilience Project<br/><b>Loan/Credit/TF Info:</b>IBRD-96540<br/><b>Bid/Contract Reference No:</b>04 RF 3289-343-118<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Repairing of damaged sewer line and cleaning of sewer line and manhole at Mayur Vihar Bridge to Kandli Bridge area, Dehradun and its appurtenant works (MH.124-125)</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/01/15<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>3 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>DISHA ASSOCIATE (1137467)</b><br/>durga enclave dehradun<br/>Country: India<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>INR 782550.00<br/><br/>Evaluated Bid Price<br/>INR 782550.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>INR 782550.00</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>M R ENGINEERS AND CONTRACTORS (1137466)</b><br/>Doon vihar Jakhan Dehradun<br/>Country: India<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>INR 792220.00<br/><br/>Evaluated Bid Price<br/>INR 792220.00</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>S E AND C SERVIC (1137694)</b><br/>Laxmi Vihar Haridwar<br/>Country: India<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>INR 793740.00<br/><br/>Evaluated Bid Price<br/>INR 793740.00</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:11+00:00",
+  "content_sha256": "419536eef6bf8b175a9b9f34d32ae6c3161405f42bf00211f197aada1ba71d6d"
+}

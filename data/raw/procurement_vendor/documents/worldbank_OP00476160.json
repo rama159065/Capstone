@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476160",
+  "title": "Livestock Productivity and Resilience Support Project",
+  "text": "bid_description: Purchase of 15 No Laptop Computers for Operational Efficiency\nbid_reference_no: NG-TARABA L-PRES-561600-GO-RFQ\nid: OP00476160\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P160865-Livestock Productivity and Resilience Support Project Loan/Credit/TF Info: IDA-70570 Bid/Contract Reference No: NG-TARABA L-PRES-561600-GO-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: PURCHASE OF 15 NO. LAPTOP COMPUTERS FOR OPERATIONAL EFFICIENCY Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/08/14 Duration of Contract 4 Week(s) Awarded Bidder(s): MONLAK GLOBAL MULTIBIZ COMPANY LTD (1136923) No. 36, Barde Way, Jalingo, Taraba State Country: Nigeria Bid Price at Opening NGN 36450000.00 Evaluated Bid Price NGN 36450000.00 Signed Contract price NGN 36450000.00 Evaluated Bidder(s): TECHCLONE NIGERIA LTD (1136927) No. 51, Sabon Gari Road, Opp. Federal Ministry of Agric. Jalingo, Taraba State Country: Nigeria Bid Price at Opening NGN 42150000.00 Evaluated Bid Price NGN 42150000.00 THINK TREK INTERBIZ LTD (1136925) No. 220, Lamurde Street, Jalingo, Taraba State Country: Nigeria Bid Price at Opening NGN 42000000.00 Evaluated Bid Price NGN 42000000.00 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Nigeria\nproject_id: P160865\nproject_name: Livestock Productivity and Resilience Support Project\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=400&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476160",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Nigeria",
+      "project_id": "P160865",
+      "project_name": "Livestock Productivity and Resilience Support Project",
+      "bid_reference_no": "NG-TARABA L-PRES-561600-GO-RFQ",
+      "bid_description": "Purchase of 15 No Laptop Computers for Operational Efficiency",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P160865-Livestock Productivity and Resilience Support Project<br/><b>Loan/Credit/TF Info:</b>IDA-70570<br/><b>Bid/Contract Reference No:</b>NG-TARABA L-PRES-561600-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>PURCHASE OF 15 NO. LAPTOP COMPUTERS FOR OPERATIONAL EFFICIENCY</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/08/14<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>4 Week(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>MONLAK GLOBAL MULTIBIZ COMPANY LTD (1136923)</b><br/>No. 36, Barde Way, Jalingo, Taraba State<br/>Country: Nigeria<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>NGN 36450000.00<br/><br/>Evaluated Bid Price<br/>NGN 36450000.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>NGN 36450000.00</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>TECHCLONE NIGERIA LTD (1136927)</b><br/>No. 51, Sabon Gari Road, Opp. Federal Ministry of Agric. Jalingo, Taraba State<br/>Country: Nigeria<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>NGN 42150000.00<br/><br/>Evaluated Bid Price<br/>NGN 42150000.00</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>THINK TREK INTERBIZ LTD (1136925)</b><br/>No. 220, Lamurde Street, Jalingo, Taraba State<br/>Country: Nigeria<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>NGN 42000000.00<br/><br/>Evaluated Bid Price<br/>NGN 42000000.00</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:21+00:00",
+  "content_sha256": "c70e0a088fe0ec57115d6e84671198e48678ad8a07ad40fb1fb50a40229accc4"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_Liabilities",
+  "title": "Apple Inc. - Liabilities",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: Liabilities\nLabel: Liabilities\nDescription: Sum of the carrying amounts as of the balance sheet date of all liabilities that are recognized. Liabilities are probable future sacrifices of economic benefits arising from present obligations of an entity to transfer assets or provide services to other entities in the future.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 308030000000\nUSD 2025 FY 10-K filed 2025-10-31: 308030000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 277327000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 264437000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 265665000000\nUSD 2025 FY 10-K filed 2025-10-31: 285508000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 285508000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 285508000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 285508000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 291107000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 264591000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 275746000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "Liabilities",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "26fb1d515c7a57df3f178309d3515fed982a8f77d73e164912c4dadb0b2b474e"
+}

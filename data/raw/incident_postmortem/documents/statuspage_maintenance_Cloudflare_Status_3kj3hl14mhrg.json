@@ -1,0 +1,67 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Cloudflare_Status_3kj3hl14mhrg",
+  "title": "Cloudflare Status - MAA (Chennai) on 2026-10-28",
+  "text": "Service: Cloudflare Status\nMaintenance: MAA (Chennai) on 2026-10-28\nStatus: scheduled\nImpact: maintenance\nScheduled for: 2026-10-28T21:00:00.000Z\nScheduled until: 2026-10-29T01:00:00.000Z\nUpdates:\n- 2026-09-17T17:11:21.004Z: scheduled - We will be performing scheduled maintenance in MAA (Chennai) datacenter between 2026-10-28 21:00 and 2026-10-29 01:00 UTC.\n\nTraffic might be re-routed from this location, hence there is a possibility of a slight increase in latency during this maintenance window for end-users in the affected region. For PNI / CNI customers connecting with us in this location, please make sure you are expecting this traffic to fail over elsewhere during this maintenance window as network interfaces in this datacentre may become temporarily unavailable.\n\nYou can now subscribe to these notifications via Cloudflare dashboard and receive these updates directly via email, PagerDuty and webhooks (based on your plan): https://developers.cloudflare.com/notifications/notification-available/#cloudflare-status.",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://www.cloudflarestatus.com/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "3kj3hl14mhrg",
+      "name": "MAA (Chennai) on 2026-10-28",
+      "status": "scheduled",
+      "created_at": "2026-09-17T17:11:20.000Z",
+      "updated_at": "2026-09-17T17:11:21.000Z",
+      "monitoring_at": null,
+      "resolved_at": null,
+      "impact": "maintenance",
+      "shortlink": "https://www.cloudflarestatus.com/incidents/3kj3hl14mhrg",
+      "started_at": "2026-09-17T17:11:20.000Z",
+      "page_id": "yh6f0r4529hb",
+      "incident_updates": [
+        {
+          "id": "h3nqf5s0mxm9",
+          "status": "scheduled",
+          "body": "We will be performing scheduled maintenance in MAA (Chennai) datacenter between 2026-10-28 21:00 and 2026-10-29 01:00 UTC.\n\nTraffic might be re-routed from this location, hence there is a possibility of a slight increase in latency during this maintenance window for end-users in the affected region. For PNI / CNI customers connecting with us in this location, please make sure you are expecting this traffic to fail over elsewhere during this maintenance window as network interfaces in this datacentre may become temporarily unavailable.\n\nYou can now subscribe to these notifications via Cloudflare dashboard and receive these updates directly via email, PagerDuty and webhooks (based on your plan): https://developers.cloudflare.com/notifications/notification-available/#cloudflare-status.",
+          "incident_id": "3kj3hl14mhrg",
+          "created_at": "2026-09-17T17:11:21.004Z",
+          "updated_at": "2026-09-17T17:11:21.004Z",
+          "display_at": "2026-09-17T17:11:21.004Z",
+          "affected_components": [
+            {
+              "code": "d9znrq17k6ny",
+              "name": "Asia - Chennai, India - (MAA)",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "d9znrq17k6ny",
+          "name": "Chennai, India - (MAA)",
+          "status": "operational",
+          "created_at": "2015-11-12T05:20:52.000Z",
+          "updated_at": "2026-10-20T21:02:50.000Z",
+          "position": 12,
+          "description": null,
+          "showcase": false,
+          "start_date": null,
+          "group_id": "77867vxkttgw",
+          "page_id": "yh6f0r4529hb",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2026-10-28T21:00:00.000Z",
+      "scheduled_until": "2026-10-29T01:00:00.000Z"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:48:24+00:00",
+  "content_sha256": "259e91cc09696d16ac7bdc9a92b8f55fabc84d1f4fc9ddefa721ec1bea741237"
+}

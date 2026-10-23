@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_LongTermPurchaseCommitmentAmount",
+  "title": "Apple Inc. - Long-term Purchase Commitment, Amount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: LongTermPurchaseCommitmentAmount\nLabel: Long-term Purchase Commitment, Amount\nDescription: The minimum amount the entity agreed to spend under the long-term purchase commitment.\nRecent reported values:\nUSD 2012 Q2 10-Q filed 2012-04-25: 1400000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 302000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 302000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "LongTermPurchaseCommitmentAmount",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "7d8ddf26fb61aed5ee6933ac8ea4b5914565422cc4c586765852e29632ea9245"
+}

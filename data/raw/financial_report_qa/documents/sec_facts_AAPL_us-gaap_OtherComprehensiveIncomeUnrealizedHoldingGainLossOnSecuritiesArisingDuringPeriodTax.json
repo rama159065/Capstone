@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeUnrealizedHoldingGainLossOnSecuritiesArisingDuringPeriodTax",
+  "title": "Apple Inc. - OCI, Debt Securities, Available-for-Sale, Unrealized Holding Gain (Loss), before Adjustment, Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeUnrealizedHoldingGainLossOnSecuritiesArisingDuringPeriodTax\nLabel: OCI, Debt Securities, Available-for-Sale, Unrealized Holding Gain (Loss), before Adjustment, Tax\nDescription: Amount, before adjustment, of tax expense (benefit) for unrealized holding gain (loss) on investment in debt security measured at fair value with change in fair value recognized in other comprehensive income (available-for-sale). Excludes tax expense (benefit) for unrealized gain (loss) on investment in debt security measured at amortized cost (held-to-maturity) from transfer to available-for-sale.\nRecent reported values:\nUSD 2017 Q3 10-Q filed 2017-08-02: -536000000\nUSD 2018 Q3 10-Q filed 2018-08-01: -536000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 197000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 197000000\nUSD 2017 FY 10-K filed 2017-11-03: -425000000\nUSD 2018 FY 10-K filed 2018-11-05: -425000000\nUSD 2018 Q1 10-Q filed 2018-02-02: -464000000\nUSD 2018 Q2 10-Q filed 2018-05-02: -1005000000\nUSD 2018 Q2 10-Q filed 2018-05-02: -541000000\nUSD 2018 Q3 10-Q filed 2018-08-01: -1159000000\nUSD 2018 Q3 10-Q filed 2018-08-01: -154000000\nUSD 2018 FY 10-K filed 2018-11-05: -1156000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeUnrealizedHoldingGainLossOnSecuritiesArisingDuringPeriodTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b1dedfdef476f5d8d782243b796be7254321c4a799210930065529272ef40d55"
+}

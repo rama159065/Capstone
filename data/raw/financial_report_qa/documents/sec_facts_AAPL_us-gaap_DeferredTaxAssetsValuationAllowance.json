@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DeferredTaxAssetsValuationAllowance",
+  "title": "Apple Inc. - Deferred Tax Assets, Valuation Allowance",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DeferredTaxAssetsValuationAllowance\nLabel: Deferred Tax Assets, Valuation Allowance\nDescription: Amount of deferred tax assets for which it is more likely than not that a tax benefit will not be realized.\nRecent reported values:\nUSD 2020 FY 10-K filed 2020-10-30: 747000000\nUSD 2020 FY 10-K filed 2020-10-30: 1041000000\nUSD 2021 FY 10-K filed 2021-10-29: 1041000000\nUSD 2021 FY 10-K filed 2021-10-29: 4903000000\nUSD 2022 FY 10-K filed 2022-10-28: 4903000000\nUSD 2022 FY 10-K filed 2022-10-28: 7530000000\nUSD 2023 FY 10-K filed 2023-11-03: 7530000000\nUSD 2023 FY 10-K filed 2023-11-03: 8374000000\nUSD 2024 FY 10-K filed 2024-11-01: 8374000000\nUSD 2024 FY 10-K filed 2024-11-01: 8866000000\nUSD 2025 FY 10-K filed 2025-10-31: 8866000000\nUSD 2025 FY 10-K filed 2025-10-31: 10966000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DeferredTaxAssetsValuationAllowance",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "443b3f2279c497e6dbeae3f6bef1bdcc52ba500efaea971844a8344812325792"
+}

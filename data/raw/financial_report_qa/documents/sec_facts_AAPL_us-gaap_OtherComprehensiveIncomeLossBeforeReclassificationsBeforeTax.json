@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeLossBeforeReclassificationsBeforeTax",
+  "title": "Apple Inc. - Other Comprehensive Income (Loss), before Reclassifications, before Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeLossBeforeReclassificationsBeforeTax\nLabel: Other Comprehensive Income (Loss), before Reclassifications, before Tax\nDescription: Amount before tax and reclassification adjustments of other comprehensive income (loss).\nRecent reported values:\nUSD 2014 Q3 10-Q filed 2014-07-23: 843000000\nUSD 2014 FY 10-K filed 2014-10-27: 1938000000\nUSD None None 8-K filed 2015-01-28: 1938000000\nUSD 2015 FY 10-K filed 2015-10-28: 1938000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 1569000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 3383000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 2749000000\nUSD 2015 FY 10-K filed 2015-10-28: 1987000000\nUSD 2016 Q1 10-Q filed 2016-01-27: -1226000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 233000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeLossBeforeReclassificationsBeforeTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "034f1f2a6af316891883de074f6c7e4be012226f26302343c04b5fb399dd3ce4"
+}

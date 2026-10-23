@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeLossTaxPortionAttributableToParent1",
+  "title": "Apple Inc. - Other Comprehensive Income (Loss), Tax, Portion Attributable to Parent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeLossTaxPortionAttributableToParent1\nLabel: Other Comprehensive Income (Loss), Tax, Portion Attributable to Parent\nDescription: Amount of tax expense (benefit) allocated to other comprehensive income (loss) attributable to parent entity.\nRecent reported values:\nUSD 2016 FY 10-K filed 2016-10-26: -622000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 460000000\nUSD 2016 FY 10-K filed 2016-10-26: 762000000\nUSD 2017 Q1 10-Q filed 2017-02-01: -615000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeLossTaxPortionAttributableToParent1",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "f46560a630a3e05b931ae708b91fa94ad093a8f2982505be44447fedc92d2fb6"
+}

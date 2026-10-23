@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_HedgedLiabilityFairValueHedge",
+  "title": "Apple Inc. - Hedged Liability, Fair Value Hedge",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: HedgedLiabilityFairValueHedge\nLabel: Hedged Liability, Fair Value Hedge\nDescription: Amount of liability hedged in fair value hedging relationship.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 13500000000\nUSD 2025 FY 10-K filed 2025-10-31: 13500000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 13300000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 13400000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 12500000000\nUSD 2025 FY 10-K filed 2025-10-31: 12600000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 12600000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 12600000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 12600000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 12600000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 10400000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 10400000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "HedgedLiabilityFairValueHedge",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "9b79fd45e175acbc05ac3b14d15277a9710bee635f37c803484f3b09fa575c9a"
+}

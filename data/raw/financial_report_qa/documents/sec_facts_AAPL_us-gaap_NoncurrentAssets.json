@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_NoncurrentAssets",
+  "title": "Apple Inc. - Long-Lived Assets",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: NoncurrentAssets\nLabel: Long-Lived Assets\nDescription: Long-lived assets other than financial instruments, long-term customer relationships of a financial institution, mortgage and other servicing rights, deferred policy acquisition costs, and deferred tax assets.\nRecent reported values:\nUSD 2020 FY 10-K filed 2020-10-30: 37378000000\nUSD 2020 FY 10-K filed 2020-10-30: 36766000000\nUSD 2021 FY 10-K filed 2021-10-29: 36766000000\nUSD 2021 FY 10-K filed 2021-10-29: 39440000000\nUSD 2022 FY 10-K filed 2022-10-28: 39440000000\nUSD 2022 FY 10-K filed 2022-10-28: 42117000000\nUSD 2023 FY 10-K filed 2023-11-03: 42117000000\nUSD 2023 FY 10-K filed 2023-11-03: 43715000000\nUSD 2024 FY 10-K filed 2024-11-01: 43715000000\nUSD 2024 FY 10-K filed 2024-11-01: 45680000000\nUSD 2025 FY 10-K filed 2025-10-31: 45680000000\nUSD 2025 FY 10-K filed 2025-10-31: 49834000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "NoncurrentAssets",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "3da41a3e10c846610ee19d0b1cae2902d067fcdd707a7f26cd664cd8a21477ea"
+}

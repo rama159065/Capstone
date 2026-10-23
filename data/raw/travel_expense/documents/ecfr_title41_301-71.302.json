@@ -1,0 +1,16 @@
+{
+  "domain": "travel_expense",
+  "document_id": "ecfr_title41_301-71.302",
+  "title": "§ 301-71.302 Required data for travel advance accounting system.",
+  "text": "§ 301-71.302 Required data for travel advance accounting system.\n§ 301-71.302 Required data for travel advance accounting system.\nThe travel advance accounting system must capture:\n\n(a) Names and Social Security numbers of employees with advances;\n\n(b) Amount of each advance;\n\n(c) Issuance date; and\n\n(d) Reconciliation date for unused advance portions.",
+  "source_name": "eCFR Title 41 Public Contracts and Property Management",
+  "source_url": "https://www.govinfo.gov/bulkdata/ECFR/title-41/ECFR-title41.xml",
+  "metadata": {
+    "title_number": 41,
+    "section": "§ 301-71.302",
+    "heading_path": "§ 301-71.302 Required data for travel advance accounting system.",
+    "source_type": "regulatory_section"
+  },
+  "downloaded_at": "2026-10-22T12:46:24+00:00",
+  "content_sha256": "5b9068be9a040952631ab9a5444f9b9d615c419085d087129eecbcaa1bd4e394"
+}

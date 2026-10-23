@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00475948",
+  "title": "Digital West Bank & Gaza Project",
+  "text": "bid_description: ERC Operational Acceptance Testing Verification Services\nbid_reference_no: GZ-MTIT-548211-CS-CDS\nid: OP00475948\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P174355-Digital West Bank & Gaza Project Loan/Credit/TF Info: TF-B5236 Bid/Contract Reference No: GZ-MTIT-548211-CS-CDS Procurement Method: CDS-Direct Selection Scope of Contract: ERC Operational Acceptance Testing Verification Services Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/15 Duration of Contract 7.5 Month(s) Awarded Firm(s): TADAS MAROIKAS (998312) Country: Lithuania Final Evaluation Price USD 19000.00 Signed Contract Price USD 19000.00 Price: Currency: Amount: United States Dollars (United States Dollars) 19000.00 \nnotice_type: Contract Award\nnoticedate: 18-Oct-2026\nprocurement_group: CS\nprocurement_method_code: CDS\nprocurement_method_name: Direct Selection\nproject_ctry_name: West Bank and Gaza\nproject_id: P174355\nproject_name: Digital West Bank & Gaza Project\nsubmission_date: 2026-10-18T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=400&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00475948",
+      "notice_type": "Contract Award",
+      "noticedate": "18-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "West Bank and Gaza",
+      "project_id": "P174355",
+      "project_name": "Digital West Bank & Gaza Project",
+      "bid_reference_no": "GZ-MTIT-548211-CS-CDS",
+      "bid_description": "ERC Operational Acceptance Testing Verification Services",
+      "procurement_group": "CS",
+      "procurement_method_code": "CDS",
+      "procurement_method_name": "Direct Selection",
+      "submission_date": "2026-10-18T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P174355-Digital West Bank & Gaza Project<br/><b>Loan/Credit/TF Info:</b>TF-B5236<br/><b>Bid/Contract Reference No:</b>GZ-MTIT-548211-CS-CDS<br/><b>Procurement Method:</b>CDS-Direct Selection<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>ERC Operational Acceptance Testing Verification Services</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/15<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>7.5 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Firm(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='row col-sm-12'><div class='col-sm-6'><b>TADAS MAROIKAS (998312)</b><br/>Country: Lithuania<br/></div></div><br/><div class='col-sm-6'><table width='100%'><tbody></tbody></table></div><div class='col-sm-6'><p></p><b>Final Evaluation Price</b><br/>USD 19000.00<br/><p></p><b>Signed Contract Price</b><br/>USD 19000.00</div><div class='row col-sm-12'><div class='col-xs-12'><b>Price:</b><br/></div></div><div class='row col-sm-12'><div class='col-xs-4'>Currency:</div><div class='col-xs-4'>Amount:</div></div><div class='row col-sm-12'><div class='col-xs-4'>United States Dollars (United States Dollars)</div><div class='col-xs-4'>19000.00</div></div></div><div class='spacing'></div><div class='spacing'></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:22+00:00",
+  "content_sha256": "24ef7eee4e652f124dfc58dd86ed34de6a99601c22f0c7dad08361e0541319ba"
+}

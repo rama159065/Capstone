@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DepreciationAndAmortization",
+  "title": "Apple Inc. - Depreciation, Depletion and Amortization, Nonproduction",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DepreciationAndAmortization\nLabel: Depreciation, Depletion and Amortization, Nonproduction\nDescription: The current period expense charged against earnings on long-lived, physical assets not used in production, and which are not intended for resale, to allocate or recognize the cost of such assets over their useful lives; or to record the reduction in book value of an intangible asset over the benefit period of such asset; or to reflect consumption during the period of an asset that is not used in production.\nRecent reported values:\nUSD None None 8-K filed 2015-01-28: 2600000000\nUSD 2013 FY 10-K filed 2013-10-30: 5800000000\nUSD 2014 FY 10-K filed 2014-10-27: 5800000000\nUSD None None 8-K filed 2015-01-28: 5800000000\nUSD 2015 FY 10-K filed 2015-10-28: 5800000000\nUSD 2014 FY 10-K filed 2014-10-27: 6900000000\nUSD None None 8-K filed 2015-01-28: 6900000000\nUSD 2015 FY 10-K filed 2015-10-28: 6900000000\nUSD 2016 FY 10-K filed 2016-10-26: 6900000000\nUSD 2015 FY 10-K filed 2015-10-28: 9200000000\nUSD 2016 FY 10-K filed 2016-10-26: 9200000000\nUSD 2016 FY 10-K filed 2016-10-26: 8300000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DepreciationAndAmortization",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "c53e4e083cd34f8138df9d7d28a78fd97d42ae29de96203e81ee0b9ea3b91de4"
+}

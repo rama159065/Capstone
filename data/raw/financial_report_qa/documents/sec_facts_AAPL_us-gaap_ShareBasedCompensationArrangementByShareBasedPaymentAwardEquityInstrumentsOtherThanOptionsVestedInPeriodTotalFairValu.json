@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsVestedInPeriodTotalFairValue",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Vested in Period, Fair Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsVestedInPeriodTotalFairValue\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Vested in Period, Fair Value\nDescription: Fair value of share-based awards for which the grantee gained the right by satisfying service and performance requirements, to receive or retain shares or units, other instruments, or cash.\nRecent reported values:\nUSD 2015 Q3 10-Q filed 2015-07-22: 4300000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 4300000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 2300000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 2300000000\nUSD 2015 FY 10-K filed 2015-10-28: 4800000000\nUSD 2016 FY 10-K filed 2016-10-26: 4800000000\nUSD 2016 Q1 10-Q filed 2016-01-27: 2000000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 2500000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 450000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 4500000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 2000000000\nUSD 2016 FY 10-K filed 2016-10-26: 5100000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsVestedInPeriodTotalFairValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "dbbcb6bba14b4a48da6acd35a73064a0703b82e341562f64b98b88f38251f94b"
+}

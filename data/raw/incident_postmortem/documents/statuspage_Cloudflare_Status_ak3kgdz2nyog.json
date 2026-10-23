@@ -1,0 +1,66 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Cloudflare_Status_ak3kgdz2nyog",
+  "title": "Cloudflare Status - Increased HTTP Errors in London (LHR)",
+  "text": "Service: Cloudflare Status\nIncident: Increased HTTP Errors in London (LHR)\nStatus: resolved\nImpact: minor\nStarted: 2026-10-14T07:43:00.000Z\nResolved: 2026-10-14T07:51:00.000Z\nUpdates:\n- 2026-10-14T10:54:23.731Z: resolved - Cloudflare is aware of, and has resolved, an increased level of HTTP errors in London (LHR), between 07:43 UTC and 07:51 UTC. Services have resumed normal operation after this time.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://www.cloudflarestatus.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "ak3kgdz2nyog",
+      "name": "Increased HTTP Errors in London (LHR)",
+      "status": "resolved",
+      "created_at": "2026-10-14T10:54:23.731Z",
+      "updated_at": "2026-10-14T10:54:52.901Z",
+      "monitoring_at": null,
+      "resolved_at": "2026-10-14T07:51:00.000Z",
+      "impact": "minor",
+      "shortlink": "https://www.cloudflarestatus.com/incidents/ak3kgdz2nyog",
+      "started_at": "2026-10-14T07:43:00.000Z",
+      "page_id": "yh6f0r4529hb",
+      "incident_updates": [
+        {
+          "id": "808u5k7k4fbh",
+          "status": "resolved",
+          "body": "Cloudflare is aware of, and has resolved, an increased level of HTTP errors in London (LHR), between 07:43 UTC and 07:51 UTC. Services have resumed normal operation after this time.",
+          "incident_id": "ak3kgdz2nyog",
+          "created_at": "2026-10-14T10:54:23.731Z",
+          "updated_at": "2026-10-14T10:54:52.901Z",
+          "display_at": "2026-10-14T07:51:00.000Z",
+          "affected_components": [
+            {
+              "code": "4n0gb0kh02gf",
+              "name": "Cloudflare Sites and Services - Network",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "4n0gb0kh02gf",
+          "name": "Network",
+          "status": "operational",
+          "created_at": "2023-01-13T13:39:19.000Z",
+          "updated_at": "2026-10-16T18:04:41.000Z",
+          "position": 75,
+          "description": null,
+          "showcase": false,
+          "start_date": "2023-01-13",
+          "group_id": "1km35smx8p41",
+          "page_id": "yh6f0r4529hb",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:22+00:00",
+  "content_sha256": "02bcec811638bb45657dee1967495dad431f1cb30be60f61d99fa0eb477806bf"
+}

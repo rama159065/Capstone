@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AccumulatedOtherComprehensiveIncomeLossForeignCurrencyTranslationAdjustmentNetOfTax",
+  "title": "Apple Inc. - Accumulated Other Comprehensive Income (Loss), Foreign Currency Translation Adjustment, Net of Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AccumulatedOtherComprehensiveIncomeLossForeignCurrencyTranslationAdjustmentNetOfTax\nLabel: Accumulated Other Comprehensive Income (Loss), Foreign Currency Translation Adjustment, Net of Tax\nDescription: Accumulated adjustment, net of tax, that results from the process of translating subsidiary financial statements and foreign equity investments into the reporting currency from the functional currency of the reporting entity, net of reclassification of realized foreign currency translation gains or losses.\nRecent reported values:\nUSD 2012 Q2 10-Q filed 2012-04-25: 26000000\nUSD 2012 Q3 10-Q filed 2012-07-25: -65000000\nUSD 2013 FY 10-K filed 2013-10-30: 8000000\nUSD 2013 Q3 10-Q filed 2013-07-24: 8000000\nUSD 2012 FY 8-K filed 2013-04-24: 8000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 8000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 8000000\nUSD 2012 FY 10-K filed 2012-10-31: 8000000\nUSD 2013 Q1 10-Q filed 2013-01-24: -18000000\nUSD 2013 Q2 10-Q filed 2013-04-24: -69000000\nUSD 2013 Q3 10-Q filed 2013-07-24: -169000000\nUSD 2013 FY 10-K filed 2013-10-30: -105000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AccumulatedOtherComprehensiveIncomeLossForeignCurrencyTranslationAdjustmentNetOfTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "aae6530a7c920b61c5f58b42b0967725f366e0ec7cd69c588cf94431cf9f31eb"
+}

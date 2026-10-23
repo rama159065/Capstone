@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_StockIssuedDuringPeriodValueShareBasedCompensation",
+  "title": "Apple Inc. - Shares Issued, Value, Share-based Payment Arrangement, after Forfeiture",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: StockIssuedDuringPeriodValueShareBasedCompensation\nLabel: Shares Issued, Value, Share-based Payment Arrangement, after Forfeiture\nDescription: Value, after forfeiture, of shares issued under share-based payment arrangement. Excludes employee stock ownership plan (ESOP).\nRecent reported values:\nUSD 2009 FY 10-K/A filed 2010-01-25: 362000000\nUSD 2009 FY 10-K filed 2009-10-27: 362000000\nUSD 2009 FY 10-K/A filed 2010-01-25: 359000000\nUSD 2009 FY 10-K filed 2009-10-27: 359000000\nUSD 2009 FY 10-K/A filed 2010-01-25: 393000000\nUSD 2009 FY 10-K filed 2009-10-27: 393000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "StockIssuedDuringPeriodValueShareBasedCompensation",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "5a07236c41166ee870c7bf45c439ecc3455c1e7d559929c655dd6c0044e782a6"
+}

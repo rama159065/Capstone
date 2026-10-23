@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AccumulatedOtherComprehensiveIncomeLossNetOfTax",
+  "title": "Apple Inc. - Accumulated Other Comprehensive Income (Loss), Net of Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AccumulatedOtherComprehensiveIncomeLossNetOfTax\nLabel: Accumulated Other Comprehensive Income (Loss), Net of Tax\nDescription: Accumulated change in equity from transactions and other events and circumstances from non-owner sources, net of tax effect, at period end. Excludes Net Income (Loss), and accumulated changes in equity from transactions resulting from investments by owners and distributions to owners. Includes foreign currency translation items, certain pension adjustments, unrealized gains and losses on certain investments in debt and equity securities, other than temporary impairment (OTTI) losses related to factors other than credit losses on available-for-sale and held-to-maturity debt securities that an entity does not intend to sell and it is not more likely than not that the entity will be required to sell before recovery of the amortized cost basis, as well as changes in the fair value of derivatives related to the effective portion of a designated cash flow hedge.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: -7172000000\nUSD 2025 FY 10-K filed 2025-10-31: -7172000000\nUSD 2025 Q1 10-Q filed 2025-01-31: -6789000000\nUSD 2025 Q2 10-Q filed 2025-05-02: -6363000000\nUSD 2025 Q3 10-Q filed 2025-08-01: -6369000000\nUSD 2025 FY 10-K filed 2025-10-31: -5571000000\nUSD 2026 Q1 10-Q filed 2026-01-30: -5571000000\nUSD 2026 Q2 10-Q filed 2026-05-01: -5571000000\nUSD 2026 Q3 10-Q filed 2026-07-31: -5571000000\nUSD 2026 Q1 10-Q filed 2026-01-30: -4854000000\nUSD 2026 Q2 10-Q filed 2026-05-01: -5375000000\nUSD 2026 Q3 10-Q filed 2026-07-31: -4508000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AccumulatedOtherComprehensiveIncomeLossNetOfTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "1c9ac7c9942125633b3340a6b2434d0a7ee294c60332555a049b64028e9d6c07"
+}

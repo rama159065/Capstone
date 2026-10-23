@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476412",
+  "title": "Morocco Sustainable Oasis Ecosystems Management Project",
+  "text": "bid_description: TRAVAUX DE CONSTRUCTION DES BASSINS D’ACCUMULATION AU NIVEAU DE L’OASIS D’AKKA, PROVINCE DE TATA\nbid_reference_no: MA-ANDZOA-572283-CW-RFQ\nid: OP00476412\nnotice_lang_name: French\nnotice_status: Published\nnotice_text: Contract Award Project: P500402-Morocco Sustainable Oasis Ecosystems Management Project Loan/Credit/TF Info: TF-C4927 Bid/Contract Reference No: MA-ANDZOA-572283-CW-RFQ Procurement Method: RFQ-Demande de prix Scope of Contract: Travaux de construction des bassins daccumulation au niveau de loasis dAkka, province de Tata. Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/09 Duration of Contract 3 Month(s) Awarded Bidder(s): ST IRKHA VERT (1121969) 77 rue Mohamed Etage 10 n57 Casablanca Country: Maroc Bid Price at Opening MAD 1237160.00 Evaluated Bid Price MAD 1237160.00 Signed Contract price MAD 1237160.00 Evaluated Bidder(s): TAFILALET STEEL SARL (964485) LAURIERS ROSES IMM 4 APPT 17 SIDI YAHYA ZAIR Country: Maroc Bid Price at Opening MAD 1409130.00 Evaluated Bid Price MAD 1409130.00 \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: CW\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Morocco\nproject_id: P500402\nproject_name: Morocco Sustainable Oasis Ecosystems Management Project\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=200&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476412",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "French",
+      "notice_status": "Published",
+      "project_ctry_name": "Morocco",
+      "project_id": "P500402",
+      "project_name": "Morocco Sustainable Oasis Ecosystems Management Project",
+      "bid_reference_no": "MA-ANDZOA-572283-CW-RFQ",
+      "bid_description": "TRAVAUX DE CONSTRUCTION DES BASSINS D’ACCUMULATION AU NIVEAU DE L’OASIS D’AKKA, PROVINCE DE TATA",
+      "procurement_group": "CW",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P500402-Morocco Sustainable Oasis Ecosystems Management Project<br/><b>Loan/Credit/TF Info:</b>TF-C4927<br/><b>Bid/Contract Reference No:</b>MA-ANDZOA-572283-CW-RFQ<br/><b>Procurement Method:</b>RFQ-Demande de prix<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Travaux de construction des bassins daccumulation au niveau de loasis dAkka, province de Tata.</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/09<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>3 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>ST IRKHA VERT (1121969)</b><br/>77 rue Mohamed Etage 10 n57 Casablanca<br/>Country: Maroc<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>MAD 1237160.00<br/><br/>Evaluated Bid Price<br/>MAD 1237160.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>MAD 1237160.00</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>TAFILALET STEEL SARL (964485)</b><br/>LAURIERS ROSES IMM 4 APPT 17 SIDI YAHYA ZAIR<br/>Country: Maroc<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>MAD 1409130.00<br/><br/>Evaluated Bid Price<br/>MAD 1409130.00</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:14+00:00",
+  "content_sha256": "55c34a2aac602839e67556f4849658bbad68efe634d332a7da2992899e9904db"
+}

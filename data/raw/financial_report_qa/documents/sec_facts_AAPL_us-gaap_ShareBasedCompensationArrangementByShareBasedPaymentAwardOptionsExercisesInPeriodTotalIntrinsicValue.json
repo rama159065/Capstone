@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsExercisesInPeriodTotalIntrinsicValue",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Exercises in Period, Intrinsic Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsExercisesInPeriodTotalIntrinsicValue\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Exercises in Period, Intrinsic Value\nDescription: Amount of accumulated difference between fair value of underlying shares on dates of exercise and exercise price on options exercised (or share units converted) into shares.\nRecent reported values:\nUSD 2015 Q3 10-Q filed 2015-07-22: 978000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 271000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 271000000\nUSD 2014 FY 10-K filed 2014-10-27: 1500000000\nUSD None None 8-K filed 2015-01-28: 1500000000\nUSD 2015 FY 10-K filed 2015-10-28: 1500000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 248000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 367000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 119000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 439000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 72000000\nUSD 2015 FY 10-K filed 2015-10-28: 479000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsExercisesInPeriodTotalIntrinsicValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "a3abe5f5e2853c9f46992128f44ed0a588f36a29f2c1f713997f83a62b33417e"
+}

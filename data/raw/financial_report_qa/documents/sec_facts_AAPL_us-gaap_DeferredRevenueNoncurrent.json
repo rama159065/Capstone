@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DeferredRevenueNoncurrent",
+  "title": "Apple Inc. - Deferred Revenue, Noncurrent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DeferredRevenueNoncurrent\nLabel: Deferred Revenue, Noncurrent\nDescription: Amount of deferred income and obligation to transfer product and service to customer for which consideration has been received or is receivable, classified as noncurrent.\nRecent reported values:\nUSD 2017 Q1 10-Q filed 2017-02-01: 3163000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 3107000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 2984000000\nUSD 2017 FY 10-K filed 2017-11-03: 2836000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 2836000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 2836000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 2836000000\nUSD 2018 FY 10-K filed 2018-11-05: 2836000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 3131000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 3087000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 2878000000\nUSD 2018 FY 10-K filed 2018-11-05: 2797000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DeferredRevenueNoncurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "2a70706f9a2717631f3c20e3ca343359def19c6cd93df541faba6ebe0425dc07"
+}

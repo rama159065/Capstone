@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_FairValueAssetsMeasuredOnRecurringBasisDerivativeFinancialInstrumentsAssets",
+  "title": "Apple Inc. - Fair Value, Assets Measured on Recurring Basis, Derivative Financial Instruments, Assets (Deprecated 2011-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: FairValueAssetsMeasuredOnRecurringBasisDerivativeFinancialInstrumentsAssets\nLabel: Fair Value, Assets Measured on Recurring Basis, Derivative Financial Instruments, Assets (Deprecated 2011-01-31)\nDescription: This element represents a certain statement of financial position asset caption which represents a class of assets, or which may include an individual asset, measured at fair value on a recurring basis.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 37000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 37000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 206000000\nUSD 2010 FY 10-K filed 2010-10-27: 107000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "FairValueAssetsMeasuredOnRecurringBasisDerivativeFinancialInstrumentsAssets",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4314ff0d258041db39cf0d79f15946a14f91526ec4889beabd882e4d07f77e19"
+}

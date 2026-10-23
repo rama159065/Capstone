@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AdvertisingExpense",
+  "title": "Apple Inc. - Advertising Expense",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AdvertisingExpense\nLabel: Advertising Expense\nDescription: Amount charged to advertising expense for the period, which are expenses incurred with the objective of increasing revenue for a specified brand, product or product line.\nRecent reported values:\nUSD 2012 FY 8-K filed 2013-04-24: 1000000000\nUSD 2013 FY 10-K filed 2013-10-30: 1000000000\nUSD 2014 FY 10-K filed 2014-10-27: 1000000000\nUSD None None 8-K filed 2015-01-28: 1000000000\nUSD 2013 FY 10-K filed 2013-10-30: 1100000000\nUSD 2014 FY 10-K filed 2014-10-27: 1100000000\nUSD None None 8-K filed 2015-01-28: 1100000000\nUSD 2015 FY 10-K filed 2015-10-28: 1100000000\nUSD 2014 FY 10-K filed 2014-10-27: 1200000000\nUSD None None 8-K filed 2015-01-28: 1200000000\nUSD 2015 FY 10-K filed 2015-10-28: 1200000000\nUSD 2015 FY 10-K filed 2015-10-28: 1800000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AdvertisingExpense",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "8d20e9d8db136e5e3b2c4b53392a78225f54d19b61b4b71bd9abcd7552ca98bf"
+}

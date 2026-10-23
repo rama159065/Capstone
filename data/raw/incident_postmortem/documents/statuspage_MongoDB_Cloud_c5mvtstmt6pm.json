@@ -1,0 +1,106 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_MongoDB_Cloud_c5mvtstmt6pm",
+  "title": "MongoDB Cloud - Atlas Stream Processing errors in Azure West Europe",
+  "text": "Service: MongoDB Cloud\nIncident: Atlas Stream Processing errors in Azure West Europe\nStatus: resolved\nImpact: none\nStarted: 2026-07-29T18:11:59.174Z\nResolved: 2026-07-29T22:47:06.717Z\nUpdates:\n- 2026-07-29T22:47:06.717Z: resolved - This incident has been resolved.\n- 2026-07-29T22:35:59.290Z: monitoring - A fix has been implemented and we are monitoring the results.\n- 2026-07-29T18:11:59.246Z: investigating - We are investigating an issue affecting Atlas Stream Processing in Azure West Europe. Some users may see processors in this region encounter internal errors. We are actively investigating and will share another update as soon as we have more information.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.mongodb.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "c5mvtstmt6pm",
+      "name": "Atlas Stream Processing errors in Azure West Europe",
+      "status": "resolved",
+      "created_at": "2026-07-29T18:11:59.187Z",
+      "updated_at": "2026-07-29T22:47:06.736Z",
+      "monitoring_at": "2026-07-29T22:35:59.290Z",
+      "resolved_at": "2026-07-29T22:47:06.717Z",
+      "impact": "none",
+      "shortlink": "https://stspg.io/07211g8rn4f0",
+      "started_at": "2026-07-29T18:11:59.174Z",
+      "page_id": "smhnl3lt74kc",
+      "incident_updates": [
+        {
+          "id": "wnk85tytrf7q",
+          "status": "resolved",
+          "body": "This incident has been resolved.",
+          "incident_id": "c5mvtstmt6pm",
+          "created_at": "2026-07-29T22:47:06.717Z",
+          "updated_at": "2026-07-29T22:47:06.717Z",
+          "display_at": "2026-07-29T22:47:06.717Z",
+          "affected_components": [
+            {
+              "code": "prk6bb5j7h4l",
+              "name": "MongoDB Atlas Stream Processing",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "vm2m8jvtjqt9",
+          "status": "monitoring",
+          "body": "A fix has been implemented and we are monitoring the results.",
+          "incident_id": "c5mvtstmt6pm",
+          "created_at": "2026-07-29T22:35:59.290Z",
+          "updated_at": "2026-07-29T22:35:59.290Z",
+          "display_at": "2026-07-29T22:35:59.290Z",
+          "affected_components": [
+            {
+              "code": "prk6bb5j7h4l",
+              "name": "MongoDB Atlas Stream Processing",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "1gz7mr74rmbb",
+          "status": "investigating",
+          "body": "We are investigating an issue affecting Atlas Stream Processing in Azure West Europe. Some users may see processors in this region encounter internal errors. We are actively investigating and will share another update as soon as we have more information.",
+          "incident_id": "c5mvtstmt6pm",
+          "created_at": "2026-07-29T18:11:59.246Z",
+          "updated_at": "2026-07-29T18:11:59.246Z",
+          "display_at": "2026-07-29T18:11:59.246Z",
+          "affected_components": [
+            {
+              "code": "prk6bb5j7h4l",
+              "name": "MongoDB Atlas Stream Processing",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "prk6bb5j7h4l",
+          "name": "MongoDB Atlas Stream Processing",
+          "status": "operational",
+          "created_at": "2024-01-16T22:46:34.606Z",
+          "updated_at": "2026-07-10T01:11:09.839Z",
+          "position": 7,
+          "description": "Atlas Stream Processing enables processing streams of complex data using the same data model and Query API used in Atlas databases.",
+          "showcase": false,
+          "start_date": "2024-01-16",
+          "group_id": null,
+          "page_id": "smhnl3lt74kc",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:12+00:00",
+  "content_sha256": "850f79e875ef16c7e661677d1e5fe73d1a3ff62607aaa5de1b9223e07fd7fc69"
+}

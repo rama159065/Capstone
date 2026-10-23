@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ContractWithCustomerLiabilityCurrent",
+  "title": "Apple Inc. - Contract with Customer, Liability, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ContractWithCustomerLiabilityCurrent\nLabel: Contract with Customer, Liability, Current\nDescription: Amount of obligation to transfer good or service to customer for which consideration has been received or is receivable, classified as current.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 8249000000\nUSD 2025 FY 10-K filed 2025-10-31: 8249000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 8461000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 8976000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 8979000000\nUSD 2025 FY 10-K filed 2025-10-31: 9055000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 9055000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 9055000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 9055000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 9413000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 9331000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 9538000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ContractWithCustomerLiabilityCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "c4a65979a22b6e400ee047c3a16d65aa66b38e81b991b105deca623c067d9c13"
+}

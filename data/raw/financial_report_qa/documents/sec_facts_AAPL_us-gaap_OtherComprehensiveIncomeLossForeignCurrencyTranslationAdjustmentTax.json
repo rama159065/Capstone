@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeLossForeignCurrencyTranslationAdjustmentTax",
+  "title": "Apple Inc. - Other Comprehensive Income (Loss), Foreign Currency Translation Adjustment, Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeLossForeignCurrencyTranslationAdjustmentTax\nLabel: Other Comprehensive Income (Loss), Foreign Currency Translation Adjustment, Tax\nDescription: Amount of tax expense (benefit), after reclassification adjustments of gain (loss) on foreign currency translation adjustments, foreign currency transactions designated and effective as economic hedges of a net investment in a foreign entity and intra-entity foreign currency transactions that are of a long-term-investment nature.\nRecent reported values:\nUSD 2017 Q3 10-Q filed 2017-08-02: 3000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 3000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 35000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 35000000\nUSD 2017 FY 10-K filed 2017-11-03: 77000000\nUSD 2018 FY 10-K filed 2018-11-05: 77000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 1000000\nUSD 2018 Q2 10-Q filed 2018-05-02: -7000000\nUSD 2018 Q2 10-Q filed 2018-05-02: -8000000\nUSD 2018 Q3 10-Q filed 2018-08-01: -4000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 3000000\nUSD 2018 FY 10-K filed 2018-11-05: 1000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeLossForeignCurrencyTranslationAdjustmentTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "550e7948f82b35751aebdf862f55cca595aa4ee48fcafb16b987f61c6fee5ef7"
+}

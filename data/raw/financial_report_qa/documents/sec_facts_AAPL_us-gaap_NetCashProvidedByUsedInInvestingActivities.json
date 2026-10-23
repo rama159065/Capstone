@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_NetCashProvidedByUsedInInvestingActivities",
+  "title": "Apple Inc. - Net Cash Provided by (Used in) Investing Activities",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: NetCashProvidedByUsedInInvestingActivities\nLabel: Net Cash Provided by (Used in) Investing Activities\nDescription: Amount of cash inflow (outflow) from investing activities, including discontinued operations. Investing activity cash flows include making and collecting loans and acquiring and disposing of debt or equity instruments and property, plant, and equipment and other productive assets.\nRecent reported values:\nUSD 2024 FY 10-K filed 2024-11-01: 2935000000\nUSD 2025 FY 10-K filed 2025-10-31: 2935000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 9792000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 9792000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 12709000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 12709000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 17782000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 17782000000\nUSD 2025 FY 10-K filed 2025-10-31: 15195000000\nUSD 2026 Q1 10-Q filed 2026-01-30: -4886000000\nUSD 2026 Q2 10-Q filed 2026-05-01: -11054000000\nUSD 2026 Q3 10-Q filed 2026-07-31: -18811000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "NetCashProvidedByUsedInInvestingActivities",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "20a75be1aee95575156e86a41c3033393f1f288ea7f5c84816885be7cbbb4982"
+}

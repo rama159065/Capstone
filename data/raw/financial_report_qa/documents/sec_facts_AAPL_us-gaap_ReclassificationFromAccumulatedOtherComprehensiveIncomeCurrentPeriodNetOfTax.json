@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ReclassificationFromAccumulatedOtherComprehensiveIncomeCurrentPeriodNetOfTax",
+  "title": "Apple Inc. - Reclassification from Accumulated Other Comprehensive Income, Current Period, Net of Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ReclassificationFromAccumulatedOtherComprehensiveIncomeCurrentPeriodNetOfTax\nLabel: Reclassification from Accumulated Other Comprehensive Income, Current Period, Net of Tax\nDescription: Amount after tax of reclassification adjustments of other comprehensive income (loss).\nRecent reported values:\nUSD 2014 Q1 10-Q filed 2014-01-28: -71000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 3000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ReclassificationFromAccumulatedOtherComprehensiveIncomeCurrentPeriodNetOfTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "95e3a2d13bbe970d228cd623dd019f561fbd3351cfc434fcdbe81f4b6f68a5f0"
+}

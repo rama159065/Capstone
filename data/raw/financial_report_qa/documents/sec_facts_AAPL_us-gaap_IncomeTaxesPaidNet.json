@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncomeTaxesPaidNet",
+  "title": "Apple Inc. - Income Taxes Paid, Net",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncomeTaxesPaidNet\nLabel: Income Taxes Paid, Net\nDescription: The amount of cash paid during the current period to foreign, federal, state, and local authorities as taxes on income, net of any cash received during the current period as refunds for the overpayment of taxes.\nRecent reported values:\nUSD 2024 FY 10-K filed 2024-11-01: 26102000000\nUSD 2025 FY 10-K filed 2025-10-31: 26102000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 18651000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 18651000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 31683000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 31683000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 37332000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 37332000000\nUSD 2025 FY 10-K filed 2025-10-31: 43369000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 3434000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 20397000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 26555000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncomeTaxesPaidNet",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "18075c85e33fa493c602f1c2817f1187a4eafc3ef39fecfb3bf7917d977c85c5"
+}

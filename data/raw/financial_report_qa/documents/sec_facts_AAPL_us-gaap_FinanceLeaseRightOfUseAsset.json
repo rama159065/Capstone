@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_FinanceLeaseRightOfUseAsset",
+  "title": "Apple Inc. - Finance Lease, Right-of-Use Asset, after Accumulated Amortization",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: FinanceLeaseRightOfUseAsset\nLabel: Finance Lease, Right-of-Use Asset, after Accumulated Amortization\nDescription: Amount, after accumulated amortization, of right-of-use asset from finance lease.\nRecent reported values:\nUSD 2020 FY 10-K filed 2020-10-30: 629000000\nUSD 2021 FY 10-K filed 2021-10-29: 629000000\nUSD 2021 FY 10-K filed 2021-10-29: 861000000\nUSD 2022 FY 10-K filed 2022-10-28: 861000000\nUSD 2022 FY 10-K filed 2022-10-28: 952000000\nUSD 2023 FY 10-K filed 2023-11-03: 952000000\nUSD 2023 FY 10-K filed 2023-11-03: 1015000000\nUSD 2024 FY 10-K filed 2024-11-01: 1015000000\nUSD 2024 FY 10-K filed 2024-11-01: 1069000000\nUSD 2025 FY 10-K filed 2025-10-31: 1069000000\nUSD 2025 FY 10-K filed 2025-10-31: 1033000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "FinanceLeaseRightOfUseAsset",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "2a053798af62bfc1d88448d14c9d3407da17582d2d86a7f0f78a49c0bf2382fc"
+}

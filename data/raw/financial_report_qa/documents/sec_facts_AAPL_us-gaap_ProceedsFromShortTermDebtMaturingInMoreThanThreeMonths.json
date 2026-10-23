@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ProceedsFromShortTermDebtMaturingInMoreThanThreeMonths",
+  "title": "Apple Inc. - Proceeds from Short-term Debt, Maturing in More than Three Months",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ProceedsFromShortTermDebtMaturingInMoreThanThreeMonths\nLabel: Proceeds from Short-term Debt, Maturing in More than Three Months\nDescription: The cash inflow from a borrowing having initial term of repayment of more than three months but less than one year or one operating cycle (if the normal cycle is more than one year).\nRecent reported values:\nUSD 2023 Q2 10-Q filed 2023-05-05: 0\nUSD 2023 Q3 10-Q filed 2023-08-04: 0\nUSD 2023 FY 10-K filed 2023-11-03: 0\nUSD 2024 FY 10-K filed 2024-11-01: 0\nUSD 2025 FY 10-K filed 2025-10-31: 0\nUSD 2025 Q3 10-Q filed 2025-08-01: 0\nUSD 2024 FY 10-K filed 2024-11-01: 0\nUSD 2025 FY 10-K filed 2025-10-31: 0\nUSD 2025 Q3 10-Q filed 2025-08-01: 5625000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 5625000000\nUSD 2025 FY 10-K filed 2025-10-31: 5836000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 0",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ProceedsFromShortTermDebtMaturingInMoreThanThreeMonths",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "5b07fb4230d10cb79dfd20cac392f8fc57d25b89b0cc55b4135a1f9543320f42"
+}

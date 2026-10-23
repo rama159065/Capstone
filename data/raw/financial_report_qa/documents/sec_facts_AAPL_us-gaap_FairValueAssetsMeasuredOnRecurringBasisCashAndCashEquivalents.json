@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_FairValueAssetsMeasuredOnRecurringBasisCashAndCashEquivalents",
+  "title": "Apple Inc. - Fair Value, Assets Measured on Recurring Basis, Cash and Cash Equivalents (Deprecated 2011-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: FairValueAssetsMeasuredOnRecurringBasisCashAndCashEquivalents\nLabel: Fair Value, Assets Measured on Recurring Basis, Cash and Cash Equivalents (Deprecated 2011-01-31)\nDescription: This element represents a certain statement of financial position asset caption which represents a class of assets, or which may include an individual asset, measured at fair value on a recurring basis.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 4124000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 4124000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 7779000000\nUSD 2010 FY 10-K filed 2010-10-27: 9571000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "FairValueAssetsMeasuredOnRecurringBasisCashAndCashEquivalents",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "baad883cb3bb426f52a599c6412979e948a0cbda7f6c80536386fef21a7b6d2e"
+}

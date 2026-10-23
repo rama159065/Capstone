@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476411",
+  "title": "Sustainable and Inclusive Secondary Cities Project",
+  "text": "bid_description: Acquisition de fournitures de bureau pour le PDDIVS\nbid_reference_no: CI-PARU-556336-GO-RFQ\nid: OP00476411\nnotice_lang_name: French\nnotice_status: Published\nnotice_text: Contract Award Project: P177062-Sustainable and Inclusive Secondary Cities Project Loan/Credit/TF Info: IDA-72870 Bid/Contract Reference No: CI-PARU-556336-GO-RFQ Procurement Method: RFQ-Demande de prix Scope of Contract: ACQUISITION DE FOURNITURES DE BUREAU POUR LE PROJET DE DEVELOPPEMENT DURABLE ET INCLUSIF DES VILLES SECONDAIRES (PDDIVS) Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/08/31 Duration of Contract 15 Day(s) Awarded Bidder(s): KARS ENTREPRISE (1057429) 17 BP 544 Abidjan 17, +225 07 77 40 34 78 , 07 07 08 91 25 Country: Cte d'Ivoire Bid Price at Opening XOF 15345000 Evaluated Bid Price XOF 15345000 Signed Contract price XOF 15345000 Evaluated Bidder(s): 2SCOM (750272) Cocody, Angr 01 BP 1821 Abidjan 01 Country: Cte d'Ivoire Bid Price at Opening XOF 18140000 Evaluated Bid Price XOF 18140000 MYOHO SMARTBURO SARL (906546) ABIDJAN COCODY RIVIERA ,3 CITE BELLE VUE NON LOIN DE LA PHARMACIE SAINT PIERRE DES ROSES 07 08 88 51 6007 07 70 72 09jeaneudeskouassi@gmail.com Country: Cte d'Ivoire Bid Price at Opening XOF 19826200 Evaluated Bid Price XOF 18603750 \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Cote d'Ivoire\nproject_id: P177062\nproject_name: Sustainable and Inclusive Secondary Cities Project\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=200&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476411",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "French",
+      "notice_status": "Published",
+      "project_ctry_name": "Cote d'Ivoire",
+      "project_id": "P177062",
+      "project_name": "Sustainable and Inclusive Secondary Cities Project",
+      "bid_reference_no": "CI-PARU-556336-GO-RFQ",
+      "bid_description": "Acquisition de fournitures de bureau pour le PDDIVS",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P177062-Sustainable and Inclusive Secondary Cities Project<br/><b>Loan/Credit/TF Info:</b>IDA-72870<br/><b>Bid/Contract Reference No:</b>CI-PARU-556336-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Demande de prix<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>ACQUISITION DE FOURNITURES DE BUREAU POUR LE PROJET DE DEVELOPPEMENT DURABLE ET INCLUSIF DES VILLES SECONDAIRES (PDDIVS)</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/08/31<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>15 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>KARS ENTREPRISE (1057429)</b><br/>17 BP 544 Abidjan 17, +225 07 77 40 34 78 , 07 07 08 91 25<br/>Country: Cte d'Ivoire<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>XOF 15345000<br/><br/>Evaluated Bid Price<br/>XOF 15345000</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>XOF 15345000</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>2SCOM (750272)</b><br/>Cocody, Angr 01 BP 1821 Abidjan 01<br/>Country: Cte d'Ivoire<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>XOF 18140000<br/><br/>Evaluated Bid Price<br/>XOF 18140000</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>MYOHO SMARTBURO SARL (906546)</b><br/>ABIDJAN COCODY RIVIERA ,3 CITE BELLE VUE NON LOIN DE LA PHARMACIE SAINT PIERRE DES ROSES 07 08 88 51 6007 07 70 72 09jeaneudeskouassi@gmail.com<br/>Country: Cte d'Ivoire<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>XOF 19826200<br/><br/>Evaluated Bid Price<br/>XOF 18603750</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:14+00:00",
+  "content_sha256": "b0c8e232e0249be71eb53624cbb4d08f6af789887a5081aae39ab10cadd7990f"
+}

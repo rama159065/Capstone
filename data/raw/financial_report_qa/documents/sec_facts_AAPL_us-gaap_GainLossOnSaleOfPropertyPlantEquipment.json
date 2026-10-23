@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_GainLossOnSaleOfPropertyPlantEquipment",
+  "title": "Apple Inc. - Gain (Loss) on Disposition of Property Plant Equipment",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: GainLossOnSaleOfPropertyPlantEquipment\nLabel: Gain (Loss) on Disposition of Property Plant Equipment\nDescription: Amount of gain (loss) on sale or disposal of property, plant and equipment assets, including oil and gas property and timber property.\nRecent reported values:\nUSD 2009 FY 10-K filed 2009-10-27: -22000000\nUSD 2010 Q1 10-Q filed 2010-01-25: -7000000\nUSD 2010 Q2 10-Q filed 2010-04-21: -8000000\nUSD 2010 Q3 10-Q filed 2010-07-21: -18000000\nUSD 2009 Q3 10-Q filed 2009-07-22: -18000000\nUSD 2010 FY 10-K filed 2010-10-27: -26000000\nUSD 2009 FY 10-K/A filed 2010-01-25: -26000000\nUSD 2009 FY 10-K filed 2009-10-27: -26000000\nUSD 2010 Q1 10-Q filed 2010-01-25: -6000000\nUSD 2010 Q2 10-Q filed 2010-04-21: -9000000\nUSD 2010 Q3 10-Q filed 2010-07-21: -14000000\nUSD 2010 FY 10-K filed 2010-10-27: -24000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "GainLossOnSaleOfPropertyPlantEquipment",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b29497698c355010d90f80cc67e4c64639c27f19141314f9fe8c2ab2f0aecf41"
+}

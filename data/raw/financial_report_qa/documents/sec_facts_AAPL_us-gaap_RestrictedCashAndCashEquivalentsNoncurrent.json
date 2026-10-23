@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_RestrictedCashAndCashEquivalentsNoncurrent",
+  "title": "Apple Inc. - Restricted Cash and Cash Equivalents, Noncurrent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: RestrictedCashAndCashEquivalentsNoncurrent\nLabel: Restricted Cash and Cash Equivalents, Noncurrent\nDescription: Amount of cash and cash equivalents restricted as to withdrawal or usage, classified as noncurrent. Cash includes, but is not limited to, currency on hand, demand deposits with banks or financial institutions, and other accounts with general characteristics of demand deposits. Cash equivalents include, but are not limited to, short-term, highly liquid investments that are both readily convertible to known amounts of cash and so near their maturity that they present insignificant risk of changes in value because of changes in interest rates.\nRecent reported values:\nUSD 2019 Q2 10-Q filed 2019-05-01: 1488000000\nUSD 2019 Q3 10-Q filed 2019-07-31: 1355000000\nUSD 2019 FY 10-K filed 2019-10-31: 1357000000\nUSD 2020 Q1 10-Q filed 2020-01-29: 1357000000\nUSD 2020 Q2 10-Q filed 2020-05-01: 1357000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 1357000000\nUSD 2020 FY 10-K filed 2020-10-30: 1357000000\nUSD 2020 Q1 10-Q filed 2020-01-29: 1826000000\nUSD 2020 Q2 10-Q filed 2020-05-01: 1798000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 1627000000\nUSD 2020 FY 10-K filed 2020-10-30: 1737000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "RestrictedCashAndCashEquivalentsNoncurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "2a94f1a19ca9769d9f64e69b378452cff39ab7453180404f1d7e6c56aedfffa5"
+}

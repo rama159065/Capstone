@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncomeTaxReconciliationTaxContingenciesDomestic",
+  "title": "Apple Inc. - Effective Income Tax Rate Reconciliation, Tax Contingency, Domestic, Amount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncomeTaxReconciliationTaxContingenciesDomestic\nLabel: Effective Income Tax Rate Reconciliation, Tax Contingency, Domestic, Amount\nDescription: Amount of the difference between reported income tax expense (benefit) and expected income tax expense (benefit) computed by applying the domestic federal statutory income tax rates to pretax income (loss) from continuing operations attributable to increase (decrease) in domestic income tax contingency.\nRecent reported values:\nUSD 2014 Q2 10-Q filed 2014-04-24: -68000000\nUSD 2014 Q3 10-Q filed 2014-07-23: -68000000\nUSD 2014 FY 10-K filed 2014-10-27: -166000000\nUSD None None 8-K filed 2015-01-28: -166000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncomeTaxReconciliationTaxContingenciesDomestic",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "6f23a00be0686d8bc5561c29a782bafe20b825b797acbb1c16e07423f422fd63"
+}

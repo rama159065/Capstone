@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476179",
+  "title": "Sustainable Rural Water Supply and Sanitation Program Phase II",
+  "text": "bid_description: Procurement and supply of one motor vehicle\nbid_reference_no: TZ-MOWEM-563634-GO-RFQ\nid: OP00476179\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P508698-Sustainable Rural Water Supply and Sanitation Program Phase II Loan/Credit/TF Info: IDA-79300 Bid/Contract Reference No: TZ-MOWEM-563634-GO-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: Procurement and Supply of One Motor Vehicle Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/16 Duration of Contract 60 Day(s) Awarded Bidder(s): NOBLE MOTORS LIMITED (1112198) P.O.BOX 7847DAR-ES-SALAAM, TANZANIA+255758974650salesnml1@noble-tz.com Country: Tanzania Bid Price at Opening TZS 179800000.00 Evaluated Bid Price TZS 175228813.15 Signed Contract price TZS 175228813.15 Rejected Bidder(s): CFAO MOTORS LTD (913658) P.O.Box: 40798Dar Es Salaam - Tanzaniaemsafiri@cfao.com Country: Tanzania Bid Price at Opening TZS 160211000.00 Evaluated Bid Price TZS 160211000.00 Reason for Rejection Non-compliance NISSAN TANZANIA (AMC TANZANIA LTD), (1112200) P.O.BOX: 19982 DARE-ES-SALAAM TANZANIA nps3@nissantanzania.com Country: Tanzania Bid Price at Opening TZS 120148350.00 Evaluated Bid Price TZS 120148350.00 Reason for Rejection Non-compliance \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Tanzania\nproject_id: P508698\nproject_name: Sustainable Rural Water Supply and Sanitation Program Phase II\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=400&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476179",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Tanzania",
+      "project_id": "P508698",
+      "project_name": "Sustainable Rural Water Supply and Sanitation Program Phase II",
+      "bid_reference_no": "TZ-MOWEM-563634-GO-RFQ",
+      "bid_description": "Procurement and supply of one motor vehicle",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P508698-Sustainable Rural Water Supply and Sanitation Program Phase II<br/><b>Loan/Credit/TF Info:</b>IDA-79300<br/><b>Bid/Contract Reference No:</b>TZ-MOWEM-563634-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Procurement and Supply of One Motor Vehicle</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/16<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>60 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>NOBLE MOTORS LIMITED (1112198)</b><br/>P.O.BOX 7847DAR-ES-SALAAM, TANZANIA+255758974650salesnml1@noble-tz.com<br/>Country: Tanzania<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>TZS 179800000.00<br/><br/>Evaluated Bid Price<br/>TZS 175228813.15</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>TZS 175228813.15</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Rejected Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>CFAO MOTORS LTD (913658)</b><br/>P.O.Box: 40798Dar Es Salaam - Tanzaniaemsafiri@cfao.com<br/>Country: Tanzania<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>TZS 160211000.00<br/><br/>Evaluated Bid Price<br/>TZS 160211000.00<br/><br/>Reason for Rejection<br/>Non-compliance<br/></div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>NISSAN TANZANIA (AMC TANZANIA LTD), (1112200)</b><br/>P.O.BOX: 19982  DARE-ES-SALAAM  TANZANIA  nps3@nissantanzania.com<br/>Country: Tanzania<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>TZS 120148350.00<br/><br/>Evaluated Bid Price<br/>TZS 120148350.00<br/><br/>Reason for Rejection<br/>Non-compliance<br/></div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:21+00:00",
+  "content_sha256": "d44defaf5448866c1414aeeb4681be30f0245e9b2db7c8d05762bb2e6ff41791"
+}

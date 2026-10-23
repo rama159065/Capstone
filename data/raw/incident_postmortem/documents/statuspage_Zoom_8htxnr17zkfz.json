@@ -1,0 +1,126 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Zoom_8htxnr17zkfz",
+  "title": "Zoom - Service Degradation Affecting Zoom Calendar",
+  "text": "Service: Zoom\nIncident: Service Degradation Affecting Zoom Calendar\nStatus: resolved\nImpact: minor\nStarted: 2026-10-06T19:41:42.161-07:00\nResolved: 2026-10-06T20:58:27.829-07:00\nUpdates:\n- 2026-10-06T20:58:27.829-07:00: resolved - This incident has been resolved and the affected services have been restored.\n- 2026-10-06T20:46:22.643-07:00: monitoring - The service degradation affecting calendar provisioning for new users has been successfully resolved.\n\nOur team will continue to monitor the situation closely and will keep you informed of any further updates.\n- 2026-10-06T20:09:43.237-07:00: identified - We have identified the service degradation where new users may be experiencing issues with calendar provisioning.\n\nOur team is actively working on a resolution, and we will keep you informed with timely updates as progress is made. \n\nThank you for your patience.\n- 2026-10-06T19:41:42.284-07:00: investigating - We are currently investigating a service degradation where new users may be experiencing issues with calendar provisioning.\n\nOur team is actively working to identify the impact and root cause. We will provide an update as soon as more information becomes available.\n\nWe appreciate your patience as we work to resolve this issue.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.zoom.us/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "8htxnr17zkfz",
+      "name": "Service Degradation Affecting Zoom Calendar",
+      "status": "resolved",
+      "created_at": "2026-10-06T19:41:42.171-07:00",
+      "updated_at": "2026-10-06T20:58:27.857-07:00",
+      "monitoring_at": "2026-10-06T20:46:22.643-07:00",
+      "resolved_at": "2026-10-06T20:58:27.829-07:00",
+      "impact": "minor",
+      "shortlink": "https://stspg.io/9prfd6p22by0",
+      "started_at": "2026-10-06T19:41:42.161-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "qtwtt2qxwqv8",
+          "status": "resolved",
+          "body": "This incident has been resolved and the affected services have been restored.",
+          "incident_id": "8htxnr17zkfz",
+          "created_at": "2026-10-06T20:58:27.829-07:00",
+          "updated_at": "2026-10-06T20:58:27.829-07:00",
+          "display_at": "2026-10-06T20:58:27.829-07:00",
+          "affected_components": [
+            {
+              "code": "hybzp260h3n2",
+              "name": "Zoom Mail - Calendar",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "xzqlljc2kj0y",
+          "status": "monitoring",
+          "body": "The service degradation affecting calendar provisioning for new users has been successfully resolved.\n\nOur team will continue to monitor the situation closely and will keep you informed of any further updates.",
+          "incident_id": "8htxnr17zkfz",
+          "created_at": "2026-10-06T20:46:22.643-07:00",
+          "updated_at": "2026-10-06T20:46:22.643-07:00",
+          "display_at": "2026-10-06T20:46:22.643-07:00",
+          "affected_components": [
+            {
+              "code": "hybzp260h3n2",
+              "name": "Zoom Mail - Calendar",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "m389cl6vp0m8",
+          "status": "identified",
+          "body": "We have identified the service degradation where new users may be experiencing issues with calendar provisioning.\n\nOur team is actively working on a resolution, and we will keep you informed with timely updates as progress is made. \n\nThank you for your patience.",
+          "incident_id": "8htxnr17zkfz",
+          "created_at": "2026-10-06T20:09:43.237-07:00",
+          "updated_at": "2026-10-06T20:09:43.237-07:00",
+          "display_at": "2026-10-06T20:09:43.237-07:00",
+          "affected_components": [
+            {
+              "code": "hybzp260h3n2",
+              "name": "Zoom Mail - Calendar",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "58s1dq9dvbpk",
+          "status": "investigating",
+          "body": "We are currently investigating a service degradation where new users may be experiencing issues with calendar provisioning.\n\nOur team is actively working to identify the impact and root cause. We will provide an update as soon as more information becomes available.\n\nWe appreciate your patience as we work to resolve this issue.",
+          "incident_id": "8htxnr17zkfz",
+          "created_at": "2026-10-06T19:41:42.284-07:00",
+          "updated_at": "2026-10-06T19:41:42.284-07:00",
+          "display_at": "2026-10-06T19:41:42.284-07:00",
+          "affected_components": [
+            {
+              "code": "hybzp260h3n2",
+              "name": "Zoom Mail - Calendar",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "hybzp260h3n2",
+          "name": "Calendar",
+          "status": "operational",
+          "created_at": "2023-03-23T09:35:24.809-07:00",
+          "updated_at": "2026-10-06T20:46:22.591-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": "2023-03-23",
+          "group_id": "thrn29k311lc",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:00+00:00",
+  "content_sha256": "edff068402beaba9b5ae8d9b8ac8fffc883d4c94b963aca274c0ff2d8eaaa267"
+}

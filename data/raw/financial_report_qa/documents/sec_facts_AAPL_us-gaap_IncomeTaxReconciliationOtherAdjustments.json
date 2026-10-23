@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncomeTaxReconciliationOtherAdjustments",
+  "title": "Apple Inc. - Effective Income Tax Rate Reconciliation, Other Adjustments, Amount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncomeTaxReconciliationOtherAdjustments\nLabel: Effective Income Tax Rate Reconciliation, Other Adjustments, Amount\nDescription: Amount of the difference between reported income tax expense (benefit) and expected income tax expense (benefit) computed by applying the domestic federal statutory income tax rates to pretax income (loss) from continuing operations attributable to other adjustments.\nRecent reported values:\nUSD 2021 FY 10-K filed 2021-10-29: -300000000\nUSD 2022 FY 10-K filed 2022-10-28: -300000000\nUSD 2023 FY 10-K filed 2023-11-03: -300000000\nUSD 2022 FY 10-K filed 2022-10-28: -86000000\nUSD 2023 FY 10-K filed 2023-11-03: 456000000\nUSD 2024 FY 10-K filed 2024-11-01: 160000000\nUSD 2023 FY 10-K filed 2023-11-03: -192000000\nUSD 2024 FY 10-K filed 2024-11-01: -192000000\nUSD 2025 FY 10-K filed 2025-10-31: -188000000\nUSD 2024 FY 10-K filed 2024-11-01: 10000000\nUSD 2025 FY 10-K filed 2025-10-31: 279000000\nUSD 2025 FY 10-K filed 2025-10-31: 410000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncomeTaxReconciliationOtherAdjustments",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "11fc15acb451d736c8ac3ceae9b0569b9308623c0885858969dc937cf8b0f55f"
+}

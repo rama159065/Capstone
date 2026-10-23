@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_StockIssuedDuringPeriodValueAcquisitions",
+  "title": "Apple Inc. - Stock Issued During Period, Value, Acquisitions",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: StockIssuedDuringPeriodValueAcquisitions\nLabel: Stock Issued During Period, Value, Acquisitions\nDescription: Value of stock issued pursuant to acquisitions during the period.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 21000000\nUSD 2009 FY 10-K/A filed 2010-01-25: 21000000\nUSD 2009 FY 10-K filed 2009-10-27: 21000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "StockIssuedDuringPeriodValueAcquisitions",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "f70c9a95ccf9a21f4f9b328bd0d26036433866cf90329b428596b7343e342d62"
+}

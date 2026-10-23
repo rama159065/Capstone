@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsGrantsInPeriod",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Grants in Period",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsGrantsInPeriod\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Grants in Period\nDescription: The number of grants made during the period on other than stock (or unit) option plans (for example, phantom stock or unit plan, stock or unit appreciation rights plan, performance target plan).\nRecent reported values:\nshares 2012 Q2 10-Q filed 2012-04-25: 6585000\nshares 2012 Q3 10-Q filed 2012-07-25: 7223000\nshares 2012 FY 10-K filed 2012-10-31: 7799000\nshares 2012 FY 8-K filed 2013-04-24: 7799000\nshares 2013 FY 10-K filed 2013-10-30: 7799000\nshares 2013 Q1 10-Q filed 2013-01-24: 3691000\nshares 2013 Q2 10-Q filed 2013-04-24: 4059000\nshares 2013 Q3 10-Q filed 2013-07-24: 5124000\nshares 2013 FY 10-K filed 2013-10-30: 5631000\nshares 2014 Q1 10-Q filed 2014-01-28: 6183000\nshares 2014 Q2 10-Q filed 2014-04-24: 6964000\nshares 2014 Q3 10-Q filed 2014-07-23: 53730000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsGrantsInPeriod",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "099bb1e0f4df5fa57114b3627de827cef2dc705bab56c9c079532e30d9b01f9d"
+}

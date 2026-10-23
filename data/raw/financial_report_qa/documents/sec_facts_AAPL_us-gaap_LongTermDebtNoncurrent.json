@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_LongTermDebtNoncurrent",
+  "title": "Apple Inc. - Long-term Debt, Excluding Current Maturities",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: LongTermDebtNoncurrent\nLabel: Long-term Debt, Excluding Current Maturities\nDescription: Amount after unamortized (discount) premium and debt issuance costs of long-term debt classified as noncurrent and excluding amounts to be repaid within one year or the normal operating cycle, if longer. Includes, but not limited to, notes payable, bonds payable, debentures, mortgage loans and commercial paper. Excludes capital lease obligations.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 85750000000\nUSD 2025 FY 10-K filed 2025-10-31: 85750000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 83956000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 78566000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 82430000000\nUSD 2025 FY 10-K filed 2025-10-31: 78328000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 78328000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 78328000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 78328000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 76685000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 74404000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 71340000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "LongTermDebtNoncurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b8c58375b7242f38a91178671540da5fe721ad57efe7051e35e62ed9ac5cb0c9"
+}

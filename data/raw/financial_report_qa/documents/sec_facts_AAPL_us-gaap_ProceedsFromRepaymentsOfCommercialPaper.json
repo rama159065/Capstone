@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ProceedsFromRepaymentsOfCommercialPaper",
+  "title": "Apple Inc. - Proceeds from (Repayments of) Commercial Paper",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ProceedsFromRepaymentsOfCommercialPaper\nLabel: Proceeds from (Repayments of) Commercial Paper\nDescription: The net cash inflow or cash outflow from issuing (borrowing) and repaying commercial paper.\nRecent reported values:\nUSD 2024 FY 10-K filed 2024-11-01: 3960000000\nUSD 2025 FY 10-K filed 2025-10-31: 3960000000\nUSD 2025 Q1 10-Q filed 2025-01-31: -7944000000\nUSD 2026 Q1 10-Q filed 2026-01-30: -7944000000\nUSD 2025 Q2 10-Q filed 2025-05-02: -3968000000\nUSD 2026 Q2 10-Q filed 2026-05-01: -3968000000\nUSD 2025 Q3 10-Q filed 2025-08-01: -65000000\nUSD 2026 Q3 10-Q filed 2026-07-31: -65000000\nUSD 2025 FY 10-K filed 2025-10-31: -2032000000\nUSD 2026 Q1 10-Q filed 2026-01-30: -5910000000\nUSD 2026 Q2 10-Q filed 2026-05-01: -5911000000\nUSD 2026 Q3 10-Q filed 2026-07-31: -5911000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ProceedsFromRepaymentsOfCommercialPaper",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "5161c63516ebb406caf8d8d9fa51714f5108ec997c79653056bee244c462e376"
+}

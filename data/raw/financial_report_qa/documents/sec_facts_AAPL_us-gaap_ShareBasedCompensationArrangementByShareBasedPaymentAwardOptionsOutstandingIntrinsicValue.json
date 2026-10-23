@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOutstandingIntrinsicValue",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Outstanding, Intrinsic Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOutstandingIntrinsicValue\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Outstanding, Intrinsic Value\nDescription: Amount by which the current fair value of the underlying stock exceeds the exercise price of options outstanding.\nRecent reported values:\nUSD 2014 Q1 10-Q filed 2014-01-28: 1124000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 926000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 908000000\nUSD 2014 FY 10-K filed 2014-10-27: 520000000\nUSD None None 8-K filed 2015-01-28: 520000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 330000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 239000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 177000000\nUSD 2015 FY 10-K filed 2015-10-28: 120000000\nUSD 2016 Q1 10-Q filed 2016-01-27: 106000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 100000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 84000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOutstandingIntrinsicValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "cee909646fd5235dae70b78ba898292a392a954a08b9b53907eca0a3305d065e"
+}

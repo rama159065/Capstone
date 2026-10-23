@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ProceedsFromPaymentsForOtherFinancingActivities",
+  "title": "Apple Inc. - Proceeds from (Payments for) Other Financing Activities",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ProceedsFromPaymentsForOtherFinancingActivities\nLabel: Proceeds from (Payments for) Other Financing Activities\nDescription: Amount of cash inflow (outflow) from financing activities classified as other.\nRecent reported values:\nUSD 2024 FY 10-K filed 2024-11-01: -361000000\nUSD 2025 FY 10-K filed 2025-10-31: -361000000\nUSD 2025 Q1 10-Q filed 2025-01-31: -35000000\nUSD 2026 Q1 10-Q filed 2026-01-30: -35000000\nUSD 2025 Q2 10-Q filed 2025-05-02: -77000000\nUSD 2026 Q2 10-Q filed 2026-05-01: -77000000\nUSD 2025 Q3 10-Q filed 2025-08-01: -87000000\nUSD 2026 Q3 10-Q filed 2026-07-31: -87000000\nUSD 2025 FY 10-K filed 2025-10-31: -111000000\nUSD 2026 Q1 10-Q filed 2026-01-30: -38000000\nUSD 2026 Q2 10-Q filed 2026-05-01: -126000000\nUSD 2026 Q3 10-Q filed 2026-07-31: -184000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ProceedsFromPaymentsForOtherFinancingActivities",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e5c394494d13410ce700f5e81057af11c6e2d1b42966a9cd809a73fad95cd512"
+}

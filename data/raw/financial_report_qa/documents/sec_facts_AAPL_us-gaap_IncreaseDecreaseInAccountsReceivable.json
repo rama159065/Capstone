@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncreaseDecreaseInAccountsReceivable",
+  "title": "Apple Inc. - Increase (Decrease) in Accounts Receivable",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncreaseDecreaseInAccountsReceivable\nLabel: Increase (Decrease) in Accounts Receivable\nDescription: The increase (decrease) during the reporting period in amount due within one year (or one business cycle) from customers for the credit sale of goods and services.\nRecent reported values:\nUSD 2024 FY 10-K filed 2024-11-01: 3788000000\nUSD 2025 FY 10-K filed 2025-10-31: 3788000000\nUSD 2025 Q1 10-Q filed 2025-01-31: -3597000000\nUSD 2026 Q1 10-Q filed 2026-01-30: -3597000000\nUSD 2025 Q2 10-Q filed 2025-05-02: -7266000000\nUSD 2026 Q2 10-Q filed 2026-05-01: -7266000000\nUSD 2025 Q3 10-Q filed 2025-08-01: -5685000000\nUSD 2026 Q3 10-Q filed 2026-07-31: -5685000000\nUSD 2025 FY 10-K filed 2025-10-31: 6682000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 153000000\nUSD 2026 Q2 10-Q filed 2026-05-01: -9295000000\nUSD 2026 Q3 10-Q filed 2026-07-31: -8316000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncreaseDecreaseInAccountsReceivable",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "c3542f0368741f935078bc753c90f9c766a23ca142503ec519ec5518afeafb25"
+}

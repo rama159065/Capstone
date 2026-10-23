@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OciBeforeReclassificationsBeforeTaxAttributableToParent",
+  "title": "Apple Inc. - OCI, before Reclassifications, before Tax, Attributable to Parent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OciBeforeReclassificationsBeforeTaxAttributableToParent\nLabel: OCI, before Reclassifications, before Tax, Attributable to Parent\nDescription: Amount before tax and reclassification adjustments of other comprehensive income (loss) attributable to parent.\nRecent reported values:\nUSD 2016 FY 10-K filed 2016-10-26: 1987000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 1886000000\nUSD 2016 FY 10-K filed 2016-10-26: 2526000000\nUSD 2017 Q1 10-Q filed 2017-02-01: -1552000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OciBeforeReclassificationsBeforeTaxAttributableToParent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "d70ea898d6e6e266138d16d54b0f910e3b6d672c8b59d752544c6f3ba6ff92c4"
+}

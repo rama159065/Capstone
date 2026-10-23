@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DeferredTaxAssetsNetCurrent",
+  "title": "Apple Inc. - Deferred Tax Assets, Net of Valuation Allowance, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DeferredTaxAssetsNetCurrent\nLabel: Deferred Tax Assets, Net of Valuation Allowance, Current\nDescription: Amount after allocation of valuation allowances of deferred tax asset attributable to deductible temporary differences and carryforwards classified as current.\nRecent reported values:\nUSD 2013 Q3 10-Q filed 2013-07-24: 3193000000\nUSD 2013 FY 10-K filed 2013-10-30: 3453000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 3453000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 3453000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 3453000000\nUSD 2014 FY 10-K filed 2014-10-27: 3453000000\nUSD None None 8-K filed 2015-01-28: 3453000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 3742000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 4014000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 3884000000\nUSD 2014 FY 10-K filed 2014-10-27: 4318000000\nUSD None None 8-K filed 2015-01-28: 4318000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DeferredTaxAssetsNetCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e702b3afbc43912732b7d76c8aefea3e54500333af39a5b186a7a75ec9c9a693"
+}

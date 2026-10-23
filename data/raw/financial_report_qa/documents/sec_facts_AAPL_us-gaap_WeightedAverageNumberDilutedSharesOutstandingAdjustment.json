@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_WeightedAverageNumberDilutedSharesOutstandingAdjustment",
+  "title": "Apple Inc. - Weighted Average Number Diluted Shares Outstanding Adjustment",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: WeightedAverageNumberDilutedSharesOutstandingAdjustment\nLabel: Weighted Average Number Diluted Shares Outstanding Adjustment\nDescription: The sum of dilutive potential common shares or units used in the calculation of the diluted per-share or per-unit computation.\nRecent reported values:\nshares 2022 Q2 10-Q filed 2022-04-29: 124514000\nshares 2023 Q2 10-Q filed 2023-05-05: 124514000\nshares 2022 Q3 10-Q filed 2022-07-29: 117113000\nshares 2023 Q3 10-Q filed 2023-08-04: 117113000\nshares 2022 Q3 10-Q filed 2022-07-29: 99258000\nshares 2023 Q3 10-Q filed 2023-08-04: 99258000\nshares 2022 FY 10-K filed 2022-10-28: 109856000\nshares 2023 Q1 10-Q filed 2023-02-03: 62995000\nshares 2023 Q2 10-Q filed 2023-05-05: 61445000\nshares 2023 Q2 10-Q filed 2023-05-05: 59896000\nshares 2023 Q3 10-Q filed 2023-08-04: 66766000\nshares 2023 Q3 10-Q filed 2023-08-04: 77407000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "WeightedAverageNumberDilutedSharesOutstandingAdjustment",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "8dc0fcbcb18acb6be9bab5da9b8f64b32c3bbb58eb6aba1e66308886aab80636"
+}

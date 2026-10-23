@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_SegmentReportingSegmentAssets",
+  "title": "Apple Inc. - Segment Reporting, Segment Assets (Deprecated 2011-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: SegmentReportingSegmentAssets\nLabel: Segment Reporting, Segment Assets (Deprecated 2011-01-31)\nDescription: Total assets for reportable segments.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 4563000000\nUSD 2010 FY 10-K filed 2010-10-27: 5604000000\nUSD 2010 FY 10-K filed 2010-10-27: 9177000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "SegmentReportingSegmentAssets",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "2a8ac803a63c2d451396809f5e584d371ba8f2fc75ffbcfec87c16db7e422a8f"
+}

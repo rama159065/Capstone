@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476604",
+  "title": "Strengthening the Statistical System of Uzbekistan",
+  "text": "bid_description: Hiring company for conducting topographic surveying and engineering-geological investigations of Institute's building\nbid_reference_no: SSS/C1.2/RFQ/78\nid: OP00476604\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P173450-Strengthening the Statistical System of Uzbekistan Loan/Credit/TF Info: IDA-70380 Bid/Contract Reference No: SSS/C1.2/RFQ/78 Procurement Method: RFQ-Request for Quotations Scope of Contract: Hiring company for conducting topographic surveying and engineering-geological investigations of Institute's building Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/07/14 Duration of Contract 30 Day(s) Awarded Bidder(s): TRADE GEO SERVICE (1137507) Tashkent, 55 I. Karimov Street Country: Uzbekistan Bid Price at Opening UZS 12500000.00 Evaluated Bid Price UZS 12500000.00 Signed Contract price UZS 12500000.00 \nnotice_type: Contract Award\nnoticedate: 21-Oct-2026\nprocurement_group: NC\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Uzbekistan\nproject_id: P173450\nproject_name: Strengthening the Statistical System of Uzbekistan\nsubmission_date: 2026-10-21T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=0&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476604",
+      "notice_type": "Contract Award",
+      "noticedate": "21-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Uzbekistan",
+      "project_id": "P173450",
+      "project_name": "Strengthening the Statistical System of Uzbekistan",
+      "bid_reference_no": "SSS/C1.2/RFQ/78",
+      "bid_description": "Hiring company for conducting topographic surveying and engineering-geological investigations of Institute's building",
+      "procurement_group": "NC",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-21T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P173450-Strengthening the Statistical System of Uzbekistan<br/><b>Loan/Credit/TF Info:</b>IDA-70380<br/><b>Bid/Contract Reference No:</b>SSS/C1.2/RFQ/78<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Hiring company for conducting topographic surveying and engineering-geological investigations of Institute's building</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/07/14<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>30 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>TRADE GEO SERVICE (1137507)</b><br/>Tashkent, 55 I. Karimov Street<br/>Country: Uzbekistan<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>UZS 12500000.00<br/><br/>Evaluated Bid Price<br/>UZS 12500000.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>UZS 12500000.00</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:08+00:00",
+  "content_sha256": "a15e8a8ffbf41de2c61560d1061ebf7296511996107fad84ac91e23d82c83469"
+}

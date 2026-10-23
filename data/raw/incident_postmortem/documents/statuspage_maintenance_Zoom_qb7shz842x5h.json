@@ -1,0 +1,120 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Zoom_qb7shz842x5h",
+  "title": "Zoom - Network Maintenance in SJC Data Center : October 18, 2026",
+  "text": "Service: Zoom\nMaintenance: Network Maintenance in SJC Data Center : October 18, 2026\nStatus: completed\nImpact: maintenance\nScheduled for: 2026-10-18T21:00:00.000-07:00\nScheduled until: 2026-10-19T03:00:00.000-07:00\nUpdates:\n- 2026-10-19T03:00:10.186-07:00: completed - The scheduled maintenance has been completed.\n- 2026-10-18T21:00:07.803-07:00: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2026-10-18T20:00:14.441-07:00: scheduled - Maintenance will begin as scheduled in 60 minutes.\n- 2026-09-20T01:42:14.828-07:00: scheduled - Zoom will perform network maintenance at our San Jose data center. Users may experience a brief interruption of service during the maintenance window.",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://status.zoom.us/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "qb7shz842x5h",
+      "name": "Network Maintenance in SJC Data Center : October 18, 2026",
+      "status": "completed",
+      "created_at": "2026-09-20T01:42:14.722-07:00",
+      "updated_at": "2026-10-19T03:00:11.098-07:00",
+      "monitoring_at": null,
+      "resolved_at": "2026-10-19T03:00:10.186-07:00",
+      "impact": "maintenance",
+      "shortlink": "https://stspg.io/8yy7qnw0fmbz",
+      "started_at": "2026-09-20T01:42:14.709-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "mqnp5h62nv99",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "qb7shz842x5h",
+          "created_at": "2026-10-19T03:00:10.186-07:00",
+          "updated_at": "2026-10-19T03:00:10.186-07:00",
+          "display_at": "2026-10-19T03:00:10.186-07:00",
+          "affected_components": [
+            {
+              "code": "jh6w5p8b9yv9",
+              "name": "Zoom Phone - NORTH AMERICA - Zoom Phone",
+              "old_status": "under_maintenance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "r5qbbg90g48t",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "qb7shz842x5h",
+          "created_at": "2026-10-18T21:00:07.803-07:00",
+          "updated_at": "2026-10-18T21:00:07.803-07:00",
+          "display_at": "2026-10-18T21:00:07.803-07:00",
+          "affected_components": [
+            {
+              "code": "jh6w5p8b9yv9",
+              "name": "Zoom Phone - NORTH AMERICA - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "under_maintenance"
+            }
+          ],
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "q33sr8dgvj91",
+          "status": "scheduled",
+          "body": "Maintenance will begin as scheduled in 60 minutes.",
+          "incident_id": "qb7shz842x5h",
+          "created_at": "2026-10-18T20:00:14.441-07:00",
+          "updated_at": "2026-10-18T20:00:14.441-07:00",
+          "display_at": "2026-10-18T20:00:14.441-07:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "ylnttm7y35yk",
+          "status": "scheduled",
+          "body": "Zoom will perform network maintenance at our San Jose data center. Users may experience a brief interruption of service during the maintenance window.",
+          "incident_id": "qb7shz842x5h",
+          "created_at": "2026-09-20T01:42:14.828-07:00",
+          "updated_at": "2026-09-20T03:44:22.287-07:00",
+          "display_at": "2026-09-20T01:42:14.828-07:00",
+          "affected_components": [
+            {
+              "code": "jh6w5p8b9yv9",
+              "name": "Zoom Phone - NORTH AMERICA - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "jh6w5p8b9yv9",
+          "name": "Zoom Phone",
+          "status": "operational",
+          "created_at": "2019-01-23T13:28:01.376-08:00",
+          "updated_at": "2026-10-19T03:00:08.428-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": null,
+          "group_id": "gwtd6dbkck60",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2026-10-18T21:00:00.000-07:00",
+      "scheduled_until": "2026-10-19T03:00:00.000-07:00"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:49:04+00:00",
+  "content_sha256": "8c11408af889b1518d312fabfb69f082a696d74c10cf682667c991cc238f0fec"
+}

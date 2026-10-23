@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_EmployeeServiceShareBasedCompensationNonvestedAwardsTotalCompensationCostNotYetRecognized",
+  "title": "Apple Inc. - Share-based Payment Arrangement, Nonvested Award, Cost Not yet Recognized, Amount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: EmployeeServiceShareBasedCompensationNonvestedAwardsTotalCompensationCostNotYetRecognized\nLabel: Share-based Payment Arrangement, Nonvested Award, Cost Not yet Recognized, Amount\nDescription: Amount of cost not yet recognized for nonvested award under share-based payment arrangement.\nRecent reported values:\nUSD 2021 Q1 10-Q filed 2021-01-28: 18200000000\nUSD 2021 Q2 10-Q filed 2021-04-29: 16700000000\nUSD 2021 Q3 10-Q filed 2021-07-28: 15300000000\nUSD 2021 FY 10-K filed 2021-10-29: 13600000000\nUSD 2022 Q1 10-Q filed 2022-01-28: 20600000000\nUSD 2022 Q2 10-Q filed 2022-04-29: 19300000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 18100000000\nUSD 2022 FY 10-K filed 2022-10-28: 16700000000\nUSD 2023 Q1 10-Q filed 2023-02-03: 25500000000\nUSD 2023 Q2 10-Q filed 2023-05-05: 23200000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 20900000000\nUSD 2023 FY 10-K filed 2023-11-03: 18600000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "EmployeeServiceShareBasedCompensationNonvestedAwardsTotalCompensationCostNotYetRecognized",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e9a4fcd3f61e256fb55aa5b30570f1ba92f769e3508029a6af57bb2a2bce2a67"
+}

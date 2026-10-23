@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ProductWarrantyAccrualPayments",
+  "title": "Apple Inc. - Standard and Extended Product Warranty Accrual, Decrease for Payments",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ProductWarrantyAccrualPayments\nLabel: Standard and Extended Product Warranty Accrual, Decrease for Payments\nDescription: Amount of decrease in the standard and extended product warranty accrual from payments made in cash or in kind to satisfy claims under the terms of the standard and extended product warranty.\nRecent reported values:\nUSD 2012 Q2 10-Q filed 2012-04-25: 249000000\nUSD 2011 Q2 10-Q filed 2011-04-21: 249000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 790000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 790000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 288000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 288000000\nUSD 2011 FY 10-K filed 2011-10-26: 1147000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 401000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 865000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 464000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 1301000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 436000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ProductWarrantyAccrualPayments",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "d9db903a892e44d89543556c5d1183f91b8010e78c40f957d8e8a736a072580c"
+}

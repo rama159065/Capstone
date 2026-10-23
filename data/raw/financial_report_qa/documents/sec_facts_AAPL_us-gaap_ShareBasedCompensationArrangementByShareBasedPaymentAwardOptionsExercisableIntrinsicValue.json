@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsExercisableIntrinsicValue",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Exercisable, Intrinsic Value (Deprecated 2011-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsExercisableIntrinsicValue\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Exercisable, Intrinsic Value (Deprecated 2011-01-31)\nDescription: The total dollar difference between fair values of the underlying shares reserved for issuance and exercise prices of vested portions of options outstanding and currently exercisable under the option plan as of the balance sheet date.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 3817663000\nUSD 2011 Q1 10-Q filed 2011-01-19: 3612242000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsExercisableIntrinsicValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "ad4b68746ba45af47f1085e0eb5ff9a01ef398581a965f0a70382af53160d2a8"
+}

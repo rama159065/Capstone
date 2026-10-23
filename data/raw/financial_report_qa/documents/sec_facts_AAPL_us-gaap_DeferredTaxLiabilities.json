@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DeferredTaxLiabilities",
+  "title": "Apple Inc. - Deferred Tax Liabilities, Net",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DeferredTaxLiabilities\nLabel: Deferred Tax Liabilities, Net\nDescription: Amount, after deferred tax asset, of deferred tax liability attributable to taxable differences without jurisdictional netting.\nRecent reported values:\nUSD 2011 FY 10-K filed 2011-10-26: 5129000000\nUSD 2011 FY 10-K filed 2011-10-26: 9168000000\nUSD 2012 FY 10-K filed 2012-10-31: 9168000000\nUSD 2012 FY 8-K filed 2013-04-24: 9168000000\nUSD 2012 FY 10-K filed 2012-10-31: 14905000000\nUSD 2012 FY 8-K filed 2013-04-24: 14905000000\nUSD 2013 FY 10-K filed 2013-10-30: 15168000000\nUSD 2013 FY 10-K filed 2013-10-30: 18156000000\nUSD 2017 FY 10-K filed 2017-11-03: 21906000000\nUSD 2017 FY 10-K filed 2017-11-03: 27588000000\nUSD 2018 FY 10-K filed 2018-11-05: 27588000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DeferredTaxLiabilities",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "16d7574c210637f790331f67e588c2ed18330a556f206e1cb4ee9b6635f9cd78"
+}

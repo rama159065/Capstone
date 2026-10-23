@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AvailableForSaleSecuritiesGrossUnrealizedLosses1",
+  "title": "Apple Inc. - Available-for-sale Securities, Gross Unrealized Losses (Deprecated 2013-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AvailableForSaleSecuritiesGrossUnrealizedLosses1\nLabel: Available-for-sale Securities, Gross Unrealized Losses (Deprecated 2013-01-31)\nDescription: This item represents the gross unrealized losses for securities, at a point in time, which are categorized neither as held-to-maturity nor trading securities.\nRecent reported values:\nUSD 2012 Q2 10-Q filed 2012-04-25: 158000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 158000000\nUSD 2011 FY 10-K filed 2011-10-26: 158000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 203000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 76000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 72000000\nUSD 2012 FY 8-K filed 2013-04-24: 20000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 20000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 20000000\nUSD 2012 FY 10-K filed 2012-10-31: 20000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 87000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 139000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AvailableForSaleSecuritiesGrossUnrealizedLosses1",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "ea8d2d7fa070d096703703ec2ad35d8a8b90b4cf80d7d1bc806a8ee01a38ef2b"
+}

@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476322",
+  "title": "Food Systems Resilience Program for Eastern and Southern Africa",
+  "text": "bid_description: Procurement of poly bag and improved coffee seed for coffee nursury development demonstration at Sodo wereda.\nbid_reference_no: ET-CERS-FSRP-469270-GO-RFQ\nid: OP00476322\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P178566-Food Systems Resilience Program for Eastern and Southern Africa Loan/Credit/TF Info: IDA-71560 Bid/Contract Reference No: ET-CERS-FSRP-469270-GO-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: Procurement of Poly bag for Coffee seed production Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2025/03/07 Duration of Contract 5 Day(s) Awarded Bidder(s): ELISABET KASSAHUN SUPPLY OF AGRI. PRODUCTS & ANTI-INSECT CHEMICAL RETAILER (1137149) Addis AbebaTel: 0900443090 Country: Ethiopia Bid Price at Opening ETB 419094.00 Evaluated Bid Price ETB 419094.00 Signed Contract price ETB 419094.00 Evaluated Bidder(s): NIGIST YILMU H/MARIAM AGRICULTURAL INPUTS WHOLESALE (1036971) Addis Ababa Country: Ethiopia Bid Price at Opening ETB 515808.00 Evaluated Bid Price ETB 515808.00 ADDISALEM KASAHUN SUPPLY OF AGRICULTURAL PRODUCTS (779076) Addis Ababa Country: Ethiopia Bid Price at Opening ETB 483570.00 Evaluated Bid Price ETB 483570.00 \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Eastern and Southern Africa\nproject_id: P178566\nproject_name: Food Systems Resilience Program for Eastern and Southern Africa\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=200&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476322",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Eastern and Southern Africa",
+      "project_id": "P178566",
+      "project_name": "Food Systems Resilience Program for Eastern and Southern Africa",
+      "bid_reference_no": "ET-CERS-FSRP-469270-GO-RFQ",
+      "bid_description": "Procurement of  poly bag and  improved coffee seed for coffee nursury development demonstration at Sodo wereda.",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P178566-Food Systems Resilience Program for Eastern and Southern Africa<br/><b>Loan/Credit/TF Info:</b>IDA-71560<br/><b>Bid/Contract Reference No:</b>ET-CERS-FSRP-469270-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Procurement of Poly bag for Coffee seed production</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2025/03/07<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>5 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>ELISABET KASSAHUN SUPPLY OF AGRI. PRODUCTS & ANTI-INSECT CHEMICAL RETAILER (1137149)</b><br/>Addis AbebaTel: 0900443090<br/>Country: Ethiopia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>ETB 419094.00<br/><br/>Evaluated Bid Price<br/>ETB 419094.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>ETB 419094.00</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>NIGIST YILMU H/MARIAM AGRICULTURAL INPUTS WHOLESALE (1036971)</b><br/>Addis Ababa<br/>Country: Ethiopia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>ETB 515808.00<br/><br/>Evaluated Bid Price<br/>ETB 515808.00</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>ADDISALEM KASAHUN SUPPLY OF AGRICULTURAL PRODUCTS (779076)</b><br/>Addis Ababa<br/>Country: Ethiopia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>ETB 483570.00<br/><br/>Evaluated Bid Price<br/>ETB 483570.00</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:13+00:00",
+  "content_sha256": "675b34cbae05a838fffac4f7b300fe8f03e6946fbae5b61773051da258f3eaf3"
+}

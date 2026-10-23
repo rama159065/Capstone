@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DeferredTaxAssetsTaxDeferredExpenseCompensationAndBenefitsShareBasedCompensationCost",
+  "title": "Apple Inc. - Deferred Tax Assets, Tax Deferred Expense, Compensation and Benefits, Share-based Compensation Cost",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DeferredTaxAssetsTaxDeferredExpenseCompensationAndBenefitsShareBasedCompensationCost\nLabel: Deferred Tax Assets, Tax Deferred Expense, Compensation and Benefits, Share-based Compensation Cost\nDescription: Amount before allocation of valuation allowances of deferred tax asset attributable to deductible temporary differences from share-based compensation.\nRecent reported values:\nUSD 2014 FY 10-K filed 2014-10-27: 454000000\nUSD None None 8-K filed 2015-01-28: 454000000\nUSD 2015 FY 10-K filed 2015-10-28: 454000000\nUSD 2015 FY 10-K filed 2015-10-28: 575000000\nUSD 2016 FY 10-K filed 2016-10-26: 575000000\nUSD 2016 FY 10-K filed 2016-10-26: 601000000\nUSD 2017 FY 10-K filed 2017-11-03: 601000000\nUSD 2017 FY 10-K filed 2017-11-03: 703000000\nUSD 2018 FY 10-K filed 2018-11-05: 703000000\nUSD 2018 FY 10-K filed 2018-11-05: 513000000\nUSD 2019 FY 10-K filed 2019-10-31: 513000000\nUSD 2019 FY 10-K filed 2019-10-31: 749000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DeferredTaxAssetsTaxDeferredExpenseCompensationAndBenefitsShareBasedCompensationCost",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "df0ec710f687f952a8cbc3ab95c2f17f812e299462b546b5454b4187dafb569a"
+}

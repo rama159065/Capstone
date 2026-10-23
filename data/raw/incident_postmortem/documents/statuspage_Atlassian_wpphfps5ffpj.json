@@ -1,0 +1,56 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Atlassian_wpphfps5ffpj",
+  "title": "Atlassian - Partial app outage across multiple regions",
+  "text": "Service: Atlassian\nIncident: Partial app outage across multiple regions\nStatus: resolved\nImpact: none\nStarted: 2022-06-22T03:17:06.995Z\nResolved: 2022-06-22T03:33:33.007Z\nUpdates:\n- 2022-06-22T03:33:33.007Z: resolved - Between 2:05 UTC and 2:42 UTC, we experienced failures to load some marketplace apps for customers tenanted in the apse, eu-west and eu-central regions. The issue has been resolved and the service is operating normally.\n- 2022-06-22T03:17:07.077Z: monitoring - We are investigating reports of intermittent errors for some marketplace apps across the following regions: apse, eu west and eu central. Service has now been restored to each of the affected regions. We are continuing to monitor, but believe there is no further impact to customers and Atlassian developers.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.atlassian.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "wpphfps5ffpj",
+      "name": "Partial app outage across multiple regions",
+      "status": "resolved",
+      "created_at": "2022-06-22T03:17:07.004Z",
+      "updated_at": "2022-06-22T03:33:33.027Z",
+      "monitoring_at": "2022-06-22T03:17:07.077Z",
+      "resolved_at": "2022-06-22T03:33:33.007Z",
+      "impact": "none",
+      "shortlink": "https://stspg.io/g9syxmx696d8",
+      "started_at": "2022-06-22T03:17:06.995Z",
+      "page_id": "0f54fx204jpt",
+      "incident_updates": [
+        {
+          "id": "r6nzwmmq8chn",
+          "status": "resolved",
+          "body": "Between 2:05 UTC and 2:42 UTC, we experienced failures to load some marketplace apps for customers tenanted in the apse, eu-west and eu-central regions. The issue has been resolved and the service is operating normally.",
+          "incident_id": "wpphfps5ffpj",
+          "created_at": "2022-06-22T03:33:33.007Z",
+          "updated_at": "2022-06-22T03:33:33.007Z",
+          "display_at": "2022-06-22T03:33:33.007Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "xcm9wqwdy2zb",
+          "status": "monitoring",
+          "body": "We are investigating reports of intermittent errors for some marketplace apps across the following regions: apse, eu west and eu central. Service has now been restored to each of the affected regions. We are continuing to monitor, but believe there is no further impact to customers and Atlassian developers.",
+          "incident_id": "wpphfps5ffpj",
+          "created_at": "2022-06-22T03:17:07.077Z",
+          "updated_at": "2022-06-22T03:17:07.077Z",
+          "display_at": "2022-06-22T03:17:07.077Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:48+00:00",
+  "content_sha256": "370d48b41354b238f8194fc3b8756d42a6081361e653094e271009501dbf83d2"
+}

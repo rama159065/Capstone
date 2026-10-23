@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_StockRepurchaseProgramAuthorizedAmount1",
+  "title": "Apple Inc. - Stock Repurchase Program, Authorized Amount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: StockRepurchaseProgramAuthorizedAmount1\nLabel: Stock Repurchase Program, Authorized Amount\nDescription: Amount of stock repurchase plan authorized.\nRecent reported values:\nUSD 2020 Q1 10-Q filed 2020-01-29: 100000000000\nUSD 2019 Q3 10-Q filed 2019-07-31: 175000000000\nUSD 2019 FY 10-K filed 2019-10-31: 175000000000\nUSD 2020 Q1 10-Q filed 2020-01-29: 175000000000\nUSD 2020 Q2 10-Q filed 2020-05-01: 175000000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 225000000000\nUSD 2020 FY 10-K filed 2020-10-30: 225000000000\nUSD 2021 Q1 10-Q filed 2021-01-28: 225000000000\nUSD 2021 Q2 10-Q filed 2021-04-29: 225000000000\nUSD 2021 Q3 10-Q filed 2021-07-28: 315000000000\nUSD 2021 FY 10-K filed 2021-10-29: 315000000000\nUSD 2022 Q1 10-Q filed 2022-01-28: 315000000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "StockRepurchaseProgramAuthorizedAmount1",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "1ff3c8f4bc31367dd673bf67fdfe0d91718770423acbcdbd3fc0a94634c76026"
+}

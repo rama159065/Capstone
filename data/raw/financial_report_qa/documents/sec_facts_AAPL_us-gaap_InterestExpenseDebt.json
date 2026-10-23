@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_InterestExpenseDebt",
+  "title": "Apple Inc. - Interest Expense, Debt",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: InterestExpenseDebt\nLabel: Interest Expense, Debt\nDescription: Amount of the cost of borrowed funds accounted for as interest expense for debt.\nRecent reported values:\nUSD 2019 Q2 10-Q filed 2019-05-01: 1400000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 742000000\nUSD 2019 Q2 10-Q filed 2019-05-01: 742000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 2200000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 780000000\nUSD 2018 FY 10-K filed 2018-11-05: 3000000000\nUSD 2019 Q1 10-Q filed 2019-01-30: 809000000\nUSD 2019 Q2 10-Q filed 2019-05-01: 1600000000\nUSD 2019 Q2 10-Q filed 2019-05-01: 828000000\nUSD 2021 FY 10-K filed 2021-10-29: 3200000000\nUSD 2021 FY 10-K filed 2021-10-29: 2800000000\nUSD 2021 FY 10-K filed 2021-10-29: 2600000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "InterestExpenseDebt",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "79d8af2a77ea80cde0b6e682c97558104e78f5010cde05359bd4e40c14223a71"
+}

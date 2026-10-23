@@ -1,0 +1,120 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Zoom_0mhy7s4pzv18",
+  "title": "Zoom - Zoom Phone Update - Japan SIP Zones: September 20, 2026 (No Operational Impact)",
+  "text": "Service: Zoom\nMaintenance: Zoom Phone Update - Japan SIP Zones: September 20, 2026 (No Operational Impact)\nStatus: completed\nImpact: maintenance\nScheduled for: 2026-09-20T08:00:00.000-07:00\nScheduled until: 2026-09-20T10:00:00.000-07:00\nUpdates:\n- 2026-09-20T10:00:07.865-07:00: completed - The scheduled maintenance has been completed.\n- 2026-09-20T08:00:07.302-07:00: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2026-09-20T07:00:09.666-07:00: scheduled - Maintenance will begin as scheduled in 60 minutes.\n- 2026-09-15T15:49:37.111-07:00: scheduled - We will be providing an update to Zoom Phone - Japan SIP zones in Tokyo and Osaka. Please refer to https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0062333 for more details. This update includes credential rotation for Zoom Phone Corporate Directory.\n\nThere is no operational impact. All services will be available during this scheduled update.",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://status.zoom.us/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "0mhy7s4pzv18",
+      "name": "Zoom Phone Update - Japan SIP Zones: September 20, 2026 (No Operational Impact)",
+      "status": "completed",
+      "created_at": "2026-09-15T15:49:36.997-07:00",
+      "updated_at": "2026-09-20T10:00:07.926-07:00",
+      "monitoring_at": null,
+      "resolved_at": "2026-09-20T10:00:07.865-07:00",
+      "impact": "maintenance",
+      "shortlink": "https://stspg.io/3qmd4wd413vv",
+      "started_at": "2026-09-15T15:49:36.980-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "nlwvkd1vh3db",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "0mhy7s4pzv18",
+          "created_at": "2026-09-20T10:00:07.865-07:00",
+          "updated_at": "2026-09-20T10:00:07.865-07:00",
+          "display_at": "2026-09-20T10:00:07.865-07:00",
+          "affected_components": [
+            {
+              "code": "yrt9l9s4twjl",
+              "name": "Zoom Phone - JAPAN - Zoom Phone",
+              "old_status": "under_maintenance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "3jz1hw914w09",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "0mhy7s4pzv18",
+          "created_at": "2026-09-20T08:00:07.302-07:00",
+          "updated_at": "2026-09-20T08:00:07.302-07:00",
+          "display_at": "2026-09-20T08:00:07.302-07:00",
+          "affected_components": [
+            {
+              "code": "yrt9l9s4twjl",
+              "name": "Zoom Phone - JAPAN - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "under_maintenance"
+            }
+          ],
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "hccxfmbj9rm3",
+          "status": "scheduled",
+          "body": "Maintenance will begin as scheduled in 60 minutes.",
+          "incident_id": "0mhy7s4pzv18",
+          "created_at": "2026-09-20T07:00:09.666-07:00",
+          "updated_at": "2026-09-20T07:00:09.666-07:00",
+          "display_at": "2026-09-20T07:00:09.666-07:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "t333p5t2tffj",
+          "status": "scheduled",
+          "body": "We will be providing an update to Zoom Phone - Japan SIP zones in Tokyo and Osaka. Please refer to https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0062333 for more details. This update includes credential rotation for Zoom Phone Corporate Directory.\n\nThere is no operational impact. All services will be available during this scheduled update.",
+          "incident_id": "0mhy7s4pzv18",
+          "created_at": "2026-09-15T15:49:37.111-07:00",
+          "updated_at": "2026-09-15T15:49:37.111-07:00",
+          "display_at": "2026-09-15T15:49:37.111-07:00",
+          "affected_components": [
+            {
+              "code": "yrt9l9s4twjl",
+              "name": "Zoom Phone - JAPAN - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "yrt9l9s4twjl",
+          "name": "Zoom Phone",
+          "status": "operational",
+          "created_at": "2022-05-03T10:50:25.396-07:00",
+          "updated_at": "2026-10-06T23:30:08.304-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "r6hzm1tntmq3",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2026-09-20T08:00:00.000-07:00",
+      "scheduled_until": "2026-09-20T10:00:00.000-07:00"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:49:04+00:00",
+  "content_sha256": "eaf79a6fead487753dffac56b63ef2df93cc1231e9f658997759384d6917820f"
+}

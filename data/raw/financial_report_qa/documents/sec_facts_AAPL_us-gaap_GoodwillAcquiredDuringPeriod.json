@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_GoodwillAcquiredDuringPeriod",
+  "title": "Apple Inc. - Goodwill, Acquired During Period",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: GoodwillAcquiredDuringPeriod\nLabel: Goodwill, Acquired During Period\nDescription: Amount of increase in asset representing future economic benefits arising from other assets acquired in a business combination that are not individually identified and separately recognized resulting from a business combination.\nRecent reported values:\nUSD 2013 FY 10-K filed 2013-10-30: 245000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 369000000\nUSD 2013 FY 10-K filed 2013-10-30: 419000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 440000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 474000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 789000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "GoodwillAcquiredDuringPeriod",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "99f6934ac22e4675617a6297e90eda4d415f3700b82e8196f4c87b97d735dce1"
+}

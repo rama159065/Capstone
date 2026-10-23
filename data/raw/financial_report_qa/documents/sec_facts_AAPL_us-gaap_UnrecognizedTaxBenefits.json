@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_UnrecognizedTaxBenefits",
+  "title": "Apple Inc. - Unrecognized Tax Benefits",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: UnrecognizedTaxBenefits\nLabel: Unrecognized Tax Benefits\nDescription: Amount of unrecognized tax benefits.\nRecent reported values:\nUSD 2023 FY 10-K filed 2023-11-03: 15477000000\nUSD 2024 FY 10-K filed 2024-11-01: 15477000000\nUSD 2022 FY 10-K filed 2022-10-28: 16758000000\nUSD 2023 FY 10-K filed 2023-11-03: 16758000000\nUSD 2024 FY 10-K filed 2024-11-01: 16758000000\nUSD 2025 FY 10-K filed 2025-10-31: 16758000000\nUSD 2023 FY 10-K filed 2023-11-03: 19454000000\nUSD 2024 FY 10-K filed 2024-11-01: 19454000000\nUSD 2025 FY 10-K filed 2025-10-31: 19454000000\nUSD 2024 FY 10-K filed 2024-11-01: 22038000000\nUSD 2025 FY 10-K filed 2025-10-31: 22038000000\nUSD 2025 FY 10-K filed 2025-10-31: 23242000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "UnrecognizedTaxBenefits",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "f46bfb7fed2a243b29085dafaf9fdb72f1976d0620078870b49a8f87f1e6d0cf"
+}

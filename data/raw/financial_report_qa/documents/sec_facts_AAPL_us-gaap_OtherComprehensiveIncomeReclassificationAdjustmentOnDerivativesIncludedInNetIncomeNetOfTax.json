@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeReclassificationAdjustmentOnDerivativesIncludedInNetIncomeNetOfTax",
+  "title": "Apple Inc. - Other Comprehensive Income (Loss), Reclassification Adjustment on Derivatives Included in Net Income, Net of Tax (Deprecated 2012-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeReclassificationAdjustmentOnDerivativesIncludedInNetIncomeNetOfTax\nLabel: Other Comprehensive Income (Loss), Reclassification Adjustment on Derivatives Included in Net Income, Net of Tax (Deprecated 2012-01-31)\nDescription: Net of tax effect of the reclassification adjustment for accumulated gains and losses from derivative instrument designated and qualifying as the effective portion of cash flow hedges included in accumulated comprehensive income that was realized in net income during the period.\nRecent reported values:\nUSD 2011 Q3 10-Q filed 2011-07-20: -42000000\nUSD 2010 Q3 10-Q filed 2010-07-21: -42000000\nUSD 2011 FY 10-K filed 2011-10-26: -73000000\nUSD 2010 FY 10-K filed 2010-10-27: -73000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 286000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 286000000\nUSD 2011 Q2 10-Q filed 2011-04-21: 344000000\nUSD 2011 Q2 10-Q filed 2011-04-21: 58000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 448000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 104000000\nUSD 2011 FY 10-K filed 2011-10-26: 450000000\nUSD 2012 Q1 10-Q filed 2012-01-25: -154000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeReclassificationAdjustmentOnDerivativesIncludedInNetIncomeNetOfTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "9bc4b8e0fe78b17a58294e4f0cd45a2cda513d7844f16cf2e093d2266615be25"
+}

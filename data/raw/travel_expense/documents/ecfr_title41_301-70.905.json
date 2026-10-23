@@ -1,0 +1,16 @@
+{
+  "domain": "travel_expense",
+  "document_id": "ecfr_title41_301-70.905",
+  "title": "§ 301-70.905 Documentation retention.",
+  "text": "§ 301-70.905 Documentation retention.\n§ 301-70.905 Documentation retention.\n(a) Agencies must retain for two years copies of travel authorizations for senior Federal officials and non-Federal travelers who travel on the agency's Government aircraft.\n\n(b) Agencies must also retain for two years the following information for each flight:\n\n(1) The tail number of the Government aircraft used.\n\n(2) The dates used for travel.\n\n(3) The name(s) of pilot(s), other crewmembers, and qualified non-crewmembers.\n\n(4) The purpose(s) of the flight.\n\n(5) The route(s) flown.\n\n(6) The names of all passengers.",
+  "source_name": "eCFR Title 41 Public Contracts and Property Management",
+  "source_url": "https://www.govinfo.gov/bulkdata/ECFR/title-41/ECFR-title41.xml",
+  "metadata": {
+    "title_number": 41,
+    "section": "§ 301-70.905",
+    "heading_path": "§ 301-70.905 Documentation retention.",
+    "source_type": "regulatory_section"
+  },
+  "downloaded_at": "2026-10-22T12:46:24+00:00",
+  "content_sha256": "42d14d9d80fdd5e5000cc6806fd4f73cf4d37375628fd13c273c97f675de694c"
+}

@@ -1,0 +1,17 @@
+{
+  "created_at": "2026-10-22T12:49:54+00:00",
+  "domains": {
+    "procurement_vendor": 500,
+    "travel_expense": 500,
+    "competitive_research": 500,
+    "incident_postmortem": 500,
+    "financial_report_qa": 500,
+    "hr_policy": 500
+  },
+  "errors": [],
+  "layout": {
+    "documents": "data/raw/<domain>/documents/*.json",
+    "manifest": "data/raw/<domain>/manifest.jsonl",
+    "source_files": "data/raw/<domain>/source_files/"
+  }
+}

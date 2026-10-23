@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CashAndCashEquivalentsAtCarryingValue",
+  "title": "Apple Inc. - Cash and Cash Equivalents, at Carrying Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CashAndCashEquivalentsAtCarryingValue\nLabel: Cash and Cash Equivalents, at Carrying Value\nDescription: Amount of currency on hand as well as demand deposits with banks or financial institutions. Includes other kinds of accounts that have the general characteristics of demand deposits. Also includes short-term, highly liquid investments that are both readily convertible to known amounts of cash and so near their maturity that they present insignificant risk of changes in value because of changes in interest rates. Excludes cash and cash equivalents within disposal group and discontinued operation.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 29943000000\nUSD 2025 FY 10-K filed 2025-10-31: 29943000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 30299000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 28162000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 36269000000\nUSD 2025 FY 10-K filed 2025-10-31: 35934000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 35934000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 35934000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 35934000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 45317000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 45572000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 39544000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CashAndCashEquivalentsAtCarryingValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "f17ded6e8def2a3f8cffe9e013829b6dab32b14c241db721b3fc99dbc85a6143"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AllocatedShareBasedCompensationExpense",
+  "title": "Apple Inc. - Share-based Payment Arrangement, Expense",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AllocatedShareBasedCompensationExpense\nLabel: Share-based Payment Arrangement, Expense\nDescription: Amount of expense for award under share-based payment arrangement. Excludes amount capitalized.\nRecent reported values:\nUSD 2025 Q2 10-Q filed 2025-05-02: 3226000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 3226000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 9680000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 9680000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 3168000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 3168000000\nUSD 2025 FY 10-K filed 2025-10-31: 12863000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 3594000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 7122000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 3528000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 10523000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 3401000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AllocatedShareBasedCompensationExpense",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "014dd5670f747b9509d0d88bd0cca801ff9cd6bb76e6c7d8263da227e1c39a4d"
+}

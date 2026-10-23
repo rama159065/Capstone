@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherPrepaidExpenseCurrent",
+  "title": "Apple Inc. - Other Prepaid Expense, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherPrepaidExpenseCurrent\nLabel: Other Prepaid Expense, Current\nDescription: Amount of asset related to consideration paid in advance for other costs that provide economic benefits within a future period of one year or the normal operating cycle, if longer.\nRecent reported values:\nUSD 2011 Q1 10-Q filed 2011-01-19: 183000000\nUSD 2011 Q2 10-Q filed 2011-04-21: 179000000\nUSD 2011 Q3 10-Q filed 2011-07-20: 701000000\nUSD 2011 FY 10-K filed 2011-10-26: 728000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 871000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 653000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 1300000000\nUSD 2012 FY 8-K filed 2013-04-24: 1200000000\nUSD 2012 FY 10-K filed 2012-10-31: 1200000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 1300000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 1000000000\nUSD 2013 Q3 10-Q filed 2013-07-24: 1100000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherPrepaidExpenseCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4537e215c9e7fc1d989c19c57e665f0ca7a11cfeb7c06bf2f5b1bc4f25074784"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_InterestExpense",
+  "title": "Apple Inc. - Interest Expense",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: InterestExpense\nLabel: Interest Expense\nDescription: Amount of the cost of borrowed funds accounted for as interest expense.\nRecent reported values:\nUSD 2022 Q3 10-Q filed 2022-07-29: 2104000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 2104000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 719000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 719000000\nUSD 2022 FY 10-K filed 2022-10-28: 2931000000\nUSD 2023 FY 10-K filed 2023-11-03: 2931000000\nUSD 2023 Q1 10-Q filed 2023-02-03: 1003000000\nUSD 2023 Q2 10-Q filed 2023-05-05: 1933000000\nUSD 2023 Q2 10-Q filed 2023-05-05: 930000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 2931000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 998000000\nUSD 2023 FY 10-K filed 2023-11-03: 3933000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "InterestExpense",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "f6a5bb06bf3239c8caae52a34ccc4f873101e2d60e4b267aa9e05c86d139edd8"
+}

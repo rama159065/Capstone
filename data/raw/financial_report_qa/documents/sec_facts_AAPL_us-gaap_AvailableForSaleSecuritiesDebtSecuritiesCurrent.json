@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AvailableForSaleSecuritiesDebtSecuritiesCurrent",
+  "title": "Apple Inc. - Debt Securities, Available-for-sale, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AvailableForSaleSecuritiesDebtSecuritiesCurrent\nLabel: Debt Securities, Available-for-sale, Current\nDescription: Amount of investment in debt security measured at fair value with change in fair value recognized in other comprehensive income (available-for-sale), classified as current.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 18201000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 18201000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 14583000000\nUSD 2011 Q2 10-Q filed 2011-04-21: 14359000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 14359000000\nUSD 2010 FY 10-K filed 2010-10-27: 14359000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 16243000000\nUSD 2011 Q2 10-Q filed 2011-04-21: 13256000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AvailableForSaleSecuritiesDebtSecuritiesCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "1c4050ccfadb6f4f1ca2c3cf43d53dfb1d50299a6d005478c36a040d32e2a6d7"
+}

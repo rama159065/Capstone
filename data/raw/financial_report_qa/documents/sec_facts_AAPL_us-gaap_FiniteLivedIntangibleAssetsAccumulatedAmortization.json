@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_FiniteLivedIntangibleAssetsAccumulatedAmortization",
+  "title": "Apple Inc. - Finite-Lived Intangible Assets, Accumulated Amortization",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: FiniteLivedIntangibleAssetsAccumulatedAmortization\nLabel: Finite-Lived Intangible Assets, Accumulated Amortization\nDescription: Accumulated amount of amortization of assets, excluding financial assets and goodwill, lacking physical substance with a finite life.\nRecent reported values:\nUSD 2017 Q3 10-Q filed 2017-08-02: 5806000000\nUSD 2017 FY 10-K filed 2017-11-03: 5806000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 4724000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 4741000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 5014000000\nUSD 2017 FY 10-K filed 2017-11-03: 5309000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 5309000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 5491000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 11649000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 11649000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 11970000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 12803000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "FiniteLivedIntangibleAssetsAccumulatedAmortization",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "170a89327e6e199e247a074c0c30b89b1f861d811ce2502f4213ac7e61c522b1"
+}

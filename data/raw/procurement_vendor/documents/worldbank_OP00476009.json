@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476009",
+  "title": "Food Systems Resilience Program for Eastern and Southern Africa",
+  "text": "bid_description: Provision of Chair # 225,Table # 18, Shelf # 9 and Display Board # 9 for Farmer Training Centers (FTC )\nbid_reference_no: ET-SER-NORTH ARI WO-FSRP-400166-GO-RFQ\nid: OP00476009\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P178566-Food Systems Resilience Program for Eastern and Southern Africa Loan/Credit/TF Info: IDA-71560 Bid/Contract Reference No: ET-SER-NORTH ARI WO-FSRP-400166-GO-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: contract entered between RFSRP and MDF Woods and Metal Works Cooperative Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2024/05/31 Duration of Contract 5 Month(s) Awarded Bidder(s): MDF WOODS AND METAL WORKS COOPERATIVE (1136646) Semen Ari Country: Ethiopia Bid Price at Opening ETB 867690.00 Evaluated Bid Price ETB 867690.00 Signed Contract price ETB 867690.00 Evaluated Bidder(s): AMENU WOODS AND METAL WORKS SHOP (1136647) Semen Ari Country: Ethiopia Bid Price at Opening ETB 979800.00 Evaluated Bid Price ETB 979800.00 ANBESAW WOODS AND METALS WORKS COOPERATIVE (1136555) Semen Ari Country: Ethiopia Bid Price at Opening ETB 668350.00 Evaluated Bid Price ETB 668350.00 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Eastern and Southern Africa\nproject_id: P178566\nproject_name: Food Systems Resilience Program for Eastern and Southern Africa\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476009",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Eastern and Southern Africa",
+      "project_id": "P178566",
+      "project_name": "Food Systems Resilience Program for Eastern and Southern Africa",
+      "bid_reference_no": "ET-SER-NORTH ARI WO-FSRP-400166-GO-RFQ",
+      "bid_description": "Provision of Chair # 225,Table # 18, Shelf # 9 and Display Board # 9 for Farmer Training Centers (FTC )",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P178566-Food Systems Resilience Program for Eastern and Southern Africa<br/><b>Loan/Credit/TF Info:</b>IDA-71560<br/><b>Bid/Contract Reference No:</b>ET-SER-NORTH ARI WO-FSRP-400166-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>contract entered between RFSRP and MDF Woods and Metal Works Cooperative</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2024/05/31<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>5 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>MDF WOODS AND METAL WORKS COOPERATIVE (1136646)</b><br/>Semen Ari<br/>Country: Ethiopia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>ETB 867690.00<br/><br/>Evaluated Bid Price<br/>ETB 867690.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>ETB 867690.00</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>AMENU WOODS AND METAL WORKS SHOP (1136647)</b><br/>Semen Ari<br/>Country: Ethiopia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>ETB 979800.00<br/><br/>Evaluated Bid Price<br/>ETB 979800.00</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>ANBESAW WOODS AND METALS WORKS COOPERATIVE (1136555)</b><br/>Semen Ari<br/>Country: Ethiopia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>ETB 668350.00<br/><br/>Evaluated Bid Price<br/>ETB 668350.00</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "9b1916fabf95169bf8b99a411ba61c10610a995dd2321bb7368acc39c9f2a47e"
+}

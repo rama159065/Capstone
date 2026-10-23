@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_InventoryWorkInProcessAndRawMaterialsNetOfReserves",
+  "title": "Apple Inc. - Inventory, Work in Process and Raw Materials, Net of Reserves",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: InventoryWorkInProcessAndRawMaterialsNetOfReserves\nLabel: Inventory, Work in Process and Raw Materials, Net of Reserves\nDescription: The aggregate carrying amount, net of valuation reserves and adjustments, as of the balance sheet date of items which are partially completed at the time of measurement and unprocessed items that will go through the production process and become part of the final product. This element may be used when the reporting entity combines work in process and raw materials into an aggregate amount.\nRecent reported values:\nUSD 2023 Q1 10-Q filed 2023-02-03: 1637000000\nUSD 2023 Q1 10-Q filed 2023-02-03: 2513000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "InventoryWorkInProcessAndRawMaterialsNetOfReserves",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "db558ca4ed6f32aeca760f7aede156922bef741b33ac857dc81725582ad3811b"
+}

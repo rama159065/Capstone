@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CommonStockValue",
+  "title": "Apple Inc. - Common Stock, Value, Issued",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CommonStockValue\nLabel: Common Stock, Value, Issued\nDescription: Aggregate par or stated value of issued nonredeemable common stock (or common stock redeemable solely at the option of the issuer). This item includes treasury stock repurchased by the entity. Note: elements for number of nonredeemable common shares, par value and other disclosure concepts are in another section within stockholders' equity.\nRecent reported values:\nUSD 2013 FY 10-K filed 2013-10-30: 16422000000\nUSD 2013 Q3 10-Q filed 2013-07-24: 16422000000\nUSD 2012 FY 8-K filed 2013-04-24: 16422000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 16422000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 16422000000\nUSD 2012 FY 10-K filed 2012-10-31: 16422000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 17167000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 17954000000\nUSD 2013 Q3 10-Q filed 2013-07-24: 19024000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 19764000000\nUSD 2013 FY 10-K filed 2013-10-30: 19764000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 20559000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CommonStockValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "be0b07749570234f11917ec4087a0435f783da96879beca1aad324f7c0dcaad1"
+}

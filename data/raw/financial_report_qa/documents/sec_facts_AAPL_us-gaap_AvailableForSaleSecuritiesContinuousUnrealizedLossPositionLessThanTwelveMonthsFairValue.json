@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AvailableForSaleSecuritiesContinuousUnrealizedLossPositionLessThanTwelveMonthsFairValue",
+  "title": "Apple Inc. - Available-for-sale Securities, Continuous Unrealized Loss Position, Less than Twelve Months, Fair Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AvailableForSaleSecuritiesContinuousUnrealizedLossPositionLessThanTwelveMonthsFairValue\nLabel: Available-for-sale Securities, Continuous Unrealized Loss Position, Less than Twelve Months, Fair Value\nDescription: This item represents the aggregate fair value of investments in debt and equity securities categorized neither as held-to-maturity nor trading securities that have been in a continuous unrealized loss position for less than twelve months.\nRecent reported values:\nUSD 2010 Q3 10-Q filed 2010-07-21: 1667000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 8738000000\nUSD 2010 FY 10-K filed 2010-10-27: 4679000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 101986000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 101986000000\nUSD 2018 FY 10-K filed 2018-11-05: 101986000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 159198000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 150468000000\nUSD 2018 FY 10-K filed 2018-11-05: 126238000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AvailableForSaleSecuritiesContinuousUnrealizedLossPositionLessThanTwelveMonthsFairValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "c8b2f45b86da4eb14e5efaa77db6cdcb17191dafd19e0dccd32663e1117e9fad"
+}

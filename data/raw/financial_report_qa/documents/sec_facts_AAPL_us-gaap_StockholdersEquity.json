@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_StockholdersEquity",
+  "title": "Apple Inc. - Stockholders' Equity Attributable to Parent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: StockholdersEquity\nLabel: Stockholders' Equity Attributable to Parent\nDescription: Total of all stockholders' equity (deficit) items, net of receivables from officers, directors, owners, and affiliates of the entity which are attributable to the parent. The amount of the economic entity's stockholders' equity attributable to the parent excludes the amount of stockholders' equity which is allocable to that ownership interest in subsidiary equity which is not attributable to the parent (noncontrolling interest, minority interest). This excludes temporary equity and is sometimes called permanent equity.\nRecent reported values:\nUSD 2026 Q3 10-Q filed 2026-07-31: 66796000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 65830000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 65830000000\nUSD 2025 FY 10-K filed 2025-10-31: 73733000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 73733000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 73733000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 73733000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 88190000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 88190000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 106491000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 106491000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 107520000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "StockholdersEquity",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4b82c6bf2012db24a5ccb46791570e4372f17414e255d755dc3bbfdc6033232b"
+}

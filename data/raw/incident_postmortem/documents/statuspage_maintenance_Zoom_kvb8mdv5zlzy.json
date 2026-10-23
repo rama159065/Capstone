@@ -1,0 +1,93 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Zoom_kvb8mdv5zlzy",
+  "title": "Zoom - Zoom Phone Update - Japan SIP Zones: October 18, 2026 (No Operational Impact)",
+  "text": "Service: Zoom\nMaintenance: Zoom Phone Update - Japan SIP Zones: October 18, 2026 (No Operational Impact)\nStatus: completed\nImpact: maintenance\nScheduled for: 2026-10-18T08:00:00.000-07:00\nScheduled until: 2026-10-18T10:00:00.000-07:00\nUpdates:\n- 2026-10-18T10:00:07.748-07:00: completed - The scheduled maintenance has been completed.\n- 2026-10-18T08:00:13.561-07:00: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2026-10-12T17:45:14.720-07:00: scheduled - We will be providing an update to Zoom Phone - Japan SIP zones in Tokyo and Osaka. Please refer to https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0062333 for more details. This update includes spam warning integration for Movius identified spam calls.\n\nThere is no operational impact. All services will be available during this scheduled update.",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://status.zoom.us/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "kvb8mdv5zlzy",
+      "name": "Zoom Phone Update - Japan SIP Zones: October 18, 2026 (No Operational Impact)",
+      "status": "completed",
+      "created_at": "2026-10-12T17:45:14.619-07:00",
+      "updated_at": "2026-10-18T10:00:08.424-07:00",
+      "monitoring_at": null,
+      "resolved_at": "2026-10-18T10:00:07.748-07:00",
+      "impact": "maintenance",
+      "shortlink": "https://stspg.io/dn1lwb60748p",
+      "started_at": "2026-10-12T17:45:14.608-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "qt9q9pbwcp8x",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "kvb8mdv5zlzy",
+          "created_at": "2026-10-18T10:00:07.748-07:00",
+          "updated_at": "2026-10-18T10:00:07.748-07:00",
+          "display_at": "2026-10-18T10:00:07.748-07:00",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "cjhv3g1mjjsv",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "kvb8mdv5zlzy",
+          "created_at": "2026-10-18T08:00:13.561-07:00",
+          "updated_at": "2026-10-18T08:00:13.561-07:00",
+          "display_at": "2026-10-18T08:00:13.561-07:00",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "8l919szfnd5f",
+          "status": "scheduled",
+          "body": "We will be providing an update to Zoom Phone - Japan SIP zones in Tokyo and Osaka. Please refer to https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0062333 for more details. This update includes spam warning integration for Movius identified spam calls.\n\nThere is no operational impact. All services will be available during this scheduled update.",
+          "incident_id": "kvb8mdv5zlzy",
+          "created_at": "2026-10-12T17:45:14.720-07:00",
+          "updated_at": "2026-10-12T17:45:14.720-07:00",
+          "display_at": "2026-10-12T17:45:14.720-07:00",
+          "affected_components": [
+            {
+              "code": "yrt9l9s4twjl",
+              "name": "Zoom Phone - JAPAN - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "yrt9l9s4twjl",
+          "name": "Zoom Phone",
+          "status": "operational",
+          "created_at": "2022-05-03T10:50:25.396-07:00",
+          "updated_at": "2026-10-06T23:30:08.304-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "r6hzm1tntmq3",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2026-10-18T08:00:00.000-07:00",
+      "scheduled_until": "2026-10-18T10:00:00.000-07:00"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:49:04+00:00",
+  "content_sha256": "ac06e89df13d8c3a5f13bae11815adcad21697154650f039c7cee320aab4ff11"
+}

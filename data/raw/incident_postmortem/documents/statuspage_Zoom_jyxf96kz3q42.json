@@ -1,0 +1,243 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Zoom_jyxf96kz3q42",
+  "title": "Zoom - Service Degradation Affecting Zoom Rooms Management and Workspaces Management in SA01.",
+  "text": "Service: Zoom\nIncident: Service Degradation Affecting Zoom Rooms Management and Workspaces Management in SA01.\nStatus: resolved\nImpact: minor\nStarted: 2026-10-04T16:19:07.066-07:00\nResolved: 2026-10-04T17:41:25.605-07:00\nUpdates:\n- 2026-10-04T17:41:25.605-07:00: resolved - This incident has been resolved and the affected services have been restored.\n- 2026-10-04T17:00:36.744-07:00: monitoring - The issue affecting Zoom Rooms Management and Workspaces Management has been successfully resolved. Our team will continue to monitor the situation closely and keep you informed of any further developments.\n- 2026-10-04T16:50:34.609-07:00: identified - We have identified the service degradation with Zoom Rooms Management and Workspaces Management.\n \nOur team is actively working on a resolution, and we will keep you informed with timely updates as progress is made. \n\nThank you for your patience.\n- 2026-10-04T16:19:07.283-07:00: investigating - We are currently investigating a service degradation affecting Zoom Rooms Management and Workspaces Management in SA01 region. \n\nOur team is actively working to identify the impact and root cause. We will provide an update as soon as more information becomes available.\n\nWe appreciate your patience as we work to resolve this issue.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.zoom.us/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "jyxf96kz3q42",
+      "name": "Service Degradation Affecting Zoom Rooms Management and Workspaces Management in SA01.",
+      "status": "resolved",
+      "created_at": "2026-10-04T16:19:07.087-07:00",
+      "updated_at": "2026-10-04T17:41:25.632-07:00",
+      "monitoring_at": "2026-10-04T17:00:36.744-07:00",
+      "resolved_at": "2026-10-04T17:41:25.605-07:00",
+      "impact": "minor",
+      "shortlink": "https://stspg.io/1mzjn9tgd3dc",
+      "started_at": "2026-10-04T16:19:07.066-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "h3ml934tb3fy",
+          "status": "resolved",
+          "body": "This incident has been resolved and the affected services have been restored.",
+          "incident_id": "jyxf96kz3q42",
+          "created_at": "2026-10-04T17:41:25.605-07:00",
+          "updated_at": "2026-10-04T17:41:25.605-07:00",
+          "display_at": "2026-10-04T17:41:25.605-07:00",
+          "affected_components": [
+            {
+              "code": "6r3mvdqx37b6",
+              "name": "Zoom Website - Zoom Rooms",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "qmwgsb4jbrst",
+              "name": "Zoom Rooms - Zoom Workspace Reservation",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "2x4mw99x40lk",
+              "name": "Zoom Rooms - Zoom Visitor Management",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "2tky4nd16my2",
+              "name": "Zoom Rooms - Workspace Reservation Dashboard & Reporting",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "nnk3vhqrg7qm",
+          "status": "monitoring",
+          "body": "The issue affecting Zoom Rooms Management and Workspaces Management has been successfully resolved. Our team will continue to monitor the situation closely and keep you informed of any further developments.",
+          "incident_id": "jyxf96kz3q42",
+          "created_at": "2026-10-04T17:00:36.744-07:00",
+          "updated_at": "2026-10-04T17:00:36.744-07:00",
+          "display_at": "2026-10-04T17:00:36.744-07:00",
+          "affected_components": [
+            {
+              "code": "6r3mvdqx37b6",
+              "name": "Zoom Website - Zoom Rooms",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            },
+            {
+              "code": "qmwgsb4jbrst",
+              "name": "Zoom Rooms - Zoom Workspace Reservation",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            },
+            {
+              "code": "2x4mw99x40lk",
+              "name": "Zoom Rooms - Zoom Visitor Management",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            },
+            {
+              "code": "2tky4nd16my2",
+              "name": "Zoom Rooms - Workspace Reservation Dashboard & Reporting",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "w0nk261v2f01",
+          "status": "identified",
+          "body": "We have identified the service degradation with Zoom Rooms Management and Workspaces Management.\n \nOur team is actively working on a resolution, and we will keep you informed with timely updates as progress is made. \n\nThank you for your patience.",
+          "incident_id": "jyxf96kz3q42",
+          "created_at": "2026-10-04T16:50:34.609-07:00",
+          "updated_at": "2026-10-04T16:50:34.609-07:00",
+          "display_at": "2026-10-04T16:50:34.609-07:00",
+          "affected_components": [
+            {
+              "code": "6r3mvdqx37b6",
+              "name": "Zoom Website - Zoom Rooms",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "qmwgsb4jbrst",
+              "name": "Zoom Rooms - Zoom Workspace Reservation",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "2x4mw99x40lk",
+              "name": "Zoom Rooms - Zoom Visitor Management",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "2tky4nd16my2",
+              "name": "Zoom Rooms - Workspace Reservation Dashboard & Reporting",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "70ynwlz1x5zg",
+          "status": "investigating",
+          "body": "We are currently investigating a service degradation affecting Zoom Rooms Management and Workspaces Management in SA01 region. \n\nOur team is actively working to identify the impact and root cause. We will provide an update as soon as more information becomes available.\n\nWe appreciate your patience as we work to resolve this issue.",
+          "incident_id": "jyxf96kz3q42",
+          "created_at": "2026-10-04T16:19:07.283-07:00",
+          "updated_at": "2026-10-04T16:19:07.283-07:00",
+          "display_at": "2026-10-04T16:19:07.283-07:00",
+          "affected_components": [
+            {
+              "code": "6r3mvdqx37b6",
+              "name": "Zoom Website - Zoom Rooms",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "qmwgsb4jbrst",
+              "name": "Zoom Rooms - Zoom Workspace Reservation",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "2x4mw99x40lk",
+              "name": "Zoom Rooms - Zoom Visitor Management",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "2tky4nd16my2",
+              "name": "Zoom Rooms - Workspace Reservation Dashboard & Reporting",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "qmwgsb4jbrst",
+          "name": "Zoom Workspace Reservation",
+          "status": "operational",
+          "created_at": "2022-05-03T11:13:14.622-07:00",
+          "updated_at": "2026-10-04T17:00:36.452-07:00",
+          "position": 4,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "xxngg08dxtpq",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "2x4mw99x40lk",
+          "name": "Zoom Visitor Management",
+          "status": "operational",
+          "created_at": "2024-04-13T12:39:55.175-07:00",
+          "updated_at": "2026-10-04T17:00:36.627-07:00",
+          "position": 5,
+          "description": null,
+          "showcase": false,
+          "start_date": "2024-04-13",
+          "group_id": "xxngg08dxtpq",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "6r3mvdqx37b6",
+          "name": "Zoom Rooms",
+          "status": "operational",
+          "created_at": "2022-05-03T11:23:44.681-07:00",
+          "updated_at": "2026-10-04T17:00:36.657-07:00",
+          "position": 6,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "1ndlrnp6r9js",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "2tky4nd16my2",
+          "name": "Workspace Reservation Dashboard & Reporting",
+          "status": "operational",
+          "created_at": "2026-03-26T20:40:42.786-07:00",
+          "updated_at": "2026-10-04T17:00:36.689-07:00",
+          "position": 6,
+          "description": null,
+          "showcase": false,
+          "start_date": "2026-03-26",
+          "group_id": "xxngg08dxtpq",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:00+00:00",
+  "content_sha256": "a15d1e0077dc0b0f3ba4b15e759ee32f8ca63ab437e98c2a61ba0ed5a7fe47e3"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeLossDerivativesQualifyingAsHedgesNetOfTax",
+  "title": "Apple Inc. - Other Comprehensive Income (Loss), Derivatives Qualifying as Hedges, Net of Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeLossDerivativesQualifyingAsHedgesNetOfTax\nLabel: Other Comprehensive Income (Loss), Derivatives Qualifying as Hedges, Net of Tax\nDescription: Amount after tax and reclassification adjustments, of increase (decrease) in accumulated gain (loss) from derivative instruments designated and qualifying as the effective portion of cash flow hedges and an entity's share of an equity investee's increase (decrease) in deferred hedging gain (loss).\nRecent reported values:\nUSD 2020 Q1 10-Q filed 2020-01-29: -292000000\nUSD 2019 Q2 10-Q filed 2019-05-01: -447000000\nUSD 2020 Q2 10-Q filed 2020-05-01: -447000000\nUSD 2019 Q2 10-Q filed 2019-05-01: -155000000\nUSD 2020 Q2 10-Q filed 2020-05-01: -155000000\nUSD 2019 Q3 10-Q filed 2019-07-31: -599000000\nUSD 2020 Q3 10-Q filed 2020-07-31: -599000000\nUSD 2019 Q3 10-Q filed 2019-07-31: -152000000\nUSD 2020 Q3 10-Q filed 2020-07-31: -152000000\nUSD 2019 FY 10-K filed 2019-10-31: -638000000\nUSD 2020 FY 10-K filed 2020-10-30: -638000000\nUSD 2021 FY 10-K filed 2021-10-29: -638000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeLossDerivativesQualifyingAsHedgesNetOfTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e80408b0a144bd2c6a275099083f2b9539fd648f6916921872031e75e0283dca"
+}

@@ -1,0 +1,43 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Cloudflare_Status_594dc44q2dcc",
+  "title": "Cloudflare Status - Network Performance Issues in Kuala Lumpur",
+  "text": "Service: Cloudflare Status\nIncident: Network Performance Issues in Kuala Lumpur\nStatus: resolved\nImpact: minor\nStarted: 2026-10-15T16:05:00.000Z\nResolved: 2026-10-15T16:10:00.000Z\nUpdates:\n- 2026-10-15T16:27:48.946Z: resolved - Cloudflare resolved an incident where we observed network performance issues in our Kuala Lumpur (KUL) facility. Customers may have observed elevated error rates and/or increased latency today, 2026-10-15, between approximately 16:10 and 16:15 UTC.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://www.cloudflarestatus.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "594dc44q2dcc",
+      "name": "Network Performance Issues in Kuala Lumpur",
+      "status": "resolved",
+      "created_at": "2026-10-15T16:27:48.946Z",
+      "updated_at": "2026-10-15T16:27:48.946Z",
+      "monitoring_at": null,
+      "resolved_at": "2026-10-15T16:10:00.000Z",
+      "impact": "minor",
+      "shortlink": "https://www.cloudflarestatus.com/incidents/594dc44q2dcc",
+      "started_at": "2026-10-15T16:05:00.000Z",
+      "page_id": "yh6f0r4529hb",
+      "incident_updates": [
+        {
+          "id": "gk78yp8udf7c",
+          "status": "resolved",
+          "body": "Cloudflare resolved an incident where we observed network performance issues in our Kuala Lumpur (KUL) facility. Customers may have observed elevated error rates and/or increased latency today, 2026-10-15, between approximately 16:10 and 16:15 UTC.",
+          "incident_id": "594dc44q2dcc",
+          "created_at": "2026-10-15T16:27:48.946Z",
+          "updated_at": "2026-10-15T16:27:48.946Z",
+          "display_at": "2026-10-15T16:10:00.000Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:22+00:00",
+  "content_sha256": "2aa2b5f4c46211c969eb9a6f86459bc7653f25ccdbdbc4af19b93d402d2f113e"
+}

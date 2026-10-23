@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment",
+  "title": "Apple Inc. - Accumulated Depreciation, Depletion and Amortization, Property, Plant, and Equipment",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment\nLabel: Accumulated Depreciation, Depletion and Amortization, Property, Plant, and Equipment\nDescription: Amount of accumulated depreciation, depletion and amortization for physical assets used in the normal conduct of business to produce goods and services.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 73448000000\nUSD 2025 FY 10-K filed 2025-10-31: 73448000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 74546000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 74303000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 75803000000\nUSD 2025 FY 10-K filed 2025-10-31: 76014000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 76014000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 76014000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 76014000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 77161000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 77441000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 76744000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AccumulatedDepreciationDepletionAndAmortizationPropertyPlantAndEquipment",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "d5795c6f963fd233a74b63a2f61c2c9f8a490ae772d49a87ffaa14d08c658a60"
+}

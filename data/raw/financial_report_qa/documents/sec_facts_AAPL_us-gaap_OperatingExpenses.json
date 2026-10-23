@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OperatingExpenses",
+  "title": "Apple Inc. - Operating Expenses",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OperatingExpenses\nLabel: Operating Expenses\nDescription: Generally recurring costs associated with normal operations except for the portion of these expenses which can be clearly related to production and included in cost of sales or services. Includes selling, general and administrative expense.\nRecent reported values:\nUSD 2025 Q2 10-Q filed 2025-05-02: 15278000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 15278000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 46237000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 46237000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 15516000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 15516000000\nUSD 2025 FY 10-K filed 2025-10-31: 62151000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 18379000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 37275000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 18896000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 56350000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 19075000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OperatingExpenses",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "bf580f044b3655ff44ee795ffec75a1f1a34bf1bbc0a38a9af7fc6fa893144ce"
+}

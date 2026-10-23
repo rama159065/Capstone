@@ -1,0 +1,17 @@
+{
+  "domain": "competitive_research",
+  "document_id": "sec_competitive_MSFT_0001193125-25-154103",
+  "title": "MICROSOFT CORP 8-K filed 2025-07-01",
+  "text": "Company: MICROSOFT CORP\nTicker: MSFT\nCIK: 0000789019\nSIC: 7372 Services-Prepackaged Software\nBusiness address: {'street1': 'ONE MICROSOFT WAY', 'street2': None, 'city': 'REDMOND', 'stateOrCountry': 'WA', 'zipCode': '98052-6399', 'stateOrCountryDescription': 'WA', 'isForeignLocation': None, 'foreignStateTerritory': None, 'country': None, 'countryCode': None}\nForm: 8-K\nFiling date: 2025-07-01\nAccession number: 0001193125-25-154103\nPrimary document: d84624d8k.htm\nPrimary document description: 8-K\nFiling URL: https://www.sec.gov/Archives/edgar/data/789019/000119312525154103/d84624d8k.htm",
+  "source_name": "SEC EDGAR submissions",
+  "source_url": "https://data.sec.gov/submissions/CIK0000789019.json",
+  "metadata": {
+    "ticker": "MSFT",
+    "cik": "0000789019",
+    "form": "8-K",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312525154103/d84624d8k.htm",
+    "source_type": "sec_filing_metadata"
+  },
+  "downloaded_at": "2026-10-22T12:41:52+00:00",
+  "content_sha256": "81ff8814877e7d7729666677871343f59911e9af5e2e52742e0bf2245175b695"
+}

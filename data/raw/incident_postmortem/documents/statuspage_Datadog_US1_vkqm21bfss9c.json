@@ -1,0 +1,191 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Datadog_US1_vkqm21bfss9c",
+  "title": "Datadog US1 - Delayed Traces in APM",
+  "text": "Service: Datadog US1\nIncident: Delayed Traces in APM\nStatus: resolved\nImpact: minor\nStarted: 2026-02-11T19:57:47.006-05:00\nResolved: 2026-02-11T21:08:46.715-05:00\nUpdates:\n- 2026-02-11T21:08:46.715-05:00: resolved - This incident has been resolved.\n- 2026-02-11T20:49:18.240-05:00: monitoring - The remaining impact is limited to AWS Streams metrics. We are continuing to monitor for any further issues.\n- 2026-02-11T20:32:45.427-05:00: monitoring - A fix has been implemented and we are monitoring the results.\n- 2026-02-11T20:20:35.617-05:00: identified - The issue has been identified and a fix is being implemented.\n- 2026-02-11T19:57:47.140-05:00: investigating - We are investigating increased latency processing Traces in APM Trace Search and AWS streams metrics.\nAs a result of this issue, some users may see missing or delayed traces in APM Trace Search, and delayed AWS stream metrics since 00:13 UTC.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.datadoghq.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "vkqm21bfss9c",
+      "name": "Delayed Traces in APM",
+      "status": "resolved",
+      "created_at": "2026-02-11T19:57:47.013-05:00",
+      "updated_at": "2026-02-11T21:08:47.176-05:00",
+      "monitoring_at": "2026-02-11T20:32:45.427-05:00",
+      "resolved_at": "2026-02-11T21:08:46.715-05:00",
+      "impact": "minor",
+      "shortlink": "https://stspg.io/19l6tqc8m1b2",
+      "started_at": "2026-02-11T19:57:47.006-05:00",
+      "page_id": "1k6wzpspjf99",
+      "incident_updates": [
+        {
+          "id": "ndvl07mzp7jm",
+          "status": "resolved",
+          "body": "This incident has been resolved.",
+          "incident_id": "vkqm21bfss9c",
+          "created_at": "2026-02-11T21:08:46.715-05:00",
+          "updated_at": "2026-02-11T21:08:47.171-05:00",
+          "display_at": "2026-02-11T21:08:46.715-05:00",
+          "affected_components": [
+            {
+              "code": "qrnng5l7z80l",
+              "name": "Metrics and Infra Monitoring",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            },
+            {
+              "code": "p4hwj4wsc5wf",
+              "name": "APM",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": 2021768413388189986
+        },
+        {
+          "id": "klq14qz3fy3w",
+          "status": "monitoring",
+          "body": "The remaining impact is limited to AWS Streams metrics. We are continuing to monitor for any further issues.",
+          "incident_id": "vkqm21bfss9c",
+          "created_at": "2026-02-11T20:49:18.240-05:00",
+          "updated_at": "2026-02-11T20:49:18.546-05:00",
+          "display_at": "2026-02-11T20:49:18.240-05:00",
+          "affected_components": [
+            {
+              "code": "qrnng5l7z80l",
+              "name": "Metrics and Infra Monitoring",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "p4hwj4wsc5wf",
+              "name": "APM",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": 2021763511718953410
+        },
+        {
+          "id": "fwbs9rdzpzsg",
+          "status": "monitoring",
+          "body": "A fix has been implemented and we are monitoring the results.",
+          "incident_id": "vkqm21bfss9c",
+          "created_at": "2026-02-11T20:32:45.427-05:00",
+          "updated_at": "2026-02-11T20:32:45.708-05:00",
+          "display_at": "2026-02-11T20:32:45.427-05:00",
+          "affected_components": [
+            {
+              "code": "qrnng5l7z80l",
+              "name": "Metrics and Infra Monitoring",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "p4hwj4wsc5wf",
+              "name": "APM",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": 2021759347555283362
+        },
+        {
+          "id": "k3jnlr0lb3y7",
+          "status": "identified",
+          "body": "The issue has been identified and a fix is being implemented.",
+          "incident_id": "vkqm21bfss9c",
+          "created_at": "2026-02-11T20:20:35.617-05:00",
+          "updated_at": "2026-02-11T20:20:37.600-05:00",
+          "display_at": "2026-02-11T20:20:35.617-05:00",
+          "affected_components": [
+            {
+              "code": "qrnng5l7z80l",
+              "name": "Metrics and Infra Monitoring",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "p4hwj4wsc5wf",
+              "name": "APM",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": 2021756293254721983
+        },
+        {
+          "id": "z3g11qgtv4nz",
+          "status": "investigating",
+          "body": "We are investigating increased latency processing Traces in APM Trace Search and AWS streams metrics.\nAs a result of this issue, some users may see missing or delayed traces in APM Trace Search, and delayed AWS stream metrics since 00:13 UTC.",
+          "incident_id": "vkqm21bfss9c",
+          "created_at": "2026-02-11T19:57:47.140-05:00",
+          "updated_at": "2026-02-11T19:57:47.653-05:00",
+          "display_at": "2026-02-11T19:57:47.140-05:00",
+          "affected_components": [
+            {
+              "code": "qrnng5l7z80l",
+              "name": "Metrics and Infra Monitoring",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "p4hwj4wsc5wf",
+              "name": "APM",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": 2021750547586666734
+        }
+      ],
+      "components": [
+        {
+          "id": "p4hwj4wsc5wf",
+          "name": "APM",
+          "status": "operational",
+          "created_at": "2017-03-23T08:40:20.513-04:00",
+          "updated_at": "2026-09-30T14:29:22.927-04:00",
+          "position": 1,
+          "description": "Application Performance Monitoring (services and traces)",
+          "showcase": false,
+          "start_date": null,
+          "group_id": null,
+          "page_id": "1k6wzpspjf99",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "qrnng5l7z80l",
+          "name": "Metrics and Infra Monitoring",
+          "status": "operational",
+          "created_at": "2013-07-01T19:11:47.268-04:00",
+          "updated_at": "2026-09-24T14:48:53.910-04:00",
+          "position": 24,
+          "description": null,
+          "showcase": false,
+          "start_date": null,
+          "group_id": null,
+          "page_id": "1k6wzpspjf99",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:54+00:00",
+  "content_sha256": "83a0b501cafc3b91c783263112922943b530725fcd2691af9d3b1549f34d120e"
+}

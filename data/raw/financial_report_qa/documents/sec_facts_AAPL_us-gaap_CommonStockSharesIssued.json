@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CommonStockSharesIssued",
+  "title": "Apple Inc. - Common Stock, Shares, Issued",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CommonStockSharesIssued\nLabel: Common Stock, Shares, Issued\nDescription: Total number of common shares of an entity that have been sold or granted to shareholders (includes common shares that were issued, repurchased and remain in the treasury). These shares represent capital invested by the firm's shareholders and owners, and may be all or only a portion of the number of shares authorized. Shares issued include shares outstanding and shares held in the treasury.\nRecent reported values:\nshares 2025 Q3 10-Q filed 2025-08-01: 15116786000\nshares 2025 FY 10-K filed 2025-10-31: 15116786000\nshares 2025 Q1 10-Q filed 2025-01-31: 15040731000\nshares 2025 Q2 10-Q filed 2025-05-02: 14939315000\nshares 2025 Q3 10-Q filed 2025-08-01: 14856722000\nshares 2025 FY 10-K filed 2025-10-31: 14773260000\nshares 2026 Q1 10-Q filed 2026-01-30: 14773260000\nshares 2026 Q2 10-Q filed 2026-05-01: 14773260000\nshares 2026 Q3 10-Q filed 2026-07-31: 14773260000\nshares 2026 Q1 10-Q filed 2026-01-30: 14702703000\nshares 2026 Q2 10-Q filed 2026-05-01: 14667688000\nshares 2026 Q3 10-Q filed 2026-07-31: 14608963000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CommonStockSharesIssued",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "bec44c2f89462cca40de86377519552cb2c8362dfdc389d8d49a768c38cf118b"
+}

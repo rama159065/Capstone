@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_UndistributedEarningsOfForeignSubsidiaries",
+  "title": "Apple Inc. - Undistributed Earnings of Foreign Subsidiaries",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: UndistributedEarningsOfForeignSubsidiaries\nLabel: Undistributed Earnings of Foreign Subsidiaries\nDescription: Amount of undistributed earnings of foreign subsidiaries intended to be permanently reinvested outside the country of domicile.\nRecent reported values:\nUSD 2012 FY 10-K filed 2012-10-31: 40400000000\nUSD 2012 FY 8-K filed 2013-04-24: 40400000000\nUSD 2013 FY 10-K filed 2013-10-30: 54400000000\nUSD 2014 FY 10-K filed 2014-10-27: 69700000000\nUSD None None 8-K filed 2015-01-28: 69700000000\nUSD 2015 FY 10-K filed 2015-10-28: 91500000000\nUSD 2016 FY 10-K filed 2016-10-26: 109800000000\nUSD 2017 FY 10-K filed 2017-11-03: 128700000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "UndistributedEarningsOfForeignSubsidiaries",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "27d64ae8e75d7fc7ee5d5305317fde1a18c064d2ab58a26f989e516981fbe21d"
+}

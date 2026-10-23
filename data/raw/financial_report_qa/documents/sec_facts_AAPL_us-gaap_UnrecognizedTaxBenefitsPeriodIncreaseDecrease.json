@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_UnrecognizedTaxBenefitsPeriodIncreaseDecrease",
+  "title": "Apple Inc. - Unrecognized Tax Benefits, Period Increase (Decrease)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: UnrecognizedTaxBenefitsPeriodIncreaseDecrease\nLabel: Unrecognized Tax Benefits, Period Increase (Decrease)\nDescription: Amount of increase (decrease) in unrecognized tax benefits attributable to uncertain tax positions taken in tax returns.\nRecent reported values:\nUSD 2010 Q3 10-Q filed 2010-07-21: 100000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "UnrecognizedTaxBenefitsPeriodIncreaseDecrease",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "0c025a2f098bce7f64e4051de3be28e475d3e0a9e8f9049e55e8ab617d1ecea6"
+}

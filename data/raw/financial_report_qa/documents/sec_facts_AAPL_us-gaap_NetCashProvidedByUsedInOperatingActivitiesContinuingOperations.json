@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
+  "title": "Apple Inc. - Net Cash Provided by (Used in) Operating Activities, Continuing Operations",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: NetCashProvidedByUsedInOperatingActivitiesContinuingOperations\nLabel: Net Cash Provided by (Used in) Operating Activities, Continuing Operations\nDescription: Amount of cash inflow (outflow) from operating activities, excluding discontinued operations. Operating activity cash flows include transactions, adjustments, and changes in value not defined as investing or financing activities.\nRecent reported values:\nUSD 2015 Q2 10-Q filed 2015-04-28: 52803000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 52803000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 67791000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 67791000000\nUSD 2015 FY 10-K filed 2015-10-28: 81266000000\nUSD 2016 FY 10-K filed 2016-10-26: 81266000000\nUSD 2016 Q1 10-Q filed 2016-01-27: 27463000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 27463000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 39064000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 49698000000\nUSD 2016 FY 10-K filed 2016-10-26: 65824000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 27056000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e402e77f7320d2de17d92debfe4921a7b0f6c833baa40129c70846ffad2533f2"
+}

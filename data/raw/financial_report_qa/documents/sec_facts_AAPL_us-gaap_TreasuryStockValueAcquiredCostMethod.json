@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_TreasuryStockValueAcquiredCostMethod",
+  "title": "Apple Inc. - Treasury Stock, Value, Acquired, Cost Method",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: TreasuryStockValueAcquiredCostMethod\nLabel: Treasury Stock, Value, Acquired, Cost Method\nDescription: Equity impact of the cost of common and preferred stock that were repurchased during the period. Recorded using the cost method.\nRecent reported values:\nUSD 2013 FY 10-K filed 2013-10-30: 22950000000\nUSD 2014 FY 10-K filed 2014-10-27: 22950000000\nUSD None None 8-K filed 2015-01-28: 22950000000\nUSD 2014 FY 10-K filed 2014-10-27: 45000000000\nUSD None None 8-K filed 2015-01-28: 45000000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "TreasuryStockValueAcquiredCostMethod",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "553b82eb2e25e1aeb20181593ad3b26ea723fbcf280e53a89ebb5b0928ed003d"
+}

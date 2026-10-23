@@ -1,0 +1,113 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Zoom_2zvhxwkw7j63",
+  "title": "Zoom - Service Degradation Affecting Zoom Phone and Contact Center Audio in US Region",
+  "text": "Service: Zoom\nIncident: Service Degradation Affecting Zoom Phone and Contact Center Audio in US Region\nStatus: resolved\nImpact: none\nStarted: 2026-09-03T06:42:21.225-07:00\nResolved: 2026-09-03T07:00:48.307-07:00\nUpdates:\n- 2026-09-03T07:00:48.307-07:00: resolved - This incident has been resolved and the affected services have been restored.\n- 2026-09-03T06:42:21.317-07:00: monitoring - On September 03, between 12:02 UTC to 12:17 UTC, subset of users might have experienced Zoom Phone and Contact Center audio degradation in US region. The issue has been successfully resolved. \n\nOur team will continue to monitor the situation closely and keep you informed of any further developments.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.zoom.us/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "2zvhxwkw7j63",
+      "name": "Service Degradation Affecting Zoom Phone and Contact Center Audio in US Region",
+      "status": "resolved",
+      "created_at": "2026-09-03T06:42:21.240-07:00",
+      "updated_at": "2026-09-03T07:00:48.322-07:00",
+      "monitoring_at": "2026-09-03T06:42:21.317-07:00",
+      "resolved_at": "2026-09-03T07:00:48.307-07:00",
+      "impact": "none",
+      "shortlink": "https://stspg.io/yhcywgp2hss5",
+      "started_at": "2026-09-03T06:42:21.225-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "221zcy4nm9dn",
+          "status": "resolved",
+          "body": "This incident has been resolved and the affected services have been restored.",
+          "incident_id": "2zvhxwkw7j63",
+          "created_at": "2026-09-03T07:00:48.307-07:00",
+          "updated_at": "2026-09-03T07:00:48.307-07:00",
+          "display_at": "2026-09-03T07:00:48.307-07:00",
+          "affected_components": [
+            {
+              "code": "jh6w5p8b9yv9",
+              "name": "Zoom Phone - NORTH AMERICA - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "vttvjkwmdfps",
+              "name": "Zoom CX - NORTH AMERICA - Zoom Contact Center",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "rm09f995wzbb",
+          "status": "monitoring",
+          "body": "On September 03, between 12:02 UTC to 12:17 UTC, subset of users might have experienced Zoom Phone and Contact Center audio degradation in US region. The issue has been successfully resolved. \n\nOur team will continue to monitor the situation closely and keep you informed of any further developments.",
+          "incident_id": "2zvhxwkw7j63",
+          "created_at": "2026-09-03T06:42:21.317-07:00",
+          "updated_at": "2026-09-03T06:42:21.317-07:00",
+          "display_at": "2026-09-03T06:42:21.317-07:00",
+          "affected_components": [
+            {
+              "code": "jh6w5p8b9yv9",
+              "name": "Zoom Phone - NORTH AMERICA - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "vttvjkwmdfps",
+              "name": "Zoom CX - NORTH AMERICA - Zoom Contact Center",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "jh6w5p8b9yv9",
+          "name": "Zoom Phone",
+          "status": "operational",
+          "created_at": "2019-01-23T13:28:01.376-08:00",
+          "updated_at": "2026-10-19T03:00:08.428-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": null,
+          "group_id": "gwtd6dbkck60",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "vttvjkwmdfps",
+          "name": "Zoom Contact Center",
+          "status": "operational",
+          "created_at": "2022-03-18T10:03:55.317-07:00",
+          "updated_at": "2026-10-12T02:00:17.605-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-03-18",
+          "group_id": "pdcbftj9pg7j",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:00+00:00",
+  "content_sha256": "b1355bfe9897805580faedc8834016c64e861b8874b13acc8e1e5953f8b11476"
+}

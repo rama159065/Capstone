@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DebtSecuritiesAvailableForSaleContinuousUnrealizedLossPositionLessThan12Months",
+  "title": "Apple Inc. - Debt Securities, Available-for-sale, Continuous Unrealized Loss Position, Less than 12 Months",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DebtSecuritiesAvailableForSaleContinuousUnrealizedLossPositionLessThan12Months\nLabel: Debt Securities, Available-for-sale, Continuous Unrealized Loss Position, Less than 12 Months\nDescription: Amount of investment in debt security measured at fair value with change in fair value recognized in other comprehensive income (available-for-sale), in continuous unrealized loss position for less than 12 months, without allowance for credit loss. Includes beneficial interest in securitized financial asset.\nRecent reported values:\nUSD 2019 Q1 10-Q filed 2019-01-30: 126238000000\nUSD 2019 Q2 10-Q filed 2019-05-01: 126238000000\nUSD 2019 Q3 10-Q filed 2019-07-31: 126238000000\nUSD 2019 FY 10-K filed 2019-10-31: 126238000000\nUSD 2019 Q1 10-Q filed 2019-01-30: 53336000000\nUSD 2019 Q2 10-Q filed 2019-05-01: 18814000000\nUSD 2019 Q3 10-Q filed 2019-07-31: 11853000000\nUSD 2019 FY 10-K filed 2019-10-31: 28151000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DebtSecuritiesAvailableForSaleContinuousUnrealizedLossPositionLessThan12Months",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "9c131e20239e24f9e5f055fc9e73aac6e04604a0ef49c3c6556685059663c649"
+}

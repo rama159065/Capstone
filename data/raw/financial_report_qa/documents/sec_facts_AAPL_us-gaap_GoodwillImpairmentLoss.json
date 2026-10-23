@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_GoodwillImpairmentLoss",
+  "title": "Apple Inc. - Goodwill, Impairment Loss",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: GoodwillImpairmentLoss\nLabel: Goodwill, Impairment Loss\nDescription: Amount of loss from the write-down of an asset representing the future economic benefits arising from other assets acquired in a business combination that are not individually identified and separately recognized.\nRecent reported values:\nUSD None None 8-K filed 2015-01-28: 0\nUSD 2015 FY 10-K filed 2015-10-28: 0\nUSD 2014 FY 10-K filed 2014-10-27: 0\nUSD None None 8-K filed 2015-01-28: 0\nUSD 2015 FY 10-K filed 2015-10-28: 0\nUSD 2016 FY 10-K filed 2016-10-26: 0\nUSD 2015 FY 10-K filed 2015-10-28: 0\nUSD 2016 FY 10-K filed 2016-10-26: 0\nUSD 2017 FY 10-K filed 2017-11-03: 0\nUSD 2016 FY 10-K filed 2016-10-26: 0\nUSD 2017 FY 10-K filed 2017-11-03: 0\nUSD 2017 FY 10-K filed 2017-11-03: 0",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "GoodwillImpairmentLoss",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "1686b6f1452948f82aa37cd92198a3977eebe1f6c889fac2a59752af2d285169"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AvailableForSaleDebtSecuritiesAccumulatedGrossUnrealizedLossBeforeTax",
+  "title": "Apple Inc. - Debt Securities, Available-for-sale, Accumulated Gross Unrealized Loss, before Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AvailableForSaleDebtSecuritiesAccumulatedGrossUnrealizedLossBeforeTax\nLabel: Debt Securities, Available-for-sale, Accumulated Gross Unrealized Loss, before Tax\nDescription: Amount, before tax, of unrealized loss in accumulated other comprehensive income (AOCI) on investment in debt security measured at fair value with change in fair value recognized in other comprehensive income (available-for-sale).\nRecent reported values:\nUSD 2019 Q3 10-Q filed 2019-07-31: 461000000\nUSD 2019 FY 10-K filed 2019-10-31: 281000000\nUSD 2020 Q1 10-Q filed 2020-01-29: 281000000\nUSD 2020 Q2 10-Q filed 2020-05-01: 281000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 281000000\nUSD 2020 FY 10-K filed 2020-10-30: 281000000\nUSD 2020 Q1 10-Q filed 2020-01-29: 239000000\nUSD 2020 Q2 10-Q filed 2020-05-01: 2923000000\nUSD 2020 Q3 10-Q filed 2020-07-31: 574000000\nUSD 2020 FY 10-K filed 2020-10-30: 385000000\nUSD 2021 Q1 10-Q filed 2021-01-28: 385000000\nUSD 2021 Q1 10-Q filed 2021-01-28: 141000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AvailableForSaleDebtSecuritiesAccumulatedGrossUnrealizedLossBeforeTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "d3213150419ba86437fb3aa88774de24ab9667f09a41104eebc4167720c8425d"
+}

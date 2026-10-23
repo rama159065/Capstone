@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_StockIssuedDuringPeriodSharesStockOptionsExercised",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Exercises in Period",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: StockIssuedDuringPeriodSharesStockOptionsExercised\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Exercises in Period\nDescription: Number of share options (or share units) exercised during the current period.\nRecent reported values:\nshares 2011 FY 10-K filed 2011-10-26: 9697000\nshares 2012 Q1 10-Q filed 2012-01-25: 1386000\nshares 2012 Q2 10-Q filed 2012-04-25: 3243000\nshares 2012 Q3 10-Q filed 2012-07-25: 3910000\nshares 2013 FY 10-K filed 2013-10-30: 5337000\nshares 2012 FY 8-K filed 2013-04-24: 5337000\nshares 2012 FY 10-K filed 2012-10-31: 5337000\nshares 2013 Q1 10-Q filed 2013-01-24: 754000\nshares 2013 Q2 10-Q filed 2013-04-24: 1328000\nshares 2013 Q3 10-Q filed 2013-07-24: 1887000\nshares 2013 FY 10-K filed 2013-10-30: 2480000\nshares 2014 Q1 10-Q filed 2014-01-28: 1308000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "StockIssuedDuringPeriodSharesStockOptionsExercised",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "fbff0d9e841140f3b909f43bb25071bfcb1b56770de38d2f683eac45d574b9d4"
+}

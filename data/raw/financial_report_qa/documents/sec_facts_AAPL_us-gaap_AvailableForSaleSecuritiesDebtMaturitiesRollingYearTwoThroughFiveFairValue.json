@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AvailableForSaleSecuritiesDebtMaturitiesRollingYearTwoThroughFiveFairValue",
+  "title": "Apple Inc. - Debt Securities, Available-for-sale, Maturity, Allocated and Single Maturity Date, Rolling after One Through Five Years, Fair Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AvailableForSaleSecuritiesDebtMaturitiesRollingYearTwoThroughFiveFairValue\nLabel: Debt Securities, Available-for-sale, Maturity, Allocated and Single Maturity Date, Rolling after One Through Five Years, Fair Value\nDescription: Fair value of investment in debt security, measured at fair value with change in fair value recognized in other comprehensive income (available-for-sale), with single maturity date and allocated without single maturity date, maturing in next rolling fiscal year through fifth year following latest fiscal year. For interim and annual periods when interim period is reported on rolling approach, from latest statement of financial position date.\nRecent reported values:\nUSD 2021 FY 10-K filed 2021-10-29: 83755000000\nUSD 2022 Q1 10-Q filed 2022-01-28: 93206000000\nUSD 2022 Q2 10-Q filed 2022-04-29: 97603000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 92970000000\nUSD 2022 FY 10-K filed 2022-10-28: 87031000000\nUSD 2023 Q1 10-Q filed 2023-02-03: 82497000000\nUSD 2023 Q2 10-Q filed 2023-05-05: 81352000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 76267000000\nUSD 2023 FY 10-K filed 2023-11-03: 74427000000\nUSD 2024 Q1 10-Q filed 2024-02-02: 72994000000\nUSD 2024 Q2 10-Q filed 2024-05-03: 67987000000\nUSD 2024 Q3 10-Q filed 2024-08-02: 64209000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AvailableForSaleSecuritiesDebtMaturitiesRollingYearTwoThroughFiveFairValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "c317fd3d15c9cc15e868d77664c3d58f4cded2967dc2de18ae37c18baeda5ef3"
+}

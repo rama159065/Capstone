@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsForfeituresWeightedAverageGrantDateFairValue",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Forfeitures, Weighted Average Grant Date Fair Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsForfeituresWeightedAverageGrantDateFairValue\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Forfeitures, Weighted Average Grant Date Fair Value\nDescription: Weighted average fair value as of the grant date of equity-based award plans other than stock (unit) option plans that were not exercised or put into effect as a result of the occurrence of a terminating event.\nRecent reported values:\nUSD/shares 2012 Q2 10-Q filed 2012-04-25: 229.97\nUSD/shares 2012 Q3 10-Q filed 2012-07-25: 245.2\nUSD/shares 2012 FY 10-K filed 2012-10-31: 256.01\nUSD/shares 2012 FY 8-K filed 2013-04-24: 256.01\nUSD/shares 2013 FY 10-K filed 2013-10-30: 256.01\nUSD/shares 2013 Q1 10-Q filed 2013-01-24: 422.8\nUSD/shares 2013 Q2 10-Q filed 2013-04-24: 420.69\nUSD/shares 2013 Q3 10-Q filed 2013-07-24: 405.36\nUSD/shares 2013 FY 10-K filed 2013-10-30: 401.17\nUSD/shares 2014 Q1 10-Q filed 2014-01-28: 461.35\nUSD/shares 2014 Q2 10-Q filed 2014-04-24: 469\nUSD/shares 2014 Q3 10-Q filed 2014-07-23: 67.64",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsForfeituresWeightedAverageGrantDateFairValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b1c86576c32a9ea7c2b6e445bc54bf2733399fddefd025daa2886a5d077255ca"
+}

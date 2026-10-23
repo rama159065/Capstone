@@ -1,0 +1,122 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Datadog_US1_8lq18rrf6g0y",
+  "title": "Datadog US1 - Scheduled Maintenance",
+  "text": "Service: Datadog US1\nMaintenance: Scheduled Maintenance\nStatus: completed\nImpact: minor\nScheduled for: 2016-01-06T22:00:00.000-05:00\nScheduled until: 2016-01-06T23:00:00.000-05:00\nUpdates:\n- 2016-01-06T23:23:16.319-05:00: completed - The scheduled maintenance has been completed.\n- 2016-01-06T23:00:35.998-05:00: verifying - We are verifying actions now.\n- 2016-01-06T22:13:48.317-05:00: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2016-01-06T22:13:12.654-05:00: scheduled - We will be undergoing scheduled maintenance during this time.\n- 2016-01-06T22:01:15.182-05:00: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2016-01-06T20:59:49.160-05:00: scheduled - Maintenance will begin as scheduled in 60 minutes.\n- 2015-12-30T10:56:51.698-05:00: scheduled - On January 6, 2016, we will be performing maintenance on the Datadog platform for a window of no longer than 60 minutes.\nDuring this period, you may come across our 'down' page, but that is to be expected.\nThere may be a brief period during this maintenance window when alerts may not be sent. If this is impacted beyond the maintenance window, we will update our Status Page here.\n\nAfter the maintenance window is over, you will be required to log in again.\n\n*Most importantly*, all of your data will be processed. \nIf you have any questions or concerns, please contact us at support@datadoghq.com\n\nClick here to see the time in other locations: http://dtdg.co/1MH0zDq",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://status.datadoghq.com/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "8lq18rrf6g0y",
+      "name": "Scheduled Maintenance",
+      "status": "completed",
+      "created_at": "2015-12-30T10:56:51.447-05:00",
+      "updated_at": "2016-01-06T23:23:16.706-05:00",
+      "monitoring_at": "2016-01-06T23:00:35.998-05:00",
+      "resolved_at": "2016-01-06T23:23:16.319-05:00",
+      "impact": "minor",
+      "shortlink": "http://stspg.io/1oX3",
+      "started_at": "2015-12-30T10:56:51.698-05:00",
+      "page_id": "1k6wzpspjf99",
+      "incident_updates": [
+        {
+          "id": "fljlfphghknd",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "8lq18rrf6g0y",
+          "created_at": "2016-01-06T23:23:16.319-05:00",
+          "updated_at": "2016-01-06T23:23:16.704-05:00",
+          "display_at": "2016-01-06T23:23:16.319-05:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "nljfddfffhnh",
+          "status": "verifying",
+          "body": "We are verifying actions now.",
+          "incident_id": "8lq18rrf6g0y",
+          "created_at": "2016-01-06T23:00:35.998-05:00",
+          "updated_at": "2016-01-06T23:00:36.715-05:00",
+          "display_at": "2016-01-06T23:00:35.998-05:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "kppkcfdpgggl",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "8lq18rrf6g0y",
+          "created_at": "2016-01-06T22:13:48.317-05:00",
+          "updated_at": "2016-01-06T23:00:42.524-05:00",
+          "display_at": "2016-01-06T22:13:48.317-05:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "jbncgddcbcdb",
+          "status": "scheduled",
+          "body": "We will be undergoing scheduled maintenance during this time.",
+          "incident_id": "8lq18rrf6g0y",
+          "created_at": "2016-01-06T22:13:12.654-05:00",
+          "updated_at": "2016-01-06T22:13:14.141-05:00",
+          "display_at": "2016-01-06T22:13:12.654-05:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "mkhjljdlcnjm",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "8lq18rrf6g0y",
+          "created_at": "2016-01-06T22:01:15.182-05:00",
+          "updated_at": "2016-01-06T22:01:15.551-05:00",
+          "display_at": "2016-01-06T22:01:15.182-05:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "lbgjbmfgfngp",
+          "status": "scheduled",
+          "body": "Maintenance will begin as scheduled in 60 minutes.",
+          "incident_id": "8lq18rrf6g0y",
+          "created_at": "2016-01-06T20:59:49.160-05:00",
+          "updated_at": "2016-01-06T20:59:49.160-05:00",
+          "display_at": "2016-01-06T20:59:49.160-05:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "x8b0gr9hhlst",
+          "status": "scheduled",
+          "body": "On January 6, 2016, we will be performing maintenance on the Datadog platform for a window of no longer than 60 minutes.\r\nDuring this period, you may come across our 'down' page, but that is to be expected.\r\nThere may be a brief period during this maintenance window when alerts may not be sent. If this is impacted beyond the maintenance window, we will update our Status Page here.\r\n\r\nAfter the maintenance window is over, you will be required to log in again.\r\n\r\n*Most importantly*, all of your data will be processed. \r\nIf you have any questions or concerns, please contact us at support@datadoghq.com\r\n\r\nClick here to see the time in other locations: http://dtdg.co/1MH0zDq",
+          "incident_id": "8lq18rrf6g0y",
+          "created_at": "2015-12-30T10:56:51.698-05:00",
+          "updated_at": "2015-12-30T10:56:52.069-05:00",
+          "display_at": "2015-12-30T10:56:51.698-05:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "scheduled_for": "2016-01-06T22:00:00.000-05:00",
+      "scheduled_until": "2016-01-06T23:00:00.000-05:00"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:48:56+00:00",
+  "content_sha256": "2f7a137dd967f93e66578940dc8ba89473ba4e93f3e43e69ee5826c19c92de47"
+}

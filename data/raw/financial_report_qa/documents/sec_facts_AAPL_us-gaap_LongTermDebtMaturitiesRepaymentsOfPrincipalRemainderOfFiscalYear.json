@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_LongTermDebtMaturitiesRepaymentsOfPrincipalRemainderOfFiscalYear",
+  "title": "Apple Inc. - Long-Term Debt, Maturity, Remainder of Fiscal Year",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: LongTermDebtMaturitiesRepaymentsOfPrincipalRemainderOfFiscalYear\nLabel: Long-Term Debt, Maturity, Remainder of Fiscal Year\nDescription: Amount of long-term debt payable, sinking fund requirement, and other securities issued that are redeemable by holder at fixed or determinable price and date, maturing in remainder of current fiscal year.\nRecent reported values:\nUSD 2013 Q3 10-Q filed 2013-07-24: 0\nUSD 2014 Q3 10-Q filed 2014-07-23: 0\nUSD 2015 Q1 10-Q filed 2015-01-28: 0\nUSD 2015 Q2 10-Q filed 2015-04-28: 0\nUSD 2015 Q3 10-Q filed 2015-07-22: 0",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "LongTermDebtMaturitiesRepaymentsOfPrincipalRemainderOfFiscalYear",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "900b7fc09f0f20004a464983125874fbd8fa2d588210f31a9086b7a9eabe3fdc"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_FiniteLivedIntangibleAssetsNet",
+  "title": "Apple Inc. - Finite-Lived Intangible Assets, Net",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: FiniteLivedIntangibleAssetsNet\nLabel: Finite-Lived Intangible Assets, Net\nDescription: Amount after amortization of assets, excluding financial assets and goodwill, lacking physical substance with a finite life.\nRecent reported values:\nUSD 2016 Q3 10-Q filed 2016-07-27: 3406000000\nUSD 2016 FY 10-K filed 2016-10-26: 3106000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 3106000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 3106000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 3106000000\nUSD 2017 FY 10-K filed 2017-11-03: 3106000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 2748000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 2517000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 2344000000\nUSD 2017 FY 10-K filed 2017-11-03: 2198000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 2198000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 2049000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "FiniteLivedIntangibleAssetsNet",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "3c771288808002d7a289320ad9a651dd64a751eda1788bbcd0422cb0e627aab1"
+}

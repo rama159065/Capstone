@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CapitalExpendituresIncurredButNotYetPaid",
+  "title": "Apple Inc. - Capital Expenditures Incurred but Not yet Paid",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CapitalExpendituresIncurredButNotYetPaid\nLabel: Capital Expenditures Incurred but Not yet Paid\nDescription: Future cash outflow to pay for purchases of fixed assets that have occurred.\nRecent reported values:\nUSD 2018 FY 10-K filed 2018-11-05: 3400000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CapitalExpendituresIncurredButNotYetPaid",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "2afef35a70d1f86aabbd0470289b581a1894944e7810ad666f05fe4d0bc4ec87"
+}

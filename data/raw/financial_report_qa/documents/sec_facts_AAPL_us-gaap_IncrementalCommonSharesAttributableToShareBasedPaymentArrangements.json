@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncrementalCommonSharesAttributableToShareBasedPaymentArrangements",
+  "title": "Apple Inc. - Incremental Common Shares Attributable to Dilutive Effect of Share-based Payment Arrangements",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncrementalCommonSharesAttributableToShareBasedPaymentArrangements\nLabel: Incremental Common Shares Attributable to Dilutive Effect of Share-based Payment Arrangements\nDescription: Additional shares included in the calculation of diluted EPS as a result of the potentially dilutive effect of share based payment arrangements using the treasury stock method.\nRecent reported values:\nshares 2025 Q2 10-Q filed 2025-05-02: 62051000\nshares 2026 Q2 10-Q filed 2026-05-01: 62051000\nshares 2025 Q3 10-Q filed 2025-08-01: 58828000\nshares 2026 Q3 10-Q filed 2026-07-31: 58828000\nshares 2025 Q3 10-Q filed 2025-08-01: 45293000\nshares 2026 Q3 10-Q filed 2026-07-31: 45293000\nshares 2025 FY 10-K filed 2025-10-31: 56197000\nshares 2026 Q1 10-Q filed 2026-01-30: 62198000\nshares 2026 Q2 10-Q filed 2026-05-01: 57397000\nshares 2026 Q2 10-Q filed 2026-05-01: 52595000\nshares 2026 Q3 10-Q filed 2026-07-31: 57787000\nshares 2026 Q3 10-Q filed 2026-07-31: 58566000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncrementalCommonSharesAttributableToShareBasedPaymentArrangements",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "f744700e657be7051d3feeac40ada666887a052290a4b70bff5121722f2ec156"
+}

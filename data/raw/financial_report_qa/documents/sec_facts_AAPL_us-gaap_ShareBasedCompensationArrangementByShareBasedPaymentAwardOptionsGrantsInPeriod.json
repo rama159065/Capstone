@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsGrantsInPeriod",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Grants in Period, Net of Forfeitures",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsGrantsInPeriod\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Grants in Period, Net of Forfeitures\nDescription: Net number of share options (or share units) granted during the period.\nRecent reported values:\nshares 2011 Q2 10-Q filed 2011-04-21: 1000\nshares 2011 Q3 10-Q filed 2011-07-20: 1000\nshares 2013 FY 10-K filed 2013-10-30: 1000\nshares 2012 FY 8-K filed 2013-04-24: 1000\nshares 2012 FY 10-K filed 2012-10-31: 1000\nshares 2011 FY 10-K filed 2011-10-26: 1000\nshares 2012 Q1 10-Q filed 2012-01-25: 0\nshares 2012 Q2 10-Q filed 2012-04-25: 0\nshares 2013 Q3 10-Q filed 2013-07-24: 8000\nshares 2013 Q3 10-Q filed 2013-07-24: 8000\nshares 2013 FY 10-K filed 2013-10-30: 8000\nshares 2014 Q1 10-Q filed 2014-01-28: 1000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsGrantsInPeriod",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e479665496c75cb86eca2e62f1cd59cce8c0682c7c6d5a63d85ad793b9d802a0"
+}

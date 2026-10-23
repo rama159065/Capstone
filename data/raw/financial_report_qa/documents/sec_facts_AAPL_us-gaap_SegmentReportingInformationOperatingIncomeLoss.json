@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_SegmentReportingInformationOperatingIncomeLoss",
+  "title": "Apple Inc. - Segment Reporting Information, Operating Income (Loss) (Deprecated 2011-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: SegmentReportingInformationOperatingIncomeLoss\nLabel: Segment Reporting Information, Operating Income (Loss) (Deprecated 2011-01-31)\nDescription: Amount of income or loss for the reportable segment before unusual Items, equity method income or loss, income taxes, and extraordinary items.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 10881000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 10200000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 3431000000\nUSD 2010 FY 10-K filed 2010-10-27: 14692000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 5631000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 16124000000\nUSD 2010 Q3 10-Q filed 2010-07-21: 5452000000\nUSD 2010 FY 10-K filed 2010-10-27: 22971000000\nUSD 2011 Q1 10-Q filed 2011-01-19: 9299000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "SegmentReportingInformationOperatingIncomeLoss",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4f4b736134a3761cab7e0b14966a43bf26b33b6a363aafd939dc3bf6139ac413"
+}

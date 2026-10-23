@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AccountsReceivableNetCurrent",
+  "title": "Apple Inc. - Accounts Receivable, after Allowance for Credit Loss, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AccountsReceivableNetCurrent\nLabel: Accounts Receivable, after Allowance for Credit Loss, Current\nDescription: Amount, after allowance for credit loss, of right to consideration from customer for product sold and service rendered in normal course of business, classified as current.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 33410000000\nUSD 2025 FY 10-K filed 2025-10-31: 33410000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 29639000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 26136000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 27557000000\nUSD 2025 FY 10-K filed 2025-10-31: 39777000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 39777000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 39777000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 39777000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 39921000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 30339000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 31398000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AccountsReceivableNetCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "7655fc9eea764f82586bfcbe89a76f69fdfa2dae11f3562b7ed2869c572fa12f"
+}

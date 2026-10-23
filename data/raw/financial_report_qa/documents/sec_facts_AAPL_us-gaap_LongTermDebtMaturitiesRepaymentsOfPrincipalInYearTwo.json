@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_LongTermDebtMaturitiesRepaymentsOfPrincipalInYearTwo",
+  "title": "Apple Inc. - Long-Term Debt, Maturity, Year Two",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: LongTermDebtMaturitiesRepaymentsOfPrincipalInYearTwo\nLabel: Long-Term Debt, Maturity, Year Two\nDescription: Amount of long-term debt payable, sinking fund requirement, and other securities issued that are redeemable by holder at fixed or determinable price and date, maturing in second fiscal year following current fiscal year. Excludes interim and annual periods when interim periods are reported from current statement of financial position date (rolling approach).\nRecent reported values:\nUSD 2015 Q3 10-Q filed 2015-07-22: 2500000000\nUSD 2015 FY 10-K filed 2015-10-28: 3500000000\nUSD 2016 FY 10-K filed 2016-10-26: 6500000000\nUSD 2017 FY 10-K filed 2017-11-03: 8863000000\nUSD 2018 FY 10-K filed 2018-11-05: 10183000000\nUSD 2019 FY 10-K filed 2019-10-31: 8750000000\nUSD 2020 FY 10-K filed 2020-10-30: 9569000000\nUSD 2021 FY 10-K filed 2021-10-29: 11391000000\nUSD 2022 FY 10-K filed 2022-10-28: 9910000000\nUSD 2023 FY 10-K filed 2023-11-03: 10775000000\nUSD 2024 FY 10-K filed 2024-11-01: 12342000000\nUSD 2025 FY 10-K filed 2025-10-31: 10078000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "LongTermDebtMaturitiesRepaymentsOfPrincipalInYearTwo",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "f3aa658b250d17adf8e1948bba09577dc9ba516c869ce45f6c427d10b7c7497f"
+}

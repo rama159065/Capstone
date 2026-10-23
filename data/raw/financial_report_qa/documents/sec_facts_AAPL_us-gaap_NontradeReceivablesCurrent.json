@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_NontradeReceivablesCurrent",
+  "title": "Apple Inc. - Nontrade Receivables, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: NontradeReceivablesCurrent\nLabel: Nontrade Receivables, Current\nDescription: The sum of amounts currently receivable other than from customers. For classified balance sheets, represents the current amount receivable, that is amounts expected to be collected within one year or the normal operating cycle, if longer.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 32833000000\nUSD 2025 FY 10-K filed 2025-10-31: 32833000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 29667000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 23662000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 19278000000\nUSD 2025 FY 10-K filed 2025-10-31: 33180000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 33180000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 33180000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 33180000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 30399000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 23172000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 27509000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "NontradeReceivablesCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "b5cf28153146c0fa7ff1ce474b7214ecde0b9016c61c10e69dd2bf68f4ec314e"
+}

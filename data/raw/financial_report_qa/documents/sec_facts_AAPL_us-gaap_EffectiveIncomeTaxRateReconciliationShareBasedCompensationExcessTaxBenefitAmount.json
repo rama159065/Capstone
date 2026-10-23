@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_EffectiveIncomeTaxRateReconciliationShareBasedCompensationExcessTaxBenefitAmount",
+  "title": "Apple Inc. - Effective Income Tax Rate Reconciliation, Tax Expense (Benefit), Share-based Payment Arrangement, Amount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: EffectiveIncomeTaxRateReconciliationShareBasedCompensationExcessTaxBenefitAmount\nLabel: Effective Income Tax Rate Reconciliation, Tax Expense (Benefit), Share-based Payment Arrangement, Amount\nDescription: Amount of difference between reported income tax expense (benefit) and expected income tax expense (benefit) computed by applying domestic federal statutory income tax rate to pretax income (loss) from continuing operation, attributable to expense for award under share-based payment arrangement. Excludes expense determined to be nondeductible upon grant or after for award under share-based payment arrangement.\nRecent reported values:\nUSD 2020 FY 10-K filed 2020-10-30: -930000000\nUSD 2021 FY 10-K filed 2021-10-29: -930000000\nUSD 2022 FY 10-K filed 2022-10-28: -930000000\nUSD 2021 FY 10-K filed 2021-10-29: -2137000000\nUSD 2022 FY 10-K filed 2022-10-28: -2137000000\nUSD 2023 FY 10-K filed 2023-11-03: -2137000000\nUSD 2022 FY 10-K filed 2022-10-28: -1871000000\nUSD 2023 FY 10-K filed 2023-11-03: -1871000000\nUSD 2024 FY 10-K filed 2024-11-01: -1871000000\nUSD 2023 FY 10-K filed 2023-11-03: -1120000000\nUSD 2024 FY 10-K filed 2024-11-01: -1120000000\nUSD 2024 FY 10-K filed 2024-11-01: -893000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "EffectiveIncomeTaxRateReconciliationShareBasedCompensationExcessTaxBenefitAmount",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "076d75c566ea67e2b112e8408e675effbf5dd63f0a64297986d7f9df9059463f"
+}

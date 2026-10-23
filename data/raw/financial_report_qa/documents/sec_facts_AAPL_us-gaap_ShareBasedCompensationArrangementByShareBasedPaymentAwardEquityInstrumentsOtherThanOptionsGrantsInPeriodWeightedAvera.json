@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsGrantsInPeriodWeightedAverageGrantDateFairValue",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Grants in Period, Weighted Average Grant Date Fair Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsGrantsInPeriodWeightedAverageGrantDateFairValue\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Grants in Period, Weighted Average Grant Date Fair Value\nDescription: The weighted average fair value at grant date for nonvested equity-based awards issued during the period on other than stock (or unit) option plans (for example, phantom stock or unit plan, stock or unit appreciation rights plan, performance target plan).\nRecent reported values:\nUSD/shares 2012 Q2 10-Q filed 2012-04-25: 398.64\nUSD/shares 2012 Q3 10-Q filed 2012-07-25: 414.88\nUSD/shares 2012 FY 10-K filed 2012-10-31: 431.35\nUSD/shares 2012 FY 8-K filed 2013-04-24: 431.35\nUSD/shares 2013 FY 10-K filed 2013-10-30: 431.35\nUSD/shares 2013 Q1 10-Q filed 2013-01-24: 600.62\nUSD/shares 2013 Q2 10-Q filed 2013-04-24: 587.83\nUSD/shares 2013 Q3 10-Q filed 2013-07-24: 556.98\nUSD/shares 2013 FY 10-K filed 2013-10-30: 547.62\nUSD/shares 2014 Q1 10-Q filed 2014-01-28: 491.93\nUSD/shares 2014 Q2 10-Q filed 2014-04-24: 496.99\nUSD/shares 2014 Q3 10-Q filed 2014-07-23: 72.18",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsGrantsInPeriodWeightedAverageGrantDateFairValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "53ba18064c64edd8a983410ad0fa2e0f8743aa1b58b3bc3ded3a7a14ad13f892"
+}

@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476346",
+  "title": "Türkiye Preparedness for Public Health Emergencies Project",
+  "text": "bid_description: Procurement of 9 Lots of Chemical Analysis Devices\nbid_reference_no: TPPHEP/HSGM/2026/G/L.2.2.4/RFB/3\nid: OP00476346\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P180781-Trkiye Preparedness for Public Health Emergencies Project Loan/Credit/TF Info: IBRD-97540 Bid/Contract Reference No: TPPHEP/HSGM/2026/G/L.2.2.4/RFB/3 Procurement Method: RFB-Request for Bids Scope of Contract: Procurement of 9 Lots of Chemical Analysis Devices-Lot 1, 2, 5, 6, 7, 8 and 9 Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/20 Duration of Contract 90 Day(s) Awarded Bidder(s): REDOKS ANALITIK CIHAZLAR A.. (1114611) Mustafa Kemal, 2076. Sk. No:8/1, 06530 ankaya/Ankara Country: Turkiye Bid Price at Opening USD Evaluated Bid Price USD 1711200.00 Signed Contract price USD 1711200.00 \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Turkiye\nproject_id: P180781\nproject_name: Türkiye Preparedness for Public Health Emergencies Project\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=200&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476346",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Turkiye",
+      "project_id": "P180781",
+      "project_name": "Türkiye Preparedness for Public Health Emergencies Project",
+      "bid_reference_no": "TPPHEP/HSGM/2026/G/L.2.2.4/RFB/3",
+      "bid_description": "Procurement of 9 Lots of Chemical Analysis Devices",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P180781-Trkiye Preparedness for Public Health Emergencies Project<br/><b>Loan/Credit/TF Info:</b>IBRD-97540<br/><b>Bid/Contract Reference No:</b>TPPHEP/HSGM/2026/G/L.2.2.4/RFB/3<br/><b>Procurement Method:</b>RFB-Request for Bids<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Procurement of 9 Lots of Chemical Analysis Devices-Lot 1, 2, 5, 6, 7, 8 and 9</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/20<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>90 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>REDOKS ANALITIK CIHAZLAR A.. (1114611)</b><br/>Mustafa Kemal, 2076. Sk. No:8/1, 06530 ankaya/Ankara<br/>Country: Turkiye<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>USD<br/><br/>Evaluated Bid Price<br/>USD 1711200.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>USD 1711200.00</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:13+00:00",
+  "content_sha256": "ae5d34e4b1b8724878bae262d2e11b5f8fcc642ccb3694f1b4c78437e0bd3078"
+}

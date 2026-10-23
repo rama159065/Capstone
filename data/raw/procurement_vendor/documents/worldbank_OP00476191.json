@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476191",
+  "title": "Bolivia Improving Sustainable Access to Electricity Project (IDTR III)",
+  "text": "bid_description: Adquisicion de Material de escritorio\nbid_reference_no: ENDE-IDTR III-2025-05\nid: OP00476191\nnotice_lang_name: Spanish; Castilian\nnotice_status: Published\nnotice_text: Contract Award Project: P180027-Bolivia Improving Sustainable Access to Electricity Project (IDTR III) Loan/Credit/TF Info: IBRD-96110 Bid/Contract Reference No: ENDE-IDTR III-2025-05 Procurement Method: RFQ-Solicitud de cotizaciones Scope of Contract: MATERIAL DE ESCRITORIO IDTR III Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/07/16 Duration of Contract 15 Day(s) Awarded Bidder(s): LIBRERIA PAULA ANDREA (1136983) Av. Caoto No 600 Country: Bolivia Bid Price at Opening BOB 38435.00 Evaluated Bid Price BOB 38435.00 Signed Contract price BOB 38435.00 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Bolivia\nproject_id: P180027\nproject_name: Bolivia Improving Sustainable Access to Electricity Project (IDTR III)\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=400&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476191",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "Spanish; Castilian",
+      "notice_status": "Published",
+      "project_ctry_name": "Bolivia",
+      "project_id": "P180027",
+      "project_name": "Bolivia Improving Sustainable Access to Electricity Project (IDTR III)",
+      "bid_reference_no": "ENDE-IDTR III-2025-05",
+      "bid_description": "Adquisicion de Material de escritorio",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P180027-Bolivia Improving Sustainable Access to Electricity Project (IDTR III)<br/><b>Loan/Credit/TF Info:</b>IBRD-96110<br/><b>Bid/Contract Reference No:</b>ENDE-IDTR III-2025-05<br/><b>Procurement Method:</b>RFQ-Solicitud de cotizaciones<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>MATERIAL DE ESCRITORIO IDTR III</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/07/16<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>15 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>LIBRERIA PAULA ANDREA (1136983)</b><br/>Av. Caoto No 600<br/>Country: Bolivia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>BOB 38435.00<br/><br/>Evaluated Bid Price<br/>BOB 38435.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>BOB 38435.00</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:21+00:00",
+  "content_sha256": "fec4644f0c3856c86613365e16a0e7bf0d10c8cbecb71f11f88f23610aa86822"
+}

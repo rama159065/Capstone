@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476230",
+  "title": "Kiribati Kiritimati Infrastructure Project",
+  "text": "bid_description: Technical Assistance for GBV handling system\nbid_reference_no: KI-MLPID-457758-CS-CDS\nid: OP00476230\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P506425-Kiribati Kiritimati Infrastructure Project Loan/Credit/TF Info: IDA-E3910 Bid/Contract Reference No: KI-MLPID-457758-CS-CDS Procurement Method: CDS-Direct Selection Scope of Contract: Technical Assistance for GBV handling system Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/07 Duration of Contract 4 Year(s) Awarded Firm(s): KIRIBATI WOMEN AND CHILDREN SUPPORT CENTRE (1137029) Country: Kiribati Final Evaluation Price AUD 339890.00 Signed Contract Price AUD 339890.00 Price: Currency: Amount: Australian Dollars (Australian Dollars) 339890.00 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: CS\nprocurement_method_code: CDS\nprocurement_method_name: Direct Selection\nproject_ctry_name: Kiribati\nproject_id: P506425\nproject_name: Kiribati Kiritimati Infrastructure Project\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=400&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476230",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Kiribati",
+      "project_id": "P506425",
+      "project_name": "Kiribati Kiritimati Infrastructure Project",
+      "bid_reference_no": "KI-MLPID-457758-CS-CDS",
+      "bid_description": "Technical Assistance for GBV handling system",
+      "procurement_group": "CS",
+      "procurement_method_code": "CDS",
+      "procurement_method_name": "Direct Selection",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P506425-Kiribati Kiritimati Infrastructure Project<br/><b>Loan/Credit/TF Info:</b>IDA-E3910<br/><b>Bid/Contract Reference No:</b>KI-MLPID-457758-CS-CDS<br/><b>Procurement Method:</b>CDS-Direct Selection<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Technical Assistance for GBV handling system</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/07<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>4 Year(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Firm(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='row col-sm-12'><div class='col-sm-6'><b>KIRIBATI WOMEN AND CHILDREN SUPPORT CENTRE (1137029)</b><br/>Country: Kiribati<br/></div></div><br/><div class='col-sm-6'><table width='100%'><tbody></tbody></table></div><div class='col-sm-6'><p></p><b>Final Evaluation Price</b><br/>AUD 339890.00<br/><p></p><b>Signed Contract Price</b><br/>AUD 339890.00</div><div class='row col-sm-12'><div class='col-xs-12'><b>Price:</b><br/></div></div><div class='row col-sm-12'><div class='col-xs-4'>Currency:</div><div class='col-xs-4'>Amount:</div></div><div class='row col-sm-12'><div class='col-xs-4'>Australian Dollars (Australian Dollars)</div><div class='col-xs-4'>339890.00</div></div></div><div class='spacing'></div><div class='spacing'></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:22+00:00",
+  "content_sha256": "bf57cb4300b4589f4a65e35d1e15f94975f20be44ac8e1a7520bce746c4dabf5"
+}

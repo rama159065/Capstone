@@ -1,0 +1,83 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Datadog_US1_9rtgnnmp53j5",
+  "title": "Datadog US1 - Emergency Maintenance on Alerting Engine",
+  "text": "Service: Datadog US1\nMaintenance: Emergency Maintenance on Alerting Engine\nStatus: completed\nImpact: none\nScheduled for: 2015-09-30T18:00:00.000-04:00\nScheduled until: 2015-09-30T18:30:00.000-04:00\nUpdates:\n- 2015-09-30T20:19:51.668-04:00: completed - The scheduled maintenance has been completed.\n- 2015-09-30T18:40:14.339-04:00: verifying - Verification is currently underway for the maintenance items.\n- 2015-09-30T18:00:34.797-04:00: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2015-09-30T17:42:36.690-04:00: scheduled - We're going to be performing some emergency maintenance on the alerting engine starting at 30 SEP 2015, 18:00 EDT (22:00 UTC). We don't anticipate any false alerts during this time.\n\n*Most importantly*, all of your data will be processed. \n\nIf you have any questions or concerns, please contact us at support@datadoghq.com.",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://status.datadoghq.com/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "9rtgnnmp53j5",
+      "name": "Emergency Maintenance on Alerting Engine",
+      "status": "completed",
+      "created_at": "2015-09-30T17:42:36.435-04:00",
+      "updated_at": "2015-09-30T20:19:52.082-04:00",
+      "monitoring_at": "2015-09-30T18:40:14.339-04:00",
+      "resolved_at": "2015-09-30T20:19:51.668-04:00",
+      "impact": "none",
+      "shortlink": "http://stspg.io/1XDV",
+      "started_at": "2015-09-30T17:42:36.690-04:00",
+      "page_id": "1k6wzpspjf99",
+      "incident_updates": [
+        {
+          "id": "wrhfh3gk95bj",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "9rtgnnmp53j5",
+          "created_at": "2015-09-30T20:19:51.668-04:00",
+          "updated_at": "2015-09-30T20:19:52.079-04:00",
+          "display_at": "2015-09-30T20:19:51.668-04:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "syt1sbmyjmyv",
+          "status": "verifying",
+          "body": "Verification is currently underway for the maintenance items.",
+          "incident_id": "9rtgnnmp53j5",
+          "created_at": "2015-09-30T18:40:14.339-04:00",
+          "updated_at": "2015-09-30T18:40:14.852-04:00",
+          "display_at": "2015-09-30T18:40:14.339-04:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "3gvtgnkbqmw4",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "9rtgnnmp53j5",
+          "created_at": "2015-09-30T18:00:34.797-04:00",
+          "updated_at": "2015-09-30T18:00:35.149-04:00",
+          "display_at": "2015-09-30T18:00:34.797-04:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "94txm32fp03s",
+          "status": "scheduled",
+          "body": "We're going to be performing some emergency maintenance on the alerting engine starting at 30 SEP 2015, 18:00 EDT (22:00 UTC). We don't anticipate any false alerts during this time.\r\n\r\n*Most importantly*, all of your data will be processed. \r\n\r\nIf you have any questions or concerns, please contact us at support@datadoghq.com.",
+          "incident_id": "9rtgnnmp53j5",
+          "created_at": "2015-09-30T17:42:36.690-04:00",
+          "updated_at": "2015-09-30T17:42:37.006-04:00",
+          "display_at": "2015-09-30T17:42:36.690-04:00",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "scheduled_for": "2015-09-30T18:00:00.000-04:00",
+      "scheduled_until": "2015-09-30T18:30:00.000-04:00"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:48:56+00:00",
+  "content_sha256": "e20dc499f02d3b382bafe5e8a79f207d8ae7fcc5e60d851ff095dfa67e9fb125"
+}

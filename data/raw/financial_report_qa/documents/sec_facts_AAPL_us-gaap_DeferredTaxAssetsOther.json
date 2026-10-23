@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DeferredTaxAssetsOther",
+  "title": "Apple Inc. - Deferred Tax Assets, Other",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DeferredTaxAssetsOther\nLabel: Deferred Tax Assets, Other\nDescription: Amount, before allocation of valuation allowance, of deferred tax asset attributable to deductible temporary differences, classified as other.\nRecent reported values:\nUSD 2020 FY 10-K filed 2020-10-30: 2174000000\nUSD 2020 FY 10-K filed 2020-10-30: 2409000000\nUSD 2021 FY 10-K filed 2021-10-29: 1612000000\nUSD 2021 FY 10-K filed 2021-10-29: 1639000000\nUSD 2022 FY 10-K filed 2022-10-28: 1639000000\nUSD 2022 FY 10-K filed 2022-10-28: 1596000000\nUSD 2023 FY 10-K filed 2023-11-03: 3407000000\nUSD 2023 FY 10-K filed 2023-11-03: 2343000000\nUSD 2024 FY 10-K filed 2024-11-01: 2343000000\nUSD 2024 FY 10-K filed 2024-11-01: 2168000000\nUSD 2025 FY 10-K filed 2025-10-31: 3341000000\nUSD 2025 FY 10-K filed 2025-10-31: 3049000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DeferredTaxAssetsOther",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "89c4eb79c80bfe95b741635ca2501d2fc17fe1b264fa6fbf502bae0119c469b1"
+}

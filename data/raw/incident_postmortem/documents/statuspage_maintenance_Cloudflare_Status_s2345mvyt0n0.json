@@ -1,0 +1,106 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Cloudflare_Status_s2345mvyt0n0",
+  "title": "Cloudflare Status - BOM (Mumbai) on 2026-10-21",
+  "text": "Service: Cloudflare Status\nMaintenance: BOM (Mumbai) on 2026-10-21\nStatus: completed\nImpact: maintenance\nScheduled for: 2026-10-21T21:00:00.000Z\nScheduled until: 2026-10-22T01:00:00.000Z\nUpdates:\n- 2026-10-22T01:02:07.332Z: completed - The scheduled maintenance has been completed.\n- 2026-10-21T21:00:07.610Z: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2026-10-21T20:00:40.947Z: scheduled - Maintenance will begin as scheduled in 60 minutes.\n- 2026-09-17T17:11:17.340Z: scheduled - We will be performing scheduled maintenance in BOM (Mumbai) datacenter between 2026-10-21 21:00 and 2026-10-22 01:00 UTC.\n\nTraffic might be re-routed from this location, hence there is a possibility of a slight increase in latency during this maintenance window for end-users in the affected region. For PNI / CNI customers connecting with us in this location, please make sure you are expecting this traffic to fail over elsewhere during this maintenance window as network interfaces in this datacentre may become temporarily unavailable.\n\nYou can now subscribe to these notifications via Cloudflare dashboard and receive these updates directly via email, PagerDuty and webhooks (based on your plan): https://developers.cloudflare.com/notifications/notification-available/#cloudflare-status.",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://www.cloudflarestatus.com/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "s2345mvyt0n0",
+      "name": "BOM (Mumbai) on 2026-10-21",
+      "status": "completed",
+      "created_at": "2026-09-17T17:11:17.000Z",
+      "updated_at": "2026-10-22T01:02:07.384Z",
+      "monitoring_at": null,
+      "resolved_at": "2026-10-22T01:02:07.332Z",
+      "impact": "maintenance",
+      "shortlink": "https://www.cloudflarestatus.com/incidents/s2345mvyt0n0",
+      "started_at": "2026-09-17T17:11:17.279Z",
+      "page_id": "yh6f0r4529hb",
+      "incident_updates": [
+        {
+          "id": "pvs3ng481k6j",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "s2345mvyt0n0",
+          "created_at": "2026-10-22T01:02:07.332Z",
+          "updated_at": "2026-10-22T01:02:07.332Z",
+          "display_at": "2026-10-22T01:02:07.332Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "hxk4fyf6x08f",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "s2345mvyt0n0",
+          "created_at": "2026-10-21T21:00:07.610Z",
+          "updated_at": "2026-10-21T21:00:07.610Z",
+          "display_at": "2026-10-21T21:00:07.610Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "50xfhjwscg2c",
+          "status": "scheduled",
+          "body": "Maintenance will begin as scheduled in 60 minutes.",
+          "incident_id": "s2345mvyt0n0",
+          "created_at": "2026-10-21T20:00:40.947Z",
+          "updated_at": "2026-10-21T20:00:40.947Z",
+          "display_at": "2026-10-21T20:00:40.947Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "hc961bn25mcb",
+          "status": "scheduled",
+          "body": "We will be performing scheduled maintenance in BOM (Mumbai) datacenter between 2026-10-21 21:00 and 2026-10-22 01:00 UTC.\n\nTraffic might be re-routed from this location, hence there is a possibility of a slight increase in latency during this maintenance window for end-users in the affected region. For PNI / CNI customers connecting with us in this location, please make sure you are expecting this traffic to fail over elsewhere during this maintenance window as network interfaces in this datacentre may become temporarily unavailable.\n\nYou can now subscribe to these notifications via Cloudflare dashboard and receive these updates directly via email, PagerDuty and webhooks (based on your plan): https://developers.cloudflare.com/notifications/notification-available/#cloudflare-status.",
+          "incident_id": "s2345mvyt0n0",
+          "created_at": "2026-09-17T17:11:17.340Z",
+          "updated_at": "2026-09-17T17:11:17.340Z",
+          "display_at": "2026-09-17T17:11:17.340Z",
+          "affected_components": [
+            {
+              "code": "t3d07wlg67nl",
+              "name": "Asia - Mumbai, India - (BOM)",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "t3d07wlg67nl",
+          "name": "Mumbai, India - (BOM)",
+          "status": "operational",
+          "created_at": "2015-10-27T20:12:43.000Z",
+          "updated_at": "2026-10-21T23:05:50.000Z",
+          "position": 49,
+          "description": null,
+          "showcase": false,
+          "start_date": null,
+          "group_id": "77867vxkttgw",
+          "page_id": "yh6f0r4529hb",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2026-10-21T21:00:00.000Z",
+      "scheduled_until": "2026-10-22T01:00:00.000Z"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:48:24+00:00",
+  "content_sha256": "6d1a0d43d1802d90a34ebf160fac4dd5b0879c4f7a7b12de0876b65960469228"
+}

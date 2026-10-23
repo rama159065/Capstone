@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOtherIncreasesDecreasesInPeriod",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Other Increases (Decreases) in Period",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOtherIncreasesDecreasesInPeriod\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Other Increases (Decreases) in Period\nDescription: The addition or reduction in the number of reserved shares that could potentially be issued under the option plan attributable to reasons other than grants, exercises, forfeitures, and expirations during the reporting period.\nRecent reported values:\nshares 2010 FY 10-K filed 2010-10-27: 0",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOtherIncreasesDecreasesInPeriod",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "751658b6a7d880a5a183ffd5ed8c3d1106d508c659a5af8e3faaa6173b7e146d"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ProceedsFromRepaymentsOfShortTermDebt",
+  "title": "Apple Inc. - Proceeds from (Repayments of) Short-term Debt",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ProceedsFromRepaymentsOfShortTermDebt\nLabel: Proceeds from (Repayments of) Short-term Debt\nDescription: The net cash inflow or outflow for borrowing having initial term of repayment within one year or the normal operating cycle, if longer.\nRecent reported values:\nUSD 2014 FY 10-K filed 2014-10-27: 6306000000\nUSD None None 8-K filed 2015-01-28: 6306000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ProceedsFromRepaymentsOfShortTermDebt",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "900e212ad5f4a9522652afe5933e54d0d0dc510ca15dfd3925208a56be4d4c65"
+}

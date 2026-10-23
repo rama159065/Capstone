@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_LongTermDebt",
+  "title": "Apple Inc. - Long-term Debt",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: LongTermDebt\nLabel: Long-term Debt\nDescription: Amount, after unamortized (discount) premium and debt issuance costs, of long-term debt. Includes, but not limited to, notes payable, bonds payable, debentures, mortgage loans and commercial paper. Excludes capital lease obligations.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 96700000000\nUSD 2025 FY 10-K filed 2025-10-31: 96662000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 94800000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 92200000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 91800000000\nUSD 2025 FY 10-K filed 2025-10-31: 90678000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 90700000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 90700000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 90700000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 88500000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 82700000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 82300000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "LongTermDebt",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4e135d9796edc1dc672265bca2909e6cf02f150b7e4b3d560a87df56ebc59a8e"
+}

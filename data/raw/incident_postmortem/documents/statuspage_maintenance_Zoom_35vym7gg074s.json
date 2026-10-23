@@ -1,0 +1,107 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_Zoom_35vym7gg074s",
+  "title": "Zoom - Zoom Phone Maintenance - EU01 - AMS2 Data Center: September 28, 2026",
+  "text": "Service: Zoom\nMaintenance: Zoom Phone Maintenance - EU01 - AMS2 Data Center: September 28, 2026\nStatus: completed\nImpact: maintenance\nScheduled for: 2026-09-28T09:00:00.000-07:00\nScheduled until: 2026-09-30T21:30:00.000-07:00\nUpdates:\n- 2026-09-30T11:04:50.424-07:00: completed - This maintenance has been completed.\n- 2026-09-28T09:00:08.530-07:00: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2026-09-10T13:43:45.596-07:00: scheduled - Zoom will perform service maintenance at our EU01-AMS2 Data Center starting at 9:00 AM Pacific on September 28, 2026. Zoom Phone users registered to the those sip zones will be automatically registered in the EU01-FRA2 sip zone sequentially. During the maintenance window, a brief disconnection may be experienced and notifications may be missed. If you get disconnected, the system will attempt to reconnect you automatically.",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://status.zoom.us/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "35vym7gg074s",
+      "name": "Zoom Phone Maintenance - EU01 - AMS2 Data Center: September 28, 2026",
+      "status": "completed",
+      "created_at": "2026-09-10T13:43:45.472-07:00",
+      "updated_at": "2026-09-30T11:04:50.478-07:00",
+      "monitoring_at": null,
+      "resolved_at": "2026-09-30T11:04:50.424-07:00",
+      "impact": "maintenance",
+      "shortlink": "https://stspg.io/hqz49hdl104p",
+      "started_at": "2026-09-10T13:43:45.459-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "q70ztx8cf67g",
+          "status": "completed",
+          "body": "This maintenance has been completed.",
+          "incident_id": "35vym7gg074s",
+          "created_at": "2026-09-30T11:04:50.424-07:00",
+          "updated_at": "2026-09-30T11:04:50.424-07:00",
+          "display_at": "2026-09-30T11:04:50.424-07:00",
+          "affected_components": [
+            {
+              "code": "773zkp1jzkgl",
+              "name": "Zoom Phone - EMEA - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "vyz6vp0s51xr",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "35vym7gg074s",
+          "created_at": "2026-09-28T09:00:08.530-07:00",
+          "updated_at": "2026-09-28T09:00:08.530-07:00",
+          "display_at": "2026-09-28T09:00:08.530-07:00",
+          "affected_components": [
+            {
+              "code": "773zkp1jzkgl",
+              "name": "Zoom Phone - EMEA - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "under_maintenance"
+            }
+          ],
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "9p083v512z24",
+          "status": "scheduled",
+          "body": "Zoom will perform service maintenance at our EU01-AMS2 Data Center starting at 9:00 AM Pacific on September 28, 2026. Zoom Phone users registered to the those sip zones will be automatically registered in the EU01-FRA2 sip zone sequentially. During the maintenance window, a brief disconnection may be experienced and notifications may be missed. If you get disconnected, the system will attempt to reconnect you automatically.",
+          "incident_id": "35vym7gg074s",
+          "created_at": "2026-09-10T13:43:45.596-07:00",
+          "updated_at": "2026-09-10T13:43:45.596-07:00",
+          "display_at": "2026-09-10T13:43:45.596-07:00",
+          "affected_components": [
+            {
+              "code": "773zkp1jzkgl",
+              "name": "Zoom Phone - EMEA - Zoom Phone",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "773zkp1jzkgl",
+          "name": "Zoom Phone",
+          "status": "operational",
+          "created_at": "2022-05-03T10:43:27.197-07:00",
+          "updated_at": "2026-10-21T21:30:07.366-07:00",
+          "position": 1,
+          "description": null,
+          "showcase": false,
+          "start_date": "2022-05-03",
+          "group_id": "8sq44v6xhj9v",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "scheduled_for": "2026-09-28T09:00:00.000-07:00",
+      "scheduled_until": "2026-09-30T21:30:00.000-07:00"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:49:04+00:00",
+  "content_sha256": "5d4e94707610a0e870a3e080654de651c74f208d2ead083fe9925b664515b102"
+}

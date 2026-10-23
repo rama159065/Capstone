@@ -1,0 +1,16 @@
+{
+  "domain": "travel_expense",
+  "document_id": "ecfr_title41_101-26.304",
+  "title": "§ 101-26.304 Substitution policy.",
+  "text": "§ 101-26.304 Substitution policy.\n§ 101-26.304 Substitution policy.\nIn supplying items requisitioned from GSA stock, GSA may substitute items with similar characteristics. Substitute items may be issued from new stock or from returned stock that is in serviceable condition (condition code A) as described in § 101-27.503-1. A notice of intent to substitute will be provided to the ordering activity only if the characteristics of the substitute item differ substantially from the characteristics of the item requisitioned. Ordering activities may prevent substitution by entering advice code 2B (do not substitute) or 2J (do not substitute or backorder) in cc 65-66 of requisitions.",
+  "source_name": "eCFR Title 41 Public Contracts and Property Management",
+  "source_url": "https://www.govinfo.gov/bulkdata/ECFR/title-41/ECFR-title41.xml",
+  "metadata": {
+    "title_number": 41,
+    "section": "§ 101-26.304",
+    "heading_path": "§ 101-26.304 Substitution policy.",
+    "source_type": "regulatory_section"
+  },
+  "downloaded_at": "2026-10-22T12:46:23+00:00",
+  "content_sha256": "3aeb0901298bd6e8fc1d1921099698adb30833fe78a22d60cfb52e4068ade186"
+}

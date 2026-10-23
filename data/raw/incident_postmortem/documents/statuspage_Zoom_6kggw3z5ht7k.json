@@ -1,0 +1,165 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Zoom_6kggw3z5ht7k",
+  "title": "Zoom - Service Degradation Affecting Zoom Chat Compose and SMS Summarisation with AI Companion",
+  "text": "Service: Zoom\nIncident: Service Degradation Affecting Zoom Chat Compose and SMS Summarisation with AI Companion\nStatus: resolved\nImpact: minor\nStarted: 2026-10-16T23:10:45.005-07:00\nResolved: 2026-10-16T23:56:58.056-07:00\nUpdates:\n- 2026-10-16T23:56:58.056-07:00: resolved - This incident has been resolved and the affected services have been restored.\n- 2026-10-16T23:16:53.093-07:00: monitoring - A service degradation affecting Zoom Chat Compose and SMS Summarisation with AI Companion has been successfully resolved.\n\nOur team will continue to monitor the situation closely and keep you informed of any further developments.\n- 2026-10-16T23:13:36.847-07:00: identified - We have successfully identified the root cause of a service degradation affecting Zoom Chat Compose and SMS Summarisation with AI Companion.\n\nOur team is actively working on a resolution and we will keep you informed with timely updates as progress is made.\n\nThank you for your patience.\n- 2026-10-16T23:10:45.156-07:00: investigating - We are currently investigating a service degradation affecting Zoom Chat Compose and SMS Summarisation with AI Companion.\n\nOur team is actively working to identify the impact and root cause. We will provide an update as soon as more information becomes available.\n\nWe appreciate your patience as we work to resolve this issue.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.zoom.us/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "6kggw3z5ht7k",
+      "name": "Service Degradation Affecting Zoom Chat Compose and SMS Summarisation with AI Companion",
+      "status": "resolved",
+      "created_at": "2026-10-16T23:10:45.019-07:00",
+      "updated_at": "2026-10-16T23:56:58.083-07:00",
+      "monitoring_at": "2026-10-16T23:16:53.093-07:00",
+      "resolved_at": "2026-10-16T23:56:58.056-07:00",
+      "impact": "minor",
+      "shortlink": "https://stspg.io/7yj0741j4bx9",
+      "started_at": "2026-10-16T23:10:45.005-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "xsrcm89yzy5v",
+          "status": "resolved",
+          "body": "This incident has been resolved and the affected services have been restored.",
+          "incident_id": "6kggw3z5ht7k",
+          "created_at": "2026-10-16T23:56:58.056-07:00",
+          "updated_at": "2026-10-16T23:56:58.056-07:00",
+          "display_at": "2026-10-16T23:56:58.056-07:00",
+          "affected_components": [
+            {
+              "code": "zhvj07hl7z83",
+              "name": "Zoom Phone - Global - Zoom AIC",
+              "old_status": "operational",
+              "new_status": "operational"
+            },
+            {
+              "code": "07fc2bfpjgct",
+              "name": "Zoom Chat - Zoom AI",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "y23vxsk2dvdp",
+          "status": "monitoring",
+          "body": "A service degradation affecting Zoom Chat Compose and SMS Summarisation with AI Companion has been successfully resolved.\n\nOur team will continue to monitor the situation closely and keep you informed of any further developments.",
+          "incident_id": "6kggw3z5ht7k",
+          "created_at": "2026-10-16T23:16:53.093-07:00",
+          "updated_at": "2026-10-16T23:16:53.093-07:00",
+          "display_at": "2026-10-16T23:16:53.093-07:00",
+          "affected_components": [
+            {
+              "code": "zhvj07hl7z83",
+              "name": "Zoom Phone - Global - Zoom AIC",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            },
+            {
+              "code": "07fc2bfpjgct",
+              "name": "Zoom Chat - Zoom AI",
+              "old_status": "degraded_performance",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "blwbbk4zhv14",
+          "status": "identified",
+          "body": "We have successfully identified the root cause of a service degradation affecting Zoom Chat Compose and SMS Summarisation with AI Companion.\n\nOur team is actively working on a resolution and we will keep you informed with timely updates as progress is made.\n\nThank you for your patience.",
+          "incident_id": "6kggw3z5ht7k",
+          "created_at": "2026-10-16T23:13:36.847-07:00",
+          "updated_at": "2026-10-16T23:13:36.847-07:00",
+          "display_at": "2026-10-16T23:13:36.847-07:00",
+          "affected_components": [
+            {
+              "code": "zhvj07hl7z83",
+              "name": "Zoom Phone - Global - Zoom AIC",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "07fc2bfpjgct",
+              "name": "Zoom Chat - Zoom AI",
+              "old_status": "degraded_performance",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "kqtkxwktbw0c",
+          "status": "investigating",
+          "body": "We are currently investigating a service degradation affecting Zoom Chat Compose and SMS Summarisation with AI Companion.\n\nOur team is actively working to identify the impact and root cause. We will provide an update as soon as more information becomes available.\n\nWe appreciate your patience as we work to resolve this issue.",
+          "incident_id": "6kggw3z5ht7k",
+          "created_at": "2026-10-16T23:10:45.156-07:00",
+          "updated_at": "2026-10-16T23:10:45.156-07:00",
+          "display_at": "2026-10-16T23:10:45.156-07:00",
+          "affected_components": [
+            {
+              "code": "zhvj07hl7z83",
+              "name": "Zoom Phone - Global - Zoom AIC",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            },
+            {
+              "code": "07fc2bfpjgct",
+              "name": "Zoom Chat - Zoom AI",
+              "old_status": "operational",
+              "new_status": "degraded_performance"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "07fc2bfpjgct",
+          "name": "Zoom AI",
+          "status": "operational",
+          "created_at": "2023-09-06T17:04:19.294-07:00",
+          "updated_at": "2026-10-16T23:16:53.029-07:00",
+          "position": 7,
+          "description": null,
+          "showcase": false,
+          "start_date": "2023-09-06",
+          "group_id": "6zvc1tw9rpfm",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        },
+        {
+          "id": "zhvj07hl7z83",
+          "name": "Zoom AIC",
+          "status": "operational",
+          "created_at": "2024-04-13T12:04:25.256-07:00",
+          "updated_at": "2026-10-16T23:16:53.054-07:00",
+          "position": 9,
+          "description": null,
+          "showcase": false,
+          "start_date": "2024-04-13",
+          "group_id": "fs7vxs27n4pn",
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:00+00:00",
+  "content_sha256": "0857953b7e3984aad5b3cc457e2885884eedeba1486cab790fb63440381189e2"
+}

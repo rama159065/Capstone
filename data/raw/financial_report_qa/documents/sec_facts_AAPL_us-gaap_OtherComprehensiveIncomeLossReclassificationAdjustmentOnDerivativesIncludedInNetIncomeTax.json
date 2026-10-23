@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeLossReclassificationAdjustmentOnDerivativesIncludedInNetIncomeTax",
+  "title": "Apple Inc. - Other Comprehensive Income (Loss), Reclassification Adjustment on Derivatives Included in Net Income, Tax (Deprecated 2013-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeLossReclassificationAdjustmentOnDerivativesIncludedInNetIncomeTax\nLabel: Other Comprehensive Income (Loss), Reclassification Adjustment on Derivatives Included in Net Income, Tax (Deprecated 2013-01-31)\nDescription: Tax effect of the income statement impact of the reclassification adjustment of accumulated gain (loss) from derivative instruments designated and qualifying as the effective portion of cash flow hedges realized in net income. Also includes reclassification adjustments of an entity's share of an equity investee's deferred hedging gain (loss) realized in net income.\nRecent reported values:\nUSD 2012 FY 8-K filed 2013-04-24: 43000000\nUSD 2012 FY 10-K filed 2012-10-31: 43000000\nUSD 2012 FY 8-K filed 2013-04-24: -250000000\nUSD 2012 FY 10-K filed 2012-10-31: -250000000\nUSD 2012 FY 8-K filed 2013-04-24: 220000000\nUSD 2012 FY 10-K filed 2012-10-31: 220000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeLossReclassificationAdjustmentOnDerivativesIncludedInNetIncomeTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "02d525099d24ab832c05126d2986d61b3fa0c5b2cd69d1fa1929f4a9344fbefa"
+}

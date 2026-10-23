@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CommonStockDividendsPerShareDeclared",
+  "title": "Apple Inc. - Common Stock, Dividends, Per Share, Declared",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CommonStockDividendsPerShareDeclared\nLabel: Common Stock, Dividends, Per Share, Declared\nDescription: Aggregate dividends declared during the period for each share of common stock outstanding.\nRecent reported values:\nUSD/shares 2025 Q2 10-Q filed 2025-05-02: 0.25\nUSD/shares 2026 Q2 10-Q filed 2026-05-01: 0.25\nUSD/shares 2025 Q3 10-Q filed 2025-08-01: 0.76\nUSD/shares 2026 Q3 10-Q filed 2026-07-31: 0.76\nUSD/shares 2025 Q3 10-Q filed 2025-08-01: 0.26\nUSD/shares 2026 Q3 10-Q filed 2026-07-31: 0.26\nUSD/shares 2025 FY 10-K filed 2025-10-31: 1.02\nUSD/shares 2026 Q1 10-Q filed 2026-01-30: 0.26\nUSD/shares 2026 Q2 10-Q filed 2026-05-01: 0.52\nUSD/shares 2026 Q2 10-Q filed 2026-05-01: 0.26\nUSD/shares 2026 Q3 10-Q filed 2026-07-31: 0.79\nUSD/shares 2026 Q3 10-Q filed 2026-07-31: 0.27",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CommonStockDividendsPerShareDeclared",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "88651ff2fd1b6e2c17d77618a1dc030bfce7dee77d26c2ae80a831f45f238642"
+}

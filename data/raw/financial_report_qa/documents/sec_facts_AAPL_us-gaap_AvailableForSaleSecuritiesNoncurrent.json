@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AvailableForSaleSecuritiesNoncurrent",
+  "title": "Apple Inc. - Available-for-sale Securities, Noncurrent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AvailableForSaleSecuritiesNoncurrent\nLabel: Available-for-sale Securities, Noncurrent\nDescription: Investments in debt and equity securities which are categorized neither as held-to-maturity nor trading and which are intended to be sold or mature more than one year from the balance sheet date or operating cycle, if longer. Such securities are reported at fair value; unrealized gains (losses) related to Available-for-sale Securities are excluded from earnings and reported in a separate component of shareholders' equity (other comprehensive income), unless the Available-for-sale security is designated as a hedge or is determined to have had an other than temporary decline in fair value below its amortized cost basis. All or a portion of the unrealized holding gain (loss) of an Available-for-sale security that is designated as being hedged in a fair value hedge is recognized in earnings during the period of the hedge, as are other than temporary declines in fair value below the cost basis for investments in equity securities and debt securities that an entity intends to sell or it is more likely than not that it will be required to sell before the recovery of its amortized cost basis. Other than temporary declines in fair value below the cost basis for debt securities categorized as Available-for-sale that an entity does not intend to sell and for which it is not more likely than not that the entity will be required to sell before the recovery of its amortized cost basis are bifurcated into credit losses and losses related to all other factors. Other than temporary declines in fair value below cost basis related to credit losses are recognized in earnings, and losses related to all other factors are recognized in other comprehensive income.\nRecent reported values:\nUSD 2017 Q1 10-Q filed 2017-02-01: 185638000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 189740000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 184757000000\nUSD 2017 FY 10-K filed 2017-11-03: 194714000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 194714000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 194714000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 194714000000\nUSD 2018 FY 10-K filed 2018-11-05: 194714000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 207944000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 179286000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 172773000000\nUSD 2018 FY 10-K filed 2018-11-05: 170799000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AvailableForSaleSecuritiesNoncurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "2d06325d6a637b9890e9f570aaa0f9a569aea6c6c6c3f8a9f9e775e0ebeb4f62"
+}

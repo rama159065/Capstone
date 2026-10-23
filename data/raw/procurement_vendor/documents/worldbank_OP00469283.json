@@ -1,0 +1,39 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00469283",
+  "title": "Rwanda Urban Mobility Improvement Project",
+  "text": "bid_description: Tender for supply of video conferencing system including video & display system, audio system, control and connectivity and infrastructure to outfit one room\nbid_reference_no: RW-COK-474007-GO-RFB\ncontact_address: P.O. Box 3527 Kigali - Rwanda\n Tel: (+250) 57 22 55, \n 57 59 58,57 69 67\ncontact_ctry_name: Rwanda\ncontact_email: ftuyisenge@kigalicity.gov.rw\ncontact_name: Fidel TUYISENGE\ncontact_organization: City of Kigali\ncontact_phone_no: 0788444080\ncontact_web_url: https://www.kigalicity.gov.rw\nid: OP00469283\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: The City of Kigali hereinafter called Client has received fund from the World Bank, EIB and EU towards the cost of the tender for supply of video conferencing system including video and display system audio system control and connectivity and infrastructure to outfit one room.  Bids shall be accompanied by bid security as specified in the e-procurement system of Rwanda at www.umucyo.gov.rw.  A complete set of bidding Documents in English may be obtained by interested bidders at the following address www.umucyo.gov.rw, payment of non-refundable fee  Rwandan francs ten thousand (RWF 10,000) . The sum is to be deposited at any commercial bank on the Account of RRA . Bids must be summited through www.umucyo.gov.rw at on or before the date specified on www.umucyo.gov.rw. Late bids will be automatically rejected by the system. Bids will be opened automatically the same day by www.umucyo.gov.rw.  \nnotice_type: Invitation for Bids\nnoticedate: 19-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Rwanda\nproject_id: P176885\nproject_name: Rwanda Urban Mobility Improvement Project\nsubmission_date: 2026-10-19T00:00:00Z\nsubmission_deadline_date: 2026-11-05T00:00:00Z\nsubmission_deadline_time: 10:30",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=200&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00469283",
+      "notice_type": "Invitation for Bids",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "submission_deadline_date": "2026-11-05T00:00:00Z",
+      "submission_deadline_time": "10:30",
+      "project_ctry_name": "Rwanda",
+      "project_id": "P176885",
+      "project_name": "Rwanda Urban Mobility Improvement Project",
+      "bid_reference_no": "RW-COK-474007-GO-RFB",
+      "bid_description": "Tender for supply of video conferencing system including video & display system, audio system, control and connectivity and infrastructure to outfit one room",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "contact_address": "P.O. Box 3527 Kigali - Rwanda\n Tel: (+250) 57 22 55, \n        57 59 58,57 69 67",
+      "contact_ctry_name": "Rwanda",
+      "contact_email": "ftuyisenge@kigalicity.gov.rw",
+      "contact_name": "Fidel TUYISENGE",
+      "contact_organization": "City of Kigali",
+      "contact_phone_no": "0788444080",
+      "contact_web_url": "https://www.kigalicity.gov.rw",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<p>The City of Kigali hereinafter called Client has received fund from the World Bank, EIB and EU towards the cost of the tender for supply of video conferencing system including video and display system audio system control and connectivity and infrastructure to outfit one room.&nbsp;</p><p>Bids shall be accompanied by bid security as specified in the e-procurement system of Rwanda at www.umucyo.gov.rw.&nbsp;</p><p>A complete set of bidding Documents in&nbsp;English may be obtained by interested bidders at the following address www.umucyo.gov.rw, payment of non-refundable fee&nbsp;<strong>Rwandan francs ten thousand (RWF 10,000)</strong>. The sum is to be deposited at any commercial bank&nbsp;on the&nbsp;Account of<strong> RRA</strong>.</p><p>Bids must be summited through&nbsp;www.umucyo.gov.rw at on or before the date specified on&nbsp;www.umucyo.gov.rw. Late bids will be automatically rejected by the system. Bids will be opened automatically the same day by www.umucyo.gov.rw.&nbsp;</p>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:14+00:00",
+  "content_sha256": "7ff73e835a81f2caa6caea31116de41ed8bf829c09786e25e2f3179a82cc08cc"
+}

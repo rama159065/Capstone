@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476255",
+  "title": "Food Systems Resilience Program for Eastern and Southern Africa (Phase 3) FSRP",
+  "text": "bid_description: Supply, Delivery and Installation of solar power systems for Sapitwa Cooperative -Mulanje, Zankhalango Cooperative -Mangochi, Chikasamaganga Cooperative-Zomba and Umodzi Cooperative-Neno\nbid_reference_no: MW-MOA-546960-GO-RFB\nid: OP00476255\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P177816-Food Systems Resilience Program for Eastern and Southern Africa (Phase 3) FSRP Loan/Credit/TF Info: IDA-E1840 Bid/Contract Reference No: MW-MOA-546960-GO-RFB Procurement Method: RFB-Request for Bids Scope of Contract: Supply, Delivery and Installation of solar power systems for Sapitwa Cooperative -Mulanje Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/15 Duration of Contract 2 Month(s) Awarded Bidder(s): G&D LINKS SOLUTION (1134740) Box 2549, Lilongwe Country: Malawi Bid Price at Opening MWK Evaluated Bid Price MWK 133112637.90 Signed Contract price MWK 133112637.90 \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Eastern and Southern Africa\nproject_id: P177816\nproject_name: Food Systems Resilience Program for Eastern and Southern Africa (Phase 3) FSRP\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=100&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476255",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Eastern and Southern Africa",
+      "project_id": "P177816",
+      "project_name": "Food Systems Resilience Program for Eastern and Southern Africa (Phase 3) FSRP",
+      "bid_reference_no": "MW-MOA-546960-GO-RFB",
+      "bid_description": "Supply, Delivery and Installation of solar power systems for Sapitwa Cooperative -Mulanje, Zankhalango Cooperative -Mangochi, Chikasamaganga Cooperative-Zomba and Umodzi Cooperative-Neno",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P177816-Food Systems Resilience Program for Eastern and Southern Africa (Phase 3) FSRP<br/><b>Loan/Credit/TF Info:</b>IDA-E1840<br/><b>Bid/Contract Reference No:</b>MW-MOA-546960-GO-RFB<br/><b>Procurement Method:</b>RFB-Request for Bids<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Supply, Delivery and Installation of solar power systems for Sapitwa Cooperative -Mulanje</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/15<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>2 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>G&D LINKS SOLUTION (1134740)</b><br/>Box 2549, Lilongwe<br/>Country: Malawi<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>MWK<br/><br/>Evaluated Bid Price<br/>MWK 133112637.90</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>MWK 133112637.90</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:11+00:00",
+  "content_sha256": "9e623b0a35463116c4ab5ddca182a8f14417d541e3b8d95bc4efc97e3d1d7f28"
+}

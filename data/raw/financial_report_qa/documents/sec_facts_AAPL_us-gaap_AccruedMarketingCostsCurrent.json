@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AccruedMarketingCostsCurrent",
+  "title": "Apple Inc. - Accrued Marketing Costs, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AccruedMarketingCostsCurrent\nLabel: Accrued Marketing Costs, Current\nDescription: Carrying value as of the balance sheet date of obligations incurred through that date and payable for the marketing, trade and selling of the entity's goods and services. Marketing costs would include expenditures for planning and executing the conception, pricing, promotion, and distribution of ideas, goods, and services; costs of public relations and corporate promotions; and obligations incurred and payable for sales discounts, rebates, price protection programs, etc. offered to customers and under government programs. Used to reflect the current portion of the liabilities (due within one year or within the normal operating cycle if longer).\nRecent reported values:\nUSD None None 8-K filed 2015-01-28: 1291000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 1143000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 1403000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 1686000000\nUSD 2014 FY 10-K filed 2014-10-27: 2321000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 2321000000\nUSD None None 8-K filed 2015-01-28: 2321000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 2321000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 2321000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 1960000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 1384000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 1651000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AccruedMarketingCostsCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "9d451ac76b8449c55a00466c7590527ede0a6f8c29cc16d9102a15b930f6d581"
+}

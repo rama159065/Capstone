@@ -1,0 +1,56 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Atlassian_85fh4cc7749r",
+  "title": "Atlassian - Increased latency in user searches",
+  "text": "Service: Atlassian\nIncident: Increased latency in user searches\nStatus: resolved\nImpact: none\nStarted: 2020-01-22T22:19:48.388Z\nResolved: 2020-01-22T23:11:44.151Z\nUpdates:\n- 2020-01-22T23:11:44.151Z: resolved - Between 20:20 UTC to 22:00 UTC, we experienced failures in user searches for Confluence, Jira Core, Jira Service Desk, Jira Software, and Bitbucket due to significantly elevated latencies, action has been taken and latencies have returned to an acceptable level.\n- 2020-01-22T22:19:48.446Z: identified - We are investigating cases of degraded performance for the user search component affecting Confluence, Jira Core, Jira Service Desk, Jira Software, and Bitbucket Cloud customers. Some customers may experience delays and elevated latencies when making user searches.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.atlassian.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "85fh4cc7749r",
+      "name": "Increased latency in user searches",
+      "status": "resolved",
+      "created_at": "2020-01-22T22:19:48.395Z",
+      "updated_at": "2020-01-22T23:11:44.166Z",
+      "monitoring_at": null,
+      "resolved_at": "2020-01-22T23:11:44.151Z",
+      "impact": "none",
+      "shortlink": "http://stspg.io/c641pfy1nrg6",
+      "started_at": "2020-01-22T22:19:48.388Z",
+      "page_id": "0f54fx204jpt",
+      "incident_updates": [
+        {
+          "id": "y6yg2kp4c1dt",
+          "status": "resolved",
+          "body": "Between 20:20 UTC to 22:00 UTC, we experienced failures in user searches for Confluence, Jira Core, Jira Service Desk, Jira Software, and Bitbucket due to significantly elevated latencies, action has been taken and latencies have returned to an acceptable level.",
+          "incident_id": "85fh4cc7749r",
+          "created_at": "2020-01-22T23:11:44.151Z",
+          "updated_at": "2020-01-22T23:11:44.151Z",
+          "display_at": "2020-01-22T23:11:44.151Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "l4k5581ng08w",
+          "status": "identified",
+          "body": "We are investigating cases of degraded performance for the user search component affecting Confluence, Jira Core, Jira Service Desk, Jira Software, and Bitbucket Cloud customers. Some customers may experience delays and elevated latencies when making user searches.",
+          "incident_id": "85fh4cc7749r",
+          "created_at": "2020-01-22T22:19:48.446Z",
+          "updated_at": "2020-01-22T22:19:48.446Z",
+          "display_at": "2020-01-22T22:19:48.446Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:48+00:00",
+  "content_sha256": "e5a021eee89f6904b7b54580721928f81c36daec33531548b78499da710f957e"
+}

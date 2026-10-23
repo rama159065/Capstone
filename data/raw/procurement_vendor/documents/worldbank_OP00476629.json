@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476629",
+  "title": "Improving the Performance of Non-Criminal Justice Services",
+  "text": "bid_description: Adquisición de seis (06) escáneres de alta producción para la Junta Nacional de Justicia\nbid_reference_no: PE-MINJUS-567636-GO-RFB\nid: OP00476629\nnotice_lang_name: Spanish; Castilian\nnotice_status: Published\nnotice_text: Contract Award Project: P162833-Improving the Performance of Non-Criminal Justice Services Loan/Credit/TF Info: IBRD-89750 Bid/Contract Reference No: PE-MINJUS-567636-GO-RFB Procurement Method: RFB-Solicitud de ofertas Scope of Contract: ADQUISICIN DE SEIS (06) ESCNERES DE ALTA PRODUCCIN PARA LA JUNTA NACIONAL DE JUSTICIA Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/16 Duration of Contract 45 Day(s) Awarded Bidder(s): LEVEL TECH PERU S.A.C (606496) AV. ARENALES NRO. 1323 URB. SANTA BEATRIZ, Lima (Lima ), PE, 1 Country: Per Bid Price at Opening PEN Evaluated Bid Price PEN 473880.00 Signed Contract price PEN 473880.00 \nnotice_type: Contract Award\nnoticedate: 21-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Peru\nproject_id: P162833\nproject_name: Improving the Performance of Non-Criminal Justice Services\nsubmission_date: 2026-10-21T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=100&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476629",
+      "notice_type": "Contract Award",
+      "noticedate": "21-Oct-2026",
+      "notice_lang_name": "Spanish; Castilian",
+      "notice_status": "Published",
+      "project_ctry_name": "Peru",
+      "project_id": "P162833",
+      "project_name": "Improving the Performance of Non-Criminal Justice Services",
+      "bid_reference_no": "PE-MINJUS-567636-GO-RFB",
+      "bid_description": "Adquisición de seis (06) escáneres de alta producción para la Junta Nacional de Justicia",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-21T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P162833-Improving the Performance of Non-Criminal Justice Services<br/><b>Loan/Credit/TF Info:</b>IBRD-89750<br/><b>Bid/Contract Reference No:</b>PE-MINJUS-567636-GO-RFB<br/><b>Procurement Method:</b>RFB-Solicitud de ofertas<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>ADQUISICIN DE SEIS (06) ESCNERES DE ALTA PRODUCCIN PARA LA JUNTA NACIONAL DE JUSTICIA</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/16<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>45 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>LEVEL TECH PERU S.A.C (606496)</b><br/>AV. ARENALES NRO. 1323 URB. SANTA BEATRIZ, Lima (Lima ), PE, 1<br/>Country: Per<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PEN<br/><br/>Evaluated Bid Price<br/>PEN 473880.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>PEN 473880.00</div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:11+00:00",
+  "content_sha256": "f4a75c2e0fc19687836d189d359e8d6c5c084bf0c4c70876d1c0e43bae14970a"
+}

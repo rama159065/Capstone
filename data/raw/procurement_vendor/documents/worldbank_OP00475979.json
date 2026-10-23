@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00475979",
+  "title": "Bangladesh Sustainable Recovery, Emergency Preparedness and Response Project",
+  "text": "bid_description: Rehabilitation of 12.85 km emergency evacuation of Rural Roads including 11 m box culvert at Daganbhuiyan upazila under Feni District\nbid_reference_no: BSTRONG-LGED -FENI/RD-6\nid: OP00475979\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P508058-Bangladesh Sustainable Recovery, Emergency Preparedness and Response Project Loan/Credit/TF Info: IDA-77860 Bid/Contract Reference No: BSTRONG-LGED -FENI/RD-6 Procurement Method: RFB-Request for Bids Scope of Contract: Rehabilitation of 13.408 km Emergency Evacuation Rural Road including re-construction of 23.30 m Box Culvert under B-STRONG project (LGED Part) at Chhagalnaiya and Daganbhuiyan Upazila, District: Feni Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/09/03 Duration of Contract 18 Month(s) Awarded Bidder(s): M/S ZAMAN TRADERS (1136651) Lagnashar Bazar, Post: Lagnashar Bazar, P.S: Barura, District: Cumilla Country: Bangladesh Bid Price at Opening BDT Evaluated Bid Price BDT 177067378.87 Signed Contract price BDT 177067378.87 Evaluated Bidder(s): SAB (PVT.) LTD (1074150) 194/1, Haque Plaza, 1st Floor, SSK Road, Feni Country: Bangladesh Bid Price at Opening BDT Evaluated Bid Price BDT 186885962.00 M/S. HOQUE TRADERS (916309) 422, Islam Plaza Trunk Road, Feni. Country: Bangladesh Bid Price at Opening BDT Evaluated Bid Price BDT 178761226.05 \nnotice_type: Contract Award\nnoticedate: 18-Oct-2026\nprocurement_group: CW\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Bangladesh\nproject_id: P508058\nproject_name: Bangladesh Sustainable Recovery, Emergency Preparedness and Response Project\nsubmission_date: 2026-10-18T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=400&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00475979",
+      "notice_type": "Contract Award",
+      "noticedate": "18-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Bangladesh",
+      "project_id": "P508058",
+      "project_name": "Bangladesh Sustainable Recovery, Emergency Preparedness and Response Project",
+      "bid_reference_no": "BSTRONG-LGED -FENI/RD-6",
+      "bid_description": "Rehabilitation of 12.85 km emergency evacuation of Rural Roads including 11 m box culvert at Daganbhuiyan upazila under Feni District",
+      "procurement_group": "CW",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-18T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P508058-Bangladesh Sustainable Recovery, Emergency Preparedness and Response Project<br/><b>Loan/Credit/TF Info:</b>IDA-77860<br/><b>Bid/Contract Reference No:</b>BSTRONG-LGED -FENI/RD-6<br/><b>Procurement Method:</b>RFB-Request for Bids<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Rehabilitation of 13.408 km Emergency Evacuation Rural Road including re-construction of 23.30 m Box Culvert under B-STRONG project (LGED Part) at Chhagalnaiya and Daganbhuiyan Upazila, District: Feni</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/09/03<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>18 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>M/S ZAMAN TRADERS (1136651)</b><br/>Lagnashar Bazar, Post: Lagnashar Bazar, P.S: Barura, District: Cumilla<br/>Country: Bangladesh<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>BDT<br/><br/>Evaluated Bid Price<br/>BDT 177067378.87</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>BDT 177067378.87</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>SAB (PVT.) LTD (1074150)</b><br/>194/1, Haque Plaza, 1st Floor, SSK Road, Feni<br/>Country: Bangladesh<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>BDT<br/><br/>Evaluated Bid Price<br/>BDT 186885962.00</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>M/S. HOQUE TRADERS (916309)</b><br/>422, Islam Plaza Trunk Road, Feni.<br/>Country: Bangladesh<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>BDT<br/><br/>Evaluated Bid Price<br/>BDT 178761226.05</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:22+00:00",
+  "content_sha256": "5d977ac1b53e07b83fc7a936c13a14d674442ea8a8b0f71cf8835b34f95fbc9c"
+}

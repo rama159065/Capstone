@@ -1,0 +1,90 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_maintenance_GitHub_kq75qp7try8t",
+  "title": "GitHub - \"Github Services\" Feature Webhook Brownout",
+  "text": "Service: GitHub\nMaintenance: \"Github Services\" Feature Webhook Brownout\nStatus: completed\nImpact: maintenance\nScheduled for: 2019-01-07T19:00:00.000Z\nScheduled until: 2019-01-14T19:00:00.000Z\nUpdates:\n- 2019-01-14T19:00:59.137Z: completed - The scheduled maintenance has been completed.\n- 2019-01-07T19:00:48.377Z: in_progress - Scheduled maintenance is currently in progress. We will provide updates as necessary.\n- 2019-01-07T17:59:32.334Z: scheduled - Maintenance will begin as scheduled in 60 minutes.\n- 2018-12-19T21:27:18.744Z: scheduled - As part of the deprecation process of the \"GitHub Services\" feature, we have planned a week-long brownout of services webhook deliveries. This brownout will begin on January 7th, at 19:00 UTC, and will end on January 14th, at 19:00 UTC. All other systems are operating normally. More information can be found at https://developer.github.com/changes/2018-11-05-github-services-brownout",
+  "source_name": "Atlassian Statuspage public maintenance API",
+  "source_url": "https://www.githubstatus.com/api/v2/scheduled-maintenances.json",
+  "metadata": {
+    "incident": {
+      "id": "kq75qp7try8t",
+      "name": "\"Github Services\" Feature Webhook Brownout",
+      "status": "completed",
+      "created_at": "2018-12-19T21:27:18.687Z",
+      "updated_at": "2019-01-14T19:01:00.010Z",
+      "monitoring_at": null,
+      "resolved_at": "2019-01-14T19:00:59.137Z",
+      "impact": "maintenance",
+      "shortlink": "http://stspg.io/48fef2c91",
+      "started_at": "2018-12-19T21:27:18.744Z",
+      "page_id": "kctbh9vrtdwd",
+      "incident_updates": [
+        {
+          "id": "95f3krkl4phj",
+          "status": "completed",
+          "body": "The scheduled maintenance has been completed.",
+          "incident_id": "kq75qp7try8t",
+          "created_at": "2019-01-14T19:00:59.137Z",
+          "updated_at": "2019-01-14T19:01:00.006Z",
+          "display_at": "2019-01-14T19:00:59.137Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": 1084888125032128514
+        },
+        {
+          "id": "fb5mm0jp4fr3",
+          "status": "in_progress",
+          "body": "Scheduled maintenance is currently in progress. We will provide updates as necessary.",
+          "incident_id": "kq75qp7try8t",
+          "created_at": "2019-01-07T19:00:48.377Z",
+          "updated_at": "2019-01-07T19:00:48.377Z",
+          "display_at": "2019-01-07T19:00:48.377Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "jq1y7ysy0hy9",
+          "status": "scheduled",
+          "body": "Maintenance will begin as scheduled in 60 minutes.",
+          "incident_id": "kq75qp7try8t",
+          "created_at": "2019-01-07T17:59:32.334Z",
+          "updated_at": "2019-01-07T17:59:32.334Z",
+          "display_at": "2019-01-07T17:59:32.334Z",
+          "affected_components": null,
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "s4ytxfvy4vxy",
+          "status": "scheduled",
+          "body": "As part of the deprecation process of the \"GitHub Services\" feature, we have planned a week-long brownout of services webhook deliveries. This brownout will begin on January 7th, at 19:00 UTC, and will end on January 14th, at 19:00 UTC. All other systems are operating normally. More information can be found at https://developer.github.com/changes/2018-11-05-github-services-brownout",
+          "incident_id": "kq75qp7try8t",
+          "created_at": "2018-12-19T21:27:18.744Z",
+          "updated_at": "2018-12-19T21:27:18.744Z",
+          "display_at": "2018-12-19T21:27:18.744Z",
+          "affected_components": [
+            {
+              "code": "5bfcr2x9x8kc",
+              "name": "Notifications",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "scheduled_for": "2019-01-07T19:00:00.000Z",
+      "scheduled_until": "2019-01-14T19:00:00.000Z"
+    },
+    "source_type": "status_maintenance"
+  },
+  "downloaded_at": "2026-10-22T12:48:19+00:00",
+  "content_sha256": "8cd676480785639a25be67e57c639f313a673c225f47ce57490b492f5f2467fc"
+}

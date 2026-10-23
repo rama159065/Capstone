@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476107",
+  "title": "Harmonizing and Improving Statistics in West and Central Africa - Series of Projects 1 (HISWACA - SO",
+  "text": "bid_description: Recrutement d’un Consultant pour l’élaboration d’un cadre national d’assurance qualité pour le Système Statistique National.\nbid_reference_no: ML-PHASAOC-549262-CS-CDS\nid: OP00476107\nnotice_lang_name: French\nnotice_status: Published\nnotice_text: Contract Award Project: P178497-Harmonizing and Improving Statistics in West and Central Africa - Series of Projects 1 (HISWACA - SOP 1) Loan/Credit/TF Info: IDA-73120 Bid/Contract Reference No: ML-PHASAOC-549262-CS-CDS Procurement Method: CDS-Slection de consultants par entente directe Scope of Contract: SERVICES DE CONSULTANTS POUR LE RECRUTEMENT DUN CONSULTANT POUR LELABORATION D'UN CADRE NATIONAL ASSURANCE QUALITE POUR LE SYSTEME STATISTIQUE NATIONAL DANS LE CADRE DU PROJET DHARMONISATION ET D Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/10/14 Duration of Contract 40 Day(s) Awarded Firm(s): AFRISTAT, (1126028) Country: Mali Final Evaluation Price XOF 23673269 Signed Contract Price XOF 23673269 Price: Currency: Amount: C.F.A. Franc CFA de la BCEAO (C.F.A. Franc CFA de la BCEAO) 23673269 \nnotice_type: Contract Award\nnoticedate: 19-Oct-2026\nprocurement_group: CS\nprocurement_method_code: CDS\nprocurement_method_name: Direct Selection\nproject_ctry_name: Western and Central Africa\nproject_id: P178497\nproject_name: Harmonizing and Improving Statistics in West and Central Africa - Series of Projects 1 (HISWACA - SO\nsubmission_date: 2026-10-19T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=300&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476107",
+      "notice_type": "Contract Award",
+      "noticedate": "19-Oct-2026",
+      "notice_lang_name": "French",
+      "notice_status": "Published",
+      "project_ctry_name": "Western and Central Africa",
+      "project_id": "P178497",
+      "project_name": "Harmonizing and Improving Statistics in West and Central Africa - Series of Projects 1 (HISWACA - SO",
+      "bid_reference_no": "ML-PHASAOC-549262-CS-CDS",
+      "bid_description": "Recrutement d’un Consultant pour l’élaboration d’un cadre national d’assurance qualité pour le Système Statistique National.",
+      "procurement_group": "CS",
+      "procurement_method_code": "CDS",
+      "procurement_method_name": "Direct Selection",
+      "submission_date": "2026-10-19T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P178497-Harmonizing and Improving Statistics in West and Central Africa - Series of Projects 1 (HISWACA - SOP 1)<br/><b>Loan/Credit/TF Info:</b>IDA-73120<br/><b>Bid/Contract Reference No:</b>ML-PHASAOC-549262-CS-CDS<br/><b>Procurement Method:</b>CDS-Slection de consultants par entente directe<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>SERVICES DE CONSULTANTS POUR LE RECRUTEMENT DUN CONSULTANT POUR LELABORATION D'UN CADRE NATIONAL ASSURANCE QUALITE POUR LE SYSTEME STATISTIQUE NATIONAL DANS LE CADRE DU PROJET DHARMONISATION ET D</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/10/14<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>40 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Firm(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='row col-sm-12'><div class='col-sm-6'><b>AFRISTAT, (1126028)</b><br/>Country: Mali<br/></div></div><br/><div class='col-sm-6'><table width='100%'><tbody></tbody></table></div><div class='col-sm-6'><p></p><b>Final Evaluation Price</b><br/>XOF 23673269<br/><p></p><b>Signed Contract Price</b><br/>XOF 23673269</div><div class='row col-sm-12'><div class='col-xs-12'><b>Price:</b><br/></div></div><div class='row col-sm-12'><div class='col-xs-4'>Currency:</div><div class='col-xs-4'>Amount:</div></div><div class='row col-sm-12'><div class='col-xs-4'>C.F.A. Franc CFA de la BCEAO (C.F.A. Franc CFA de la BCEAO)</div><div class='col-xs-4'>23673269</div></div></div><div class='spacing'></div><div class='spacing'></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:18+00:00",
+  "content_sha256": "233ae48db16759917dcfd7a45071ac8e869dacab0169d07e68f4c550df4ea6dc"
+}

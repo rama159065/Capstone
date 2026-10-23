@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476404",
+  "title": "Access to Finance & Economic Opportunities Project – Mais Oportunidades",
+  "text": "bid_description: Supply of office furniture to meetings rooms of the PIU office\nbid_reference_no: MZ-MEF-DNT-526710-GO-RFQ\nid: OP00476404\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P178658-Access to Finance & Economic Opportunities Project Mais Oportunidades Loan/Credit/TF Info: IDA-72780 Bid/Contract Reference No: MZ-MEF-DNT-526710-GO-RFQ Procurement Method: RFQ-Request for Quotations Scope of Contract: Fornecimento e Entrega de Mobilirio para os Escritrios da UCP Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/06/22 Duration of Contract 12 Month(s) Awarded Bidder(s): ISECTION LDA (758815) Maputo Country: Mozambique Bid Price at Opening MZN 506373.48 Evaluated Bid Price MZN 506373.48 Signed Contract price MZN 506373.48 Evaluated Bidder(s): MOBISERVE (1129423) Maputo, Mozambique Country: Mozambique Bid Price at Opening MZN 550625.40 Evaluated Bid Price MZN 550625.40 ARMSIT LDA (921127) Maputo Country: Mozambique Bid Price at Opening MZN 550420.00 Evaluated Bid Price MZN 550420.00 FORNECSERV LDA (1055587) Av. Eduardo Mondlane n 1939, R/C Bairro Central, Cidade de Maputo - Moambique Country: Mozambique Bid Price at Opening MZN 649600.00 Evaluated Bid Price MZN 649600.00 \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFQ\nprocurement_method_name: Request for Quotations\nproject_ctry_name: Mozambique\nproject_id: P178658\nproject_name: Access to Finance & Economic Opportunities Project – Mais Oportunidades\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=200&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476404",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Mozambique",
+      "project_id": "P178658",
+      "project_name": "Access to Finance & Economic Opportunities Project – Mais Oportunidades",
+      "bid_reference_no": "MZ-MEF-DNT-526710-GO-RFQ",
+      "bid_description": "Supply of office furniture to meetings rooms of the PIU office",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFQ",
+      "procurement_method_name": "Request for Quotations",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P178658-Access to Finance & Economic Opportunities Project  Mais Oportunidades<br/><b>Loan/Credit/TF Info:</b>IDA-72780<br/><b>Bid/Contract Reference No:</b>MZ-MEF-DNT-526710-GO-RFQ<br/><b>Procurement Method:</b>RFQ-Request for Quotations<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Fornecimento e Entrega de Mobilirio para os Escritrios da UCP</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/06/22<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>12 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>ISECTION LDA (758815)</b><br/>Maputo<br/>Country: Mozambique<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>MZN 506373.48<br/><br/>Evaluated Bid Price<br/>MZN 506373.48</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>MZN 506373.48</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>MOBISERVE (1129423)</b><br/>Maputo, Mozambique<br/>Country: Mozambique<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>MZN 550625.40<br/><br/>Evaluated Bid Price<br/>MZN 550625.40</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>ARMSIT LDA (921127)</b><br/>Maputo<br/>Country: Mozambique<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>MZN 550420.00<br/><br/>Evaluated Bid Price<br/>MZN 550420.00</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>FORNECSERV LDA (1055587)</b><br/>Av. Eduardo Mondlane n 1939, R/C Bairro Central, Cidade de Maputo - Moambique<br/>Country: Mozambique<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>MZN 649600.00<br/><br/>Evaluated Bid Price<br/>MZN 649600.00</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:14+00:00",
+  "content_sha256": "a9afcee4b148b12cf2f0e4245f816a3bb3f1f6f16f7c537aa2098bf2cf467f4a"
+}

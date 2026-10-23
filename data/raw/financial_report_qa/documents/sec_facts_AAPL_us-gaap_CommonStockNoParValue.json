@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CommonStockNoParValue",
+  "title": "Apple Inc. - Common Stock, No Par Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CommonStockNoParValue\nLabel: Common Stock, No Par Value\nDescription: Face amount per share of no-par value common stock.\nRecent reported values:\nUSD/shares 2010 Q1 10-Q filed 2010-01-25: 0\nUSD/shares 2009 FY 10-K filed 2009-10-27: 0\nUSD/shares 2010 Q1 10-Q filed 2010-01-25: 0\nUSD/shares 2010 Q2 10-Q filed 2010-04-21: 0\nUSD/shares 2010 Q3 10-Q filed 2010-07-21: 0\nUSD/shares 2011 Q3 10-Q filed 2011-07-20: 0\nUSD/shares 2011 Q2 10-Q filed 2011-04-21: 0\nUSD/shares 2011 Q1 10-Q filed 2011-01-19: 0\nUSD/shares 2010 FY 10-K filed 2010-10-27: 0\nUSD/shares 2011 Q1 10-Q filed 2011-01-19: 0\nUSD/shares 2011 Q2 10-Q filed 2011-04-21: 0\nUSD/shares 2011 Q3 10-Q filed 2011-07-20: 0",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CommonStockNoParValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "c68f4d03a87f9aad740414a13c9775690954d76e6b369e1ebd59679fae588b98"
+}

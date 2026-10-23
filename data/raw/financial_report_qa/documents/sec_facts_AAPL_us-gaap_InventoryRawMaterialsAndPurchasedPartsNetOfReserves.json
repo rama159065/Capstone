@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_InventoryRawMaterialsAndPurchasedPartsNetOfReserves",
+  "title": "Apple Inc. - Inventory, Raw Materials and Purchased Parts, Net of Reserves",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: InventoryRawMaterialsAndPurchasedPartsNetOfReserves\nLabel: Inventory, Raw Materials and Purchased Parts, Net of Reserves\nDescription: Carrying amount, net of valuation reserves and adjustments, as of the balance sheet date of items purchased for use as components of a finished product or pieces of machinery and equipment plus any items in their natural and unrefined state. This element may be used when the reporting entity combines raw materials and purchased parts into an aggregate amount.\nRecent reported values:\nUSD 2023 Q2 10-Q filed 2023-05-05: 1637000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 1637000000\nUSD 2023 Q2 10-Q filed 2023-05-05: 3379000000\nUSD 2023 Q3 10-Q filed 2023-08-04: 3788000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 3627000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 3627000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 3627000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 2792000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 2673000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 2288000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 2124000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 7645000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "InventoryRawMaterialsAndPurchasedPartsNetOfReserves",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4b3ba67337fc80c2dc05fd80ca192270fc4c8bc94d7b16bde604d05ae71488e8"
+}

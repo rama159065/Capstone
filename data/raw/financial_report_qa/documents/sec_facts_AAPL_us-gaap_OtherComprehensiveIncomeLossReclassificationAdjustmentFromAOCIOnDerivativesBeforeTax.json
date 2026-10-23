@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherComprehensiveIncomeLossReclassificationAdjustmentFromAOCIOnDerivativesBeforeTax",
+  "title": "Apple Inc. - Other Comprehensive Income (Loss), Reclassification Adjustment from AOCI on Derivatives, before Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherComprehensiveIncomeLossReclassificationAdjustmentFromAOCIOnDerivativesBeforeTax\nLabel: Other Comprehensive Income (Loss), Reclassification Adjustment from AOCI on Derivatives, before Tax\nDescription: Amount before tax of reclassification adjustment from accumulated other comprehensive income of accumulated gain (loss) realized from derivative instruments designated and qualifying as the effective portion of cash flow hedges and an entity's share of an equity investee's deferred hedging gain (loss).\nRecent reported values:\nUSD 2015 Q1 10-Q filed 2015-01-28: 663000000\nUSD 2016 Q1 10-Q filed 2016-01-27: 663000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 1477000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 1477000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 814000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 814000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 2945000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 1468000000\nUSD 2015 FY 10-K filed 2015-10-28: 4127000000\nUSD 2016 Q1 10-Q filed 2016-01-27: 511000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 1183000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 672000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherComprehensiveIncomeLossReclassificationAdjustmentFromAOCIOnDerivativesBeforeTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "cd026dbf308bd89077b959fdb77cc3c0103adf14477cd71847ea232e4e2f202b"
+}

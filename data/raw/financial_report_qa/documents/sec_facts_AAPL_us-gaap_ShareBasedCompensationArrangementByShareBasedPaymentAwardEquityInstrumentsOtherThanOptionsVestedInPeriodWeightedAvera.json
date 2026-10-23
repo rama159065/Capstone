@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsVestedInPeriodWeightedAverageGrantDateFairValue",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Vested in Period, Weighted Average Grant Date Fair Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsVestedInPeriodWeightedAverageGrantDateFairValue\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Vested in Period, Weighted Average Grant Date Fair Value\nDescription: The weighted average fair value as of grant date pertaining to an equity-based award plan other than a stock (or unit) option plan for which the grantee gained the right during the reporting period, by satisfying service and performance requirements, to receive or retain shares or units, other instruments, or cash in accordance with the terms of the arrangement.\nRecent reported values:\nUSD/shares 2012 Q2 10-Q filed 2012-04-25: 176.83\nUSD/shares 2012 Q3 10-Q filed 2012-07-25: 202.92\nUSD/shares 2012 FY 10-K filed 2012-10-31: 205.27\nUSD/shares 2012 FY 8-K filed 2013-04-24: 205.27\nUSD/shares 2013 FY 10-K filed 2013-10-30: 205.27\nUSD/shares 2013 Q1 10-Q filed 2013-01-24: 249.09\nUSD/shares 2013 Q2 10-Q filed 2013-04-24: 261.17\nUSD/shares 2013 Q3 10-Q filed 2013-07-24: 315.62\nUSD/shares 2013 FY 10-K filed 2013-10-30: 321.73\nUSD/shares 2014 Q1 10-Q filed 2014-01-28: 379.23\nUSD/shares 2014 Q2 10-Q filed 2014-04-24: 383.21\nUSD/shares 2014 Q3 10-Q filed 2014-07-23: 58.87",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsVestedInPeriodWeightedAverageGrantDateFairValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "04e3f13b4153e1dd895183db4882c2b0a17ae279ad04b36ae2659cc3dd7c5c53"
+}

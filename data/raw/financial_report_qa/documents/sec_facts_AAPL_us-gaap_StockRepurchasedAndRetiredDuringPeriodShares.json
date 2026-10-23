@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_StockRepurchasedAndRetiredDuringPeriodShares",
+  "title": "Apple Inc. - Stock Repurchased and Retired During Period, Shares",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: StockRepurchasedAndRetiredDuringPeriodShares\nLabel: Stock Repurchased and Retired During Period, Shares\nDescription: Number of shares that have been repurchased and retired during the period.\nRecent reported values:\nshares 2023 FY 10-K filed 2023-11-03: 471000000\nshares 2024 Q1 10-Q filed 2024-02-02: 118000000\nshares 2024 Q2 10-Q filed 2024-05-03: 248000000\nshares 2024 Q3 10-Q filed 2024-08-02: 387000000\nshares 2024 FY 10-K filed 2024-11-01: 499000000\nshares 2025 Q1 10-Q filed 2025-01-31: 100000000\nshares 2025 Q2 10-Q filed 2025-05-02: 208000000\nshares 2025 Q3 10-Q filed 2025-08-01: 312000000\nshares 2025 FY 10-K filed 2025-10-31: 402000000\nshares 2026 Q1 10-Q filed 2026-01-30: 93000000\nshares 2026 Q2 10-Q filed 2026-05-01: 135000000\nshares 2026 Q3 10-Q filed 2026-07-31: 215000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "StockRepurchasedAndRetiredDuringPeriodShares",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "40a612d2f614c0cd5b689a753434ed5807340687c6d39b4e71ed8a98a8c287a0"
+}

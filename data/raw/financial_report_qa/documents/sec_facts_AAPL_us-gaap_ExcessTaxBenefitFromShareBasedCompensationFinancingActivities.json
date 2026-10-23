@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ExcessTaxBenefitFromShareBasedCompensationFinancingActivities",
+  "title": "Apple Inc. - Excess Tax Benefit from Share-based Compensation, Financing Activities",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ExcessTaxBenefitFromShareBasedCompensationFinancingActivities\nLabel: Excess Tax Benefit from Share-based Compensation, Financing Activities\nDescription: Amount of cash inflow from realized tax benefit related to deductible compensation cost reported on the entity's tax return for equity instruments in excess of the compensation cost for those instruments recognized for financial reporting purposes.\nRecent reported values:\nUSD 2016 Q1 10-Q filed 2016-01-27: 224000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 224000000\nUSD 2016 Q2 10-Q filed 2016-04-27: 264000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 264000000\nUSD 2016 Q3 10-Q filed 2016-07-27: 391000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 391000000\nUSD 2016 FY 10-K filed 2016-10-26: 407000000\nUSD 2017 FY 10-K filed 2017-11-03: 407000000\nUSD 2017 Q1 10-Q filed 2017-02-01: 178000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 225000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 534000000\nUSD 2017 FY 10-K filed 2017-11-03: 627000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ExcessTaxBenefitFromShareBasedCompensationFinancingActivities",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "3186bf04da64d6f6018b9db180317ecc7a831a57d1a8546cca141e39747e4b92"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsForfeitedInPeriodWeightedAverageGrantDateFairValue",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Forfeited in Period, Weighted Average Grant Date Fair Value (Deprecated 2012-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsForfeitedInPeriodWeightedAverageGrantDateFairValue\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Equity Instruments Other than Options, Forfeited in Period, Weighted Average Grant Date Fair Value (Deprecated 2012-01-31)\nDescription: The weighted average fair value as of the grant date of equity-based award plans other than stock (unit) option plans that were not exercised or put into effect during the reporting period as a result of the occurrence of a terminating event specified in the contractual agreement of the plan.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 119.12\nUSD 2011 FY 10-K filed 2011-10-26: 121.28\nUSD 2010 FY 10-K filed 2010-10-27: 121.28\nUSD 2010 Q3 10-Q filed 2010-07-21: 146.42\nUSD 2011 FY 10-K filed 2011-10-26: 147.56\nUSD 2010 FY 10-K filed 2010-10-27: 147.56\nUSD 2011 Q1 10-Q filed 2011-01-19: 183.71\nUSD 2011 Q2 10-Q filed 2011-04-21: 169.53\nUSD 2011 Q3 10-Q filed 2011-07-20: 183.53\nUSD 2011 FY 10-K filed 2011-10-26: 189.08\nUSD 2012 Q1 10-Q filed 2012-01-25: 213.94",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardEquityInstrumentsOtherThanOptionsForfeitedInPeriodWeightedAverageGrantDateFairValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "7412765096d05fb487751a05c2767bc1432b6c82e3517833c4c40309db3e4843"
+}

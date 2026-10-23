@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_UnrecordedUnconditionalPurchaseObligationBalanceOnFifthAnniversary",
+  "title": "Apple Inc. - Unrecorded Unconditional Purchase Obligation, to be Paid, Year Five",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: UnrecordedUnconditionalPurchaseObligationBalanceOnFifthAnniversary\nLabel: Unrecorded Unconditional Purchase Obligation, to be Paid, Year Five\nDescription: Amount of fixed and determinable portion of unrecorded unconditional purchase obligation to be paid in fifth fiscal year following current fiscal year. Excludes interim and annual periods when interim periods are reported from current statement of financial position date (rolling approach).\nRecent reported values:\nUSD 2017 FY 10-K filed 2017-11-03: 1268000000\nUSD 2018 FY 10-K filed 2018-11-05: 268000000\nUSD 2019 FY 10-K filed 2019-10-31: 218000000\nUSD 2020 FY 10-K filed 2020-10-30: 104000000\nUSD 2021 FY 10-K filed 2021-10-29: 51000000\nUSD 2022 FY 10-K filed 2022-10-28: 312000000\nUSD 2023 FY 10-K filed 2023-11-03: 5878000000\nUSD 2024 FY 10-K filed 2024-11-01: 633000000\nUSD 2025 FY 10-K filed 2025-10-31: 788000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "UnrecordedUnconditionalPurchaseObligationBalanceOnFifthAnniversary",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "f79d33c155ed1a3d9f22dfeac45ae25aaf3a902af66a274847165f4d81010340"
+}

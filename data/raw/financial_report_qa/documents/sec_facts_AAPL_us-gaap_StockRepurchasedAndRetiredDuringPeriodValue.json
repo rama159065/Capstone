@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_StockRepurchasedAndRetiredDuringPeriodValue",
+  "title": "Apple Inc. - Stock Repurchased and Retired During Period, Value",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: StockRepurchasedAndRetiredDuringPeriodValue\nLabel: Stock Repurchased and Retired During Period, Value\nDescription: Equity impact of the value of stock that has been repurchased and retired during the period. The excess of the purchase price over par value can be charged against retained earnings (once the excess is fully allocated to additional paid in capital).\nRecent reported values:\nUSD 2023 FY 10-K filed 2023-11-03: 76600000000\nUSD 2024 Q1 10-Q filed 2024-02-02: 20500000000\nUSD 2024 Q2 10-Q filed 2024-05-03: 44000000000\nUSD 2024 Q3 10-Q filed 2024-08-02: 70000000000\nUSD 2024 FY 10-K filed 2024-11-01: 95000000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 23300000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 48300000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 69300000000\nUSD 2025 FY 10-K filed 2025-10-31: 89300000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 25000000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 36000000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 61800000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "StockRepurchasedAndRetiredDuringPeriodValue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "fc7e935359eb2ddc66bae80cb6b66856006b8a7a918195ff76b49fa7ab4af231"
+}

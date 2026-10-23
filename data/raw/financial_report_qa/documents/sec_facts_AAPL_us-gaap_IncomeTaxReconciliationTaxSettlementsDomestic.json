@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_IncomeTaxReconciliationTaxSettlementsDomestic",
+  "title": "Apple Inc. - Effective Income Tax Rate Reconciliation, Tax Settlement, Domestic, Amount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: IncomeTaxReconciliationTaxSettlementsDomestic\nLabel: Effective Income Tax Rate Reconciliation, Tax Settlement, Domestic, Amount\nDescription: Amount of the difference between reported income tax expense (benefit) and expected income tax expense (benefit) computed by applying the domestic federal statutory income tax rates to pretax income (loss) from continuing operations attributable to domestic income tax settlement.\nRecent reported values:\nUSD 2014 FY 10-K filed 2014-10-27: 570000000\nUSD None None 8-K filed 2015-01-28: 570000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "IncomeTaxReconciliationTaxSettlementsDomestic",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "6580cfd40e3f633ef273cc94cd050794cc76a1358a02596dbd81c9de94bf355a"
+}

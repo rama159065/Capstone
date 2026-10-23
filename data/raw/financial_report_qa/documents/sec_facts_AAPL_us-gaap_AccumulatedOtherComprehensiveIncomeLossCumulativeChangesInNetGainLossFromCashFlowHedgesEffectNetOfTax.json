@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AccumulatedOtherComprehensiveIncomeLossCumulativeChangesInNetGainLossFromCashFlowHedgesEffectNetOfTax",
+  "title": "Apple Inc. - Accumulated Other Comprehensive Income (Loss), Cumulative Changes in Net Gain (Loss) from Cash Flow Hedges, Effect Net of Tax",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AccumulatedOtherComprehensiveIncomeLossCumulativeChangesInNetGainLossFromCashFlowHedgesEffectNetOfTax\nLabel: Accumulated Other Comprehensive Income (Loss), Cumulative Changes in Net Gain (Loss) from Cash Flow Hedges, Effect Net of Tax\nDescription: Accumulated change, net of tax, in accumulated gains and losses from derivative instruments designated and qualifying as the effective portion of cash flow hedges. Includes an entity's share of an equity investee's Increase or Decrease in deferred hedging gains or losses.\nRecent reported values:\nUSD 2012 Q2 10-Q filed 2012-04-25: 105000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 201000000\nUSD 2013 FY 10-K filed 2013-10-30: -240000000\nUSD 2013 Q3 10-Q filed 2013-07-24: -240000000\nUSD 2012 FY 8-K filed 2013-04-24: -240000000\nUSD 2013 Q2 10-Q filed 2013-04-24: -240000000\nUSD 2013 Q1 10-Q filed 2013-01-24: -240000000\nUSD 2012 FY 10-K filed 2012-10-31: -240000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 18000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 517000000\nUSD 2013 Q3 10-Q filed 2013-07-24: 348000000\nUSD 2013 FY 10-K filed 2013-10-30: -175000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AccumulatedOtherComprehensiveIncomeLossCumulativeChangesInNetGainLossFromCashFlowHedgesEffectNetOfTax",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "e9ca13e8790ea47ebea093bb6d15371a5adfc7ae1d2efa010b5afcf7a3492de7"
+}

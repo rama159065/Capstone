@@ -1,0 +1,86 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Zoom_gbc9rjs7l531",
+  "title": "Zoom - Service Degradation Affecting ZoomMate",
+  "text": "Service: Zoom\nIncident: Service Degradation Affecting ZoomMate\nStatus: resolved\nImpact: none\nStarted: 2026-09-18T15:45:28.476-07:00\nResolved: 2026-09-18T16:03:24.925-07:00\nUpdates:\n- 2026-09-18T16:03:24.925-07:00: resolved - This incident has been resolved.\n- 2026-09-18T15:45:28.547-07:00: monitoring - The service degradation with ZoomMate has been successfully resolved. \n\nOur team will continue to monitor the situation closely and keep you informed of any further developments.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.zoom.us/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "gbc9rjs7l531",
+      "name": "Service Degradation Affecting ZoomMate",
+      "status": "resolved",
+      "created_at": "2026-09-18T15:45:28.484-07:00",
+      "updated_at": "2026-09-18T16:03:24.942-07:00",
+      "monitoring_at": "2026-09-18T15:45:28.547-07:00",
+      "resolved_at": "2026-09-18T16:03:24.925-07:00",
+      "impact": "none",
+      "shortlink": "https://stspg.io/p29c3gcmdptt",
+      "started_at": "2026-09-18T15:45:28.476-07:00",
+      "page_id": "14qjgk812kgk",
+      "incident_updates": [
+        {
+          "id": "qym2x8dk2j5d",
+          "status": "resolved",
+          "body": "This incident has been resolved.",
+          "incident_id": "gbc9rjs7l531",
+          "created_at": "2026-09-18T16:03:24.925-07:00",
+          "updated_at": "2026-09-18T16:03:24.925-07:00",
+          "display_at": "2026-09-18T16:03:24.925-07:00",
+          "affected_components": [
+            {
+              "code": "n1llzwc1cxtr",
+              "name": "ZoomMate",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "0l06trckmhtk",
+          "status": "monitoring",
+          "body": "The service degradation with ZoomMate has been successfully resolved. \n\nOur team will continue to monitor the situation closely and keep you informed of any further developments.",
+          "incident_id": "gbc9rjs7l531",
+          "created_at": "2026-09-18T15:45:28.547-07:00",
+          "updated_at": "2026-09-18T15:45:28.547-07:00",
+          "display_at": "2026-09-18T15:45:28.547-07:00",
+          "affected_components": [
+            {
+              "code": "n1llzwc1cxtr",
+              "name": "ZoomMate",
+              "old_status": "operational",
+              "new_status": "operational"
+            }
+          ],
+          "deliver_notifications": true,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [
+        {
+          "id": "n1llzwc1cxtr",
+          "name": "ZoomMate",
+          "status": "operational",
+          "created_at": "2026-06-22T09:29:03.520-07:00",
+          "updated_at": "2026-10-05T15:04:58.029-07:00",
+          "position": 53,
+          "description": null,
+          "showcase": false,
+          "start_date": "2026-06-22",
+          "group_id": null,
+          "page_id": "14qjgk812kgk",
+          "group": false,
+          "only_show_if_degraded": false
+        }
+      ],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:49:00+00:00",
+  "content_sha256": "67c55100a3fcd3a052c6a0eac22f719e9d14bf046bd9076433b75fc53809482a"
+}

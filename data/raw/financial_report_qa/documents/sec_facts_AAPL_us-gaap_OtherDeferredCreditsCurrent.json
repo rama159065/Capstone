@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OtherDeferredCreditsCurrent",
+  "title": "Apple Inc. - Other Deferred Credits, Current",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OtherDeferredCreditsCurrent\nLabel: Other Deferred Credits, Current\nDescription: Amount of unearned revenue or income classified as other, expected to be taken into income within one year or the normal operating cycle, if longer.\nRecent reported values:\nUSD None None 8-K filed 2015-01-28: 1262000000\nUSD 2014 Q1 10-Q filed 2014-01-28: 1475000000\nUSD 2014 Q2 10-Q filed 2014-04-24: 1145000000\nUSD 2014 Q3 10-Q filed 2014-07-23: 890000000\nUSD 2014 FY 10-K filed 2014-10-27: 1057000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 1057000000\nUSD None None 8-K filed 2015-01-28: 1057000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 1057000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 1057000000\nUSD 2015 Q1 10-Q filed 2015-01-28: 1133000000\nUSD 2015 Q2 10-Q filed 2015-04-28: 1130000000\nUSD 2015 Q3 10-Q filed 2015-07-22: 1369000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OtherDeferredCreditsCurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "991cefe5a19abe29fbcfe4729c50d298a9d1e36a61b75d57c658ec94dbbac046"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DeferredTaxAssetsOtherComprehensiveLoss",
+  "title": "Apple Inc. - Deferred Tax Assets, Other Comprehensive Loss",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DeferredTaxAssetsOtherComprehensiveLoss\nLabel: Deferred Tax Assets, Other Comprehensive Loss\nDescription: Amount before allocation of valuation allowances of deferred tax asset attributable to deductible temporary differences from unrealized losses in other comprehensive income.\nRecent reported values:\nUSD 2022 FY 10-K filed 2022-10-28: 53000000\nUSD 2022 FY 10-K filed 2022-10-28: 2913000000\nUSD 2023 FY 10-K filed 2023-11-03: 2913000000\nUSD 2023 FY 10-K filed 2023-11-03: 2447000000\nUSD 2024 FY 10-K filed 2024-11-01: 2447000000\nUSD 2024 FY 10-K filed 2024-11-01: 1173000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DeferredTaxAssetsOtherComprehensiveLoss",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "477f20266d244b7ec4287fdb3d1f2af625341ae24acbb9b31dc01ada3cc6ff99"
+}

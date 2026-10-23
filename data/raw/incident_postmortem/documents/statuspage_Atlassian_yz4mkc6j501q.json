@@ -1,0 +1,56 @@
+{
+  "domain": "incident_postmortem",
+  "document_id": "statuspage_Atlassian_yz4mkc6j501q",
+  "title": "Atlassian - Atlassian account session invalidations",
+  "text": "Service: Atlassian\nIncident: Atlassian account session invalidations\nStatus: resolved\nImpact: none\nStarted: 2021-04-19T04:32:10.838Z\nResolved: 2021-04-30T01:34:05.130Z\nUpdates:\n- 2021-04-30T01:34:05.130Z: resolved - Between 15/Apr/21 17:20 AM PDT to 27/Apr/21 10:00 PM PDT, we experienced some cloud customers of Atlassian Support, Confluence, Jira Work Management, Jira Service Management, Jira Software, Opsgenie, Atlassian Developer, Trello, Atlassian Bitbucket, Atlassian Access, and Jira Align were logged out of there account. The issue has been resolved and the service is operating normally.\n- 2021-04-19T04:32:10.896Z: investigating - We are investigating an incident impacting Jira Cloud, Confluence Cloud, Bitbucket Cloud, and Statuspage. During our investigation, users may be logged out of their accounts as we work towards a resolution. We are continuing to investigate and will update this incident with more details as they are available.",
+  "source_name": "Atlassian Statuspage public incident API",
+  "source_url": "https://status.atlassian.com/api/v2/incidents.json",
+  "metadata": {
+    "incident": {
+      "id": "yz4mkc6j501q",
+      "name": "Atlassian account session invalidations",
+      "status": "resolved",
+      "created_at": "2021-04-19T04:32:10.845Z",
+      "updated_at": "2021-04-30T01:34:05.150Z",
+      "monitoring_at": null,
+      "resolved_at": "2021-04-30T01:34:05.130Z",
+      "impact": "none",
+      "shortlink": "https://stspg.io/ql9jsw73ndfh",
+      "started_at": "2021-04-19T04:32:10.838Z",
+      "page_id": "0f54fx204jpt",
+      "incident_updates": [
+        {
+          "id": "2y83hm3vy0j1",
+          "status": "resolved",
+          "body": "Between 15/Apr/21 17:20 AM PDT to 27/Apr/21 10:00 PM PDT, we experienced some cloud customers of Atlassian Support, Confluence, Jira Work Management, Jira Service Management, Jira Software, Opsgenie, Atlassian Developer, Trello, Atlassian Bitbucket, Atlassian Access, and Jira Align were logged out of there account. The issue has been resolved and the service is operating normally.",
+          "incident_id": "yz4mkc6j501q",
+          "created_at": "2021-04-30T01:34:05.130Z",
+          "updated_at": "2021-04-30T01:34:05.130Z",
+          "display_at": "2021-04-30T01:34:05.130Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        },
+        {
+          "id": "7wpnx9lg7n5r",
+          "status": "investigating",
+          "body": "We are investigating an incident impacting Jira Cloud, Confluence Cloud, Bitbucket Cloud, and Statuspage. During our investigation, users may be logged out of their accounts as we work towards a resolution. We are continuing to investigate and will update this incident with more details as they are available.",
+          "incident_id": "yz4mkc6j501q",
+          "created_at": "2021-04-19T04:32:10.896Z",
+          "updated_at": "2021-04-19T04:32:10.896Z",
+          "display_at": "2021-04-19T04:32:10.896Z",
+          "affected_components": null,
+          "deliver_notifications": false,
+          "custom_tweet": null,
+          "tweet_id": null
+        }
+      ],
+      "components": [],
+      "reminder_intervals": null
+    },
+    "source_type": "status_incident"
+  },
+  "downloaded_at": "2026-10-22T12:48:48+00:00",
+  "content_sha256": "062c0c2c623182f4359a20bc4a8aff35251b808b8ba9a5a76f3d7434c1230efa"
+}

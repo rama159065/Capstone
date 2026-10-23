@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_OperatingLeasesFutureMinimumPaymentsDue",
+  "title": "Apple Inc. - Operating Leases, Future Minimum Payments Due",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: OperatingLeasesFutureMinimumPaymentsDue\nLabel: Operating Leases, Future Minimum Payments Due\nDescription: Amount of required minimum rental payments for leases having an initial or remaining non-cancelable letter-terms in excess of one year.\nRecent reported values:\nUSD 2017 Q1 10-Q filed 2017-02-01: 7500000000\nUSD 2017 Q2 10-Q filed 2017-05-03: 8200000000\nUSD 2017 Q3 10-Q filed 2017-08-02: 8500000000\nUSD 2017 FY 10-K filed 2017-11-03: 9545000000\nUSD 2018 Q1 10-Q filed 2018-02-02: 9600000000\nUSD 2018 Q2 10-Q filed 2018-05-02: 9800000000\nUSD 2018 Q3 10-Q filed 2018-08-01: 9600000000\nUSD 2018 FY 10-K filed 2018-11-05: 9627000000\nUSD 2019 Q1 10-Q filed 2019-01-30: 9900000000\nUSD 2019 Q2 10-Q filed 2019-05-01: 10400000000\nUSD 2019 Q3 10-Q filed 2019-07-31: 11100000000\nUSD 2019 FY 10-K filed 2019-10-31: 10838000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "OperatingLeasesFutureMinimumPaymentsDue",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "34338c8d9aef1faffa9f2bd8438d141de54d69ee399820a3fa769f3d0c5940d3"
+}

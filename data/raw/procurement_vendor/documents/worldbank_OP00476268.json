@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476268",
+  "title": "Philippine Rural Development Project Scale-up",
+  "text": "bid_description: Concreting of Junction Barangay Guinoyuran, Provincial Road - Sitio Migtulod, Barangay Mt. Nebo FMR\nbid_reference_no: PRDP-SU-IB-R010-BUK-015-VAL-001-2023-FMR\nid: OP00476268\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P180379-Philippine Rural Development Project Scale-up Loan/Credit/TF Info: IBRD-95770 Bid/Contract Reference No: PRDP-SU-IB-R010-BUK-015-VAL-001-2023-FMR Procurement Method: RFB-Request for Bids Scope of Contract: CONCRETING OF JUNCTIONBARANGAY GUINOYURANPROVINCIAL ROAD - SITIOMIGTULOD, BARANGAY MT. NEBO FMR Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/09/24 Duration of Contract 454 Day(s) Awarded Bidder(s): JEJOR'S CONSTRUCTION CORPORATION (675403) Quirino St, Barangay 31, Cagayan de Oro City Country: Philippines Bid Price at Opening PHP Evaluated Bid Price PHP 209044855.53 Signed Contract price PHP 209044855.53 Rejected Bidder(s): YAP DYBONGCO CONSTRUCTION CORPORATION (1122578) Purok 3, Brgy. Landing 7211 Baliangao, Misamis Occidental Country: Philippines Bid Price at Opening PHP Evaluated Bid Price PHP Reason for Rejection Non Responsive SYNDTITE CONSTRUCTION CORPORATION (649703) Australia Street, Upper Banlat, Tandang Sora, Quezon City, 1100 Metro Manila Country: Philippines Bid Price at Opening PHP Evaluated Bid Price PHP Reason for Rejection Non Responsive RCDG CONSTRUCTION CORPORATION (675398) Ruste Drive, San Jose Road, Zamboanga del Sur Country: Philippines Bid Price at Opening PHP Evaluated Bid Price PHP Reason for Rejection Non Responsive \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: CW\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Philippines\nproject_id: P180379\nproject_name: Philippine Rural Development Project Scale-up\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=100&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476268",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Philippines",
+      "project_id": "P180379",
+      "project_name": "Philippine Rural Development Project Scale-up",
+      "bid_reference_no": "PRDP-SU-IB-R010-BUK-015-VAL-001-2023-FMR",
+      "bid_description": "Concreting of Junction Barangay Guinoyuran, Provincial Road - Sitio Migtulod, Barangay Mt. Nebo FMR",
+      "procurement_group": "CW",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P180379-Philippine Rural Development Project Scale-up<br/><b>Loan/Credit/TF Info:</b>IBRD-95770<br/><b>Bid/Contract Reference No:</b>PRDP-SU-IB-R010-BUK-015-VAL-001-2023-FMR<br/><b>Procurement Method:</b>RFB-Request for Bids<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>CONCRETING OF JUNCTIONBARANGAY GUINOYURANPROVINCIAL ROAD - SITIOMIGTULOD, BARANGAY MT. NEBO FMR</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/09/24<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>454 Day(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>JEJOR'S CONSTRUCTION CORPORATION (675403)</b><br/>Quirino St, Barangay 31, Cagayan de Oro City<br/>Country: Philippines<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PHP<br/><br/>Evaluated Bid Price<br/>PHP 209044855.53</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>PHP 209044855.53</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Rejected Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>YAP DYBONGCO CONSTRUCTION CORPORATION (1122578)</b><br/>Purok 3, Brgy. Landing 7211 Baliangao, Misamis Occidental<br/>Country: Philippines<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PHP<br/><br/>Evaluated Bid Price<br/>PHP<br/><br/>Reason for Rejection<br/>Non Responsive<br/></div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>SYNDTITE CONSTRUCTION CORPORATION (649703)</b><br/>Australia Street, Upper Banlat, Tandang Sora, Quezon City, 1100 Metro Manila<br/>Country: Philippines<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PHP<br/><br/>Evaluated Bid Price<br/>PHP<br/><br/>Reason for Rejection<br/>Non Responsive<br/></div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>RCDG CONSTRUCTION CORPORATION (675398)</b><br/>Ruste Drive, San Jose Road, Zamboanga del Sur<br/>Country: Philippines<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>PHP<br/><br/>Evaluated Bid Price<br/>PHP<br/><br/>Reason for Rejection<br/>Non Responsive<br/></div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:11+00:00",
+  "content_sha256": "c3d65f83c94d393744a66f9292eb94994b4b3482fe2fe4c7bd07ac55cae30f23"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOutstandingWeightedAverageExercisePrice",
+  "title": "Apple Inc. - Share-based Compensation Arrangement by Share-based Payment Award, Options, Outstanding, Weighted Average Exercise Price",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOutstandingWeightedAverageExercisePrice\nLabel: Share-based Compensation Arrangement by Share-based Payment Award, Options, Outstanding, Weighted Average Exercise Price\nDescription: Weighted average price at which grantees can acquire the shares reserved for issuance under the stock option plan.\nRecent reported values:\nUSD/shares 2014 Q1 10-Q filed 2014-01-28: 156.89\nUSD/shares 2014 Q2 10-Q filed 2014-04-24: 157.93\nUSD/shares 2014 Q3 10-Q filed 2014-07-23: 22.39\nUSD/shares 2014 FY 10-K filed 2014-10-27: 21.99\nUSD/shares None None 8-K filed 2015-01-28: 21.99\nUSD/shares 2015 Q1 10-Q filed 2015-01-28: 19.61\nUSD/shares 2015 Q2 10-Q filed 2015-04-28: 18.15\nUSD/shares 2015 Q3 10-Q filed 2015-07-22: 16.62\nUSD/shares 2015 FY 10-K filed 2015-10-28: 15.08\nUSD/shares 2016 Q1 10-Q filed 2016-01-27: 15.24\nUSD/shares 2016 Q2 10-Q filed 2016-04-27: 15.48\nUSD/shares 2016 Q3 10-Q filed 2016-07-27: 15.69",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "ShareBasedCompensationArrangementByShareBasedPaymentAwardOptionsOutstandingWeightedAverageExercisePrice",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4d4857fccf1749ff3a95d6cc242bcf5130cd23d921a2262c12452c5830ca6376"
+}

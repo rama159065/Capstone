@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_NotionalAmountOfForeignCurrencyDerivativeInstrumentsNotDesignatedAsHedgingInstruments",
+  "title": "Apple Inc. - Notional Amount of Foreign Currency Derivative Instruments Not Designated as Hedging Instruments (Deprecated 2013-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: NotionalAmountOfForeignCurrencyDerivativeInstrumentsNotDesignatedAsHedgingInstruments\nLabel: Notional Amount of Foreign Currency Derivative Instruments Not Designated as Hedging Instruments (Deprecated 2013-01-31)\nDescription: Aggregate notional amount of all foreign currency derivatives not designated as hedging instruments. Notional amount refers to the number of currency units specified in the foreign currency derivative contract.\nRecent reported values:\nUSD 2012 Q2 10-Q filed 2012-04-25: 9891000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 9891000000\nUSD 2011 FY 10-K filed 2011-10-26: 9891000000\nUSD 2012 Q1 10-Q filed 2012-01-25: 15988000000\nUSD 2012 Q2 10-Q filed 2012-04-25: 13585000000\nUSD 2012 Q3 10-Q filed 2012-07-25: 10637000000\nUSD 2012 FY 8-K filed 2013-04-24: 13403000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 13403000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 13403000000\nUSD 2012 FY 10-K filed 2012-10-31: 13403000000\nUSD 2013 Q1 10-Q filed 2013-01-24: 31241000000\nUSD 2013 Q2 10-Q filed 2013-04-24: 17001000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "NotionalAmountOfForeignCurrencyDerivativeInstrumentsNotDesignatedAsHedgingInstruments",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "86c7706d4117c42832dde2fd5899fc3b92e5a61b4e28442694f8cad8092d1f4e"
+}

@@ -1,0 +1,30 @@
+{
+  "domain": "procurement_vendor",
+  "document_id": "worldbank_OP00476403",
+  "title": "Zambia Agribusiness and Trade Project-II (ZATP-II)",
+  "text": "bid_description: Procurement of Two (02) 20 - Ton Test Truck Equipment fitted with Hydraulic Crane for Zambia Metrology Agency (ZMA).\nbid_reference_no: ZM-MCTI-525546-GO-RFB\nid: OP00476403\nnotice_lang_name: English\nnotice_status: Published\nnotice_text: Contract Award Project: P179507-Zambia Agribusiness and Trade Project-II (ZATP-II) Loan/Credit/TF Info: IDA-73450 Bid/Contract Reference No: ZM-MCTI-525546-GO-RFB Procurement Method: RFB-Request for Bids Scope of Contract: Procurement of Two Heavy-Duty Test Trucks Notice Version No: 0 Date Notification of Award Issued (YYYY/MM/DD) 2026/08/25 Duration of Contract 6 Month(s) Awarded Bidder(s): SOUTHERN CROSS MOTORS LIMITED (1137272) Plot No. 1400Kafue Road, LusakaZambia Country: Zambia Bid Price at Opening USD Evaluated Bid Price USD 438600.00 Signed Contract price USD 872200.00 Evaluated Bidder(s): AZMA TECHNOLOGY COMPANY LIMITED (1137269) Plot No. 12704/M/N,Lilayi Road, Chalala, LusakaZambia Country: Zambia Bid Price at Opening USD Evaluated Bid Price USD 451169.93 FINECOP ZAMBIA LIMITED (1137273) Plot No. 7403,Mungwi Centre, Mungwi Road,Lusaka, Zambia Country: Zambia Bid Price at Opening USD Evaluated Bid Price USD 498229.80 \nnotice_type: Contract Award\nnoticedate: 20-Oct-2026\nprocurement_group: GO\nprocurement_method_code: RFB\nprocurement_method_name: Request for Bids\nproject_ctry_name: Zambia\nproject_id: P179507\nproject_name: Zambia Agribusiness and Trade Project-II (ZATP-II)\nsubmission_date: 2026-10-20T00:00:00Z",
+  "source_name": "World Bank procurement notices",
+  "source_url": "https://search.worldbank.org/api/v2/procnotices?format=json&rows=100&os=200&srt=noticedate+desc%2Cid+asc",
+  "metadata": {
+    "record": {
+      "id": "OP00476403",
+      "notice_type": "Contract Award",
+      "noticedate": "20-Oct-2026",
+      "notice_lang_name": "English",
+      "notice_status": "Published",
+      "project_ctry_name": "Zambia",
+      "project_id": "P179507",
+      "project_name": "Zambia Agribusiness and Trade Project-II (ZATP-II)",
+      "bid_reference_no": "ZM-MCTI-525546-GO-RFB",
+      "bid_description": "Procurement of Two (02) 20 - Ton Test Truck Equipment fitted with Hydraulic Crane for Zambia Metrology Agency (ZMA).",
+      "procurement_group": "GO",
+      "procurement_method_code": "RFB",
+      "procurement_method_name": "Request for Bids",
+      "submission_date": "2026-10-20T00:00:00Z",
+      "notice_text": "<div class='row col-sm-12'><h4>Contract Award</h4><p><b>Project:</b>P179507-Zambia Agribusiness and Trade Project-II (ZATP-II)<br/><b>Loan/Credit/TF Info:</b>IDA-73450<br/><b>Bid/Contract Reference No:</b>ZM-MCTI-525546-GO-RFB<br/><b>Procurement Method:</b>RFB-Request for Bids<br/><b>Scope of Contract:</b><span class='desc-word-wrap'>Procurement of Two Heavy-Duty Test Trucks</span><br/><b>Notice Version No:</b>0</p><br/></div><div class='row'><div class='col-sm-4'><b>Date Notification of Award Issued</b><br/>(YYYY/MM/DD)<br/>2026/08/25<br/></div><div class='col-sm-4'><b>Duration of Contract</b><br/><br/>6 Month(s)<br/></div></div><div class='spacing'></div><div class='spacing'></div><div class='row'><div class='col-sm-12'><u><b>Awarded Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>SOUTHERN CROSS MOTORS LIMITED (1137272)</b><br/>Plot No. 1400Kafue Road, LusakaZambia<br/>Country: Zambia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>USD<br/><br/>Evaluated Bid Price<br/>USD 438600.00</div></br></div><div class='col-sm-5'></div><div class='col-sm-7'>Signed Contract price<br/>USD 872200.00</div><br/></div></div><div class='row'><div class='col-sm-12'><u><b>Evaluated Bidder(s):</b></u></div><div class='spacing'></div><div class='spacing'></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>AZMA TECHNOLOGY COMPANY LIMITED (1137269)</b><br/>Plot No. 12704/M/N,Lilayi Road, Chalala, LusakaZambia<br/>Country: Zambia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>USD<br/><br/>Evaluated Bid Price<br/>USD 451169.93</div></br></div><br/></div><div class='row col-sm-12'><div class='col-sm-5'><div class='row col-sm-12'><b>FINECOP ZAMBIA LIMITED (1137273)</b><br/>Plot No. 7403,Mungwi Centre, Mungwi Road,Lusaka, Zambia<br/>Country: Zambia<br/></br></div></div><div class='col-sm-7'><div class='row col-sm-12'>Bid Price at Opening<br/>USD<br/><br/>Evaluated Bid Price<br/>USD 498229.80</div></br></div><br/></div></div>"
+    },
+    "source_type": "api_record"
+  },
+  "downloaded_at": "2026-10-22T12:40:14+00:00",
+  "content_sha256": "3a9683c46d9409d054081afaf3fdca914bc61e454afc5747b6f10b241e5d2075"
+}

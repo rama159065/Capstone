@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_AssetsNoncurrent",
+  "title": "Apple Inc. - Assets, Noncurrent",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: AssetsNoncurrent\nLabel: Assets, Noncurrent\nDescription: Sum of the carrying amounts as of the balance sheet date of all assets that are expected to be realized in cash, sold or consumed after one year or beyond the normal operating cycle, if longer.\nRecent reported values:\nUSD 2025 Q3 10-Q filed 2025-08-01: 211993000000\nUSD 2025 FY 10-K filed 2025-10-31: 211993000000\nUSD 2025 Q1 10-Q filed 2025-01-31: 210845000000\nUSD 2025 Q2 10-Q filed 2025-05-02: 212559000000\nUSD 2025 Q3 10-Q filed 2025-08-01: 209004000000\nUSD 2025 FY 10-K filed 2025-10-31: 211284000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 211284000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 211284000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 211284000000\nUSD 2026 Q1 10-Q filed 2026-01-30: 221193000000\nUSD 2026 Q2 10-Q filed 2026-05-01: 226968000000\nUSD 2026 Q3 10-Q filed 2026-07-31: 233448000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "AssetsNoncurrent",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "4910890a5580b1b9074114f711bf303d853f9fb5654c31d53572b66d8d9acc28"
+}

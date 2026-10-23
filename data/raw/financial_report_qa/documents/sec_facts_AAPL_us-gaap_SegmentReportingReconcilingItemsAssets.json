@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_SegmentReportingReconcilingItemsAssets",
+  "title": "Apple Inc. - Segment Reporting, Reconciling Items, Assets (Deprecated 2011-01-31)",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: SegmentReportingReconcilingItemsAssets\nLabel: Segment Reporting, Reconciling Items, Assets (Deprecated 2011-01-31)\nDescription: Total of reconciling items between total reportable segments' assets and consolidated entity assets.\nRecent reported values:\nUSD 2010 FY 10-K filed 2010-10-27: 31608000000\nUSD 2010 FY 10-K filed 2010-10-27: 41897000000\nUSD 2010 FY 10-K filed 2010-10-27: 66006000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "SegmentReportingReconcilingItemsAssets",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "41941e246c6d7afb1852ffd470ade7234af2780866fd07e08d6bd6c0eeb26e3a"
+}

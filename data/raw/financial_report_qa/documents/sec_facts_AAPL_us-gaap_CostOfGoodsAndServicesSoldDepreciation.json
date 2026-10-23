@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_CostOfGoodsAndServicesSoldDepreciation",
+  "title": "Apple Inc. - Cost, Depreciation",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: CostOfGoodsAndServicesSoldDepreciation\nLabel: Cost, Depreciation\nDescription: Amount of expense for allocation of cost of tangible asset over its useful life directly used in production of good and rendering of service.\nRecent reported values:\nUSD 2018 FY 10-K filed 2018-11-05: 8300000000\nUSD 2018 FY 10-K filed 2018-11-05: 8200000000\nUSD 2018 FY 10-K filed 2018-11-05: 9300000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "CostOfGoodsAndServicesSoldDepreciation",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "3a016eaf906e1d4634ae1846a53873f45da0ab5695c3bb414d3c18a83fac61e0"
+}

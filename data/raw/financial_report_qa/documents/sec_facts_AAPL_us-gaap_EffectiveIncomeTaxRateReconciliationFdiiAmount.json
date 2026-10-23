@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_EffectiveIncomeTaxRateReconciliationFdiiAmount",
+  "title": "Apple Inc. - EffectiveIncomeTaxRateReconciliationFdiiAmount",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: EffectiveIncomeTaxRateReconciliationFdiiAmount\nLabel: EffectiveIncomeTaxRateReconciliationFdiiAmount\nDescription: None\nRecent reported values:\nUSD 2022 FY 10-K filed 2022-10-28: 169000000\nUSD 2022 FY 10-K filed 2022-10-28: 1372000000\nUSD 2023 FY 10-K filed 2023-11-03: 1372000000\nUSD 2022 FY 10-K filed 2022-10-28: 296000000\nUSD 2023 FY 10-K filed 2023-11-03: 296000000\nUSD 2023 FY 10-K filed 2023-11-03: 0",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "EffectiveIncomeTaxRateReconciliationFdiiAmount",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "f23a819933c9281adcaa0b30852f407696f4a90ccce94a9efa942cd9ad3fad42"
+}

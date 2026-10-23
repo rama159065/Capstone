@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_StandardProductWarrantyAccrualWarrantiesIssued",
+  "title": "Apple Inc. - Standard Product Warranty Accrual, Increase for Warranties Issued",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: StandardProductWarrantyAccrualWarrantiesIssued\nLabel: Standard Product Warranty Accrual, Increase for Warranties Issued\nDescription: Amount of increase in the standard product warranty accrual from warranties issued. Excludes extended product warranties.\nRecent reported values:\nUSD 2021 Q2 10-Q filed 2021-04-29: 309000000\nUSD 2022 Q2 10-Q filed 2022-04-29: 309000000\nUSD 2021 Q3 10-Q filed 2021-07-28: 2186000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 2186000000\nUSD 2021 Q3 10-Q filed 2021-07-28: 384000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 384000000\nUSD 2021 FY 10-K filed 2021-10-29: 2684000000\nUSD 2022 Q1 10-Q filed 2022-01-28: 838000000\nUSD 2022 Q2 10-Q filed 2022-04-29: 1095000000\nUSD 2022 Q2 10-Q filed 2022-04-29: 257000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 1272000000\nUSD 2022 Q3 10-Q filed 2022-07-29: 177000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "StandardProductWarrantyAccrualWarrantiesIssued",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "6698e2a62bc574ca74c308cf491c3008cc190a6066e07a60d5f35ab51800a52b"
+}

@@ -1,0 +1,17 @@
+{
+  "domain": "financial_report_qa",
+  "document_id": "sec_facts_AAPL_us-gaap_DeferredTaxAssetsTaxCreditCarryforwards",
+  "title": "Apple Inc. - Deferred Tax Assets, Tax Credit Carryforwards",
+  "text": "Company: Apple Inc.\nTicker: AAPL\nCIK: 0000320193\nTaxonomy: us-gaap\nConcept: DeferredTaxAssetsTaxCreditCarryforwards\nLabel: Deferred Tax Assets, Tax Credit Carryforwards\nDescription: Amount, before allocation of a valuation allowances, of deferred tax assets attributable to deductible tax credit carryforwards including, but not limited to, research, foreign, general business, alternative minimum tax, and other deductible tax credit carryforwards.\nRecent reported values:\nUSD 2021 FY 10-K filed 2021-10-29: 797000000\nUSD 2021 FY 10-K filed 2021-10-29: 4262000000\nUSD 2022 FY 10-K filed 2022-10-28: 4262000000\nUSD 2022 FY 10-K filed 2022-10-28: 6962000000\nUSD 2023 FY 10-K filed 2023-11-03: 6962000000\nUSD 2023 FY 10-K filed 2023-11-03: 8302000000\nUSD 2024 FY 10-K filed 2024-11-01: 8302000000\nUSD 2024 FY 10-K filed 2024-11-01: 8856000000\nUSD 2025 FY 10-K filed 2025-10-31: 8856000000\nUSD 2025 FY 10-K filed 2025-10-31: 8643000000",
+  "source_name": "SEC EDGAR companyfacts",
+  "source_url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+  "metadata": {
+    "ticker": "AAPL",
+    "cik": "0000320193",
+    "taxonomy": "us-gaap",
+    "concept": "DeferredTaxAssetsTaxCreditCarryforwards",
+    "source_type": "sec_xbrl_company_fact"
+  },
+  "downloaded_at": "2026-10-22T12:44:44+00:00",
+  "content_sha256": "d267146e230b9ef4ab2d493a05c18f5a970e7b4f100d8559497fef6b9efbcdb5"
+}
