@@ -199,6 +199,11 @@ SECRET_PATTERNS = [
     r"\bsk-[A-Za-z0-9_-]{12,}\b",
     r"\b[A-Za-z0-9_]*(api|secret|token|password)[A-Za-z0-9_]*\s*[:=]\s*[^\s]{8,}",
 ]
+SENSITIVE_DATA_PATTERNS = [
+    r"\b(?:\d[ -]*?){13,19}\b",
+    r"\b\d{3}-\d{2}-\d{4}\b",
+    r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
+]
 
 
 def domain_paths(domain: str) -> dict[str, Path]:
@@ -530,15 +535,30 @@ def regex_labels(message: str, patterns: list[str], label: str) -> list[str]:
     ]
 
 
+def redact_sensitive(message: str) -> str:
+    redacted = message
+    for pattern in SECRET_PATTERNS:
+        redacted = re.sub(pattern, "[REDACTED_SECRET]", redacted, flags=re.IGNORECASE)
+    for pattern in SENSITIVE_DATA_PATTERNS:
+        redacted = re.sub(pattern, "[REDACTED_SENSITIVE_DATA]", redacted, flags=re.IGNORECASE)
+    return redacted
+
+
 def input_guard(message: str) -> dict[str, Any]:
     sanitized = canonicalize(message)
     labels = []
     labels.extend(regex_labels(sanitized, PROMPT_INJECTION_PATTERNS, "prompt_injection"))
     labels.extend(regex_labels(sanitized, CODE_OR_TOOL_PATTERNS, "code_or_tool_payload"))
     labels.extend(regex_labels(sanitized, SECRET_PATTERNS, "secret_or_credential"))
+    labels.extend(regex_labels(sanitized, SENSITIVE_DATA_PATTERNS, "sensitive_data"))
     labels = sorted(set(labels))
-    decision = "block" if labels else "allow"
-    return {"decision": decision, "risk_labels": labels, "sanitized_query": sanitized}
+    if any(label in labels for label in {"prompt_injection", "code_or_tool_payload", "secret_or_credential"}):
+        decision = "block"
+    elif labels:
+        decision = "review"
+    else:
+        decision = "allow"
+    return {"decision": decision, "risk_labels": labels, "sanitized_query": redact_sensitive(sanitized)}
 
 
 def invoke_prompt(llm, system: str, human: str) -> str:
@@ -597,6 +617,29 @@ def evidence_guard(hits: list[dict[str, Any]]) -> dict[str, Any]:
         if labels:
             flagged.append({"chunk_id": hit.get("chunk_id"), "risk_labels": labels})
     return {"safe": not flagged, "flagged_chunks": flagged}
+
+
+def output_content_filter(answer: str, domain_config: DomainConfig) -> dict[str, Any]:
+    text = canonicalize(answer)
+    labels = []
+    labels.extend(regex_labels(text, PROMPT_INJECTION_PATTERNS, "prompt_injection_echo"))
+    labels.extend(regex_labels(text, CODE_OR_TOOL_PATTERNS, "code_or_tool_payload"))
+    labels.extend(regex_labels(text, SECRET_PATTERNS, "secret_or_credential"))
+    labels.extend(regex_labels(text, SENSITIVE_DATA_PATTERNS, "sensitive_data"))
+    if any(term in text.lower() for term in domain_config.review_terms):
+        labels.append("domain_policy_sensitive_output")
+    labels = sorted(set(labels))
+    if any(label in labels for label in {"prompt_injection_echo", "code_or_tool_payload", "secret_or_credential"}):
+        decision = "block"
+    elif labels:
+        decision = "review"
+    else:
+        decision = "allow"
+    return {
+        "decision": decision,
+        "risk_labels": labels,
+        "redacted_preview": redact_sensitive(text)[:800],
+    }
 
 
 def evidence_context(hits: list[dict[str, Any]], max_chars: int) -> str:
@@ -661,6 +704,7 @@ def human_review_router(
     citation_check: dict[str, Any],
     security: dict[str, Any],
     evidence_check: dict[str, Any],
+    output_filter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     lowered = f"{query} {answer}".lower()
     triggers = []
@@ -674,6 +718,8 @@ def human_review_router(
         triggers.append("security_sensitive_input")
     if not evidence_check.get("safe", True):
         triggers.append("retrieved_evidence_prompt_injection")
+    if output_filter and output_filter.get("decision") == "review":
+        triggers.append("output_content_filter_review")
     queue_id = hashlib.sha256(f"{domain_config.domain}|{query}|{','.join(triggers)}".encode("utf-8")).hexdigest()[:12]
     return {
         "required": bool(triggers),
@@ -765,9 +811,27 @@ def run_domain_agent(
         ),
         f"Question: {safe_query}\n\nEvidence:\n{evidence_context(hits, max_context_chars)}\n\nAnswer with citations.",
     )
+    output_check = output_content_filter(answer, domain_config) if enable_guardrails else {
+        "decision": "allow",
+        "risk_labels": [],
+        "redacted_preview": answer[:800],
+    }
+    if output_check["decision"] == "block":
+        return {
+            "domain": domain_config.domain,
+            "display_name": domain_config.display_name,
+            "final_status": "refused",
+            "answer": "Generated answer was blocked by the output content filter.",
+            "security": security,
+            "plain_text": plain_text,
+            "plan": plan,
+            "evidence_guard": evidence_check,
+            "output_filter": output_check,
+            "evidence": summarize_evidence(hits),
+        }
     citation_check = validate_citations(answer, hits)
     human_review = human_review_router(
-        domain_config, safe_query, answer, hits, citation_check, security, evidence_check
+        domain_config, safe_query, answer, hits, citation_check, security, evidence_check, output_check
     ) if enable_human_review else {"required": False, "status": "disabled", "triggers": []}
     return {
         "domain": domain_config.domain,
@@ -780,6 +844,7 @@ def run_domain_agent(
         "plain_text": plain_text,
         "plan": plan,
         "evidence_guard": evidence_check,
+        "output_filter": output_check,
         "citation_check": citation_check,
         "human_review": human_review,
         "evidence": summarize_evidence(hits),
@@ -799,6 +864,7 @@ def render_html_result(result: dict[str, Any]) -> str:
             "security": result.get("security"),
             "plain_text": result.get("plain_text"),
             "evidence_guard": result.get("evidence_guard"),
+            "output_filter": result.get("output_filter"),
         },
         indent=2,
     )

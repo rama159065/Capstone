@@ -45,6 +45,7 @@ Seed PDF sources include DOL FMLA employee/employer guides, OPM telework guidanc
 | `leave_policy_lookup` | Retrieves FMLA/leave rules. |
 | `wage_hour_lookup` | Retrieves wage-hour and worker-rights evidence. |
 | `telework_policy_lookup` | Retrieves telework agreement and eligibility evidence. |
+| `output_content_filter` | Blocks generated secrets/tool payloads and routes employee-specific or sensitive-data outputs to review. |
 | `citation_validator` | Confirms cited evidence exists. |
 | `human_review_queue` | Routes consequential HR cases for approval. |
 
@@ -57,6 +58,7 @@ Human review is required for:
 - sensitive employee PII
 - conflicting policy evidence
 - failed citation validation
+- output content filter review for employee-specific decisions, PII, legal advice, or sensitive-data language
 
 The assistant can explain policy and draft HR responses, but it must not make personnel decisions.
 

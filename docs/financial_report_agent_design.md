@@ -83,7 +83,10 @@ flowchart TD
     EvidenceGuard -->|Unsafe retrieved text| Refusal
     EvidenceGuard -->|Needs review| HumanReview
     EvidenceGuard -->|Safe evidence| AnswerAgent[Answer Agent using Hosted <=8B LLM]
-    AnswerAgent --> Critic[Citation + Grounding Critic]
+    AnswerAgent --> OutputFilter[Output Content Filter]
+    OutputFilter -->|Blocked content| Refusal
+    OutputFilter -->|Needs review| HumanReview
+    OutputFilter -->|Allowed| Critic[Citation + Grounding Critic]
     Critic -->|Needs repair| AnswerAgent
     Critic -->|Invalid after repair| HumanReview
     Critic -->|Valid| ApprovalDecision{Human approval required?}
@@ -110,6 +113,7 @@ sequenceDiagram
     participant E as Evidence Builder
     participant I as Evidence Injection Guard
     participant L as Hosted LLM
+    participant O as Output Content Filter
     participant V as Citation Verifier
     participant H as Human Reviewer
 
@@ -137,7 +141,8 @@ sequenceDiagram
     E->>I: Evidence blocks
     I-->>E: Safe evidence or refusal
     E->>L: Prompt with safe cited evidence only
-    L-->>V: Draft answer with citations
+    L-->>O: Draft answer with citations
+    O-->>V: Allowed answer, or route/block decision
     V-->>L: Repair request if unsupported
     alt high-impact, low-confidence, conflicting, or publishable output
         V->>H: Draft answer, evidence, citations, trace
@@ -188,6 +193,18 @@ The LLM plain-text classifier should return JSON only:
 
 If `is_plain_text` is false, `financial_intent` is false, or `risk_level` is `medium` or `high`, the system refuses or asks the user to rephrase as a plain financial-report question. The classifier output is treated as a routing signal, not as trusted instructions.
 
+## Content Filtering
+
+Content filtering is enforced at three points:
+
+| Stage | Filtered content | Action |
+|---|---|---|
+| Input | prompt injection, executable payloads, secrets, credentials, card-like numbers, SSNs, emails, oversized/obfuscated content | block or route to human review before retrieval |
+| Retrieved evidence | prompt injection and tool-control instructions embedded in retrieved chunks | refuse before answer generation |
+| Output | prompt-injection echo, executable/tool payloads, generated secrets, sensitive data, investment advice, externally publishable claims | block or route to human review before final release |
+
+The output content filter returns JSON-like audit data with `decision`, `risk_labels`, and a redacted preview. `block` prevents release. `review` adds `output_content_filter_review` to the HITL triggers.
+
 ## Human-in-the-Loop Policy
 
 Human review is a governance layer, not the default path for every question. Routine citation-grounded financial-report QA can complete automatically when all security, retrieval, and citation checks pass. Human approval is required before the system releases outputs that could affect financial decisions, expose sensitive data, or leave the system with unresolved uncertainty.
@@ -211,6 +228,7 @@ Trigger human review when any condition below is true:
 | Conflicting evidence | Annual-report prose, tables, XBRL facts, or chart summaries disagree. |
 | Citation failure | Citation validator fails after the allowed repair pass. |
 | Security-sensitive input | Prompt injection, secrets, encoded payloads, tool-control instructions, or malicious retrieved evidence are detected. |
+| Output content filter review | Generated answer contains investment/decision-support language, sensitive data, or other review-level content. |
 | Sensitive financial data | User includes non-public, personal, credential-like, or account-level information. |
 | Calculation ambiguity | The requested formula, fiscal period, units, currency, or source basis is unclear. |
 

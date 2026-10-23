@@ -44,6 +44,7 @@ Seed PDF sources include 2024 annual reports for Apple, Microsoft, Amazon, NVIDI
 | `hybrid_competitive_search` | BM25 + dense retrieval over annual-report PDFs. |
 | `company_compare` | Groups and compares retrieved chunks by ticker/year. |
 | `risk_factor_lookup` | Retrieves competitive, market, revenue, supply-chain, and product-risk language. |
+| `output_content_filter` | Blocks generated secrets/tool payloads and routes investment-sensitive outputs to review. |
 | `citation_validator` | Verifies every factual claim has evidence. |
 | `human_review_queue` | Routes investment-sensitive briefs for review. |
 
@@ -56,6 +57,7 @@ Human review is required for:
 - market-moving claims
 - unsupported competitor allegations
 - conflicting annual-report evidence
+- output content filter review for investment, publication, or sensitive-data language
 
 The system may draft competitive summaries but must not give investment advice.
 

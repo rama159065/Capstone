@@ -261,6 +261,11 @@ SECRET_PATTERNS = [
     r"\bsk-[A-Za-z0-9_-]{12,}\b",
     r"\b[A-Za-z0-9_]*(api|secret|token|password)[A-Za-z0-9_]*\s*[:=]\s*[^\s]{8,}",
 ]
+SENSITIVE_DATA_PATTERNS = [
+    r"\b(?:\d[ -]*?){13,19}\b",
+    r"\b\d{3}-\d{2}-\d{4}\b",
+    r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
+]
 BASE64_LIKE_PATTERN = r"\b[A-Za-z0-9+/]{120,}={0,2}\b"
 FINANCIAL_INTENT_TERMS = {
     "annual report", "10-k", "10-q", "revenue", "net sales", "income", "cash",
@@ -289,6 +294,8 @@ def redact_secrets(message: str) -> str:
     redacted = message
     for pattern in SECRET_PATTERNS:
         redacted = re.sub(pattern, "[REDACTED_SECRET]", redacted, flags=re.IGNORECASE)
+    for pattern in SENSITIVE_DATA_PATTERNS:
+        redacted = re.sub(pattern, "[REDACTED_SENSITIVE_DATA]", redacted, flags=re.IGNORECASE)
     return redacted
 
 
@@ -306,6 +313,7 @@ def deterministic_input_guard(message: str, max_chars: int = 4000) -> dict[str, 
     labels.extend(regex_labels(sanitized, PROMPT_INJECTION_PATTERNS, "prompt_injection"))
     labels.extend(regex_labels(sanitized, CODE_OR_TOOL_PATTERNS, "code_or_tool_payload"))
     labels.extend(regex_labels(sanitized, SECRET_PATTERNS, "secret_or_credential"))
+    labels.extend(regex_labels(sanitized, SENSITIVE_DATA_PATTERNS, "sensitive_data"))
     if re.search(BASE64_LIKE_PATTERN, sanitized):
         labels.append("encoded_or_obfuscated_payload")
     if len(sanitized) > max_chars:
@@ -385,6 +393,32 @@ def evidence_prompt_injection_guard(evidence: list[dict[str, Any]]) -> dict[str,
     }
 
 
+def output_content_filter(answer: str) -> dict[str, Any]:
+    text = canonicalize_user_message(answer)
+    labels: list[str] = []
+    labels.extend(regex_labels(text, PROMPT_INJECTION_PATTERNS, "prompt_injection_echo"))
+    labels.extend(regex_labels(text, CODE_OR_TOOL_PATTERNS, "code_or_tool_payload"))
+    labels.extend(regex_labels(text, SECRET_PATTERNS, "secret_or_credential"))
+    labels.extend(regex_labels(text, SENSITIVE_DATA_PATTERNS, "sensitive_data"))
+    if any(term in text.lower() for term in INVESTMENT_REVIEW_TERMS):
+        labels.append("investment_or_decision_support_output")
+    if any(term in text.lower() for term in PUBLICATION_REVIEW_TERMS):
+        labels.append("external_publication_output")
+
+    labels = sorted(set(labels))
+    if any(label in labels for label in {"prompt_injection_echo", "code_or_tool_payload", "secret_or_credential"}):
+        decision = "block"
+    elif labels:
+        decision = "review"
+    else:
+        decision = "allow"
+    return {
+        "decision": decision,
+        "risk_labels": labels,
+        "redacted_preview": redact_secrets(text)[:800],
+    }
+
+
 def human_review_queue(
     *,
     config: AgentConfig,
@@ -395,6 +429,7 @@ def human_review_queue(
     security: dict[str, Any] | None,
     plain_text: dict[str, Any] | None,
     evidence_guard: dict[str, Any] | None,
+    output_filter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     basis = "|".join([config.query, ",".join(sorted(triggers))])
     queue_id = f"human_review_{hashlib.sha256(basis.encode('utf-8')).hexdigest()[:12]}"
@@ -410,6 +445,7 @@ def human_review_queue(
             "security": security,
             "plain_text": plain_text,
             "evidence_guard": evidence_guard,
+            "output_filter": output_filter,
             "evidence_chunk_ids": [hit.get("chunk_id") for hit in evidence],
         },
         "allowed_actions": ["approve", "reject", "request_revision", "mark_out_of_scope"],
@@ -425,6 +461,7 @@ def governance_review_router(
     security: dict[str, Any] | None,
     plain_text: dict[str, Any] | None,
     evidence_guard: dict[str, Any] | None,
+    output_filter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     triggers: list[str] = []
     query = config.query.lower()
@@ -441,6 +478,8 @@ def governance_review_router(
         triggers.append("security_sensitive_input")
     if evidence_guard and not evidence_guard.get("safe", True):
         triggers.append("retrieved_evidence_prompt_injection")
+    if output_filter and output_filter.get("decision") == "review":
+        triggers.append("output_content_filter_review")
     if "conflict" in answer or "contradict" in answer:
         triggers.append("conflicting_evidence")
     if re.search(r"\b(calculate|ratio|growth|change|difference)\b", query) and re.search(
@@ -458,6 +497,7 @@ def governance_review_router(
             security=security,
             plain_text=plain_text,
             evidence_guard=evidence_guard,
+            output_filter=output_filter,
         )
     return {
         "required": False,
@@ -472,6 +512,7 @@ def refusal_result(
     security: dict[str, Any] | None = None,
     plain_text: dict[str, Any] | None = None,
     evidence_guard: dict[str, Any] | None = None,
+    output_filter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "technique": technique,
@@ -480,6 +521,7 @@ def refusal_result(
         "security": security,
         "plain_text": plain_text,
         "evidence_guard": evidence_guard,
+        "output_filter": output_filter,
         "citation_check": {"valid": False, "cited_chunk_ids": [], "missing_chunk_ids": [], "allowed_chunk_ids": []},
         "evidence": [],
     }
@@ -493,6 +535,21 @@ def apply_governance(
     plain_text: dict[str, Any] | None,
     evidence_guard: dict[str, Any] | None,
 ) -> dict[str, Any]:
+    output_filter = output_content_filter(str(result.get("answer") or "")) if config.enable_guardrails else {
+        "decision": "allow",
+        "risk_labels": [],
+        "redacted_preview": str(result.get("answer") or "")[:800],
+    }
+    result["output_filter"] = output_filter
+    if output_filter["decision"] == "block":
+        result["answer"] = "Generated answer was blocked by the output content filter."
+        result["final_status"] = "refused"
+        result["human_review"] = {"required": False, "status": "not_required", "triggers": []}
+        result["security"] = security
+        result["plain_text"] = plain_text
+        result["evidence_guard"] = evidence_guard
+        return result
+
     review = governance_review_router(
         config=config,
         draft_answer=str(result.get("answer") or ""),
@@ -501,6 +558,7 @@ def apply_governance(
         security=security,
         plain_text=plain_text,
         evidence_guard=evidence_guard,
+        output_filter=output_filter,
     )
     result["human_review"] = review
     result["security"] = security
@@ -753,6 +811,7 @@ class AgentState(TypedDict, total=False):
     plan: dict[str, Any]
     evidence: list[dict[str, Any]]
     evidence_guard: dict[str, Any]
+    output_filter: dict[str, Any]
     answer: str
     citation_check: dict[str, Any]
     human_review: dict[str, Any]
@@ -863,6 +922,18 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
                 "final_status": "refused",
             }
         run_config = AgentConfig(**{**config.__dict__, "query": state.get("query", config.query)})
+        output_filter = output_content_filter(str(state.get("answer") or "")) if config.enable_guardrails else {
+            "decision": "allow",
+            "risk_labels": [],
+            "redacted_preview": str(state.get("answer") or "")[:800],
+        }
+        if output_filter["decision"] == "block":
+            return {
+                "output_filter": output_filter,
+                "answer": "Generated answer was blocked by the output content filter.",
+                "human_review": {"required": False, "status": "not_required", "triggers": []},
+                "final_status": "refused",
+            }
         review = governance_review_router(
             config=run_config,
             draft_answer=str(state.get("answer") or ""),
@@ -871,8 +942,10 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
             security=state.get("security"),
             plain_text=state.get("plain_text"),
             evidence_guard=state.get("evidence_guard"),
+            output_filter=output_filter,
         )
         return {
+            "output_filter": output_filter,
             "human_review": review,
             "final_status": review["status"] if review.get("required") else state.get("final_status", "answered"),
         }
@@ -915,6 +988,7 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
         "answer": final_state.get("answer"),
         "citation_check": final_state.get("citation_check"),
         "evidence_guard": final_state.get("evidence_guard"),
+        "output_filter": final_state.get("output_filter"),
         "human_review": final_state.get("human_review"),
         "evidence": final_state.get("evidence", []),
     }
@@ -970,6 +1044,7 @@ def summarize_result(result: dict[str, Any]) -> dict[str, Any]:
         "security": result.get("security"),
         "plain_text": result.get("plain_text"),
         "evidence_guard": result.get("evidence_guard"),
+        "output_filter": result.get("output_filter"),
         "human_review": result.get("human_review"),
         "citation_check": result.get("citation_check"),
         "evidence_chunk_ids": [hit.get("chunk_id") for hit in evidence],

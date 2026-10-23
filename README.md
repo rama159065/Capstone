@@ -200,11 +200,20 @@ The agent flow includes:
 - Input guard for prompt injection, code/tool payloads, and secrets
 - LLM-backed plain-text/domain-intent classifier
 - Retrieval evidence guard against injected instructions inside retrieved chunks
+- Output content filter for generated prompt-injection echoes, executable payloads, secrets, sensitive data, and domain-sensitive recommendations
 - Citation validation against retrieved chunk IDs
 - Human review routing for high-impact decisions, unsafe evidence, low confidence, or citation failure
 - HTML/JSON audit artifacts for review
 
 See `docs/financial_report_agent_design.md` and the domain design files under `docs/` for flow diagrams and governance details.
+
+Content filtering is layered:
+
+```text
+user input -> input filter -> plain-text classifier -> retrieval -> evidence filter -> answer -> output filter -> citation/HITL
+```
+
+The filters return auditable JSON fields such as `security`, `evidence_guard`, `output_filter`, and `human_review`. Output filter decisions are `allow`, `review`, or `block`; review-level content adds `output_content_filter_review` to HITL triggers.
 
 ## LangSmith Logging and Monitoring
 

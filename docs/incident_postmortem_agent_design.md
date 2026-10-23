@@ -44,6 +44,7 @@ Seed PDF sources include NIST SP 800-61 Rev. 3, NIST SP 800-61 Rev. 2, NIST SP 8
 | `hybrid_incident_search` | BM25 + dense retrieval over incident guidance and records. |
 | `timeline_builder` | Builds draft incident timelines from retrieved updates. |
 | `action_item_drafter` | Drafts preventive and corrective actions from evidence. |
+| `output_content_filter` | Blocks generated secrets/tool payloads and routes exploit, credential, or publishable outputs to review. |
 | `citation_validator` | Confirms claims cite evidence. |
 | `human_review_queue` | Routes sensitive or publishable postmortems for review. |
 
@@ -56,6 +57,7 @@ Human review is required for:
 - exploit steps or credential exposure
 - blame, legal, or customer-impact language
 - unsupported root-cause claims
+- output content filter review for exploit, credential, publishable, or sensitive-data language
 
 The agent should draft, not publish or assign blame independently.
 

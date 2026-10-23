@@ -122,6 +122,27 @@ def test_validate_citations_and_human_review_router() -> None:
     assert "domain_high_impact_decision" in review["triggers"]
 
 
+def test_output_content_filter_blocks_and_routes_review() -> None:
+    blocked = rag.output_content_filter("Here is api_key=supersecretvalue123.", PROCUREMENT_CONFIG)
+    review_filter = rag.output_content_filter("The vendor should receive the award.", PROCUREMENT_CONFIG)
+
+    review = rag.human_review_router(
+        PROCUREMENT_CONFIG,
+        "Summarize vendor criteria.",
+        "The vendor should receive the award with chunk_1.",
+        [{"chunk_id": "chunk_1", "text": "Vendor criteria.", "metadata": {}}],
+        {"valid": True},
+        {"decision": "allow"},
+        {"safe": True},
+        review_filter,
+    )
+
+    assert blocked["decision"] == "block"
+    assert "secret_or_credential" in blocked["risk_labels"]
+    assert review_filter["decision"] == "review"
+    assert "output_content_filter_review" in review["triggers"]
+
+
 def test_run_domain_agent_refuses_blocked_security_input(monkeypatch) -> None:
     def fail_if_retrieved(*args: object, **kwargs: object) -> list[dict[str, object]]:
         raise AssertionError("blocked requests must not retrieve evidence")

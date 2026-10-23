@@ -44,6 +44,7 @@ Seed PDF sources include World Bank procurement regulations, Project Procurement
 | `hybrid_procurement_search` | BM25 + dense retrieval over procurement PDFs and records. |
 | `vendor_evaluation_lookup` | Retrieves rated criteria, bid/proposal evaluation, and vendor qualification evidence. |
 | `procurement_clause_lookup` | Retrieves FAR/World Bank clauses by topic. |
+| `output_content_filter` | Blocks generated secrets/tool payloads and routes vendor-award or sensitive outputs to review. |
 | `citation_validator` | Confirms cited chunk IDs exist in retrieved evidence. |
 | `human_review_queue` | Queues high-impact vendor decisions for approval. |
 
@@ -56,6 +57,7 @@ Human review is required for:
 - externally shared vendor review
 - low-confidence or conflicting policy evidence
 - failed citation validation
+- output content filter review for award/rejection language, sensitive data, or generated unsafe content
 
 The assistant may draft and summarize, but it must not make binding procurement decisions.
 

@@ -43,6 +43,7 @@ Seed PDF sources include IRS Publication 463, Joint Travel Regulations, Federal 
 | `llm_plain_text_classifier` | Confirms safe travel/expense-policy intent. |
 | `hybrid_travel_policy_search` | BM25 + dense retrieval over travel PDFs. |
 | `expense_category_lookup` | Retrieves meal, mileage, lodging, gift, car, and documentation rules. |
+| `output_content_filter` | Blocks generated secrets/tool payloads and routes sensitive reimbursement or personal-data outputs to review. |
 | `citation_validator` | Confirms cited evidence exists. |
 | `human_review_queue` | Routes high-risk reimbursement decisions for approval. |
 
@@ -56,6 +57,7 @@ Human review is required for:
 - unclear business purpose
 - conflicting policy evidence
 - payment-card or personal-data exposure
+- output content filter review for payment, exception, card, or sensitive-data language
 
 The agent can explain policy and draft a recommendation, but it must not approve payment.
 
