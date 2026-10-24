@@ -92,7 +92,7 @@ Successful retrieval responses contain `domain`, `query`, `langsmith`, `count`, 
 
 ## Responses
 
-Chat responses include the domain and final status, and may include the answer, citation checks, evidence previews, guardrail decisions, human-review information, orchestration metadata, elapsed time, and LangSmith tracing status. Fields not produced by a particular workflow may be omitted.
+Chat responses include the domain and final status, and may include the answer, an `explanation`, citation checks, evidence previews, guardrail decisions, human-review information, orchestration metadata, elapsed time, and LangSmith tracing status. The explanation summarizes observable workflow results: retrieved evidence count and citation validation for answers, or the relevant refusal/review checks when an answer is withheld or escalated. It is not hidden chain-of-thought. Fields not produced by a particular workflow may be omitted.
 
 `GET /health` returns `status`, `service`, and `domains`. `GET /domains` returns a `domains` array with each domain's identifier, display name, description, and default query; non-financial domains also include their supported `source_types`.
 
@@ -110,16 +110,20 @@ Errors use a consistent JSON shape:
       "message": "String should have at least 1 character",
       "type": "string_too_short"
     }
-  ]
+  ],
+  "request_id": "12345678-1234-5678-1234-567812345678"
 }
 ```
 
 | Status | Meaning |
 |---|---|
-| `404` | Unknown domain or route. |
+| `404` | Unknown domain includes a link to `GET /domains`; unknown routes include a link to the API docs. |
+| `405` | HTTP method is not supported for the endpoint; the response includes the `Allow` header. |
 | `422` | Request body or parameter validation failed; `details` identifies invalid fields. |
-| `429` | Rate limit exceeded; response includes a `Retry-After` header. |
+| `429` | Rate limit exceeded; response includes the configured limit and a `Retry-After` header. |
 | `500` | Unexpected server error. Internal exception details are logged by the server and are not returned to clients. |
+
+Error responses include the request's `request_id`, which also appears in the `X-Request-ID` response header and can be used to find the corresponding server log.
 
 The API allows 60 requests per minute per client IP across all routes. The current limiter is in-memory and per application process. Multi-worker or replicated deployments need a shared rate-limit store to enforce a unified limit. Client identity uses the direct peer address; configure trusted proxy handling at the deployment boundary when running behind a reverse proxy.
 

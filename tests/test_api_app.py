@@ -87,6 +87,8 @@ def test_chat_domain_uses_shared_agent(monkeypatch) -> None:
     assert payload["domain"] == "travel_expense"
     assert payload["final_status"] == "answered"
     assert payload["langsmith"]["enabled"] is False
+    assert "1 retrieved evidence item" in payload["explanation"]
+    assert "chunk_1" in payload["explanation"]
 
 
 def test_chat_domain_validates_agent_response(monkeypatch) -> None:
@@ -107,10 +109,30 @@ def test_chat_domain_validates_agent_response(monkeypatch) -> None:
     )
 
     assert response.status_code == 500
-    assert response.json() == {
-        "error": "internal_server_error",
-        "message": "An unexpected error occurred. Please try again later.",
-    }
+    payload = response.json()
+    assert payload["error"] == "internal_server_error"
+    assert payload["message"] == "An unexpected error occurred. Please try again later."
+    assert payload["request_id"] == response.headers["X-Request-ID"]
+
+
+def test_chat_explanation_describes_refusal_and_review_reasons() -> None:
+    refused = api_app.explain_chat_result(
+        {
+            "final_status": "refused",
+            "security": {"decision": "block", "risk_labels": ["prompt_injection"]},
+        }
+    )
+    review = api_app.explain_chat_result(
+        {
+            "final_status": "pending_human_review",
+            "human_review": {"required": True, "triggers": ["citation_failure"]},
+        }
+    )
+
+    assert "input security checks" in refused
+    assert "prompt_injection" in refused
+    assert "human review" in review
+    assert "citation_failure" in review
 
 
 def test_invalid_chat_request_returns_validation_error() -> None:
@@ -123,6 +145,7 @@ def test_invalid_chat_request_returns_validation_error() -> None:
     assert payload["error"] == "validation_error"
     assert payload["message"] == "Request validation failed."
     assert payload["details"][0]["field"] == "body.query"
+    assert payload["request_id"] == response.headers["X-Request-ID"]
 
 
 def test_unknown_domain_returns_http_error_message() -> None:
@@ -131,10 +154,32 @@ def test_unknown_domain_returns_http_error_message() -> None:
     response = client.post("/chat/not_a_domain", json={"query": "hello"})
 
     assert response.status_code == 404
-    assert response.json() == {
-        "error": "http_error",
-        "message": "Unknown domain: not_a_domain",
-    }
+    payload = response.json()
+    assert payload["error"] == "http_error"
+    assert payload["message"] == "Unknown domain: not_a_domain. Use GET /domains to see supported domains."
+    assert payload["details"][0]["field"] == "domain"
+    assert payload["request_id"] == response.headers["X-Request-ID"]
+
+
+def test_unknown_route_explains_how_to_find_endpoints() -> None:
+    client = TestClient(api_app.app)
+
+    response = client.get("/not-a-route")
+
+    assert response.status_code == 404
+    payload = response.json()
+    assert "Check the route path in the API docs." in payload["message"]
+    assert payload["details"][0]["field"] == "path"
+
+
+def test_unsupported_method_returns_actionable_error() -> None:
+    client = TestClient(api_app.app)
+
+    response = client.put("/health")
+
+    assert response.status_code == 405
+    assert response.json()["message"] == "This HTTP method is not supported for the requested endpoint."
+    assert response.headers["allow"] == "GET"
 
 
 def test_unhandled_service_exception_returns_safe_error(monkeypatch) -> None:
@@ -164,6 +209,7 @@ def test_fastapi_documents_response_models() -> None:
     assert chat_operation["summary"] == "Answer a domain question"
     assert chat_operation["description"]
     assert "429" in chat_operation["responses"]
+    assert "explanation" in schemas["ChatResponse"]["properties"]
     query_field = schemas["ChatRequest"]["properties"]["query"]
     assert query_field["minLength"] == 1
     assert query_field["maxLength"] == 4000
@@ -183,10 +229,11 @@ def test_rate_limit_returns_429_with_retry_after(monkeypatch) -> None:
     response = client.get("/health")
 
     assert response.status_code == 429
-    assert response.json() == {
-        "error": "rate_limit_exceeded",
-        "message": "Rate limit exceeded. Please try again later.",
-    }
+    payload = response.json()
+    assert payload["error"] == "rate_limit_exceeded"
+    assert payload["message"] == "Rate limit exceeded. Please try again later."
+    assert payload["details"][0]["type"] == "rate_limit"
+    assert payload["request_id"] == response.headers["X-Request-ID"]
     assert 1 <= int(response.headers["Retry-After"]) <= 60
 
 
@@ -227,6 +274,7 @@ def test_chat_financial_uses_financial_agent(monkeypatch) -> None:
     assert payload["domain"] == "financial_report_qa"
     assert payload["technique"] == "agentic_graph"
     assert payload["evidence_preview"][0]["ticker"] == "AAPL"
+    assert "citation validation passed" in payload["explanation"]
 
 
 def test_retrieve_domain_summarizes_evidence(monkeypatch) -> None:

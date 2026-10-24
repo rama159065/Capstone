@@ -202,6 +202,13 @@ class ChatResponse(ApiResponse):
     query: str | None = None
     safe_query: str | None = None
     answer: str | None = None
+    explanation: str | None = Field(
+        None,
+        description=(
+            "Concise explanation of the workflow outcome based on retrieved evidence, "
+            "citation checks, safety checks, or human-review triggers."
+        ),
+    )
     langsmith: LangSmithResponse | None = None
     security: dict[str, Any] | None = None
     plain_text: dict[str, Any] | None = None
@@ -236,6 +243,7 @@ class ApiErrorResponse(BaseModel):
     error: str
     message: str
     details: list[dict[str, str]] | None = None
+    request_id: str | None = None
 
 
 API_ERROR_RESPONSES = {
@@ -316,6 +324,7 @@ async def log_request_and_enforce_rate_limit(request: Request, call_next):
         request_id = str(uuid4())
 
     request_id_token = request_id_context.set(request_id)
+    request.state.request_id = request_id
     started_at = time.perf_counter()
     client_id = request.client.host if request.client is not None else "unknown"
     response = None
@@ -327,6 +336,17 @@ async def log_request_and_enforce_rate_limit(request: Request, call_next):
                 content=ApiErrorResponse(
                     error="rate_limit_exceeded",
                     message="Rate limit exceeded. Please try again later.",
+                    details=[
+                        {
+                            "field": "request",
+                            "message": (
+                                f"Limit: {RATE_LIMIT_REQUESTS} requests per "
+                                f"{RATE_LIMIT_WINDOW_SECONDS} seconds."
+                            ),
+                            "type": "rate_limit",
+                        }
+                    ],
+                    request_id=request_id,
                 ).model_dump(exclude_none=True),
                 headers={"Retry-After": str(retry_after)},
             )
@@ -361,12 +381,32 @@ async def handle_http_exception(
     request: Request,
     exc: StarletteHTTPException,
 ) -> JSONResponse:
-    del request
+    detail = str(exc.detail)
+    if exc.status_code == 404 and detail == "Not Found":
+        message = "The requested endpoint was not found. Check the route path in the API docs."
+        details = [{"field": "path", "message": request.url.path, "type": "unknown_endpoint"}]
+    elif exc.status_code == 404 and detail.startswith("Unknown domain:"):
+        message = f"{detail}. Use GET /domains to see supported domains."
+        details = [{"field": "domain", "message": detail.split(":", 1)[-1].strip(), "type": "unknown_domain"}]
+    elif exc.status_code == 405:
+        message = "This HTTP method is not supported for the requested endpoint."
+        details = [{"field": "method", "message": request.method, "type": "method_not_allowed"}]
+    elif exc.status_code == 401:
+        message = "Authentication is required to access this resource."
+        details = None
+    elif exc.status_code == 403:
+        message = "You are not authorized to access this resource."
+        details = None
+    else:
+        message = detail
+        details = None
     return JSONResponse(
         status_code=exc.status_code,
         content=ApiErrorResponse(
             error="http_error",
-            message=str(exc.detail),
+            message=message,
+            details=details,
+            request_id=getattr(request.state, "request_id", None),
         ).model_dump(exclude_none=True),
         headers=exc.headers,
     )
@@ -377,7 +417,6 @@ async def handle_request_validation_error(
     request: Request,
     exc: RequestValidationError,
 ) -> JSONResponse:
-    del request
     details = [
         {
             "field": ".".join(str(part) for part in error["loc"]),
@@ -386,13 +425,16 @@ async def handle_request_validation_error(
         }
         for error in exc.errors()
     ]
+    request_id = getattr(request.state, "request_id", None)
     return JSONResponse(
         status_code=422,
         content=ApiErrorResponse(
             error="validation_error",
             message="Request validation failed.",
             details=details,
+            request_id=request_id,
         ).model_dump(exclude_none=True),
+        headers={"X-Request-ID": request_id} if request_id else None,
     )
 
 
@@ -405,12 +447,15 @@ async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONR
         request.url.path,
         exc_info=exc,
     )
+    request_id = getattr(request.state, "request_id", None)
     return JSONResponse(
         status_code=500,
         content=ApiErrorResponse(
             error="internal_server_error",
             message="An unexpected error occurred. Please try again later.",
+            request_id=request_id,
         ).model_dump(exclude_none=True),
+        headers={"X-Request-ID": request_id} if request_id else None,
     )
 
 
@@ -436,6 +481,56 @@ def configure_request_tracing(
 def trace_request_metadata() -> dict[str, str]:
     request_id = request_id_context.get()
     return {"request_id": request_id} if request_id is not None else {}
+
+
+def explain_chat_result(result: dict[str, Any]) -> str:
+    """Summarize the observable evidence and checks behind a chat outcome."""
+    status = str(result.get("final_status") or "unknown")
+    security = result.get("security") or {}
+    plain_text = result.get("plain_text") or {}
+    evidence_guard = result.get("evidence_guard") or {}
+    output_filter = result.get("output_filter") or {}
+    review = result.get("human_review") or {}
+    citation_check = result.get("citation_check") or {}
+
+    if status == "refused":
+        if security.get("decision") == "block":
+            labels = ", ".join(security.get("risk_labels") or [])
+            return f"The request was refused by the input security checks ({labels or 'blocked input'})."
+        if plain_text and not plain_text.get("allowed", True):
+            reason = plain_text.get("reason")
+            return f"The request was refused by the domain-intent checks: {reason}" if reason else (
+                "The request was refused because it did not pass the domain-intent checks."
+            )
+        if evidence_guard and not evidence_guard.get("safe", True):
+            return "The request was refused because retrieved evidence failed the safety checks."
+        if output_filter.get("decision") == "block":
+            return "The generated response was withheld because it failed output safety checks."
+        return "The workflow did not produce an answer because a safety or policy check refused the request."
+
+    if review.get("required"):
+        triggers = ", ".join(review.get("triggers") or [])
+        return (
+            "The answer is routed for human review"
+            f"{f' because of: {triggers}' if triggers else ''}."
+        )
+
+    if not result.get("answer"):
+        return "No answer was produced by the workflow."
+
+    evidence = result.get("evidence") or result.get("evidence_preview") or []
+    cited_ids = citation_check.get("cited_chunk_ids") or result.get("evidence_chunk_ids") or []
+    if citation_check.get("valid") and cited_ids:
+        return (
+            f"The answer is based on {len(evidence)} retrieved evidence item(s); "
+            f"citation validation passed for: {', '.join(str(item) for item in cited_ids)}."
+        )
+    if not evidence:
+        return "The workflow found no retrieved evidence to support the answer."
+    return (
+        f"The answer used {len(evidence)} retrieved evidence item(s), "
+        "but citation validation did not confirm its citations."
+    )
 
 
 def financial_config_from_request(request: FinancialChatRequest | RetrieveRequest) -> AgentConfig:
@@ -517,7 +612,8 @@ def domains() -> DomainsResponse:
     summary="Answer a financial-report question",
     description=(
         "Runs the selected financial QA technique over annual-report evidence. "
-        "Optional ticker and year fields constrain the source evidence."
+        "Optional ticker and year fields constrain the source evidence. The response includes "
+        "a concise explanation of its evidence and citation checks."
     ),
     tags=["Chat"],
     response_model=FinancialChatResponse,
@@ -556,11 +652,13 @@ def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
             **trace_request_metadata(),
         },
     )
+    summarized_result = summarize_result(result)
     return {
         "domain": FINANCIAL_DOMAIN,
         "display_name": "Financial Report QA",
         "langsmith": langsmith,
-        **summarize_result(result),
+        **summarized_result,
+        "explanation": explain_chat_result(summarized_result),
     }
 
 
@@ -570,7 +668,8 @@ def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
     description=(
         "Runs the shared guarded Agentic RAG workflow for a non-financial domain. "
         "Supported domain identifiers are returned by `GET /domains`. "
-        "Financial report QA uses the dedicated `/chat/financial_report_qa` operation."
+        "Financial report QA uses the dedicated `/chat/financial_report_qa` operation. "
+        "The response includes a concise explanation of its evidence and workflow checks."
     ),
     tags=["Chat"],
     response_model=ChatResponse,
@@ -620,6 +719,7 @@ def chat_domain(domain: str, request: ChatRequest) -> dict[str, Any]:
         enable_human_review=request.enable_human_review,
     )
     result["langsmith"] = langsmith
+    result["explanation"] = explain_chat_result(result)
     return result
 
 
