@@ -7,6 +7,9 @@ Run locally:
 from __future__ import annotations
 
 import logging
+import time
+from collections import OrderedDict, deque
+from threading import Lock
 from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Request
@@ -49,6 +52,9 @@ NON_FINANCIAL_DOMAINS: dict[str, DomainConfig] = {
 FINANCIAL_DOMAIN = "financial_report_qa"
 ALL_DOMAINS = (FINANCIAL_DOMAIN, *NON_FINANCIAL_DOMAINS.keys())
 logger = logging.getLogger(__name__)
+RATE_LIMIT_REQUESTS = 60
+RATE_LIMIT_WINDOW_SECONDS = 60
+RATE_LIMIT_MAX_CLIENTS = 10_000
 
 
 class ChatRequest(BaseModel):
@@ -193,8 +199,45 @@ class ApiErrorResponse(BaseModel):
 API_ERROR_RESPONSES = {
     404: {"model": ApiErrorResponse, "description": "The requested domain was not found."},
     422: {"model": ApiErrorResponse, "description": "The request failed validation."},
+    429: {"model": ApiErrorResponse, "description": "The client exceeded the request rate limit."},
     500: {"model": ApiErrorResponse, "description": "An unexpected server error occurred."},
 }
+
+
+class InMemoryRateLimiter:
+    def __init__(
+        self,
+        *,
+        limit: int = RATE_LIMIT_REQUESTS,
+        window_seconds: int = RATE_LIMIT_WINDOW_SECONDS,
+        max_clients: int = RATE_LIMIT_MAX_CLIENTS,
+    ) -> None:
+        self.limit = limit
+        self.window_seconds = window_seconds
+        self.max_clients = max_clients
+        self._requests: OrderedDict[str, deque[float]] = OrderedDict()
+        self._lock = Lock()
+
+    def check(self, client_id: str) -> int | None:
+        now = time.monotonic()
+        with self._lock:
+            requests = self._requests.get(client_id)
+            if requests is None:
+                if len(self._requests) >= self.max_clients:
+                    self._requests.popitem(last=False)
+                requests = deque()
+                self._requests[client_id] = requests
+            else:
+                self._requests.move_to_end(client_id)
+
+            while requests and now - requests[0] >= self.window_seconds:
+                requests.popleft()
+
+            if len(requests) >= self.limit:
+                return max(1, int(self.window_seconds - (now - requests[0]) + 0.999))
+
+            requests.append(now)
+            return None
 
 
 app = FastAPI(
@@ -209,6 +252,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.state.rate_limiter = InMemoryRateLimiter()
+
+
+@app.middleware("http")
+async def enforce_rate_limit(request: Request, call_next):
+    client_id = request.client.host if request.client is not None else "unknown"
+    retry_after = request.app.state.rate_limiter.check(client_id)
+    if retry_after is not None:
+        return JSONResponse(
+            status_code=429,
+            content=ApiErrorResponse(
+                error="rate_limit_exceeded",
+                message="Rate limit exceeded. Please try again later.",
+            ).model_dump(exclude_none=True),
+            headers={"Retry-After": str(retry_after)},
+        )
+    return await call_next(request)
 
 
 @app.exception_handler(StarletteHTTPException)

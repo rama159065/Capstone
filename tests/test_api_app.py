@@ -116,6 +116,26 @@ def test_fastapi_documents_response_models() -> None:
     assert "RetrieveResponse" in schemas
 
 
+def test_rate_limit_returns_429_with_retry_after(monkeypatch) -> None:
+    monkeypatch.setattr(
+        api_app.app.state,
+        "rate_limiter",
+        api_app.InMemoryRateLimiter(limit=2, window_seconds=60),
+    )
+    client = TestClient(api_app.app)
+
+    assert client.get("/health").status_code == 200
+    assert client.get("/health").status_code == 200
+    response = client.get("/health")
+
+    assert response.status_code == 429
+    assert response.json() == {
+        "error": "rate_limit_exceeded",
+        "message": "Rate limit exceeded. Please try again later.",
+    }
+    assert 1 <= int(response.headers["Retry-After"]) <= 60
+
+
 def test_chat_financial_uses_financial_agent(monkeypatch) -> None:
     def fake_run_technique(technique: str, llm_provider: str, config: Any) -> dict[str, Any]:
         return {

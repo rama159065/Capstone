@@ -292,6 +292,8 @@ $body = @{
 Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/chat/travel_expense" -ContentType "application/json" -Body $body
 ```
 
+The API allows 60 requests per minute per client IP across all routes. Excess requests return `429 Too Many Requests` with a `Retry-After` header. The limiter is in-memory and per application process; use a shared rate-limit store such as Redis when running multiple workers or replicas. Client IPs come from the direct connection, so configure trusted proxy handling at the deployment boundary if the API is behind a reverse proxy.
+
 Enable LangSmith for API calls by setting `LANGSMITH_API_KEY` and either passing `enable_langsmith=true` in the request body or setting `LANGSMITH_TRACING=true` in the environment.
 
 ## Execute By Domain
