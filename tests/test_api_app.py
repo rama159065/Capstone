@@ -46,6 +46,34 @@ def test_chat_domain_uses_shared_agent(monkeypatch) -> None:
     assert payload["langsmith"]["enabled"] is False
 
 
+def test_chat_domain_validates_agent_response(monkeypatch) -> None:
+    monkeypatch.setattr(
+        api_app,
+        "run_domain_agent",
+        lambda domain_config, **kwargs: {
+            "domain": None,
+            "final_status": "answered",
+            "query": kwargs["query"],
+        },
+    )
+    client = TestClient(api_app.app, raise_server_exceptions=False)
+
+    response = client.post(
+        "/chat/travel_expense",
+        json={"query": "What documentation is required for travel expenses?"},
+    )
+
+    assert response.status_code == 500
+
+
+def test_fastapi_documents_response_models() -> None:
+    schemas = api_app.app.openapi()["components"]["schemas"]
+
+    assert "ChatResponse" in schemas
+    assert "FinancialChatResponse" in schemas
+    assert "RetrieveResponse" in schemas
+
+
 def test_chat_financial_uses_financial_agent(monkeypatch) -> None:
     def fake_run_technique(technique: str, llm_provider: str, config: Any) -> dict[str, Any]:
         return {

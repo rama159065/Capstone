@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from scripts.competitive_research.domain_config import DOMAIN_CONFIG as COMPETITIVE_CONFIG
 from scripts.domain_common.langsmith_utils import configure_langsmith, env_flag, run_traced
@@ -91,6 +91,94 @@ class RetrieveRequest(BaseModel):
     langsmith_project: str | None = None
 
 
+class ApiResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+
+class HealthResponse(ApiResponse):
+    status: Literal["ok"]
+    service: str
+    domains: list[str]
+
+
+class DomainInfoResponse(ApiResponse):
+    domain: str
+    display_name: str
+    description: str
+    default_query: str
+    source_types: list[str] | None = None
+
+
+class DomainsResponse(ApiResponse):
+    domains: list[DomainInfoResponse]
+
+
+class LangSmithResponse(ApiResponse):
+    enabled: bool
+    reason: str | None = None
+    project: str | None = None
+    endpoint: str | None = None
+    hint: str | None = None
+
+
+class EvidenceResponse(ApiResponse):
+    chunk_id: str | None = None
+    title: str | None = None
+    source_type: str | None = None
+    ticker: str | None = None
+    year: int | None = None
+    page: int | None = None
+    source_url: str | None = None
+    image_path: str | None = None
+    rank: int | None = None
+    score: float | None = None
+    preview: str | None = None
+
+
+class CitationCheckResponse(ApiResponse):
+    valid: bool
+    cited_chunk_ids: list[str] | None = None
+    missing_chunk_ids: list[str] | None = None
+    allowed_chunk_ids: list[str] | None = None
+
+
+class ChatResponse(ApiResponse):
+    domain: str
+    display_name: str | None = None
+    final_status: str
+    query: str | None = None
+    safe_query: str | None = None
+    answer: str | None = None
+    langsmith: LangSmithResponse | None = None
+    security: dict[str, Any] | None = None
+    plain_text: dict[str, Any] | None = None
+    plan: dict[str, Any] | None = None
+    evidence_guard: dict[str, Any] | None = None
+    output_filter: dict[str, Any] | None = None
+    citation_check: CitationCheckResponse | None = None
+    human_review: dict[str, Any] | None = None
+    evidence: list[EvidenceResponse] | None = None
+    orchestration: dict[str, Any] | None = None
+    elapsed_seconds: float | None = None
+
+
+class FinancialChatResponse(ChatResponse):
+    technique: str | None = None
+    parsed: dict[str, Any] | None = None
+    subquestions: list[str] | None = None
+    evidence_chunk_ids: list[str | None] | None = None
+    evidence_preview: list[EvidenceResponse] | None = None
+
+
+class RetrieveResponse(ApiResponse):
+    domain: str
+    display_name: str | None = None
+    query: str
+    langsmith: LangSmithResponse
+    count: int
+    evidence: list[EvidenceResponse]
+
+
 app = FastAPI(
     title="Track B Multi-Agent Operations Copilot API",
     version="0.1.0",
@@ -142,8 +230,8 @@ def get_domain_config(domain: str) -> DomainConfig:
         raise HTTPException(status_code=404, detail=f"Unknown domain: {domain}") from exc
 
 
-@app.get("/health")
-def health() -> dict[str, Any]:
+@app.get("/health", response_model=HealthResponse, response_model_exclude_unset=True)
+def health() -> HealthResponse:
     return {
         "status": "ok",
         "service": "capstone-agentic-rag-api",
@@ -151,8 +239,8 @@ def health() -> dict[str, Any]:
     }
 
 
-@app.get("/domains")
-def domains() -> dict[str, Any]:
+@app.get("/domains", response_model=DomainsResponse, response_model_exclude_unset=True)
+def domains() -> DomainsResponse:
     rows = [
         {
             "domain": FINANCIAL_DOMAIN,
@@ -174,7 +262,11 @@ def domains() -> dict[str, Any]:
     return {"domains": rows}
 
 
-@app.post("/chat/financial_report_qa")
+@app.post(
+    "/chat/financial_report_qa",
+    response_model=FinancialChatResponse,
+    response_model_exclude_unset=True,
+)
 def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
     langsmith = configure_request_tracing(
         enabled=request.enable_langsmith,
@@ -214,7 +306,7 @@ def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
     }
 
 
-@app.post("/chat/{domain}")
+@app.post("/chat/{domain}", response_model=ChatResponse, response_model_exclude_unset=True)
 def chat_domain(domain: str, request: ChatRequest) -> dict[str, Any]:
     if domain == FINANCIAL_DOMAIN:
         return chat_financial(FinancialChatRequest(**request.model_dump()))
@@ -260,7 +352,11 @@ def chat_domain(domain: str, request: ChatRequest) -> dict[str, Any]:
     return result
 
 
-@app.post("/retrieve/financial_report_qa")
+@app.post(
+    "/retrieve/financial_report_qa",
+    response_model=RetrieveResponse,
+    response_model_exclude_unset=True,
+)
 def retrieve_financial(request: RetrieveRequest) -> dict[str, Any]:
     langsmith = configure_request_tracing(
         enabled=request.enable_langsmith,
@@ -307,7 +403,7 @@ def retrieve_financial(request: RetrieveRequest) -> dict[str, Any]:
     }
 
 
-@app.post("/retrieve/{domain}")
+@app.post("/retrieve/{domain}", response_model=RetrieveResponse, response_model_exclude_unset=True)
 def retrieve_domain(domain: str, request: RetrieveRequest) -> dict[str, Any]:
     if domain == FINANCIAL_DOMAIN:
         return retrieve_financial(request)
