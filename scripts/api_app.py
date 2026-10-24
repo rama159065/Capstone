@@ -6,11 +6,13 @@ Run locally:
 
 from __future__ import annotations
 
+import contextvars
 import logging
 import time
 from collections import OrderedDict, deque
 from threading import Lock
 from typing import Any, Literal
+from uuid import UUID, uuid4
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,6 +54,9 @@ NON_FINANCIAL_DOMAINS: dict[str, DomainConfig] = {
 FINANCIAL_DOMAIN = "financial_report_qa"
 ALL_DOMAINS = (FINANCIAL_DOMAIN, *NON_FINANCIAL_DOMAINS.keys())
 logger = logging.getLogger(__name__)
+request_id_context: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "api_request_id", default=None
+)
 RATE_LIMIT_REQUESTS = 60
 RATE_LIMIT_WINDOW_SECONDS = 60
 RATE_LIMIT_MAX_CLIENTS = 10_000
@@ -303,19 +308,52 @@ app.state.rate_limiter = InMemoryRateLimiter()
 
 
 @app.middleware("http")
-async def enforce_rate_limit(request: Request, call_next):
+async def log_request_and_enforce_rate_limit(request: Request, call_next):
+    supplied_request_id = request.headers.get("X-Request-ID")
+    try:
+        request_id = str(UUID(supplied_request_id)) if supplied_request_id else str(uuid4())
+    except ValueError:
+        request_id = str(uuid4())
+
+    request_id_token = request_id_context.set(request_id)
+    started_at = time.perf_counter()
     client_id = request.client.host if request.client is not None else "unknown"
-    retry_after = request.app.state.rate_limiter.check(client_id)
-    if retry_after is not None:
-        return JSONResponse(
-            status_code=429,
-            content=ApiErrorResponse(
-                error="rate_limit_exceeded",
-                message="Rate limit exceeded. Please try again later.",
-            ).model_dump(exclude_none=True),
-            headers={"Retry-After": str(retry_after)},
+    response = None
+    try:
+        retry_after = request.app.state.rate_limiter.check(client_id)
+        if retry_after is not None:
+            response = JSONResponse(
+                status_code=429,
+                content=ApiErrorResponse(
+                    error="rate_limit_exceeded",
+                    message="Rate limit exceeded. Please try again later.",
+                ).model_dump(exclude_none=True),
+                headers={"Retry-After": str(retry_after)},
+            )
+        else:
+            response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        duration_ms = round((time.perf_counter() - started_at) * 1000, 2)
+        log_method = logger.warning if response.status_code >= 400 else logger.info
+        log_method(
+            "api_request_completed request_id=%s method=%s path=%s status_code=%d duration_ms=%.2f",
+            request_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
         )
-    return await call_next(request)
+        return response
+    except Exception:
+        logger.exception(
+            "api_request_failed request_id=%s method=%s path=%s",
+            request_id,
+            request.method,
+            request.url.path,
+        )
+        raise
+    finally:
+        request_id_context.reset(request_id_token)
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -361,7 +399,8 @@ async def handle_request_validation_error(
 @app.exception_handler(Exception)
 async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONResponse:
     logger.exception(
-        "Unhandled API exception for %s %s",
+        "api_unhandled_exception request_id=%s method=%s path=%s",
+        request_id_context.get(),
         request.method,
         request.url.path,
         exc_info=exc,
@@ -380,10 +419,23 @@ def configure_request_tracing(
     enabled: bool,
     project_name: str | None,
 ) -> dict[str, Any]:
-    return configure_langsmith(
+    tracing = configure_langsmith(
         enabled=enabled or env_flag("LANGSMITH_TRACING"),
         project_name=project_name,
     )
+    logger.info(
+        "langsmith_trace_configured request_id=%s enabled=%s reason=%s project=%s",
+        request_id_context.get(),
+        tracing.get("enabled", False),
+        tracing.get("reason", "enabled" if tracing.get("enabled") else "disabled"),
+        tracing.get("project"),
+    )
+    return tracing
+
+
+def trace_request_metadata() -> dict[str, str]:
+    request_id = request_id_context.get()
+    return {"request_id": request_id} if request_id is not None else {}
 
 
 def financial_config_from_request(request: FinancialChatRequest | RetrieveRequest) -> AgentConfig:
@@ -501,6 +553,7 @@ def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
             "retrieval_mode": request.retrieval_mode,
             "guardrails_enabled": request.enable_guardrails,
             "human_review_enabled": request.enable_human_review,
+            **trace_request_metadata(),
         },
     )
     return {
@@ -552,6 +605,7 @@ def chat_domain(domain: str, request: ChatRequest) -> dict[str, Any]:
             "source_type": request.source_type,
             "guardrails_enabled": request.enable_guardrails,
             "human_review_enabled": request.enable_human_review,
+            **trace_request_metadata(),
         },
         query=request.query,
         llm_provider=request.llm_provider,
@@ -598,6 +652,7 @@ def retrieve_financial(request: RetrieveRequest) -> dict[str, Any]:
             "source_type": request.source_type,
             "ticker": request.ticker,
             "year": request.year,
+            **trace_request_metadata(),
         },
     )
     return {
@@ -657,6 +712,7 @@ def retrieve_domain(domain: str, request: RetrieveRequest) -> dict[str, Any]:
             "dense_top_k": request.dense_top_k,
             "bm25_top_k": request.bm25_top_k,
             "source_type": request.source_type,
+            **trace_request_metadata(),
         },
         query=request.query,
         top_k=request.top_k,

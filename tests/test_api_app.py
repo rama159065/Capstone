@@ -18,6 +18,49 @@ def test_health_and_domains() -> None:
     assert {row["domain"] for row in domains} >= {"travel_expense", "financial_report_qa"}
 
 
+def test_request_logs_and_response_include_correlation_id(caplog) -> None:
+    request_id = "12345678-1234-5678-1234-567812345678"
+    client = TestClient(api_app.app)
+
+    with caplog.at_level("INFO", logger="scripts.api_app"):
+        response = client.get("/health", headers={"X-Request-ID": request_id})
+
+    assert response.status_code == 200
+    assert response.headers["X-Request-ID"] == request_id
+    assert f"api_request_completed request_id={request_id}" in caplog.text
+    assert "method=GET path=/health status_code=200" in caplog.text
+
+
+def test_langsmith_trace_metadata_contains_request_id(monkeypatch) -> None:
+    request_id = "12345678-1234-5678-1234-567812345678"
+    captured_metadata: dict[str, Any] = {}
+
+    def fake_run_domain_agent(domain_config: Any, **kwargs: Any) -> dict[str, Any]:
+        return {
+            "domain": domain_config.domain,
+            "display_name": domain_config.display_name,
+            "final_status": "answered",
+            "query": kwargs["query"],
+        }
+
+    def capture_traced_call(name: str, func: Any, *args: Any, **kwargs: Any) -> Any:
+        captured_metadata.update(kwargs["metadata"])
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(api_app, "run_domain_agent", fake_run_domain_agent)
+    monkeypatch.setattr(api_app, "run_traced", capture_traced_call)
+    client = TestClient(api_app.app)
+
+    response = client.post(
+        "/chat/travel_expense",
+        headers={"X-Request-ID": request_id},
+        json={"query": "test query"},
+    )
+
+    assert response.status_code == 200
+    assert captured_metadata["request_id"] == request_id
+
+
 def test_chat_domain_uses_shared_agent(monkeypatch) -> None:
     def fake_run_domain_agent(domain_config: Any, **kwargs: Any) -> dict[str, Any]:
         return {

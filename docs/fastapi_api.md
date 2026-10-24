@@ -126,3 +126,9 @@ The API allows 60 requests per minute per client IP across all routes. The curre
 ## LangSmith tracing
 
 Set `LANGSMITH_API_KEY` (or `LANGCHAIN_API_KEY`) and either pass `"enable_langsmith": true` or set `LANGSMITH_TRACING=true`. `langsmith_project` can override the default project name. If tracing is requested without credentials, the response reports tracing as disabled with a reason.
+
+## Request logging and trace correlation
+
+The API logs one completion event per request with its request ID, HTTP method, path, response status, and elapsed milliseconds. Client IP addresses, request bodies, query text, authorization data, and response content are intentionally excluded from access logs. Server-side unexpected exceptions are logged with stack traces; clients receive only the sanitized `500` error.
+
+Every response includes an `X-Request-ID` header. A valid UUID from the incoming `X-Request-ID` header is reused; missing or invalid values are replaced with a generated UUID. When LangSmith tracing is enabled, that same ID is attached to the trace metadata so an API log event can be correlated with its LangSmith run. The API also logs whether LangSmith tracing was enabled and the selected project (never credentials).
