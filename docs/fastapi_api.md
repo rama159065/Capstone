@@ -1,0 +1,128 @@
+# FastAPI API Reference
+
+The FastAPI backend exposes domain discovery, guarded chat, and evidence retrieval. Request validation, response schemas, and endpoint descriptions are also published in the interactive API documentation.
+
+## Start the API
+
+From the repository root, start the server:
+
+```powershell
+uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
+```
+
+Open the interactive Swagger UI at <http://127.0.0.1:8000/docs>, ReDoc at <http://127.0.0.1:8000/redoc>, or the raw OpenAPI schema at <http://127.0.0.1:8000/openapi.json>.
+
+## Routes
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/health` | Return service status and domain identifiers. |
+| `GET` | `/domains` | List domain identifiers, display names, descriptions, and default queries. |
+| `POST` | `/chat/{domain}` | Answer a question using a non-financial domain. |
+| `POST` | `/chat/financial_report_qa` | Answer a financial-report question using the selected financial technique. |
+| `POST` | `/retrieve/{domain}` | Return ranked evidence from a non-financial domain without generating an answer. |
+| `POST` | `/retrieve/financial_report_qa` | Return ranked financial-report evidence without generating an answer. |
+
+The financial routes have dedicated request schemas and should be used for the `financial_report_qa` domain. The supported non-financial domain IDs are listed by `GET /domains`.
+
+## Chat requests
+
+Chat requests are JSON objects. `query` is required; all other fields are optional.
+
+| Field | Type | Default | Constraints / purpose |
+|---|---|---|---|
+| `query` | string | — | Required, 1–4000 characters. |
+| `llm_provider` | string | `mock` | `mock` or `hosted`. Hosted mode requires the configured chat endpoint environment variables. |
+| `embedding_provider` | string | `hashing` | `hashing` or `hosted`. |
+| `hash_dimensions` | integer | `384` | 32–4096; used by hashing embeddings. |
+| `top_k` | integer | `5` | 1–20; maximum evidence passed to the answer workflow. |
+| `dense_top_k` | integer | `30` | 1–100 dense retrieval candidates. |
+| `bm25_top_k` | integer | `30` | 1–100 lexical retrieval candidates. |
+| `source_type` | string or null | `null` | Optional source category filter. |
+| `max_context_chars` | integer | `12000` | 1000–64000; non-financial and financial chat context limit. |
+| `enable_guardrails` | boolean | `true` | Enable input, evidence, and output safety checks. |
+| `enable_human_review` | boolean | `true` | Enable governance routing for human review. |
+| `enable_langsmith` | boolean | `false` | Request LangSmith tracing (credentials must be configured). |
+| `langsmith_project` | string or null | `null` | Optional project override. |
+
+Financial chat additionally accepts:
+
+| Field | Type | Default | Constraints / purpose |
+|---|---|---|---|
+| `technique` | string | `agentic_graph` | One of `baseline_rag`, `structured_few_shot`, `decomposition`, `self_consistency`, `agentic_graph`. |
+| `retrieval_mode` | string | `hybrid` | `dense` or `hybrid`. |
+| `ticker` | string or null | `null` | Optional company ticker filter. |
+| `year` | integer or null | `null` | Optional fiscal/reporting year filter. |
+| `self_consistency_samples` | integer | `3` | 1–5 answer samples for the self-consistency technique. |
+
+Example non-financial chat request:
+
+```powershell
+$body = @{
+  query = "What documentation is required for travel expenses?"
+  llm_provider = "mock"
+  embedding_provider = "hashing"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post `
+  -Uri "http://127.0.0.1:8000/chat/travel_expense" `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+Example financial chat request:
+
+```json
+{
+  "query": "What does Apple say about revenue?",
+  "ticker": "AAPL",
+  "year": 2024,
+  "technique": "agentic_graph",
+  "llm_provider": "mock"
+}
+```
+
+## Retrieval requests
+
+Retrieval endpoints accept a JSON body with a required `query` (1–4000 characters) and optional `embedding_provider` (`hashing` or `hosted`), `hash_dimensions` (32–4096), `top_k` (1–20), `dense_top_k` and `bm25_top_k` (1–100), `source_type`, `enable_langsmith`, and `langsmith_project`.
+
+Financial retrieval also accepts `retrieval_mode` (`dense` or `hybrid`), `ticker`, and `year`. Non-financial domains use hybrid retrieval.
+
+Successful retrieval responses contain `domain`, `query`, `langsmith`, `count`, and an `evidence` array. Evidence fields may include `chunk_id`, `title`, `source_type`, `ticker`, `year`, `page`, `source_url`, `image_path`, `rank`, `score`, and `preview`; which fields are present depends on the domain and source.
+
+## Responses
+
+Chat responses include the domain and final status, and may include the answer, citation checks, evidence previews, guardrail decisions, human-review information, orchestration metadata, elapsed time, and LangSmith tracing status. Fields not produced by a particular workflow may be omitted.
+
+`GET /health` returns `status`, `service`, and `domains`. `GET /domains` returns a `domains` array with each domain's identifier, display name, description, and default query; non-financial domains also include their supported `source_types`.
+
+## Errors and rate limits
+
+Errors use a consistent JSON shape:
+
+```json
+{
+  "error": "validation_error",
+  "message": "Request validation failed.",
+  "details": [
+    {
+      "field": "body.query",
+      "message": "String should have at least 1 character",
+      "type": "string_too_short"
+    }
+  ]
+}
+```
+
+| Status | Meaning |
+|---|---|
+| `404` | Unknown domain or route. |
+| `422` | Request body or parameter validation failed; `details` identifies invalid fields. |
+| `429` | Rate limit exceeded; response includes a `Retry-After` header. |
+| `500` | Unexpected server error. Internal exception details are logged by the server and are not returned to clients. |
+
+The API allows 60 requests per minute per client IP across all routes. The current limiter is in-memory and per application process. Multi-worker or replicated deployments need a shared rate-limit store to enforce a unified limit. Client identity uses the direct peer address; configure trusted proxy handling at the deployment boundary when running behind a reverse proxy.
+
+## LangSmith tracing
+
+Set `LANGSMITH_API_KEY` (or `LANGCHAIN_API_KEY`) and either pass `"enable_langsmith": true` or set `LANGSMITH_TRACING=true`. `langsmith_project` can override the default project name. If tracing is requested without credentials, the response reports tracing as disabled with a reason.

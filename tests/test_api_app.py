@@ -109,11 +109,22 @@ def test_unhandled_service_exception_returns_safe_error(monkeypatch) -> None:
 
 
 def test_fastapi_documents_response_models() -> None:
-    schemas = api_app.app.openapi()["components"]["schemas"]
+    openapi = api_app.app.openapi()
+    schemas = openapi["components"]["schemas"]
 
     assert "ChatResponse" in schemas
     assert "FinancialChatResponse" in schemas
     assert "RetrieveResponse" in schemas
+    assert api_app.app.docs_url == "/docs"
+    assert api_app.app.redoc_url == "/redoc"
+    chat_operation = openapi["paths"]["/chat/{domain}"]["post"]
+    assert chat_operation["summary"] == "Answer a domain question"
+    assert chat_operation["description"]
+    assert "429" in chat_operation["responses"]
+    query_field = schemas["ChatRequest"]["properties"]["query"]
+    assert query_field["minLength"] == 1
+    assert query_field["maxLength"] == 4000
+    assert query_field["description"]
 
 
 def test_rate_limit_returns_429_with_retry_after(monkeypatch) -> None:

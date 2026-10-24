@@ -58,48 +58,85 @@ RATE_LIMIT_MAX_CLIENTS = 10_000
 
 
 class ChatRequest(BaseModel):
-    query: str = Field(..., min_length=1, max_length=4000)
-    llm_provider: Literal["mock", "hosted"] = "mock"
-    embedding_provider: Literal["hashing", "hosted"] = "hashing"
-    hash_dimensions: int = Field(384, ge=32, le=4096)
-    top_k: int = Field(5, ge=1, le=20)
-    dense_top_k: int = Field(30, ge=1, le=100)
-    bm25_top_k: int = Field(30, ge=1, le=100)
-    source_type: str | None = None
-    max_context_chars: int = Field(12000, ge=1000, le=64000)
-    enable_guardrails: bool = True
-    enable_human_review: bool = True
-    enable_langsmith: bool = False
-    langsmith_project: str | None = None
+    """Input shared by the non-financial and financial chat endpoints."""
+
+    query: str = Field(
+        ...,
+        min_length=1,
+        max_length=4000,
+        description="Question to answer using the selected domain's indexed evidence.",
+    )
+    llm_provider: Literal["mock", "hosted"] = Field(
+        "mock",
+        description="Chat backend. Hosted mode requires the LLM endpoint environment variables.",
+    )
+    embedding_provider: Literal["hashing", "hosted"] = Field(
+        "hashing",
+        description="Embedding backend used for dense retrieval.",
+    )
+    hash_dimensions: int = Field(
+        384, ge=32, le=4096, description="Vector size when hashing embeddings are selected."
+    )
+    top_k: int = Field(5, ge=1, le=20, description="Maximum evidence chunks returned to the answer step.")
+    dense_top_k: int = Field(30, ge=1, le=100, description="Candidate count for dense retrieval.")
+    bm25_top_k: int = Field(30, ge=1, le=100, description="Candidate count for BM25 retrieval.")
+    source_type: str | None = Field(
+        None, description="Optional source category used to filter retrieval."
+    )
+    max_context_chars: int = Field(
+        12000, ge=1000, le=64000, description="Maximum retrieved context supplied to the LLM."
+    )
+    enable_guardrails: bool = Field(True, description="Enable input, evidence, and output safety checks.")
+    enable_human_review: bool = Field(True, description="Enable routing for cases requiring human review.")
+    enable_langsmith: bool = Field(False, description="Request LangSmith tracing for this operation.")
+    langsmith_project: str | None = Field(
+        None, description="Optional LangSmith project name; uses a domain-specific default if omitted."
+    )
 
 
 class FinancialChatRequest(ChatRequest):
+    """Input for financial report QA, including technique and filing filters."""
+
     technique: Literal[
         "baseline_rag",
         "structured_few_shot",
         "decomposition",
         "self_consistency",
         "agentic_graph",
-    ] = "agentic_graph"
-    retrieval_mode: Literal["dense", "hybrid"] = "hybrid"
-    ticker: str | None = None
-    year: int | None = None
-    self_consistency_samples: int = Field(3, ge=1, le=5)
+    ] = Field("agentic_graph", description="Financial QA workflow to execute.")
+    retrieval_mode: Literal["dense", "hybrid"] = Field(
+        "hybrid", description="Use dense-only or hybrid dense-plus-BM25 retrieval."
+    )
+    ticker: str | None = Field(None, description="Optional company ticker to filter financial evidence.")
+    year: int | None = Field(None, description="Optional fiscal/reporting year filter.")
+    self_consistency_samples: int = Field(
+        3, ge=1, le=5, description="Number of answer samples for the self-consistency technique."
+    )
 
 
 class RetrieveRequest(BaseModel):
-    query: str = Field(..., min_length=1, max_length=4000)
-    embedding_provider: Literal["hashing", "hosted"] = "hashing"
-    hash_dimensions: int = Field(384, ge=32, le=4096)
-    top_k: int = Field(5, ge=1, le=20)
-    dense_top_k: int = Field(30, ge=1, le=100)
-    bm25_top_k: int = Field(30, ge=1, le=100)
-    source_type: str | None = None
-    retrieval_mode: Literal["dense", "hybrid"] = "hybrid"
-    ticker: str | None = None
-    year: int | None = None
-    enable_langsmith: bool = False
-    langsmith_project: str | None = None
+    """Input shared by the financial and non-financial retrieval endpoints."""
+
+    query: str = Field(..., min_length=1, max_length=4000, description="Search query.")
+    embedding_provider: Literal["hashing", "hosted"] = Field(
+        "hashing", description="Embedding backend used for dense retrieval."
+    )
+    hash_dimensions: int = Field(
+        384, ge=32, le=4096, description="Vector size when hashing embeddings are selected."
+    )
+    top_k: int = Field(5, ge=1, le=20, description="Maximum number of evidence records to return.")
+    dense_top_k: int = Field(30, ge=1, le=100, description="Candidate count for dense retrieval.")
+    bm25_top_k: int = Field(30, ge=1, le=100, description="Candidate count for BM25 retrieval.")
+    source_type: str | None = Field(None, description="Optional source category filter.")
+    retrieval_mode: Literal["dense", "hybrid"] = Field(
+        "hybrid", description="Financial retrieval mode; non-financial domains always use hybrid search."
+    )
+    ticker: str | None = Field(None, description="Optional company ticker filter for financial evidence.")
+    year: int | None = Field(None, description="Optional fiscal/reporting year filter.")
+    enable_langsmith: bool = Field(False, description="Request LangSmith tracing for this operation.")
+    langsmith_project: str | None = Field(
+        None, description="Optional LangSmith project name; uses a domain-specific default if omitted."
+    )
 
 
 class ApiResponse(BaseModel):
@@ -243,7 +280,17 @@ class InMemoryRateLimiter:
 app = FastAPI(
     title="Track B Multi-Agent Operations Copilot API",
     version="0.1.0",
-    description="FastAPI backend for LangGraph Agentic RAG, hybrid retrieval, guardrails, HITL, and LangSmith tracing.",
+    summary="Cited, domain-aware retrieval and Agentic RAG services.",
+    description=(
+        "FastAPI backend for the Track B Operations Copilot. Provides health and domain discovery, "
+        "citation-grounded chat, evidence retrieval, guardrails, human-review routing, and optional "
+        "LangSmith tracing. Request and response schemas below are the API contract."
+    ),
+    openapi_tags=[
+        {"name": "System", "description": "Service health and available-domain discovery."},
+        {"name": "Chat", "description": "Run a guarded, citation-grounded answer workflow."},
+        {"name": "Retrieval", "description": "Retrieve and return evidence without generating an answer."},
+    ],
 )
 app.add_middleware(
     CORSMiddleware,
@@ -367,6 +414,9 @@ def get_domain_config(domain: str) -> DomainConfig:
 
 @app.get(
     "/health",
+    summary="Check API health",
+    description="Returns the service status and the domain identifiers accepted by domain-specific routes.",
+    tags=["System"],
     response_model=HealthResponse,
     response_model_exclude_unset=True,
     responses=API_ERROR_RESPONSES,
@@ -381,6 +431,9 @@ def health() -> HealthResponse:
 
 @app.get(
     "/domains",
+    summary="List available domains",
+    description="Returns display metadata and default questions for financial and non-financial domains.",
+    tags=["System"],
     response_model=DomainsResponse,
     response_model_exclude_unset=True,
     responses=API_ERROR_RESPONSES,
@@ -409,6 +462,12 @@ def domains() -> DomainsResponse:
 
 @app.post(
     "/chat/financial_report_qa",
+    summary="Answer a financial-report question",
+    description=(
+        "Runs the selected financial QA technique over annual-report evidence. "
+        "Optional ticker and year fields constrain the source evidence."
+    ),
+    tags=["Chat"],
     response_model=FinancialChatResponse,
     response_model_exclude_unset=True,
     responses=API_ERROR_RESPONSES,
@@ -454,6 +513,13 @@ def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
 
 @app.post(
     "/chat/{domain}",
+    summary="Answer a domain question",
+    description=(
+        "Runs the shared guarded Agentic RAG workflow for a non-financial domain. "
+        "Supported domain identifiers are returned by `GET /domains`. "
+        "Financial report QA uses the dedicated `/chat/financial_report_qa` operation."
+    ),
+    tags=["Chat"],
     response_model=ChatResponse,
     response_model_exclude_unset=True,
     responses=API_ERROR_RESPONSES,
@@ -505,6 +571,9 @@ def chat_domain(domain: str, request: ChatRequest) -> dict[str, Any]:
 
 @app.post(
     "/retrieve/financial_report_qa",
+    summary="Retrieve financial-report evidence",
+    description="Searches annual-report evidence and returns ranked records without generating an answer.",
+    tags=["Retrieval"],
     response_model=RetrieveResponse,
     response_model_exclude_unset=True,
     responses=API_ERROR_RESPONSES,
@@ -557,6 +626,13 @@ def retrieve_financial(request: RetrieveRequest) -> dict[str, Any]:
 
 @app.post(
     "/retrieve/{domain}",
+    summary="Retrieve domain evidence",
+    description=(
+        "Searches a non-financial domain's corpus and returns ranked evidence records. "
+        "Supported domain identifiers are returned by `GET /domains`; financial retrieval uses "
+        "the dedicated `/retrieve/financial_report_qa` operation."
+    ),
+    tags=["Retrieval"],
     response_model=RetrieveResponse,
     response_model_exclude_unset=True,
     responses=API_ERROR_RESPONSES,
