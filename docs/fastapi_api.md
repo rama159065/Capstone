@@ -92,7 +92,9 @@ Successful retrieval responses contain `domain`, `query`, `langsmith`, `count`, 
 
 ## Responses
 
-Chat responses include the domain and final status, and may include the answer, an `explanation`, citation checks, evidence previews, guardrail decisions, human-review information, orchestration metadata, elapsed time, and LangSmith tracing status. The explanation summarizes observable workflow results: retrieved evidence count and citation validation for answers, or the relevant refusal/review checks when an answer is withheld or escalated. It is not hidden chain-of-thought. Fields not produced by a particular workflow may be omitted.
+Chat responses include the domain and final status, and may include the answer, an `explanation`, `grounding` status, citation checks, evidence previews, guardrail decisions, human-review information, orchestration metadata, elapsed time, and LangSmith tracing status. The API only returns a generated answer when there is retrieved evidence and citation validation reports cited chunk IDs that belong to that evidence. Otherwise, it withholds the generated answer (`answer: null`, `final_status: "not_grounded"`) and explains the reason. A guardrail refusal is marked `not_applicable` for answer grounding because no generated answer is being returned.
+
+The `grounding` object reports `status` (`grounded`, `not_grounded`, or `not_applicable`), evidence count, cited chunk IDs, and a reason. This is a citation/evidence consistency check, not a guarantee that every factual claim is entailed by its cited passage or is factually correct. The explanation does not expose hidden chain-of-thought.
 
 `GET /health` returns `status`, `service`, and `domains`. `GET /domains` returns a `domains` array with each domain's identifier, display name, description, and default query; non-financial domains also include their supported `source_types`.
 

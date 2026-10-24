@@ -195,6 +195,13 @@ class CitationCheckResponse(ApiResponse):
     allowed_chunk_ids: list[str] | None = None
 
 
+class GroundingResponse(BaseModel):
+    status: Literal["grounded", "not_grounded", "not_applicable"]
+    evidence_count: int
+    cited_chunk_ids: list[str]
+    reason: str
+
+
 class ChatResponse(ApiResponse):
     domain: str
     display_name: str | None = None
@@ -209,6 +216,7 @@ class ChatResponse(ApiResponse):
             "citation checks, safety checks, or human-review triggers."
         ),
     )
+    grounding: GroundingResponse | None = None
     langsmith: LangSmithResponse | None = None
     security: dict[str, Any] | None = None
     plain_text: dict[str, Any] | None = None
@@ -486,6 +494,9 @@ def trace_request_metadata() -> dict[str, str]:
 def explain_chat_result(result: dict[str, Any]) -> str:
     """Summarize the observable evidence and checks behind a chat outcome."""
     status = str(result.get("final_status") or "unknown")
+    grounding = result.get("grounding") or {}
+    if grounding.get("status") == "not_grounded":
+        return str(grounding["reason"])
     security = result.get("security") or {}
     plain_text = result.get("plain_text") or {}
     evidence_guard = result.get("evidence_guard") or {}
@@ -531,6 +542,71 @@ def explain_chat_result(result: dict[str, Any]) -> str:
         f"The answer used {len(evidence)} retrieved evidence item(s), "
         "but citation validation did not confirm its citations."
     )
+
+
+def apply_grounding_policy(result: dict[str, Any]) -> dict[str, Any]:
+    """Withhold answers unless citations validate against retrieved evidence IDs."""
+    if result.get("final_status") == "refused":
+        result["grounding"] = {
+            "status": "not_applicable",
+            "evidence_count": 0,
+            "cited_chunk_ids": [],
+            "reason": "The request was refused before an answer was provided.",
+        }
+        return result
+
+    evidence = result.get("evidence") or result.get("evidence_preview") or []
+    evidence_ids = {
+        str(item["chunk_id"])
+        for item in evidence
+        if isinstance(item, dict) and item.get("chunk_id") is not None
+    }
+    evidence_ids.update(
+        str(chunk_id) for chunk_id in result.get("evidence_chunk_ids", []) if chunk_id is not None
+    )
+    citation_check = result.get("citation_check") or {}
+    cited_ids = {
+        str(chunk_id)
+        for chunk_id in citation_check.get("cited_chunk_ids", [])
+        if chunk_id is not None
+    }
+    allowed_ids = {
+        str(chunk_id)
+        for chunk_id in citation_check.get("allowed_chunk_ids", [])
+        if chunk_id is not None
+    }
+    valid = (
+        bool(result.get("answer"))
+        and bool(evidence_ids)
+        and citation_check.get("valid") is True
+        and bool(cited_ids)
+        and cited_ids <= evidence_ids
+        and (not allowed_ids or cited_ids <= allowed_ids)
+    )
+    if valid:
+        result["grounding"] = {
+            "status": "grounded",
+            "evidence_count": len(evidence_ids),
+            "cited_chunk_ids": sorted(cited_ids),
+            "reason": "Citation validation matched the answer citations to retrieved evidence.",
+        }
+        return result
+
+    result["answer"] = None
+    result["final_status"] = "not_grounded"
+    if not evidence_ids:
+        reason = "The answer was withheld because no retrieved evidence was available."
+    elif not cited_ids:
+        reason = "The answer was withheld because it did not cite any retrieved evidence."
+    else:
+        reason = "The answer was withheld because its citations did not validate against retrieved evidence."
+    result["grounding"] = {
+        "status": "not_grounded",
+        "evidence_count": len(evidence_ids),
+        "cited_chunk_ids": sorted(cited_ids),
+        "reason": reason,
+    }
+    return result
 
 
 def financial_config_from_request(request: FinancialChatRequest | RetrieveRequest) -> AgentConfig:
@@ -652,7 +728,7 @@ def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
             **trace_request_metadata(),
         },
     )
-    summarized_result = summarize_result(result)
+    summarized_result = apply_grounding_policy(summarize_result(result))
     return {
         "domain": FINANCIAL_DOMAIN,
         "display_name": "Financial Report QA",
@@ -719,6 +795,7 @@ def chat_domain(domain: str, request: ChatRequest) -> dict[str, Any]:
         enable_human_review=request.enable_human_review,
     )
     result["langsmith"] = langsmith
+    apply_grounding_policy(result)
     result["explanation"] = explain_chat_result(result)
     return result
 

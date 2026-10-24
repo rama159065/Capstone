@@ -300,6 +300,8 @@ Enable LangSmith for API calls by setting `LANGSMITH_API_KEY` and either passing
 
 API access logs include request IDs, route, status, and duration without recording request bodies or prompts. Each response returns `X-Request-ID`; when LangSmith tracing is active, the ID is attached as trace metadata. See [docs/fastapi_api.md](docs/fastapi_api.md#request-logging-and-trace-correlation).
 
+Chat endpoints return generated answers only when citations validate against retrieved evidence; otherwise the answer is withheld and the response explains the grounding failure. This verifies evidence/citation consistency, not semantic entailment or factual correctness.
+
 ## Execute By Domain
 
 Use hashing embeddings and mock LLM mode for local smoke tests. For final capstone runs, replace `--embedding-provider hashing` with `--embedding-provider hosted` after setting the embedding endpoint variables, and use `--llm-provider hosted` after setting the chat endpoint variables.

@@ -135,6 +135,55 @@ def test_chat_explanation_describes_refusal_and_review_reasons() -> None:
     assert "citation_failure" in review
 
 
+def test_chat_endpoint_withholds_answer_without_valid_evidence_citations(monkeypatch) -> None:
+    monkeypatch.setattr(
+        api_app,
+        "run_domain_agent",
+        lambda domain_config, **kwargs: {
+            "domain": domain_config.domain,
+            "display_name": domain_config.display_name,
+            "final_status": "answered",
+            "query": kwargs["query"],
+            "answer": "Unsupported answer [unknown_chunk].",
+            "citation_check": {
+                "valid": True,
+                "cited_chunk_ids": ["unknown_chunk"],
+                "allowed_chunk_ids": ["chunk_1"],
+            },
+            "evidence": [{"chunk_id": "chunk_1", "preview": "available evidence"}],
+        },
+    )
+    client = TestClient(api_app.app)
+
+    response = client.post("/chat/travel_expense", json={"query": "test query"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["answer"] is None
+    assert payload["final_status"] == "not_grounded"
+    assert payload["grounding"]["status"] == "not_grounded"
+    assert "withheld" in payload["explanation"]
+
+
+def test_grounding_policy_marks_citation_checked_answer() -> None:
+    result = {
+        "final_status": "answered",
+        "answer": "The policy says to keep receipts (chunk_1).",
+        "citation_check": {
+            "valid": True,
+            "cited_chunk_ids": ["chunk_1"],
+            "allowed_chunk_ids": ["chunk_1"],
+        },
+        "evidence": [{"chunk_id": "chunk_1", "preview": "receipt policy"}],
+    }
+
+    response = api_app.apply_grounding_policy(result)
+
+    assert response["answer"] == "The policy says to keep receipts (chunk_1)."
+    assert response["grounding"]["status"] == "grounded"
+    assert response["grounding"]["cited_chunk_ids"] == ["chunk_1"]
+
+
 def test_invalid_chat_request_returns_validation_error() -> None:
     client = TestClient(api_app.app)
 
@@ -210,6 +259,7 @@ def test_fastapi_documents_response_models() -> None:
     assert chat_operation["description"]
     assert "429" in chat_operation["responses"]
     assert "explanation" in schemas["ChatResponse"]["properties"]
+    assert "grounding" in schemas["ChatResponse"]["properties"]
     query_field = schemas["ChatRequest"]["properties"]["query"]
     assert query_field["minLength"] == 1
     assert query_field["maxLength"] == 4000
