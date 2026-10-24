@@ -2,6 +2,8 @@
 
 The FastAPI backend exposes domain discovery, guarded chat, and evidence retrieval. Request validation, response schemas, and endpoint descriptions are also published in the interactive API documentation.
 
+Streaming is not currently implemented. The proposed SSE architecture, event contract, security controls, grounding gates, and HITL workflow are described in the [FastAPI streaming design](fastapi_streaming_design.md).
+
 ## Start the API
 
 From the repository root, start the server:

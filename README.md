@@ -267,7 +267,7 @@ Run the backend:
 uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
 ```
 
-Interactive docs are available at `http://127.0.0.1:8000/docs` (Swagger UI) and `http://127.0.0.1:8000/redoc` (ReDoc). The raw OpenAPI schema is at `http://127.0.0.1:8000/openapi.json`. See [docs/fastapi_api.md](docs/fastapi_api.md) for request fields, response shapes, error codes, examples, rate limits, and tracing setup.
+Interactive docs are available at `http://127.0.0.1:8000/docs` (Swagger UI) and `http://127.0.0.1:8000/redoc` (ReDoc). The raw OpenAPI schema is at `http://127.0.0.1:8000/openapi.json`. See [docs/fastapi_api.md](docs/fastapi_api.md) for request fields, response shapes, error codes, examples, rate limits, and tracing setup. Streaming is not implemented; see the [proposed FastAPI streaming design](docs/fastapi_streaming_design.md).
 
 Useful endpoints:
 
