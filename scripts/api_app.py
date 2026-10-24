@@ -6,11 +6,15 @@ Run locally:
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import JSONResponse
 
 from scripts.competitive_research.domain_config import DOMAIN_CONFIG as COMPETITIVE_CONFIG
 from scripts.domain_common.langsmith_utils import configure_langsmith, env_flag, run_traced
@@ -44,6 +48,7 @@ NON_FINANCIAL_DOMAINS: dict[str, DomainConfig] = {
 }
 FINANCIAL_DOMAIN = "financial_report_qa"
 ALL_DOMAINS = (FINANCIAL_DOMAIN, *NON_FINANCIAL_DOMAINS.keys())
+logger = logging.getLogger(__name__)
 
 
 class ChatRequest(BaseModel):
@@ -179,6 +184,19 @@ class RetrieveResponse(ApiResponse):
     evidence: list[EvidenceResponse]
 
 
+class ApiErrorResponse(BaseModel):
+    error: str
+    message: str
+    details: list[dict[str, str]] | None = None
+
+
+API_ERROR_RESPONSES = {
+    404: {"model": ApiErrorResponse, "description": "The requested domain was not found."},
+    422: {"model": ApiErrorResponse, "description": "The request failed validation."},
+    500: {"model": ApiErrorResponse, "description": "An unexpected server error occurred."},
+}
+
+
 app = FastAPI(
     title="Track B Multi-Agent Operations Copilot API",
     version="0.1.0",
@@ -191,6 +209,63 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def handle_http_exception(
+    request: Request,
+    exc: StarletteHTTPException,
+) -> JSONResponse:
+    del request
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ApiErrorResponse(
+            error="http_error",
+            message=str(exc.detail),
+        ).model_dump(exclude_none=True),
+        headers=exc.headers,
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_request_validation_error(
+    request: Request,
+    exc: RequestValidationError,
+) -> JSONResponse:
+    del request
+    details = [
+        {
+            "field": ".".join(str(part) for part in error["loc"]),
+            "message": error["msg"],
+            "type": error["type"],
+        }
+        for error in exc.errors()
+    ]
+    return JSONResponse(
+        status_code=422,
+        content=ApiErrorResponse(
+            error="validation_error",
+            message="Request validation failed.",
+            details=details,
+        ).model_dump(exclude_none=True),
+    )
+
+
+@app.exception_handler(Exception)
+async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception(
+        "Unhandled API exception for %s %s",
+        request.method,
+        request.url.path,
+        exc_info=exc,
+    )
+    return JSONResponse(
+        status_code=500,
+        content=ApiErrorResponse(
+            error="internal_server_error",
+            message="An unexpected error occurred. Please try again later.",
+        ).model_dump(exclude_none=True),
+    )
 
 
 def configure_request_tracing(
@@ -230,7 +305,12 @@ def get_domain_config(domain: str) -> DomainConfig:
         raise HTTPException(status_code=404, detail=f"Unknown domain: {domain}") from exc
 
 
-@app.get("/health", response_model=HealthResponse, response_model_exclude_unset=True)
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    response_model_exclude_unset=True,
+    responses=API_ERROR_RESPONSES,
+)
 def health() -> HealthResponse:
     return {
         "status": "ok",
@@ -239,7 +319,12 @@ def health() -> HealthResponse:
     }
 
 
-@app.get("/domains", response_model=DomainsResponse, response_model_exclude_unset=True)
+@app.get(
+    "/domains",
+    response_model=DomainsResponse,
+    response_model_exclude_unset=True,
+    responses=API_ERROR_RESPONSES,
+)
 def domains() -> DomainsResponse:
     rows = [
         {
@@ -266,6 +351,7 @@ def domains() -> DomainsResponse:
     "/chat/financial_report_qa",
     response_model=FinancialChatResponse,
     response_model_exclude_unset=True,
+    responses=API_ERROR_RESPONSES,
 )
 def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
     langsmith = configure_request_tracing(
@@ -306,7 +392,12 @@ def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
     }
 
 
-@app.post("/chat/{domain}", response_model=ChatResponse, response_model_exclude_unset=True)
+@app.post(
+    "/chat/{domain}",
+    response_model=ChatResponse,
+    response_model_exclude_unset=True,
+    responses=API_ERROR_RESPONSES,
+)
 def chat_domain(domain: str, request: ChatRequest) -> dict[str, Any]:
     if domain == FINANCIAL_DOMAIN:
         return chat_financial(FinancialChatRequest(**request.model_dump()))
@@ -356,6 +447,7 @@ def chat_domain(domain: str, request: ChatRequest) -> dict[str, Any]:
     "/retrieve/financial_report_qa",
     response_model=RetrieveResponse,
     response_model_exclude_unset=True,
+    responses=API_ERROR_RESPONSES,
 )
 def retrieve_financial(request: RetrieveRequest) -> dict[str, Any]:
     langsmith = configure_request_tracing(
@@ -403,7 +495,12 @@ def retrieve_financial(request: RetrieveRequest) -> dict[str, Any]:
     }
 
 
-@app.post("/retrieve/{domain}", response_model=RetrieveResponse, response_model_exclude_unset=True)
+@app.post(
+    "/retrieve/{domain}",
+    response_model=RetrieveResponse,
+    response_model_exclude_unset=True,
+    responses=API_ERROR_RESPONSES,
+)
 def retrieve_domain(domain: str, request: RetrieveRequest) -> dict[str, Any]:
     if domain == FINANCIAL_DOMAIN:
         return retrieve_financial(request)

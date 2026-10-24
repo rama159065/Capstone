@@ -64,6 +64,48 @@ def test_chat_domain_validates_agent_response(monkeypatch) -> None:
     )
 
     assert response.status_code == 500
+    assert response.json() == {
+        "error": "internal_server_error",
+        "message": "An unexpected error occurred. Please try again later.",
+    }
+
+
+def test_invalid_chat_request_returns_validation_error() -> None:
+    client = TestClient(api_app.app)
+
+    response = client.post("/chat/travel_expense", json={"query": ""})
+
+    assert response.status_code == 422
+    payload = response.json()
+    assert payload["error"] == "validation_error"
+    assert payload["message"] == "Request validation failed."
+    assert payload["details"][0]["field"] == "body.query"
+
+
+def test_unknown_domain_returns_http_error_message() -> None:
+    client = TestClient(api_app.app)
+
+    response = client.post("/chat/not_a_domain", json={"query": "hello"})
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": "http_error",
+        "message": "Unknown domain: not_a_domain",
+    }
+
+
+def test_unhandled_service_exception_returns_safe_error(monkeypatch) -> None:
+    def raise_service_error(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise RuntimeError("internal service detail")
+
+    monkeypatch.setattr(api_app, "run_domain_agent", raise_service_error)
+    client = TestClient(api_app.app, raise_server_exceptions=False)
+
+    response = client.post("/chat/travel_expense", json={"query": "hello"})
+
+    assert response.status_code == 500
+    assert response.json()["error"] == "internal_server_error"
+    assert "internal service detail" not in response.text
 
 
 def test_fastapi_documents_response_models() -> None:
