@@ -7,6 +7,8 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "rapidocr>=3,<4",
+    "onnxruntime>=1.17,<2",
     "qdrant-client>=1.12,<2",
     "pymupdf>=1.24,<2",
     "reportlab>=4,<5",

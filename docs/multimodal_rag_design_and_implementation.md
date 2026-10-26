@@ -1,12 +1,12 @@
 # Multimodal RAG: Design, Implementation, and Validation
 
-Updated: 26 October 2026.
+Updated: 27 October 2026.
 
 ## 1. Purpose and implementation status
 
 The application answers questions from PDF text, tables, charts, graphs, and images using local retrieval and a local vision-language model (VLM). A common pipeline supports all six application domains. The complete CPU profile has been exercised with three independent PDFs containing text, a table, and an image-only chart.
 
-**Recorded validation:** 104 regression tests passed with the ColPali integration. The earlier nine summary-based end-to-end inference checks also passed: they called the FastAPI application through `TestClient` and used the real local Qwen model over HTTP without mocked answers. Real ColPali page-vector storage and table/chart MaxSim retrieval are recorded separately in [the ColPali report](colpali_validation_results.md). These results cover the supplied synthetic fixtures, rather than establish accuracy for arbitrary PDFs or all domain corpora.
+**Recorded validation:** 112 regression tests passed with selective OCR and ColPali integration. The earlier nine summary-based end-to-end inference checks also passed: they called the FastAPI application through `TestClient` and used the real local Qwen model over HTTP without mocked answers. Real ColPali page-vector storage and table/chart MaxSim retrieval are recorded in [the ColPali report](colpali_validation_results.md); actual scanned-page and image-region OCR retrieval is recorded in [the OCR report](ocr_validation_results.md). These results cover the supplied synthetic fixtures, rather than establish accuracy for arbitrary PDFs or all domain corpora.
 
 This implementation follows the summary-based visual retrieval alternative in section 7 of [the original architecture](qdrant_multimodal_rag_architecture.md). Visual pages become searchable through extracted text, table Markdown, and VLM captions. Retrieved page images are supplied to the VLM again when answering.
 
@@ -85,11 +85,11 @@ The two Qwen GGUF files total approximately 1.55 GB on disk. This is model-file 
 1. Validate the domain and calculate the PDF's SHA-256 hash as `doc_id`.
 2. Check SQLite for a completed ingestion with the same hash and pipeline signature. Skip it unless `force=True`.
 3. Record `processing` and copy the original into the managed object directory.
-4. Extract each page's text in sorted reading order and detect tables using PyMuPDF.
+4. Extract each page's text in sorted reading order and detect tables using PyMuPDF. Apply selective RapidOCR only to scanned pages or uncovered image regions; preserve recognized lines, confidence, and coordinates.
 5. Convert detected tables into Markdown-like rows and retain them in the payload.
 6. Classify a page as visual-rich if it has a table, raster images, more than four drawing objects, or no extracted text.
 7. Render visual pages to PNG using a 1.5 scale matrix. With a configured vision backend, generate a caption containing readable values, labels, and trends.
-8. Combine extracted text, table text, and the visual caption. Split into windows of up to **400 whitespace-separated words**, advancing by 350 words: 50 words of overlap for full windows. This is word-based chunking, not the original proposal's tokenizer-based chunking.
+8. Combine extracted text, table text, accepted OCR text, and the visual caption. Split into windows of up to **400 whitespace-separated words**, advancing by 350 words: 50 words of overlap for full windows. This is word-based chunking, not the original proposal's tokenizer-based chunking.
 9. Embed each chunk and upsert deterministic Qdrant points.
 10. Record successful completion and update the source-path mapping. A changed PDF at the same path replaces the preceding version's vectors after the new version is indexed.
 
@@ -149,6 +149,7 @@ Dense vectors are normalized learned embeddings in the complete profile. The lig
 | `content_type` | Text, table, chart, or image |
 | `visual_rich`, `visual_captioned` | Page-routing and caption status |
 | `text` | Combined chunk content |
+| `ocr_text`, `ocr_mode`, `ocr_blocks`, `ocr_signature` | Selective OCR text, routing, recognized-line provenance, and configuration signature |
 | `table_markdown` | Extracted table rows |
 | `source_uri`, `source_url` | Local original-PDF URI |
 | `page_image_uri`, `image_path` | Rendered-page references, when available |
@@ -381,7 +382,7 @@ Times are observations from this CPU run, not service guarantees; they exclude i
 .venv/Scripts/python.exe -m scripts.run_local_multimodal evaluate
 ```
 
-Current regression outcome with ColPali: **104 passed**. Historical Qwen summary-based model/API outcome: **9/9 passed**. The serialization unit test uses a mocked HTTP response to inspect request bytes; the separate nine inference cases use the actual local model. ColPali has its own actual-model retrieval and storage evaluation.
+Current regression outcome with OCR and ColPali: **112 passed**. Historical Qwen summary-based model/API outcome: **9/9 passed**. The serialization unit test uses a mocked HTTP response to inspect request bytes; the separate nine inference cases use the actual local model. ColPali and selective OCR have their own actual-model retrieval and storage evaluations.
 
 Evidence artifacts:
 
@@ -401,12 +402,12 @@ Evidence artifacts:
 | Model fails to start | Inspect `indexes/runtime/llama.cpp/server.log` |
 | Embedding identifier mismatch | Use a new index directory and reingest |
 | Changed vision configuration | Pipeline signature triggers reprocessing; `--force` is also available |
-| No configured vision backend | Text/table extraction remains available; image-only visual interpretation is unavailable |
+| No configured vision backend | Native text, table extraction, and selective OCR remain available; visual relationship/image reasoning requires a vision backend |
 | Decorative or sparse vector graphics | Routing heuristics can over-classify or miss visual content |
 | Long or complex documents | Word chunks, encoder input limits, context caps, and image caps need corpus-specific evaluation |
 | External Qdrant | Keep filesystem objects and SQLite metadata accessible and consistent; do not share collections with incompatible embedding configurations |
 
-The current implementation has no dedicated OCR engine, table-cell bounding-box schema, or semantic layout parser. An optional ColPali path now supplies independent page multivectors and visual retrieval; see [ColPali implementation and Qdrant storage](colpali_qdrant.md). Scanned pages can also be interpreted by the answer VLM. There is no atomic force-reindex transaction, source-deletion reconciliation, multi-path content-reference management, distributed ingestion workers, authentication layer added by this feature, or production backup workflow.
+The implementation now includes a dedicated selective RapidOCR engine with recognized-line polygons; see [OCR routing and text-vector backfill](selective_ocr.md). It does not include OCR-based table-cell reconstruction or a full semantic layout parser. The optional ColPali path supplies independent page multivectors and visual retrieval; see [ColPali implementation and Qdrant storage](colpali_qdrant.md). Scanned pages can also be interpreted by the answer VLM. There is no atomic force-reindex transaction, source-deletion reconciliation, multi-path content-reference management, distributed ingestion workers, authentication layer added by this feature, or production backup workflow.
 
 The smaller SmolVLM-500M model was tested during development and gave the wrong chart trend. The validated default is Qwen3-VL; the optional Transformers and Ollama backends should be evaluated independently with their selected models. Broader accuracy, difficult scans, dense charts, and large-scale performance remain unmeasured.
 
@@ -416,3 +417,4 @@ The smaller SmolVLM-500M model was tested during development and gave the wrong 
 - [Local quick-start guide](local_multimodal_rag.md)
 - [Recorded actual inference report](multimodal_validation_results.md)
 - [ColPali implementation and Qdrant storage](colpali_qdrant.md)
+- [Selective OCR fallback and text-vector storage](selective_ocr.md)

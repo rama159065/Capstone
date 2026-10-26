@@ -4,6 +4,8 @@ For the consolidated architecture, implementation, schemas, API contract, config
 
 ColPali page multivectors can now be written to the same Qdrant database. See [ColPali implementation and Qdrant storage](colpali_qdrant.md) for checkpoint preparation, backfill, MaxSim queries, and `serve --colpali`.
 
+Selective CPU OCR is enabled for scanned pages and uncovered image regions. OCR text uses the same `docs_text` embeddings as native text. Run `python -m scripts.ocr_index` to enrich the existing index without recomputing ColPali matrices; see [selective OCR documentation](selective_ocr.md).
+
 This implements section 7 (the lighter alternative) of `qdrant_multimodal_rag_architecture.md` for all six application domains. Original PDFs and rendered visual pages live on the filesystem; SQLite records ingestion status and hashes. One shared Qdrant `docs_text` collection stores domain-filtered dense and sparse vectors. The Query API fuses dense and BM25-style sparse candidates with RRF and expands the matching page's context.
 
 ## Complete local CPU profile
@@ -69,7 +71,7 @@ $env:RAG_VISION_MODEL="YOUR_INSTALLED_VISION_MODEL"
 .venv/Scripts/python.exe -m scripts.domain_common.multimodal_rag query --domain hr_policy --provider ollama --query "Describe the review process diagram"
 ```
 
-Set the same environment variable before starting the API and use `provider="ollama"`. Ingestion asks the model to caption visual pages, including chart values and trends; answering sends retrieved text plus up to three unique page images to the model. Model/service errors are surfaced rather than silently replaced with invented captions. Without this model, retrieval uses extracted text and tables; extractive mode returns labelled evidence excerpts. It cannot interpret image-only charts or scanned text.
+Set the same environment variable before starting the API and use `provider="ollama"`. Ingestion asks the model to caption visual pages, including chart values and trends; answering sends retrieved text plus up to three unique page images to the model. Model/service errors are surfaced rather than silently replaced with invented captions. Without a vision model, retrieval still uses native text, extracted tables, and selective OCR text; extractive mode returns labelled evidence excerpts. OCR can read scanned text and chart labels, while visual relationships and image reasoning still require the vision path.
 
 ## Existing app integration
 

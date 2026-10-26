@@ -481,3 +481,5 @@ See [the local setup guide](docs/local_multimodal_rag.md) for PDF ingestion, hyb
 The complete CPU profile uses learned embeddings, a cross-encoder reranker, and a local Qwen vision model. Run `.venv/Scripts/python.exe -m scripts.run_local_multimodal evaluate` to validate text, tables, and an image-only chart; run the same module with `serve` to start the prepared local API and model service.
 
 For ColPali page multivectors and Qdrant MaxSim retrieval, see [ColPali implementation and Qdrant storage](docs/colpali_qdrant.md). Backfill the existing index with `python -m scripts.colpali_index backfill`, then start the API with `python -m scripts.run_local_multimodal serve --colpali`.
+
+Selective OCR now adds scanned-page and embedded-image text to the same text-vector collection. Use `python -m scripts.ocr_index` to backfill existing PDFs; see [OCR implementation and validation](docs/selective_ocr.md).
