@@ -502,6 +502,9 @@ def retrieve_hybrid(
     hash_dimensions: int,
     source_type: str | None,
 ) -> list[dict[str, Any]]:
+    if os.getenv("RAG_BACKEND") == "qdrant":
+        from scripts.domain_common.multimodal_rag import retrieve_local
+        return retrieve_local(domain_config.domain, query, top_k, source_type=source_type)
     rows = read_jsonl(domain_paths(domain_config.domain)["chunks"])
     dense_hits = dense_search(
         domain_config, query, dense_top_k, embedding_provider, hash_dimensions, source_type

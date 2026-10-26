@@ -606,6 +606,10 @@ def safe_json_loads(text: str, fallback: dict[str, Any]) -> dict[str, Any]:
 
 
 def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
+    if os.getenv("RAG_BACKEND") == "qdrant":
+        from scripts.domain_common.multimodal_rag import retrieve_local
+        return retrieve_local("financial_report_qa", config.query, config.top_k,
+                              source_type=config.source_type, ticker=config.ticker, year=config.year)
     indexer = load_indexer_module()
     client = chromadb.PersistentClient(path=str(DEFAULT_INDEX_DIR))
     collection = client.get_collection(DEFAULT_COLLECTION)

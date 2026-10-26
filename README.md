@@ -471,5 +471,9 @@ Current coverage includes:
 
 - Hashing embeddings are for local smoke tests and deterministic CI-style checks.
 - Hosted embeddings and hosted chat APIs should be used for final capstone inference runs.
-- ChromaDB is the project vector database.
+- ChromaDB is the default vector database; local Qdrant is available for multimodal PDF RAG.
 - Downloaded PDFs, processed chunks, Chroma indexes, outputs, and eval artifacts are generated files and are excluded from git.
+
+## Local Qdrant multimodal RAG
+
+See [the local setup guide](docs/local_multimodal_rag.md) for PDF ingestion, hybrid retrieval, image-aware local answers, and six included sample PDFs covering all domains. Set `RAG_BACKEND=qdrant` to use Qdrant from the existing app.

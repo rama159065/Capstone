@@ -148,6 +148,15 @@ class ApiResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
+class MultimodalRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=4000)
+    top_k: int = Field(5, ge=1, le=10)
+    provider: Literal["extractive", "ollama"] = "extractive"
+    source_type: str | None = None
+    ticker: str | None = None
+    year: int | None = None
+
+
 class HealthResponse(ApiResponse):
     status: Literal["ok"]
     service: str
@@ -907,3 +916,32 @@ def retrieve_domain(domain: str, request: RetrieveRequest) -> dict[str, Any]:
         "count": len(hits),
         "evidence": summarize_evidence(hits),
     }
+
+
+@app.post("/multimodal/{domain}/retrieve", tags=["Multimodal RAG"])
+def retrieve_multimodal(domain: str, request: MultimodalRequest) -> dict[str, Any]:
+    if domain not in ALL_DOMAINS:
+        raise HTTPException(status_code=404, detail="Unknown domain")
+    from scripts.domain_common.multimodal_rag import retrieve_local
+    hits = retrieve_local(domain, request.query, request.top_k, source_type=request.source_type,
+                          ticker=request.ticker, year=request.year)
+    return {"domain": domain, "count": len(hits), "evidence": hits}
+
+
+@app.post("/multimodal/{domain}/chat", tags=["Multimodal RAG"])
+def chat_multimodal(domain: str, request: MultimodalRequest) -> dict[str, Any]:
+    if domain not in ALL_DOMAINS:
+        raise HTTPException(status_code=404, detail="Unknown domain")
+    from scripts.domain_common.rag_agent import input_guard
+    from scripts.domain_common.multimodal_rag import LOCK, get_rag
+    guard = input_guard(request.query)
+    if guard["decision"] != "allow":
+        return {"domain": domain, "final_status": "refused", "security": guard,
+                "answer": "The query requires review.", "evidence": []}
+    try:
+        with LOCK:
+            return get_rag().answer(domain, guard["sanitized_query"], request.top_k,
+                                    request.provider, source_type=request.source_type,
+                                    ticker=request.ticker, year=request.year)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=503, detail="Local vision service unavailable; check RAG_VISION_MODEL and Ollama.") from exc
