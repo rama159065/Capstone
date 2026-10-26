@@ -947,3 +947,17 @@ def chat_multimodal(domain: str, request: MultimodalRequest) -> dict[str, Any]:
                                     ticker=request.ticker, year=request.year)
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=503, detail="Local vision service unavailable; check the configured model and runtime logs.") from exc
+
+
+@app.post("/multimodal/{domain}/visual/retrieve", tags=["Multimodal RAG"])
+def retrieve_visual_multimodal(domain: str, request: MultimodalRequest) -> dict[str, Any]:
+    if domain not in ALL_DOMAINS:
+        raise HTTPException(status_code=404, detail="Unknown domain")
+    from scripts.domain_common.multimodal_rag import LOCK, get_rag
+    try:
+        with LOCK:
+            hits = get_rag().retrieve_visual(domain, request.query, request.top_k,
+                source_type=request.source_type, ticker=request.ticker, year=request.year)
+        return {"domain": domain, "retriever": "colpali_maxsim", "count": len(hits), "evidence": hits}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=503, detail="ColPali retrieval unavailable; check model configuration and visual index.") from exc

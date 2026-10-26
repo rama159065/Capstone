@@ -40,6 +40,9 @@ dependencies = [
 [project.scripts]
 capstone-global = "capstone_global:main"
 
+[project.optional-dependencies]
+colpali = ["bitsandbytes>=0.48,<1"]
+
 [build-system]
 requires = ["uv_build>=0.12.23,<0.13.0"]
 build-backend = "uv_build"

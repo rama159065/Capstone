@@ -2,6 +2,8 @@
 
 For the consolidated architecture, implementation, schemas, API contract, configuration, and verified results, see [Multimodal RAG: Design, Implementation, and Validation](multimodal_rag_design_and_implementation.md).
 
+ColPali page multivectors can now be written to the same Qdrant database. See [ColPali implementation and Qdrant storage](colpali_qdrant.md) for checkpoint preparation, backfill, MaxSim queries, and `serve --colpali`.
+
 This implements section 7 (the lighter alternative) of `qdrant_multimodal_rag_architecture.md` for all six application domains. Original PDFs and rendered visual pages live on the filesystem; SQLite records ingestion status and hashes. One shared Qdrant `docs_text` collection stores domain-filtered dense and sparse vectors. The Query API fuses dense and BM25-style sparse candidates with RRF and expands the matching page's context.
 
 ## Complete local CPU profile
@@ -87,6 +89,6 @@ Use `--domain` to ingest a single domain and `--force` to recaption/reindex unch
 
 The samples contain text, a ruled table, labelled vector bar/line charts, and a raster process diagram. All data is fictional. PyMuPDF routes pages using tables, raster images, and drawing counts; this heuristic can miss sparse vector diagrams or classify decorative pages as visual. Image-only pages are always rendered.
 
-The lightweight demo uses hashing embeddings; the complete profile uses learned embeddings and cross-encoder reranking. Sparse vectors use BM25 saturation with a fixed reference document length plus Qdrant corpus IDF. This implementation follows the architecture's summary-based visual retrieval alternative; the optional ColPali multivector tier, S3/MinIO, and production-scale workers are outside this local small-corpus profile. Scanned/image-only content is interpreted by the VLM. Captions are generated from actual images, not synthetic sidecars. Page expansion is capped at 100 chunks/16,000 characters. The application renders source identifiers for locally generated answers; identifier validation does not establish factual entailment. The inference evaluation independently checks expected answer values.
+The lightweight demo uses hashing embeddings; the complete profile uses learned embeddings and cross-encoder reranking. Sparse vectors use BM25 saturation with a fixed reference document length plus Qdrant corpus IDF. This implementation follows the architecture's summary-based visual retrieval alternative; ColPali multivectors are available when enabled, while S3/MinIO and production-scale workers remain outside this local small-corpus profile. Scanned/image-only content is interpreted by the VLM. Captions are generated from actual images, not synthetic sidecars. Page expansion is capped at 100 chunks/16,000 characters. The application renders source identifiers for locally generated answers; identifier validation does not establish factual entailment. The inference evaluation independently checks expected answer values.
 
 Validation: `.venv/Scripts/python.exe -m pytest tests/test_multimodal_rag.py tests/test_api_app.py`.

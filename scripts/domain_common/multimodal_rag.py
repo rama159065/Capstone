@@ -1,7 +1,8 @@
-"""Local PDF RAG: architecture section 7 (summary retrieval, images at answer time).
+"""Local PDF RAG with hybrid text retrieval and optional ColPali page multivectors.
 
 No model download or external service is needed for extractive demo mode.
 Set RAG_VISION_MODEL to an installed Ollama vision model for visual understanding.
+Set RAG_COLPALI_MODEL to enable the Qdrant visual_pages MaxSim retrieval path.
 """
 from __future__ import annotations
 
@@ -69,13 +70,18 @@ def ollama(prompt, images=()):
 
 
 class LocalRAG:
-    def __init__(self, root=None):
+    def __init__(self, root=None, *, colpali_encoder=None):
         self.root = Path(root or os.getenv("RAG_LOCAL_DIR", ROOT / "indexes/multimodal"))
         self.root.mkdir(parents=True, exist_ok=True)
         self.embedding_model = os.getenv("RAG_EMBEDDING_MODEL")
         self.vision_provider = "llamacpp" if os.getenv("RAG_VISION_API_BASE") else "transformers" if os.getenv("RAG_TRANSFORMERS_MODEL") else "ollama" if os.getenv("RAG_VISION_MODEL") else None
         self.reranker_model = os.getenv("RAG_RERANKER_MODEL")
+        self.colpali = colpali_encoder
+        if self.colpali is None and os.getenv("RAG_COLPALI_MODEL"):
+            from scripts.domain_common.colpali_retrieval import ColPaliEncoder
+            self.colpali = ColPaliEncoder(os.environ["RAG_COLPALI_MODEL"])
         self.pipeline = json.dumps({"version": 2, "embedding": self.embedding_model,
+                                   "colpali": self.colpali.signature if self.colpali else None,
                                    "vision_model_id": os.getenv("RAG_VISION_MODEL_ID"),
                                    "vision": os.getenv("RAG_VISION_API_BASE") or os.getenv("RAG_TRANSFORMERS_MODEL") or os.getenv("RAG_VISION_MODEL")}, sort_keys=True)
         self.db = sqlite3.connect(self.root / "metadata.sqlite3", check_same_thread=False)
@@ -101,7 +107,92 @@ class LocalRAG:
             self.close()
             raise ValueError("Existing index has no embedding signature. Use a new RAG_LOCAL_DIR.")
         self.db.execute("INSERT OR REPLACE INTO settings VALUES ('embedding', ?)", (signature,))
+        if self.colpali:
+            saved_visual = self.db.execute("SELECT value FROM settings WHERE key='colpali'").fetchone()
+            if saved_visual and saved_visual[0] != self.colpali.signature:
+                self.close()
+                raise ValueError("ColPali configuration differs from the index. Use a new RAG_LOCAL_DIR.")
+            self.ensure_visual_collection()
+            self.db.execute("INSERT OR REPLACE INTO settings VALUES ('colpali', ?)", (self.colpali.signature,))
         self.db.commit()
+
+    def ensure_visual_collection(self):
+        if not self.client.collection_exists("visual_pages"):
+            self.client.create_collection("visual_pages", vectors_config={
+                "summary": models.VectorParams(size=len(self.embed("dimension probe")), distance=models.Distance.COSINE, on_disk=True),
+                "colpali": models.VectorParams(size=128, distance=models.Distance.COSINE, on_disk=True,
+                    multivector_config=models.MultiVectorConfig(comparator=models.MultiVectorComparator.MAX_SIM),
+                    hnsw_config=models.HnswConfigDiff(m=0))}, on_disk_payload=True)
+        vectors = self.client.get_collection("visual_pages").config.params.vectors
+        if ("colpali" not in vectors or vectors["colpali"].size != 128
+                or vectors["colpali"].multivector_config is None
+                or vectors["colpali"].multivector_config.comparator != models.MultiVectorComparator.MAX_SIM
+                or "summary" not in vectors or vectors["summary"].size != len(self.embed("dimension probe"))):
+            raise ValueError("visual_pages has an incompatible vector schema")
+
+    def delete_document(self, domain, doc_id):
+        selector = models.FilterSelector(filter=self.filter(domain, doc_id=doc_id))
+        for collection in ("docs_text", "visual_pages"):
+            if self.client.collection_exists(collection):
+                self.client.delete(collection, selector, wait=True)
+
+    def index_visual_page(self, payload, *, force=False):
+        if not self.colpali:
+            raise ValueError("Configure RAG_COLPALI_MODEL first")
+        identifier = str(uuid5(NAMESPACE_URL, f"visual:{payload['domain']}:{payload['doc_id']}:{payload['page']}"))
+        existing = self.client.retrieve("visual_pages", [identifier], with_payload=True, with_vectors=False)
+        if existing and existing[0].payload.get("colpali_model") == self.colpali.signature and not force:
+            return False
+        image = payload.get("image_path")
+        if not image or not Path(image).is_file():
+            raise FileNotFoundError(f"Rendered page is missing: {image}")
+        multivector = self.colpali.embed_image(image)
+        visual_payload = {**payload, "colpali_model": self.colpali.signature,
+                          "visual_point_id": identifier, "colpali_patches": len(multivector)}
+        self.client.upsert("visual_pages", [models.PointStruct(id=identifier,
+            vector={"summary": self.embed(payload["text"]), "colpali": multivector}, payload=visual_payload)], wait=True)
+        return True
+
+    def backfill_visual(self, domain=None, *, force=False):
+        if not self.colpali:
+            raise ValueError("Configure RAG_COLPALI_MODEL first")
+        if domain is not None and domain not in DOMAINS:
+            raise ValueError("Unknown domain")
+        condition = self.filter(domain, visual_rich=True) if domain else models.Filter(must=[
+            models.FieldCondition(key="visual_rich", match=models.MatchValue(value=True))])
+        pages = {}
+        offset = None
+        while True:
+            batch, offset = self.client.scroll("docs_text", scroll_filter=condition,
+                                               limit=100, offset=offset, with_vectors=False)
+            for point in batch:
+                payload = point.payload
+                key = (payload["domain"], payload["doc_id"], payload["page"])
+                pages.setdefault(key, []).append(payload)
+            if offset is None:
+                break
+        written = 0
+        for chunks in pages.values():
+            chunks.sort(key=lambda p: p.get("chunk_index", 0))
+            page = {**chunks[0], "text": "\n".join(p["text"] for p in chunks)}
+            written += self.index_visual_page(page, force=force)
+        return {"visual_pages_seen": len(pages), "visual_pages_written": written,
+                "visual_pages_skipped": len(pages)-written}
+
+    def retrieve_visual(self, domain, query, top_k=5, **filters):
+        if domain not in DOMAINS or not tokens(query):
+            raise ValueError("A valid domain and non-empty query are required")
+        if not self.colpali:
+            raise ValueError("Configure RAG_COLPALI_MODEL to retrieve visual multivectors")
+        condition = self.filter(domain, colpali_model=self.colpali.signature, **filters)
+        if not self.client.count("visual_pages", count_filter=condition, exact=True).count:
+            return []
+        hits = self.client.query_points("visual_pages", prefetch=models.Prefetch(
+            query=self.embed(query), using="summary", filter=condition, limit=max(30, top_k)),
+            query=self.colpali.embed_query(query), using="colpali", query_filter=condition,
+            limit=top_k, with_payload=True, with_vectors=False).points
+        return [{**h.payload, "colpali_score": h.score, "score": h.score,
+                 "rank": rank, "retrieval_paths": ["visual"]} for rank, h in enumerate(hits, 1)]
 
     def embed(self, text):
         if self.embedding_model:
@@ -140,7 +231,7 @@ class LocalRAG:
             if path.resolve() != source.resolve():
                 shutil.copyfile(path, source)
             # Clear prior partial/forced ingestion so obsolete chunks cannot survive retries.
-            self.client.delete("docs_text", models.FilterSelector(filter=self.filter(domain, doc_id=doc_id)))
+            self.delete_document(domain, doc_id)
             point_count = visual_count = 0
             with fitz.open(source) as pdf:
                 for number, page in enumerate(pdf, 1):
@@ -181,17 +272,19 @@ class LocalRAG:
                                    **{k: v for k, v in metadata.items() if k in {"ticker", "year"} and v is not None}}
                         points.append(models.PointStruct(id=identifier, vector={"dense": self.embed(chunk_text), "bm25": sparse(chunk_text)}, payload=payload))
                     self.client.upsert("docs_text", points, wait=True)
+                    if visual and self.colpali and points:
+                        self.index_visual_page({**points[0].payload, "text": content}, force=True)
                     point_count += len(points)
             self.db.execute("UPDATE documents SET status='complete', error=NULL WHERE domain=? AND doc_id=?", (domain, doc_id))
             old = self.db.execute("SELECT doc_id FROM sources WHERE domain=? AND path=?", (domain, source_key)).fetchone()
             if old and old[0] != doc_id:
-                self.client.delete("docs_text", models.FilterSelector(filter=self.filter(domain, doc_id=old[0])))
+                self.delete_document(domain, old[0])
                 self.db.execute("UPDATE documents SET status='superseded' WHERE domain=? AND doc_id=?", (domain, old[0]))
             self.db.execute("INSERT OR REPLACE INTO sources VALUES (?,?,?)", (domain, source_key, doc_id))
             self.db.commit()
             return {"domain": domain, "doc_id": doc_id, "status": "complete", "chunks": point_count, "visual_pages": visual_count}
         except Exception as exc:
-            self.client.delete("docs_text", models.FilterSelector(filter=self.filter(domain, doc_id=doc_id)))
+            self.delete_document(domain, doc_id)
             self.db.execute("UPDATE documents SET status='failed', error=? WHERE domain=? AND doc_id=?", (str(exc), domain, doc_id))
             self.db.commit()
             raise
@@ -211,21 +304,35 @@ class LocalRAG:
             models.Prefetch(query=self.embed(query), using="dense", filter=condition, limit=30),
             models.Prefetch(query=sparse(query, query=True), using="bm25", filter=condition, limit=30)],
             query=models.FusionQuery(fusion=models.Fusion.RRF), limit=max(top_k, 20) if self.reranker_model else top_k, with_payload=True).points
-        rerank_scores = {}
-        if self.reranker_model and hits:
+        candidates = {h.payload["chunk_id"]: {"payload": dict(h.payload), "score": h.score,
+                      "fusion_score": 1 / (60 + rank), "retrieval_paths": ["text"]}
+                      for rank, h in enumerate(hits, 1)}
+        if self.colpali:
+            for visual in self.retrieve_visual(domain, query, max(top_k, 20), **filters):
+                key = visual["chunk_id"]
+                candidate = candidates.setdefault(key, {"payload": dict(visual), "score": 0,
+                                                        "fusion_score": 0, "retrieval_paths": []})
+                candidate["fusion_score"] += 1 / (60 + visual["rank"])
+                candidate["colpali_score"] = visual["colpali_score"]
+                candidate["retrieval_paths"].append("visual")
+        candidates = sorted(candidates.values(), key=lambda c: c["fusion_score"], reverse=True)
+        if self.reranker_model and candidates:
             from scripts.domain_common.local_models import reranker
-            scores = reranker(self.reranker_model).predict([(query, h.payload["text"]) for h in hits])
-            rerank_scores = {str(h.id): float(s) for h, s in zip(hits, scores)}
-            hits.sort(key=lambda h: rerank_scores[str(h.id)], reverse=True)
-        hits = hits[:top_k]
+            scores = reranker(self.reranker_model).predict([(query, c["payload"]["text"]) for c in candidates])
+            for candidate, score in zip(candidates, scores):
+                candidate["rerank_score"] = float(score)
+            candidates.sort(key=lambda c: c["rerank_score"], reverse=True)
         results = []
-        for rank, hit in enumerate(hits, 1):
-            payload = dict(hit.payload)
+        for rank, candidate in enumerate(candidates[:top_k], 1):
+            payload = candidate["payload"]
             neighbors, _ = self.client.scroll("docs_text", scroll_filter=self.filter(
                 domain, doc_id=payload["doc_id"], page=payload["page"]), limit=100, with_vectors=False)
             payload["page_context"] = "\n".join(p.payload["text"] for p in sorted(neighbors, key=lambda p: p.payload.get("chunk_index", 0)))[:16000]
             results.append({**payload, "metadata": dict(payload), "rank": rank,
-                            "score": hit.score, "rerank_score": rerank_scores.get(str(hit.id), hit.score), "preview": payload["text"][:500]})
+                            "score": candidate["score"], "rrf_score": candidate["fusion_score"],
+                            "retrieval_paths": candidate["retrieval_paths"], "colpali_score": candidate.get("colpali_score"),
+                            "rerank_score": candidate.get("rerank_score", candidate["fusion_score"] if self.colpali else candidate["score"]),
+                            "preview": payload["text"][:500]})
         return results
 
     def answer(self, domain, query, top_k=5, provider="extractive", **filters):

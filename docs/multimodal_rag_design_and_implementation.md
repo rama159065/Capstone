@@ -6,7 +6,7 @@ Updated: 26 October 2026.
 
 The application answers questions from PDF text, tables, charts, graphs, and images using local retrieval and a local vision-language model (VLM). A common pipeline supports all six application domains. The complete CPU profile has been exercised with three independent PDFs containing text, a table, and an image-only chart.
 
-**Recorded validation:** 99 regression tests passed; all nine end-to-end inference checks passed. The inference checks called the FastAPI application through `TestClient` and used the real local Qwen model over HTTP. They did not mock model responses. These results cover the supplied synthetic fixtures, rather than establish accuracy for arbitrary PDFs or all domain corpora.
+**Recorded validation:** 104 regression tests passed with the ColPali integration. The earlier nine summary-based end-to-end inference checks also passed: they called the FastAPI application through `TestClient` and used the real local Qwen model over HTTP without mocked answers. Real ColPali page-vector storage and table/chart MaxSim retrieval are recorded separately in [the ColPali report](colpali_validation_results.md). These results cover the supplied synthetic fixtures, rather than establish accuracy for arbitrary PDFs or all domain corpora.
 
 This implementation follows the summary-based visual retrieval alternative in section 7 of [the original architecture](qdrant_multimodal_rag_architecture.md). Visual pages become searchable through extracted text, table Markdown, and VLM captions. Retrieved page images are supplied to the VLM again when answering.
 
@@ -23,7 +23,7 @@ This implementation follows the summary-based visual retrieval alternative in se
 | Visual retrieval | Summaries, optionally ColPali/ColQwen | Summaries in the shared `docs_text` collection |
 | Reranking | Cross-encoder and/or MaxSim | MS MARCO MiniLM cross-encoder |
 | Answer generation | LLM/VLM with text and page images | Quantized Qwen3-VL 2B running locally through llama.cpp |
-| Optional visual tier | `visual_pages` multivectors | Not implemented; no ColPali/MaxSim path |
+| Optional visual tier | `visual_pages` multivectors | Implemented ColPali path with summary prefetch and Qdrant MaxSim; enable explicitly |
 | Deployment | Server-based infrastructure | Windows CPU launcher, embedded Qdrant, localhost services |
 
 ## 2. Supported domains
@@ -236,7 +236,7 @@ uv pip install --python .venv/Scripts/python.exe "transformers>=4.57,<5" "senten
 .venv/Scripts/python.exe -m scripts.run_local_multimodal prepare
 ```
 
-The project also requires its existing FastAPI, Qdrant, PyMuPDF, ReportLab, and agent dependencies; model-runtime installation alone does not provision the entire application. `prepare` downloads Qwen weights and the projector, verifies their SHA-256 checksums, downloads encoder/reranker files, and installs the pinned llama.cpp Windows CPU binary. The ranged downloader retries chunks; it does not currently persist completed-chunk progress for resuming across separate process runs. Model preparation needs internet; prepared inference uses local models and localhost requests.
+The project also requires its existing FastAPI, Qdrant, PyMuPDF, ReportLab, and agent dependencies; model-runtime installation alone does not provision the entire application. `prepare` downloads Qwen weights and the projector, verifies their SHA-256 checksums, downloads encoder/reranker files, and installs the pinned llama.cpp Windows CPU binary. The ranged downloader persists per-chunk checksums and reuses verified chunks after interrupted transfers. Model preparation needs internet; prepared inference uses local models and localhost requests.
 
 ### Evaluate or query the validation corpus
 
@@ -381,7 +381,7 @@ Times are observations from this CPU run, not service guarantees; they exclude i
 .venv/Scripts/python.exe -m scripts.run_local_multimodal evaluate
 ```
 
-Recorded regression outcome: **99 passed**. Recorded model/API outcome: **9/9 passed**. The serialization unit test uses a mocked HTTP response to inspect request bytes; the separate nine inference cases use the actual local model.
+Current regression outcome with ColPali: **104 passed**. Historical Qwen summary-based model/API outcome: **9/9 passed**. The serialization unit test uses a mocked HTTP response to inspect request bytes; the separate nine inference cases use the actual local model. ColPali has its own actual-model retrieval and storage evaluation.
 
 Evidence artifacts:
 
@@ -406,7 +406,7 @@ Evidence artifacts:
 | Long or complex documents | Word chunks, encoder input limits, context caps, and image caps need corpus-specific evaluation |
 | External Qdrant | Keep filesystem objects and SQLite metadata accessible and consistent; do not share collections with incompatible embedding configurations |
 
-The current implementation has no dedicated OCR engine, table-cell bounding-box schema, semantic layout parser, independent patch-level visual embeddings, or ColPali retrieval. Scanned pages are interpreted by the VLM. It also has no atomic force-reindex transaction, source-deletion reconciliation, multi-path content-reference management, distributed ingestion workers, authentication layer added by this feature, or production backup workflow.
+The current implementation has no dedicated OCR engine, table-cell bounding-box schema, or semantic layout parser. An optional ColPali path now supplies independent page multivectors and visual retrieval; see [ColPali implementation and Qdrant storage](colpali_qdrant.md). Scanned pages can also be interpreted by the answer VLM. There is no atomic force-reindex transaction, source-deletion reconciliation, multi-path content-reference management, distributed ingestion workers, authentication layer added by this feature, or production backup workflow.
 
 The smaller SmolVLM-500M model was tested during development and gave the wrong chart trend. The validated default is Qwen3-VL; the optional Transformers and Ollama backends should be evaluated independently with their selected models. Broader accuracy, difficult scans, dense charts, and large-scale performance remain unmeasured.
 
@@ -415,3 +415,4 @@ The smaller SmolVLM-500M model was tested during development and gave the wrong 
 - [Original scalable Qdrant architecture](qdrant_multimodal_rag_architecture.md)
 - [Local quick-start guide](local_multimodal_rag.md)
 - [Recorded actual inference report](multimodal_validation_results.md)
+- [ColPali implementation and Qdrant storage](colpali_qdrant.md)

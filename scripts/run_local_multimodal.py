@@ -112,11 +112,18 @@ def main():
     parser.add_argument("--domain", choices=DOMAINS, default="financial_report_qa")
     parser.add_argument("--query", default="Which quarter has the highest revenue in the chart?")
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--colpali", action="store_true", help="Enable ColPali image multivectors and visual retrieval")
     args = parser.parse_args()
     if args.command == "prepare":
         prepare()
+        if args.colpali:
+            from scripts.prepare_colpali import main as prepare_colpali
+            prepare_colpali()
         return
     configure()
+    if args.colpali:
+        from scripts.colpali_index import configure_colpali
+        configure_colpali()
     with vision_server():
         if args.command == "serve":
             import uvicorn
