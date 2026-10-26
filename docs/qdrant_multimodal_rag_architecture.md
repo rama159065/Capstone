@@ -1,5 +1,7 @@
 # Multimodal RAG on Qdrant: Architecture and Flow
 
+**Implementation status:** This document describes the scalable target design. The implemented local CPU profile follows the summary-based alternative in section 7. Its current design, implementation details, commands, and measured validation results are consolidated in [Multimodal RAG: Design, Implementation, and Validation](multimodal_rag_design_and_implementation.md).
+
 **Corpus:** ~2,000 PDFs x ~100 pages (~200,000 pages). Most pages are plain text; a minority contain charts, images, tables and graphs.
 
 **Core idea:** route every page by type. Use cheap text embeddings for the bulk, and spend the expensive multimodal processing only on visual-rich pages.

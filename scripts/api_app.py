@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import contextvars
 import logging
+import os
 import time
 from collections import OrderedDict, deque
 from threading import Lock
@@ -151,7 +152,8 @@ class ApiResponse(BaseModel):
 class MultimodalRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=4000)
     top_k: int = Field(5, ge=1, le=10)
-    provider: Literal["extractive", "ollama"] = "extractive"
+    provider: Literal["extractive", "ollama", "transformers", "llamacpp"] = Field(
+        default_factory=lambda: "llamacpp" if os.getenv("RAG_VISION_API_BASE") else "extractive")
     source_type: str | None = None
     ticker: str | None = None
     year: int | None = None
@@ -944,4 +946,4 @@ def chat_multimodal(domain: str, request: MultimodalRequest) -> dict[str, Any]:
                                     request.provider, source_type=request.source_type,
                                     ticker=request.ticker, year=request.year)
     except (ValueError, OSError) as exc:
-        raise HTTPException(status_code=503, detail="Local vision service unavailable; check RAG_VISION_MODEL and Ollama.") from exc
+        raise HTTPException(status_code=503, detail="Local vision service unavailable; check the configured model and runtime logs.") from exc

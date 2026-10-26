@@ -107,3 +107,32 @@ def test_financial_retrieval_uses_local_store(rag, monkeypatch):
     monkeypatch.setenv("RAG_BACKEND", "qdrant")
     hits = retrieve_evidence(SimpleNamespace(query="revenue", top_k=3, source_type=None, ticker="DEMO", year=2026))
     assert hits and all(h["ticker"] == "DEMO" for h in hits)
+
+
+def test_embedding_model_change_is_rejected_before_loading(tmp_path, monkeypatch):
+    root = tmp_path / "index"
+    index = mm.LocalRAG(root)
+    index.close()
+    monkeypatch.setenv("RAG_EMBEDDING_MODEL", "different-embedding")
+    with pytest.raises(ValueError, match="Embedding model differs"):
+        mm.LocalRAG(root)
+
+
+def test_pipeline_change_recaptions_unchanged_documents(rag, monkeypatch):
+    path = sample("hr_policy")
+    rag.ingest("hr_policy", path)
+    rag.pipeline = "new-pipeline"
+    assert rag.ingest("hr_policy", path)["status"] == "complete"
+    assert rag.ingest("hr_policy", path)["status"] == "skipped"
+
+
+def test_image_only_chart_fixture_has_no_text_layer():
+    path = mm.ROOT / "data/samples/multimodal_validation/financial_report_qa/chart_revenue.pdf"
+    with pymupdf.open(path) as pdf:
+        assert pdf[0].get_text().strip() == ""
+        assert pdf[0].get_images()
+
+
+def test_empty_query_is_rejected(rag):
+    with pytest.raises(ValueError, match="Query must contain"):
+        rag.retrieve("hr_policy", "   ")

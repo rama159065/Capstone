@@ -477,3 +477,5 @@ Current coverage includes:
 ## Local Qdrant multimodal RAG
 
 See [the local setup guide](docs/local_multimodal_rag.md) for PDF ingestion, hybrid retrieval, image-aware local answers, and six included sample PDFs covering all domains. Set `RAG_BACKEND=qdrant` to use Qdrant from the existing app.
+
+The complete CPU profile uses learned embeddings, a cross-encoder reranker, and a local Qwen vision model. Run `.venv/Scripts/python.exe -m scripts.run_local_multimodal evaluate` to validate text, tables, and an image-only chart; run the same module with `serve` to start the prepared local API and model service.

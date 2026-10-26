@@ -32,6 +32,8 @@ dependencies = [
     "tqdm>=4.70.1",
     "transformers>=4.57.0,<5",
     "torch>=2.9.0",
+    "torchvision>=0.21.0",
+    "accelerate>=1,<2",
     "uvicorn>=0.30.0",
 ]
 
