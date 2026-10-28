@@ -31,6 +31,9 @@ from scripts.domain_common.langsmith_utils import (
 )
 
 
+from scripts.domain_common.retrieval_metrics import retrieval_metrics
+
+
 DEFAULT_EVAL_FILE = Path("eval/financial_report_qa/retrieval_eval_silver.json")
 DEFAULT_RESULTS_FILE = Path("eval/financial_report_qa/retrieval_eval_results.json")
 DEFAULT_CHUNKS = Path("data/processed/financial_report_qa/pdf_chunks.jsonl")
@@ -189,7 +192,8 @@ def evaluate(args: argparse.Namespace) -> dict:
     collection = client.get_collection(args.collection)
     embedder = indexer.get_embedder(args.embedding_provider, args.hash_dimensions)
 
-    max_k = max(args.k_values)
+    k_values = sorted(set(args.k_values) | {1, 5, 10})
+    max_k = max(k_values)
     per_query = []
     for item in eval_rows:
         source_type = item.get("filter_source_type") or item.get("source_type")
@@ -227,11 +231,9 @@ def evaluate(args: argparse.Namespace) -> dict:
             )
 
         retrieved_ids = [str(hit["chunk_id"]) for hit in hits]
-        relevant_ids = set(item["relevant_chunk_ids"])
-        recalls = {
-            f"recall@{k}": any(chunk_id in relevant_ids for chunk_id in retrieved_ids[:k])
-            for k in args.k_values
-        }
+        relevant_ids = ({key for key, grade in item["qrels"].items() if grade > 0}
+                        if "qrels" in item else set(item["relevant_chunk_ids"]))
+        recalls = retrieval_metrics(retrieved_ids, item.get("qrels", dict.fromkeys(relevant_ids, 1)), k_values)
         per_query.append(
             {
                 "query_id": item["query_id"],
@@ -253,7 +255,7 @@ def evaluate(args: argparse.Namespace) -> dict:
             }
         )
 
-    miss_k = 10 if 10 in args.k_values else max(args.k_values)
+    miss_k = 10
     miss_key = f"recall@{miss_k}"
     summary = {
         "eval_file": str(args.eval_file),
@@ -261,12 +263,12 @@ def evaluate(args: argparse.Namespace) -> dict:
         "retrieval_mode": args.retrieval_mode,
         "embedding_provider": args.embedding_provider,
         "queries": len(per_query),
-        "k_values": args.k_values,
+        "k_values": k_values,
         "metrics": {
-            f"recall@{k}": mean(1.0 if row[f"recall@{k}"] else 0.0 for row in per_query)
-            for k in args.k_values
-        },
-        "mrr": mean(row["mrr"] for row in per_query),
+            f"recall@{k}": mean(row[f"recall@{k}"] for row in per_query) if per_query else 0.0
+            for k in k_values
+        } | {"ndcg@5": mean(row["ndcg@5"] for row in per_query) if per_query else 0.0},
+        "mrr": mean(row["mrr"] for row in per_query) if per_query else 0.0,
         "source_type_counts": dict(Counter(str(row.get("source_type")) for row in per_query)),
         f"misses@{miss_k}": [
             row for row in per_query

@@ -6,6 +6,7 @@ Run locally:
 
 from __future__ import annotations
 
+import json
 import contextvars
 import logging
 import os
@@ -17,8 +18,10 @@ from uuid import UUID, uuid4
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.routing import APIRoute
+from scripts.domain_common.retrieval_metrics import response_metrics
 from fastapi.exceptions import RequestValidationError
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
@@ -63,7 +66,41 @@ RATE_LIMIT_WINDOW_SECONDS = 60
 RATE_LIMIT_MAX_CLIENTS = 10_000
 
 
-class ChatRequest(BaseModel):
+class RetrievalEvaluationRequest(BaseModel):
+    qrels: dict[str, float] | None = Field(None, description="Complete relevance judgments keyed by evidence chunk/page ID; nonnegative grades.")
+    relevant_chunk_ids: list[str] | None = Field(None, description="Binary ground truth when graded qrels are unavailable.")
+
+
+    @field_validator("qrels")
+    @classmethod
+    def validate_qrels(cls, value):
+        from scripts.domain_common.retrieval_metrics import retrieval_metrics
+        retrieval_metrics([], value)
+        return value
+
+
+class MetricsRoute(APIRoute):
+    def get_route_handler(self):
+        original = super().get_route_handler()
+
+        async def handler(request):
+            response = await original(request)
+            if request.method == "POST" and response.status_code == 200:
+                payload = json.loads(response.body)
+                if isinstance(payload, dict) and ("evidence" in payload or "evidence_chunk_ids" in payload):
+                    inputs = await request.json()
+                    payload["retrieval_metrics"] = response_metrics(
+                        payload.get("evidence") or [{"chunk_id": key} for key in payload.get("evidence_chunk_ids", [])], inputs.get("qrels"),
+                        inputs.get("relevant_chunk_ids"), inputs.get("top_k", 5))
+                    return JSONResponse(payload, status_code=response.status_code,
+                                        headers={key: value for key, value in response.headers.items()
+                                                 if key.lower() != "content-length"})
+            return response
+
+        return handler
+
+
+class ChatRequest(RetrievalEvaluationRequest):
     """Input shared by the non-financial and financial chat endpoints."""
 
     query: str = Field(
@@ -120,7 +157,7 @@ class FinancialChatRequest(ChatRequest):
     )
 
 
-class RetrieveRequest(BaseModel):
+class RetrieveRequest(RetrievalEvaluationRequest):
     """Input shared by the financial and non-financial retrieval endpoints."""
 
     query: str = Field(..., min_length=1, max_length=4000, description="Search query.")
@@ -149,7 +186,7 @@ class ApiResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class MultimodalRequest(BaseModel):
+class MultimodalRequest(RetrievalEvaluationRequest):
     query: str = Field(..., min_length=1, max_length=4000)
     top_k: int = Field(5, ge=1, le=10)
     provider: Literal["extractive", "ollama", "transformers", "llamacpp"] = Field(
@@ -332,6 +369,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.state.rate_limiter = InMemoryRateLimiter()
+
+
+app.router.route_class = MetricsRoute
 
 
 @app.middleware("http")
