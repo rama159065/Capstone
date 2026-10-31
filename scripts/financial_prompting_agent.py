@@ -158,9 +158,18 @@ class HostedChatLLM:
         self.api_key = api_key
         self.model = model
         self.temperature = temperature
-        self.timeout_seconds = timeout_seconds
+        self.timeout_seconds = min(timeout_seconds, float(os.getenv("RAG_HTTP_TIMEOUT_SECONDS", "45")))
 
-    def invoke(self, messages: list[Any]) -> MockResponse:
+    def invoke(self, messages):
+        from scripts.domain_common.resilience import Calls, fingerprint
+        calls = Calls(float(os.getenv("RAG_HTTP_TIMEOUT_SECONDS", "45")))
+        key = fingerprint({"endpoint": self.api_base, "model": self.model,
+                           "credential": hashlib.sha256(self.api_key.encode()).hexdigest(),
+                           "temperature": self.temperature,
+                           "messages": [str(getattr(m, "content", m)) + str(type(m)) for m in messages]})
+        return calls.run("hosted_model", lambda: self._invoke(messages), key=key, retry=True)
+
+    def _invoke(self, messages: list[Any]) -> MockResponse:
         payload = {
             "model": self.model,
             "messages": [self._message_to_dict(message) for message in messages],
@@ -176,12 +185,12 @@ class HostedChatLLM:
             },
             method="POST",
         )
+        request.add_header("Idempotency-Key", hashlib.sha256(request.data).hexdigest())
         try:
             with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
                 raw = response.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Hosted LLM request failed with HTTP {exc.code}: {detail}") from exc
+            raise
         except urllib.error.URLError as exc:
             raise RuntimeError(f"Hosted LLM request failed: {exc.reason}") from exc
 
@@ -998,7 +1007,7 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
     }
 
 
-def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dict[str, Any]:
+def _run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dict[str, Any]:
     def llm_factory(temperature: float = 0.0):
         return get_llm(llm_provider, temperature=temperature)
 
@@ -1036,9 +1045,44 @@ def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dic
     return apply_governance(result, guarded_config, evidence, security, plain_text, evidence_guard)
 
 
+def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dict[str, Any]:
+    """Bound legacy comparison workflows and label unverified generation honestly."""
+    from scripts.domain_common.resilience import Calls, CallFailure
+    calls = Calls(float(os.getenv("RAG_REQUEST_TIMEOUT_SECONDS", "60")))
+    try:
+        result = calls.run("financial_workflow", lambda: _run_technique(technique, llm_provider, config))
+    except CallFailure:
+        result = {"technique": technique, "final_status": "tool_error",
+                  "answer": "No answer found because a required service failed or timed out.", "evidence": [],
+                  "citation_check": {"valid": False, "cited_chunk_ids": []}}
+    if result.get("final_status") not in {"refused", "tool_error"}:
+        evidence = result.get("evidence", [])
+        if not evidence:
+            result.update(answer="No answer found in the available evidence.", final_status="insufficient_evidence",
+                          citation_check={"valid": False, "cited_chunk_ids": []})
+        elif llm_provider != "mock":
+            # Legacy prompting experiments are not a factual verifier. Return only
+            # source excerpts, rather than promoting their free-form prose to facts.
+            rows = [h for h in evidence if str(h.get("text", "")).strip()]
+            result.update(answer="Unverified generation withheld. Available evidence excerpts:\n" + "\n".join(
+                str(h["text"])[:1000] + " [" + str(h["chunk_id"]) + "]" for h in rows),
+                final_status="evidence_only" if rows else "insufficient_evidence",
+                citation_check={"valid": bool(rows), "cited_chunk_ids": [h["chunk_id"] for h in rows]})
+    if llm_provider != "mock":
+        result.pop("parsed", None)
+        result.pop("samples", None)
+    result.update(trace_id=calls.trace_id, trace=calls.events,
+                  grounding={"method": "source_excerpts" if llm_provider != "mock" else "mock",
+                             "semantic_answer_verified": False})
+    return result
+
+
 def summarize_result(result: dict[str, Any]) -> dict[str, Any]:
     evidence = result.get("evidence", [])
     return {
+        "trace_id": result.get("trace_id"),
+        "trace": result.get("trace"),
+        "grounding": result.get("grounding"),
         "technique": result.get("technique"),
         "final_status": result.get("final_status"),
         "answer": result.get("answer"),

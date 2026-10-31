@@ -194,6 +194,8 @@ class MultimodalRequest(RetrievalEvaluationRequest):
     source_type: str | None = None
     ticker: str | None = None
     year: int | None = None
+    idempotency_key: str | None = Field(None, min_length=1, max_length=128)
+    timeout_seconds: float = Field(60, gt=0, le=600)
 
 
 class HealthResponse(ApiResponse):
@@ -965,9 +967,17 @@ def retrieve_multimodal(domain: str, request: MultimodalRequest) -> dict[str, An
     if domain not in ALL_DOMAINS:
         raise HTTPException(status_code=404, detail="Unknown domain")
     from scripts.domain_common.multimodal_rag import retrieve_local
-    hits = retrieve_local(domain, request.query, request.top_k, source_type=request.source_type,
-                          ticker=request.ticker, year=request.year)
-    return {"domain": domain, "count": len(hits), "evidence": hits}
+    from scripts.domain_common.resilience import Calls, CallFailure
+    calls = Calls(request.timeout_seconds)
+    try:
+        hits = calls.run("retrieve", lambda: retrieve_local(domain, request.query, request.top_k,
+                         source_type=request.source_type, ticker=request.ticker, year=request.year))
+        return {"domain": domain, "count": len(hits), "evidence": hits,
+                "trace_id": calls.trace_id, "trace": calls.events,
+                "final_status": "evidence_found" if hits else "insufficient_evidence"}
+    except CallFailure:
+        return {"domain": domain, "count": 0, "evidence": [], "final_status": "tool_error",
+                "warnings": ["retrieval_unavailable"], "trace_id": calls.trace_id, "trace": calls.events}
 
 
 @app.post("/multimodal/{domain}/chat", tags=["Multimodal RAG"])
@@ -981,10 +991,14 @@ def chat_multimodal(domain: str, request: MultimodalRequest) -> dict[str, Any]:
         return {"domain": domain, "final_status": "refused", "security": guard,
                 "answer": "The query requires review.", "evidence": []}
     try:
-        with LOCK:
+        from scripts.domain_common.resilience import timed_lock
+        started = time.monotonic()
+        with timed_lock(LOCK, request.timeout_seconds):
             return get_rag().answer(domain, guard["sanitized_query"], request.top_k,
                                     request.provider, source_type=request.source_type,
-                                    ticker=request.ticker, year=request.year)
+                                    ticker=request.ticker, year=request.year,
+                                    idempotency_key=request.idempotency_key,
+                                    timeout_seconds=max(.001, request.timeout_seconds - (time.monotonic() - started)))
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=503, detail="Local vision service unavailable; check the configured model and runtime logs.") from exc
 
@@ -994,10 +1008,16 @@ def retrieve_visual_multimodal(domain: str, request: MultimodalRequest) -> dict[
     if domain not in ALL_DOMAINS:
         raise HTTPException(status_code=404, detail="Unknown domain")
     from scripts.domain_common.multimodal_rag import LOCK, get_rag
-    try:
-        with LOCK:
-            hits = get_rag().retrieve_visual(domain, request.query, request.top_k,
+    from scripts.domain_common.resilience import Calls, CallFailure
+    calls = Calls(request.timeout_seconds)
+    def retrieve():
+        from scripts.domain_common.resilience import timed_lock
+        with timed_lock(LOCK, request.timeout_seconds):
+            return get_rag().retrieve_visual(domain, request.query, request.top_k,
                 source_type=request.source_type, ticker=request.ticker, year=request.year)
-        return {"domain": domain, "retriever": "colpali_maxsim", "count": len(hits), "evidence": hits}
-    except (ValueError, OSError) as exc:
+    try:
+        hits = calls.run("visual_retrieve", retrieve)
+        return {"domain": domain, "retriever": "colpali_maxsim", "count": len(hits), "evidence": hits,
+                "trace_id": calls.trace_id, "trace": calls.events}
+    except (ValueError, OSError, CallFailure) as exc:
         raise HTTPException(status_code=503, detail="ColPali retrieval unavailable; check model configuration and visual index.") from exc

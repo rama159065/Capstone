@@ -22,7 +22,7 @@ CASES = [
     {"id": "chart_trend", "type": "chart", "query": "Does quarterly revenue increase or decrease from Q1 to Q4?", "file": "chart_revenue", "expected": [r"increas|ris|upward|grow"]},
     {"id": "chart_maximum", "type": "chart", "query": "Which quarter has the highest revenue in the chart?", "file": "chart_revenue", "expected": [r"q\s*4|fourth|quarter 4"]},
     {"id": "chart_value", "type": "chart", "query": "What is Q4 revenue in million USD in the chart?", "file": "chart_revenue", "expected": [r"\b40\b"]},
-    {"id": "unsupported", "type": "unsupported", "query": "What is the chief executive's private phone number?", "file": None, "expected": [r"no evidence|insufficient evidence"]},
+    {"id": "unsupported", "type": "unsupported", "query": "What is the chief executive's private phone number?", "file": None, "expected": [r"no evidence|insufficient evidence|no (verified )?answer found"]},
 ]
 
 
@@ -53,6 +53,9 @@ def main():
                 correct_source = bool(evidence) and evidence[0]["title"] == case["file"] if case["file"] else not evidence
                 generated = answer.split("\nSources:")[0]
                 correct_answer = all(re.search(p, generated, re.I) for p in case["expected"])
+                # A fallback excerpt containing the expected number is not a correct answer.
+                correct_answer = correct_answer and result.get("final_status") == (
+                    "insufficient_evidence" if case["type"] == "unsupported" else "evidence_found")
                 if case["id"] == "chart_trend" and re.search(r"decreas|declin", generated, re.I):
                     correct_answer = False
                 visual_used = result.get("images_used", 0) > 0 if case["type"] == "chart" else True
@@ -60,6 +63,8 @@ def main():
                 passed = response.status_code == 200 and correct_source and correct_answer and visual_used and citations_ok
                 row = {**case, "answer": answer, "retrieved_titles": [h["title"] for h in evidence],
                        "images_used": result.get("images_used", 0), "status_code": response.status_code,
+                       "final_status": result.get("final_status"), "warnings": result.get("warnings", []),
+                       "trace_id": result.get("trace_id"), "trace": result.get("trace", []),
                        "rerank_scores": [h["rerank_score"] for h in evidence],
                        "correct_source": correct_source, "correct_answer": bool(correct_answer),
                        "passed": passed, "elapsed_seconds": round(time.monotonic()-start, 2)}
