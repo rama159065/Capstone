@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from scripts.domain_common.resilience import Calls, CallFailure, fingerprint
+from scripts.domain_common.trace_log import emit
 
 
 def usable(hit):
@@ -38,6 +39,11 @@ def answer(rag, domain, query, top_k=5, provider="extractive", *,
             if not isinstance(found, list):
                 raise CallFailure("invalid_retrieval_result")
             useful = [h for h in found if usable(h)]
+            emit("retrieval.result", query=part, domain=domain, filters=filters,
+                 returned_count=len(found), usable_count=len(useful),
+                 sources=[{"chunk_id": h.get("chunk_id"), "doc_id": h.get("doc_id"),
+                           "page": h.get("page"), "score": h.get("rerank_score"),
+                           "retrieval_paths": h.get("retrieval_paths")} for h in useful])
             if len(useful) < len(found):
                 warnings.append("unusable_retrieval_results")
             for h in useful:
@@ -95,6 +101,9 @@ def answer(rag, domain, query, top_k=5, provider="extractive", *,
                     "prompt": prompt, "images": [fingerprint(Path(p).read_bytes().hex()) for p in images]}
         # Content is part of the key: a caller key can never reuse a different request.
         key = fingerprint({"caller": idempotency_key or "automatic", "input": identity})
+        emit("llm.request", provider=provider, prompt_sha256=fingerprint(prompt), prompt_characters=len(prompt),
+             images=len(images), source_ids=[r["source_id"] for r in records],
+             model=os.getenv("RAG_VISION_MODEL_ID") or os.getenv("RAG_TRANSFORMERS_MODEL") or os.getenv("RAG_VISION_MODEL"))
         try:
             raw = calls.run("generate", lambda: model(prompt, images), key=key, retry=True)
             if not isinstance(raw, str) or len(raw) > 32000:
@@ -112,9 +121,12 @@ def answer(rag, domain, query, top_k=5, provider="extractive", *,
             failures.extend(str(p) for p in parsed["unanswered"])
             if selected:
                 status = "evidence_found"
+            emit("llm.validated", response_sha256=fingerprint(raw), response_characters=len(raw),
+                 selections=len(selected), unanswered=len(parsed["unanswered"]))
         except (CallFailure, ValueError, TypeError, KeyError, AttributeError):
             selected = []
             warnings.append("generation_unavailable_or_ungrounded")
+            emit("llm.withheld", reason="generation_unavailable_or_ungrounded")
     if provider == "extractive" or (records and not selected):
         # Fallbacks are explicitly excerpts, never a successful synthesized answer.
         selected = [(r["source_id"], r["text"][:1000]) for r in records]
@@ -129,6 +141,8 @@ def answer(rag, domain, query, top_k=5, provider="extractive", *,
     if warnings or failures:
         status = "partial_evidence" if selected else "insufficient_evidence"
     cited = list(dict.fromkeys(source for source, _ in selected))
+    emit("answer.completed", final_status=status, cited_source_ids=cited, warnings=sorted(set(warnings)),
+         answer_sha256=fingerprint(rendered))
     return {"domain": domain, "query": query, "answer": rendered, "provider": provider,
             "model": None, "generation_mode": "verified_excerpts" if provider != "extractive" else "extractive",
             "images_used": len(images) if provider != "extractive" and records else 0,
