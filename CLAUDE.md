@@ -12,6 +12,8 @@ Run all commands from the repo root. Imports are always absolute (`from scripts.
 - `api/`
 - `ui/`
 - `agents/`
+- `guardrails/`
+- `prompts/`
 - `rag/`
 - `observability/`
 - `downloads/`
@@ -58,7 +60,13 @@ No linter or formatter is configured.
 ### Two agent implementations
 - **Financial** (`scripts/agents/financial_prompting_agent.py` + `scripts/rag/index_financial_report_pdfs.py`) is a richer, standalone implementation. It has several prompting `--technique`s (baseline, structured few-shot, decomposition, self-consistency, `agentic_graph`, `all`), and its graph includes a critic→answer **repair loop**. It loads the indexer module dynamically (`load_indexer_module`).
 - **Other five domains** share `scripts/agents/rag_agent.py`. Each domain folder holds only a `DomainConfig` (`domain_config.py`: intent terms, HITL review terms, source types, default query) and three ~10-line wrappers: `index.py` → `index_cli`, `agent.py` → `agent_cli`, and `html_app.py` → `streamlit_app`. Domain behavior belongs in `DomainConfig`, not in these wrappers.
-- Both implementations have their own copies of the guardrail regexes and LLM/embedding clients. A guardrail change usually needs to be made in **both** files.
+- **Guardrails** live in `scripts/guardrails/`: `patterns.py` holds the regex sets and `checks.py` the input, evidence and output checks.
+  - Both agents keep their public guard function names as thin wrappers over these checks.
+  - They still bind *different* prompt-injection and code/tool pattern sets (`FINANCIAL_*` vs `DOMAIN_*`). Unifying them changes what one agent blocks; `tests/test_guardrails.py` pins the current difference.
+- **Prompt templates** live in `scripts/prompts/` (`financial.py`, `domain.py`).
+  - The mock LLMs route on phrases in these prompts, so prompt text changes can change test behaviour.
+  - The Week 1 baseline prompts stay in `evaluation/prompt_baselines.py`.
+- **LLM and embedding clients** are still separate copies in each agent and indexer. They differ in timeouts, error wrapping and User-Agent, so merging them is a behaviour change.
 
 Shared graph (`run_domain_agent`): `security_guard → plain_text_classifier → planner → hybrid_retriever → evidence_guard → answer_agent → output_filter → citation_critic → governance`. A guard that fails short-circuits to `citation_critic` (not END), so the governance/HITL output is always produced. Results are auditable JSON with `security`, `evidence_guard`, `output_filter` and `human_review` fields. Output-filter decisions are `allow`/`review`/`block`.
 

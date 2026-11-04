@@ -48,7 +48,9 @@ docs/                         Design notes and capstone documentation
 scripts/
   api/            FastAPI backend for all domains (api_app.py)
   ui/             Streamlit front ends: API-backed chat (api_streamlit_app.py), standalone financial app
-  agents/         Financial agent, shared domain LangGraph agent (guardrails, HITL, HTML), clarifier, safe answer
+  agents/         Financial agent, shared domain LangGraph agent (HITL, HTML), clarifier, safe answer
+  guardrails/     Shared input / evidence / output safety checks and their regex pattern sets
+  prompts/        Prompt templates for the financial and domain agents
   rag/            Ingestion, indexing and retrieval: Chroma/BM25 indexer, Qdrant ingest (financial_ingest.py),
                   multimodal RAG, ColPali, selective OCR, retrieval metrics
   observability/  JSONL traces, LangSmith helpers, report-trace monitor
