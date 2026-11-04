@@ -75,8 +75,13 @@ METRICS = {  # canonical name -> phrases, matched longest first
 }
 PASSTHROUGH = re.compile(  # guardrail territory: never ask follow-ups, let the agent refuse
     r"\b(should i (buy|sell|invest)|buy or sell|price target|predict|forecast|will .{0,40}\b(rise|fall|beat|reach)|"
-    r"next (year|quarter)'?s? (earnings|revenue|price)|ignore (all |your )?(previous |prior )?instructions|"
-    r"system prompt|api key|password|poem|song|joke)\b", re.I)
+    r"next (year|quarter)'?s? (earnings|revenue|price)|what will|will\b.{0,60}\bnext (fiscal )?(year|quarter)|"
+    r"ignore (all |your )?(previous |prior )?instructions|system prompt|api key|password|poem|song|joke|"
+    r"home address|personal (address|phone|email)|non-public|insider|safest|riskiest|where to (keep|put|invest))\b", re.I)
+BENCHMARK = re.compile(r"\b(peers?|peer[- ]group|median|average|benchmark|industry|percentile|prior year|previous year|"
+                       r"last year|year earlier)\b", re.I)
+LOOKUP = re.compile(r"^\s*(what|which|who|when|where|how (much|many)|according|did|does|do|is|are|was|were|list|show)\b",
+                    re.I)   # a specific question: answer it from the documents instead of offering the overview menu
 REPORT = re.compile(r"\b(generate|create|prepare|write|build|produce|make|give me)\b.{0,60}\b(report|analysis|summary)\b|"
                     r"\b(full|complete|detailed|comprehensive)\s+(financial\s+)?(report|analysis)\b", re.I)
 COMPARE = re.compile(r"\b(compare|comparison|versus|vs\.?|relative to|which (company|of)|higher|lower|more than|less than)\b", re.I)
@@ -183,14 +188,19 @@ class Clarifier:
         cleaned = re.sub(r"\bannual reports?\b|\bform (ars|10-?k)\b", " ", text, flags=re.I)
         if REPORT.search(cleaned):
             return "report"
-        if len(companies) >= 2 or (COMPARE.search(cleaned) and not (len(companies) == 1 and len(years) >= 2)):
-            return "comparison" if len(companies) != 1 or re.search(r"\b(compare|vs|versus|which)\b", cleaned, re.I) else "figure"
+        # One company compared with a benchmark (peers, median, prior year) is a question about that company;
+        # "compare X" with no benchmark still needs a second company, so it stays a comparison.
+        explicit = re.search(r"\b(compare|versus|vs\.?)\b", cleaned, re.I) and not BENCHMARK.search(cleaned)
+        if len(companies) >= 2 or (not companies and COMPARE.search(cleaned)) or (len(companies) == 1 and explicit):
+            return "comparison"
         if TREND.search(cleaned) or (len(years) >= 2 and len(companies) == 1):
             return "trend"
         if EXPLAIN.search(cleaned):
             return "explain"
         if self.metric_in(cleaned):
             return "figure"
+        if companies and len(cleaned.split()) >= 6 and LOOKUP.match(cleaned):
+            return "explain"            # e.g. Chevron's production or reserves: not a figure we have a slot for
         return None
 
     @staticmethod

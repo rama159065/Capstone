@@ -7,17 +7,19 @@ is explicit (unifying them would change what one agent blocks):
 - financial adds "act as developer/system/admin" and a broader SQL rule (any of
   select/insert/update/delete/drop ... from/table/database) plus closing ``</script>``;
 - domain uses four narrower SQL rules.
+
+Both sets missed "ignore your/the previous instructions" until a notebook 05 run found it (eval item FIN-082).
 """
 
 FINANCIAL_PROMPT_INJECTION_PATTERNS = [
-    r"\bignore (all )?(previous|prior|above) instructions\b",
+    r"\bignore (all |any |your |the |my )?(previous|prior|above|earlier) (instructions|rules)\b",
     r"\breveal (the )?(system|developer) prompt\b",
     r"\bact as (a )?(developer|system|admin)\b",
     r"\boverride (the )?(policy|instructions|guardrails)\b",
     r"\bdisregard (the )?(policy|instructions)\b",
 ]
 DOMAIN_PROMPT_INJECTION_PATTERNS = [
-    r"\bignore (all )?(previous|prior|above) instructions\b",
+    r"\bignore (all |any |your |the |my )?(previous|prior|above|earlier) (instructions|rules)\b",
     r"\breveal (the )?(system|developer) prompt\b",
     r"\boverride (the )?(policy|instructions|guardrails)\b",
     r"\bdisregard (the )?(policy|instructions)\b",
