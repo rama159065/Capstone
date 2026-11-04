@@ -49,3 +49,8 @@ eval/
 tmp/
 temp/
 *.tmp
+
+# Downloaded PDF corpora (re-downloadable from each pdf_manifest.jsonl; manifests stay tracked).
+# PDFs already committed under data/raw/ stay tracked; data/samples/ test PDFs are not affected.
+data/raw/**/*.pdf
+data/raw/**/*.part
