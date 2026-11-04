@@ -97,6 +97,8 @@ Date: 2026-11-04. This is a short overview for the capstone team and reviewers. 
 | 100 EDGAR ARS PDFs + manifest ([download_edgar_ars_pdfs.py](../scripts/download_edgar_ars_pdfs.py)) | Done (PDFs git-ignored, manifest kept) |
 | Design documents: [final design](financial_rag_final_design.md), [implementation recommendations](implementation_recommendations.md), [ColPali pooling analysis](colpali_pooling_analysis.md), [agentic report design](financial_report_agentic_ai_recommendations.md), [summary](financial_copilot_summary.md) | Done |
 | Colab evaluation script for pooling and retrieval speed ([colab_colpali_pooling_eval.py](../scripts/colab_colpali_pooling_eval.py)) | Ready; GPU results pending |
+| EDGAR corpus download: 100 ARS PDFs + matching 10-K iXBRL HTML + DEF 14A proxies + companyfacts/submissions, linked by `filing_id` ([download_edgar_corpus.py](../scripts/download_edgar_corpus.py)) | Done: 100/100 filings, 1.8 GB, 6.5 min |
+| PDF → Qdrant ingestion (`docs_text` + pooled/full `visual_pages`), resumable with Drive snapshots ([financial_ingest.py](../scripts/financial_ingest.py), [Colab notebook](../notebooks/colab_financial_ingest.ipynb), [guide](financial_ingestion_colab.md)) | Done; tested offline and on real filings (text stage). First Colab server/GPU run pending |
 | Deterministic Apple FY2024 report generator (existing) | Working |
 | 10-K/XBRL parser, facts DB, chart-value extractor, Qdrant schema changes, agent flows with checkpoints, report API | To implement ([order of work](implementation_recommendations.md)) |
 

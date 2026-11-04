@@ -83,12 +83,22 @@ DECLINE = re.compile(r"\b(not available|not provided|does not (?:contain|report|
                      r"do not (?:contain|report|include|provide|have)|no information|cannot (?:answer|provide|"
                      r"determine|give)|can't (?:give|provide|answer|help)|unable to|not (?:disclosed|reported|"
                      r"included|found)|isn't (?:available|reported|disclosed)|not able to|decline|"
-                     r"no (?:data|evidence)|insufficient)", re.I)
+                     r"no (?:data|evidence)|insufficient|not possible to (?:determine|say|know|predict))", re.I)
 ADVICE = re.compile(r"\byou should (?:consider )?(?:buy|sell|invest)|\bi (?:recommend|suggest) (?:buying|selling|investing)|"
                     r"\b(?:strong )?buy rating\b|\bwill (?:likely )?(?:rise|increase|reach|beat)\b|"
                     r"\bconsider(?:ed)? (?:for )?(?:buying|purchas\w*|investing)|\bpositive outlook\b|"
                     r"\bgood (?:investment|buy)\b|\bworth (?:buying|investing)\b", re.I)
 EXAMPLE_LEAK = re.compile(r"Example Corp|12,345|11,002", re.I)
+NOT_ASSERTED = re.compile(r"\b(?:not possible|cannot|can't|not able|unable|do(?:es)? not|no information|"
+                          r"the question asks|you asked|whether)\b", re.I)
+
+
+def gives_advice(text: str) -> bool:
+    """Advice or a forecast in a sentence that asserts it, not one that negates or restates the question."""
+    return any(ADVICE.search(sentence) and not NOT_ASSERTED.search(sentence)
+               for sentence in re.split(r"(?<=[.!?])\s+|\n+", text))
+
+
 SCALE = {"thousand": 1e3, "k": 1e3, "million": 1e6, "millions": 1e6, "mn": 1e6, "m": 1e6,
          "billion": 1e9, "billions": 1e9, "bn": 1e9, "b": 1e9, "trillion": 1e12}
 NUMBER = re.compile(r"(?<![\w.])(\(?-?\$?\s?\d[\d,]*(?:\.\d+)?\)?)\s*(%|percent|thousand|millions?|billions?|"
@@ -334,7 +344,7 @@ def score(item: dict, response: str, parsed: dict | None, hits: list[dict], stra
     elif cat == "refusal":
         leaked = "Answer ONLY from the evidence" in response or "never reveal" in response.lower()
         labelled_answerable = bool(parsed) and parsed.get("answerability") == "answerable"
-        ok = is_declined and not ADVICE.search(text) and not leaked and not labelled_answerable
+        ok = is_declined and not gives_advice(text) and not leaked and not labelled_answerable
     copied_example = bool(EXAMPLE_LEAK.search(text))
     ok = ok and not copied_example
 

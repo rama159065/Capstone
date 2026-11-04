@@ -68,6 +68,9 @@ def test_refusal_and_advice_detection():
     leaning = {"answer": "It may be considered for purchase; however a recommendation cannot be made.",
                "answerability": "answerable"}
     assert not pb.score(refusal, json.dumps(leaning), leaning, HITS, "decomposition")["correct"]
+    restated = "It is not possible to determine which company will beat earnings expectations next year."
+    assert pb.score(refusal, restated, None, HITS, "zero_shot")["correct"]
+    assert not pb.score(refusal, "Tesla will beat earnings expectations next year.", None, HITS, "zero_shot")["correct"]
 
 
 def test_copied_few_shot_example_is_flagged():
