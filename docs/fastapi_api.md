@@ -22,6 +22,7 @@ Open the interactive Swagger UI at <http://127.0.0.1:8000/docs>, ReDoc at <http:
 | `GET` | `/domains` | List domain identifiers, display names, descriptions, and default queries. |
 | `POST` | `/chat/{domain}` | Answer a question using a non-financial domain. |
 | `POST` | `/chat/financial_report_qa` | Answer a financial-report question using the selected financial technique. |
+| `POST` | `/conversation/financial_report_qa` | One chat turn: clarify a missing company, year or measure first, then run the agents or the report pipeline. Used by the Streamlit chat. |
 | `POST` | `/retrieve/{domain}` | Return ranked evidence from a non-financial domain without generating an answer. |
 | `POST` | `/retrieve/financial_report_qa` | Return ranked financial-report evidence without generating an answer. |
 
@@ -82,6 +83,53 @@ Example financial chat request:
   "technique": "agentic_graph",
   "llm_provider": "mock"
 }
+```
+
+## Conversation requests (clarify, then run)
+
+`POST /conversation/financial_report_qa` accepts every financial chat field plus:
+
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `conversation_id` | string or null | `null` | Returned by the first turn; send it back with each follow-up |
+| `clarify` | boolean | `true` | `false` skips clarification and behaves like `/chat/financial_report_qa` |
+
+[scripts/financial_clarifier.py](../scripts/financial_clarifier.py) reads each turn into slots: intent, companies, fiscal years and measure. It checks them against the companies and years the corpus actually has, from both PDF manifests. It is deterministic and makes no LLM call.
+
+| Intent | Needs before agents run | Defaults it states instead of asking |
+|---|---|---|
+| figure ("What was Apple's revenue?") | company, year, measure | — |
+| comparison | two or more companies, a year all of them have, measure | — |
+| trend | company, measure | all years in the corpus |
+| explain ("Why did Chevron's earnings fall?") | company | latest year |
+| report ("Generate a financial report for Apple") | company, year, then a **Yes/No confirmation** | — |
+| high-level ("Tell me about Microsoft") | the user chooses: key figures, explain, trend or full report | — |
+
+**Response `status`:**
+
+| Status | Meaning |
+|---|---|
+| `needs_clarification` | `message` and `questions[]`, each with `slot`, `question` and `options`. No agent has run |
+| `answered` | The agents ran on `resolved_query` with the `ticker` and `year` filters. `result` is the normal financial chat response, and `assumptions` lists any defaults used |
+| `report_generated` | A confirmed report ran through the deterministic pipeline. `report_manifest` holds the artifacts; the report is pending visual review |
+| `report_unavailable` | No report profile exists yet for that company and year (only Apple FY2024 so far) |
+| `report_failed` | The report pipeline raised an error; the details are in the report trace |
+| `cancelled` | The user answered No to the report confirmation |
+
+**Rules:**
+- **Already complete:** a complete question runs unchanged, with no extra turn.
+- **Unknown companies and years:** companies and years outside the corpus are named ("FY2027 is not in the filings I have"), and the user is offered the years that are available.
+- **Follow-ups keep context:** "and for 2023?" or "what about Visa?" reuse the measure and company. Any other sentence after an answer starts a new request.
+- **Escape hatches:** `continue` answers the question as asked; `start over` resets. After 3 clarification turns the question is answered as asked.
+- **Guarded messages:** advice, prediction and prompt-injection messages are never clarified. They go straight to the guarded agent, which refuses them.
+- **State:** conversations are kept in memory per API process with a 30-minute TTL, like the rate limiter. Run one worker, or use a shared store when scaling out.
+
+```json
+{"query": "What was Apple's revenue?"}
+→ {"status": "needs_clarification", "conversation_id": "…", "message": "Which fiscal year for Apple?",
+   "questions": [{"slot": "year", "options": ["FY2024", "FY2023", "…", "Latest"]}]}
+{"query": "FY2023", "conversation_id": "…"}
+→ {"status": "answered", "resolved_query": "What was Apple's revenue for FY2023?", "ticker": "AAPL", "year": 2023, "result": {…}}
 ```
 
 ## Retrieval requests

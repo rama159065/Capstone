@@ -145,6 +145,47 @@ def render_result(result: dict[str, Any]) -> None:
         st.code(json.dumps(result, ensure_ascii=False, indent=2), language="json")
 
 
+def render_turn(turn: dict[str, Any]) -> None:
+    """Render one /conversation response: questions, an answer, or a report outcome."""
+    status = turn.get("status")
+    if status == "needs_clarification":
+        st.info(turn.get("message") or "I need a few more details.")
+    elif status == "answered":
+        if turn.get("resolved_query") and turn.get("resolved_query") != turn.get("original"):
+            st.caption(f"Answering: {turn['resolved_query']}")
+        for note in turn.get("assumptions") or []:
+            st.caption(f"Assumption: {note}")
+        render_result(turn.get("result") or {})
+    elif status == "report_generated":
+        st.success(turn.get("message"))
+        manifest = turn.get("report_manifest") or {}
+        for item in manifest.get("artifacts", []):
+            st.write(item.get("path") or item)
+    elif status in {"report_unavailable", "report_failed", "cancelled"}:
+        (st.error if status == "report_failed" else st.warning)(turn.get("message"))
+    else:
+        render_result(turn)
+
+
+def answer_options(turn: dict[str, Any], key: str) -> None:
+    """Clickable answers for the latest clarification; a click sends the option as the next message."""
+    for index, question in enumerate(turn.get("questions") or []):
+        options = question.get("options") or []
+        st.markdown(f"**{question.get('question')}**")
+        if len(options) > 8:
+            choice = st.selectbox("Choose", options, key=f"{key}-{index}-select", label_visibility="collapsed")
+            if st.button("Send", key=f"{key}-{index}-send"):
+                st.session_state["queued_prompt"] = choice
+                st.rerun()
+        elif options:
+            for column, option in zip(st.columns(len(options)), options):
+                if column.button(option, key=f"{key}-{index}-{option}"):
+                    st.session_state["queued_prompt"] = option
+                    st.rerun()
+    if turn.get("questions"):
+        st.caption("Or type your own answer. Say 'continue' to answer as asked, or 'start over' for a new question.")
+
+
 def sidebar() -> dict[str, Any]:
     st.sidebar.title("API Settings")
     api_base = st.sidebar.text_input("FastAPI base URL", DEFAULT_API_BASE)
@@ -167,7 +208,9 @@ def sidebar() -> dict[str, Any]:
         "llm_provider": st.sidebar.selectbox("LLM provider", ["mock", "hosted"], index=0),
         "embedding_provider": st.sidebar.selectbox("Embedding provider", ["hashing", "hosted"], index=0),
         "retrieval_mode": st.sidebar.selectbox("Financial retrieval mode", ["hybrid", "dense"], index=0),
-        "ticker": st.sidebar.text_input("Financial ticker", "AAPL").strip().upper(),
+        "clarify": st.sidebar.toggle("Ask clarifying questions (financial)", True,
+                                     help="Ask for a missing company, year or measure before running the agents."),
+        "ticker": st.sidebar.text_input("Financial ticker (optional)", "").strip().upper(),
         "year": None,
         "source_type": st.sidebar.text_input("Source type filter", "").strip(),
         "top_k": st.sidebar.slider("Final top k", 1, 20, 5),
@@ -190,6 +233,7 @@ def sidebar() -> dict[str, Any]:
 
     if st.sidebar.button("Clear chat", use_container_width=True):
         st.session_state["messages"] = []
+        st.session_state.pop("conversation_id", None)
         st.rerun()
     return settings
 
@@ -203,19 +247,42 @@ def main() -> None:
     settings = sidebar()
     domain = settings["domain"]
 
-    for message in st.session_state["messages"]:
+    messages = st.session_state["messages"]
+    for position, message in enumerate(messages):
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-            if message.get("result"):
-                render_result(message["result"])
+            if message.get("turn"):
+                render_turn(message["turn"])
+                if position == len(messages) - 1:
+                    answer_options(message["turn"], key=f"q{position}")
+            else:
+                st.markdown(message["content"])
+                if message.get("result"):
+                    render_result(message["result"])
 
-    prompt = st.chat_input(DEFAULT_QUERIES[domain])
+    prompt = st.chat_input(DEFAULT_QUERIES[domain]) or st.session_state.pop("queued_prompt", None)
     if not prompt:
         return
+    conversational = domain == "financial_report_qa" and settings["clarify"]
 
     st.session_state["messages"].append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
+
+    if conversational:
+        with st.chat_message("assistant"):
+            with st.spinner("Checking the question..."):
+                try:
+                    payload = {**build_payload(domain, prompt, settings), "clarify": True,
+                               "conversation_id": st.session_state.get("conversation_id")}
+                    turn = post_json(settings["api_base"], "/conversation/financial_report_qa", payload)
+                    st.session_state["conversation_id"] = turn.get("conversation_id")
+                except Exception as exc:  # noqa: BLE001 - display safe UI error.
+                    turn = {"status": "error", "final_status": "error", "answer": str(exc), "error": str(exc)}
+            render_turn(turn)
+            # Same key the history loop gives this message on the next run, so a click is not lost.
+            answer_options(turn, key=f"q{len(messages)}")
+        messages.append({"role": "assistant", "content": turn.get("message") or "", "turn": turn})
+        return
 
     with st.chat_message("assistant"):
         with st.spinner("Calling FastAPI backend..."):

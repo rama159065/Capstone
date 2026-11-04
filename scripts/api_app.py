@@ -12,6 +12,7 @@ import logging
 import os
 import time
 from collections import OrderedDict, deque
+from pathlib import Path
 from threading import Lock
 from typing import Any, Literal
 from uuid import UUID, uuid4
@@ -33,6 +34,7 @@ from scripts.domain_common.rag_agent import (
     run_domain_agent,
     summarize_evidence,
 )
+from scripts.financial_clarifier import Clarifier, ConversationStore, name as company_name
 from scripts.financial_prompting_agent import (
     AgentConfig,
     retrieve_evidence,
@@ -155,6 +157,16 @@ class FinancialChatRequest(ChatRequest):
     self_consistency_samples: int = Field(
         3, ge=1, le=5, description="Number of answer samples for the self-consistency technique."
     )
+
+
+class ConversationRequest(FinancialChatRequest):
+    """One chat turn; incomplete questions are clarified before any agent runs."""
+
+    conversation_id: str | None = Field(
+        None, min_length=1, max_length=64, pattern=r"^[A-Za-z0-9-]+$",
+        description="Returned by the first turn; send it back with every follow-up message.",
+    )
+    clarify: bool = Field(True, description="Ask for missing company, year or measure before running agents.")
 
 
 class RetrieveRequest(RetrievalEvaluationRequest):
@@ -789,6 +801,69 @@ def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
         **summarized_result,
         "explanation": explain_chat_result(summarized_result),
     }
+
+
+CONVERSATIONS = ConversationStore()
+_clarifier: Clarifier | None = None
+
+
+def get_clarifier() -> Clarifier:
+    global _clarifier
+    if _clarifier is None:
+        _clarifier = Clarifier()
+    return _clarifier
+
+
+def run_financial_report(spec: dict[str, Any]) -> dict[str, Any]:
+    """Run the deterministic report pipeline for a confirmed report request."""
+    clarifier = get_clarifier()
+    if not spec.get("profile"):
+        available = ", ".join(clarifier.available_reports()) or "none yet"
+        return {"status": "report_unavailable", "message": (
+            f"A full automated report for {company_name(spec['ticker'])} FY{spec['year']} is not available yet: "
+            f"report profiles exist for {available}. You can still ask for specific figures, trends or "
+            "explanations for this company.")}
+    from scripts.generate_financial_report import generate
+    try:
+        manifest = json.loads(Path(generate(spec["profile"])).read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001 - reported to the user, details in the report trace.
+        logger.warning("report_generation_failed error_type=%s", type(exc).__name__)
+        return {"status": "report_failed", "message": f"Report generation failed ({type(exc).__name__})."}
+    return {"status": "report_generated", "report_manifest": manifest, "message": (
+        f"Report generated for {manifest['company']} FY{manifest['year']} ({manifest.get('pdf_pages')} pages, "
+        f"{manifest.get('checks_passed')} reconciliation checks passed). It is pending visual review before publishing.")}
+
+
+@app.post(
+    "/conversation/financial_report_qa",
+    summary="Chat turn with clarification",
+    description=(
+        "Checks whether the question names a company, fiscal year and measure that the corpus covers. "
+        "If something is missing or ambiguous it returns `needs_clarification` with questions and options, and "
+        "keeps the partial request under `conversation_id` (in memory, per process, 30-minute TTL). "
+        "A complete question runs the financial agents; a report request runs the report pipeline after "
+        "the user confirms. Advice, prediction and prompt-injection messages go straight to the guarded agent."
+    ),
+    tags=["Chat"],
+    response_model=ApiResponse,
+    responses=API_ERROR_RESPONSES,
+)
+def converse_financial(request: ConversationRequest) -> dict[str, Any]:
+    conversation = CONVERSATIONS.get(request.conversation_id)
+    if request.clarify:
+        outcome = get_clarifier().step(conversation, request.query, ticker=request.ticker, year=request.year)
+    else:
+        outcome = {"status": "ready", "action": "answer", "conversation_id": conversation.conversation_id,
+                   "resolved_query": request.query, "ticker": request.ticker, "year": request.year, "questions": []}
+    if outcome["status"] in {"needs_clarification", "cancelled"}:
+        return outcome
+    if outcome["action"] == "report":
+        return {**outcome, "clarifier": outcome["status"], **run_financial_report(outcome["report"])}
+    chat_request = FinancialChatRequest(**{
+        **request.model_dump(exclude={"conversation_id", "clarify"}),
+        "query": outcome["resolved_query"], "ticker": outcome["ticker"], "year": outcome["year"]})
+    result = chat_financial(chat_request)
+    return {**outcome, "clarifier": outcome["status"], "status": "answered", "result": result}
 
 
 @app.post(
