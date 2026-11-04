@@ -615,6 +615,9 @@ def safe_json_loads(text: str, fallback: dict[str, Any]) -> dict[str, Any]:
 
 
 def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
+    if os.getenv("RAG_BACKEND") == "financial_qdrant":   # collections built by scripts/financial_ingest.py
+        from scripts.financial_ingest import retrieve_for_agent
+        return retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year)
     if os.getenv("RAG_BACKEND") == "qdrant":
         from scripts.domain_common.multimodal_rag import retrieve_local
         return retrieve_local("financial_report_qa", config.query, config.top_k,

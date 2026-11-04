@@ -10,6 +10,7 @@ Then launch this UI:
 from __future__ import annotations
 
 import json
+import os
 import urllib.error
 import urllib.request
 from typing import Any
@@ -17,7 +18,7 @@ from typing import Any
 import streamlit as st
 
 
-DEFAULT_API_BASE = "http://127.0.0.1:8000"
+DEFAULT_API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")   # set by the runtime profile
 DOMAINS = {
     "financial_report_qa": "Financial Report QA",
     "procurement_vendor": "Procurement and Vendor Review",
@@ -192,7 +193,9 @@ def sidebar() -> dict[str, Any]:
     domain = st.sidebar.selectbox("Domain", list(DOMAINS), format_func=lambda value: DOMAINS[value])
     health = get_json(api_base, "/health")
     if health.get("status") == "ok":
-        st.sidebar.success("Backend connected")
+        runtime = health.get("runtime") or {}
+        st.sidebar.success(f"Backend connected ({runtime.get('profile', '?')}, "
+                           f"financial retrieval: {runtime.get('financial_backend', '?')})")
     else:
         st.sidebar.warning("Backend unavailable")
 

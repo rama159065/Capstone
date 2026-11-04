@@ -42,6 +42,7 @@ from pathlib import Path
 import re
 import shutil
 import sqlite3
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -122,6 +123,11 @@ def split_table(lines, budget=TABLE_CHARS):
         part.append(line)
         size += len(line) + 1
     yield header + part
+
+
+def chunk_name(doc_id, page, part):
+    """Citable chunk id in the agents' convention (extract_citations matches annual_report_*)."""
+    return f"annual_report_{doc_id}_p{page:04d}_{part}"
 
 
 def point_id(*parts):
@@ -553,7 +559,8 @@ def text_records(row, pages):
                     parts.append((f"table{t}", j, f"Table, page {page['page']}{units}\n" + "\n".join(part), part))
         for index, (kind, i, chunk, table) in enumerate(parts):
             identifier = point_id(row["document_id"], page["page"], kind, i)
-            payload = {**common, "chunk_id": identifier, "chunk_index": index,
+            payload = {**common, "chunk_id": chunk_name(row["document_id"], page["page"], f"{kind}{i}"),
+                       "point_id": identifier, "chunk_index": index,
                        "content_type": "table" if table else "text", "text": chunk,
                        "table_markdown": ["\n".join(table)] if table else []}
             records.append((identifier, payload, context_line(payload) + "\n" + chunk))
@@ -613,9 +620,9 @@ class Ingest:
         ensure_collections(self.client, self.embedder.dim, visual="visual" in self.stages)
         common = {"analysis": ANALYSIS_VERSION, "max_pages": args.max_pages_per_pdf, "embedding": self.embedder.signature}
         self.pipeline = {
-            "text": json.dumps({**common, "chunk": [CHUNK_CHARS, OVERLAP_CHARS, TABLE_CHARS], "terms": "num-v1",
+            "text": json.dumps({**common, "chunk": [CHUNK_CHARS, OVERLAP_CHARS, TABLE_CHARS], "terms": "num-v1", "ids": "v2",
                                 "ocr": self.ocr_sig, "ocr_limit": args.ocr_max_pages_per_filing}, sort_keys=True),
-            "visual": json.dumps({**common, "colpali": self.colpali_sig, "pages": args.visual_pages,
+            "visual": json.dumps({**common, "colpali": self.colpali_sig, "pages": args.visual_pages, "ids": "v2",
                                   "ocr": self.ocr_sig, "ocr_limit": args.ocr_max_pages_per_filing}, sort_keys=True)}
 
     @property
@@ -746,14 +753,15 @@ class Ingest:
                                      "content_type": page["page_type"], "garbled": page["garbled"], "scale": page["scale"],
                                      "text_source": source, "text": clean(text)[:4000],
                                      "table_markdown": ["\n".join(t) for t in page["tables"]] if source == "native_pdf" else [],
-                                     "chunk_id": identifier, "visual_point_id": identifier, "visual_rich": True,
+                                     "chunk_id": chunk_name(row["document_id"], page["page"], "visual"),
+                                     "visual_point_id": identifier, "visual_rich": True,
                                      "colpali_model": self.colpali_sig, "colpali_dtype": getattr(self.colpali, "dtype_name", None)})
                 summaries = self.embedder([context_line(p) + "\n" + p["text"][:2000] for p in payloads])
                 points = []
                 for payload, summary, (full, is_image) in zip(payloads, summaries, encoded):
                     rows_, cols_ = pool_rows_cols(full, is_image)
                     payload["colpali_patches"] = len(full)
-                    points.append(models.PointStruct(id=payload["chunk_id"], payload=payload, vector={
+                    points.append(models.PointStruct(id=payload["visual_point_id"], payload=payload, vector={
                         "colpali": np.asarray(full, dtype=np.float16).tolist(),
                         "mean_rows": rows_.astype(np.float16).tolist(), "mean_cols": cols_.astype(np.float16).tolist(),
                         "summary": summary}))
@@ -787,6 +795,53 @@ def search_visual(client, colpali, embedder, query, top_k=20, flt=None, prefetch
         models.Prefetch(query=multivector, using="mean_cols", filter=flt, limit=prefetch),
         models.Prefetch(query=embedder([query])[0], using="summary", filter=flt, limit=prefetch)],
         query=multivector, using="colpali", query_filter=flt, limit=top_k, with_payload=True).points
+
+
+_serving: dict = {}
+_serving_lock = threading.RLock()
+
+
+def overlap(query, text):
+    """Share of the query's (number-aware) terms that appear in the text."""
+    wanted = set(terms(query)) - {"the", "of", "and", "what", "was", "for", "in", "a", "to", "is"}
+    return len(wanted & set(terms(text))) / len(wanted) if wanted else 0.0
+
+
+def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30):
+    """Evidence for the financial agents from docs_text (+ visual_pages when RAG_FIN_VISUAL=1).
+
+    Hybrid dense + sparse with Qdrant RRF, then a rerank by RRF + term overlap (numbers kept whole).
+    Hits use the agent's evidence format, so citation checks work unchanged.
+    """
+    with _serving_lock:
+        if "client" not in _serving:
+            root = Path(os.getenv("RAG_INGEST_DIR", DEFAULT_ROOT))
+            args = argparse.Namespace(root=root, embedding_provider="hashing", embedding_model=None)
+            _serving.update(client=connect(os.getenv("QDRANT_URL"), root), embedder=recorded_embedder(args))
+        client, embedder = _serving["client"], _serving["embedder"]
+        flt = query_filter(ticker, year)
+        fused = {}
+        for rank, hit in enumerate(search_text(client, embedder, query, max(candidates, top_k), flt), 1):
+            fused[hit.payload["chunk_id"]] = {"payload": hit.payload, "rrf": 1 / (60 + rank), "paths": ["text"]}
+        if os.getenv("RAG_FIN_VISUAL") == "1" and client.collection_exists(VISUAL):
+            if "colpali" not in _serving:
+                _serving["colpali"] = ColPali(os.getenv("RAG_FIN_COLPALI_MODEL", "vidore/colpali-v1.3-hf"))
+            for rank, hit in enumerate(search_visual(client, _serving["colpali"], embedder, query, 20, flt), 1):
+                entry = fused.setdefault(hit.payload["chunk_id"], {"payload": hit.payload, "rrf": 0.0, "paths": []})
+                entry["rrf"] += 1 / (60 + rank)
+                entry["paths"].append("visual")
+    hits = []
+    for entry in fused.values():
+        p = entry["payload"]
+        hits.append({"chunk_id": p["chunk_id"], "text": p.get("text", ""), "title": p.get("title"),
+                     "source_type": p.get("source_type"), "ticker": p.get("ticker"), "year": p.get("fiscal_year"),
+                     "page": p.get("page"), "source_url": p.get("source_url"), "local_path": p.get("pdf_name"),
+                     "image_path": None, "section": p.get("section"), "scale": p.get("scale"),
+                     "preview": re.sub(r"\s+", " ", p.get("text", ""))[:500],
+                     "rrf_score": entry["rrf"], "rerank_score": entry["rrf"] + 0.02 * overlap(query, p.get("text", "")),
+                     "retrieval_paths": entry["paths"], "metadata": dict(p)})
+    hits.sort(key=lambda h: h["rerank_score"], reverse=True)
+    return hits[:top_k]
 
 
 def status(args):

@@ -34,6 +34,7 @@ from scripts.domain_common.rag_agent import (
     run_domain_agent,
     summarize_evidence,
 )
+from scripts.runtime_profile import apply_profile, describe as describe_runtime
 from scripts.financial_clarifier import Clarifier, ConversationStore, name as company_name
 from scripts.financial_prompting_agent import (
     AgentConfig,
@@ -60,6 +61,7 @@ NON_FINANCIAL_DOMAINS: dict[str, DomainConfig] = {
 FINANCIAL_DOMAIN = "financial_report_qa"
 ALL_DOMAINS = (FINANCIAL_DOMAIN, *NON_FINANCIAL_DOMAINS.keys())
 logger = logging.getLogger(__name__)
+RUNTIME = apply_profile()   # local or colab defaults, before any retrieval runs
 request_id_context: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "api_request_id", default=None
 )
@@ -714,6 +716,7 @@ def health() -> HealthResponse:
         "status": "ok",
         "service": "capstone-agentic-rag-api",
         "domains": list(ALL_DOMAINS),
+        "runtime": describe_runtime(),
     }
 
 

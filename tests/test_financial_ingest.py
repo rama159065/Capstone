@@ -145,6 +145,20 @@ def test_ingest_end_to_end_and_resume(tmp_path, corpus):
         fi.Ingest(args_for(tmp_path, corpus), colpali=Other(), client=client)
 
 
+def test_agent_adapter_returns_citable_evidence(tmp_path, corpus, monkeypatch):
+    from scripts.financial_prompting_agent import extract_citations
+    client = fi.connect(None, tmp_path / "root")
+    run = fi.Ingest(args_for(tmp_path, corpus, stages="text"), client=client)
+    run.run()
+    monkeypatch.setattr(fi, "_serving", {"client": client, "embedder": run.embedder})
+    hits = fi.retrieve_for_agent("total net sales 391,035", top_k=2, ticker="TEST", year=2025)
+    assert hits[0]["page"] == 1 and hits[0]["ticker"] == "TEST" and hits[0]["year"] == 2025
+    assert hits[0]["chunk_id"].startswith("annual_report_edgar_ars_TEST_2025_p0001_")
+    assert extract_citations(f"Sales were $391,035 million [{hits[0]['chunk_id']}].") == [hits[0]["chunk_id"]]
+    assert {"text", "preview", "source_url", "rerank_score", "metadata"} <= set(hits[0])
+    assert fi.retrieve_for_agent("total net sales", ticker="OTHER") == []
+
+
 def test_failed_pdf_is_recorded_and_skipped(tmp_path, corpus):
     row = json.loads(corpus.read_text(encoding="utf-8"))
     corpus.write_text(json.dumps({**row, "content_sha256": "0" * 64}) + "\n", encoding="utf-8")

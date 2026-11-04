@@ -164,3 +164,43 @@ python -m scripts.financial_ingest ingest --root tmp/ingest_smoke --embedding-pr
 - **Sections:** a "contents" page mid-report keeps the previous section, and `Item 15` holds the statements for filers such as Nvidia.
 - **Garbled pages beyond the OCR limit:** they have no text points; their numbers come from the 10-K HTML (store A).
 - **Embedded mode** (no `--qdrant-url`) ignores payload indexes and on-disk settings. Use it for smoke runs only.
+
+## 7. Running the stack locally or on Colab (runtime profile)
+
+The same code runs on the PC and on Colab. [scripts/runtime_profile.py](../scripts/runtime_profile.py) picks the profile and fills in only the settings you haven't set yourself:
+- **Choosing the profile:** `RAG_PROFILE=local|colab`, or Colab is detected automatically.
+- **When it runs:** FastAPI applies the profile at startup, and `GET /health` reports the result under `runtime`. The Streamlit sidebar shows it next to "Backend connected".
+
+| | **local** (your PC) | **colab** |
+|---|---|---|
+| Index folder (`RAG_INGEST_DIR`) | `indexes/financial_qdrant` | `/content/rag` (restored from Drive) |
+| Qdrant | Embedded in the index folder (no server). `QDRANT_URL` points to a server if you run one | Server at `http://127.0.0.1:6333`, started by notebook cell 4 |
+| Financial retrieval (`RAG_BACKEND`) | `financial_qdrant` once `ingest.sqlite3` exists there, otherwise the existing Chroma index | same rule |
+| Text-model device | `cpu` | `cuda` on a GPU runtime |
+| Streamlit → API | `http://127.0.0.1:8000` | `http://127.0.0.1:8000`, same VM; you open Streamlit through the Colab port proxy |
+
+**How financial retrieval works with `financial_qdrant`:** the agents call `retrieve_for_agent`.
+- **Hybrid search:** dense and number-aware sparse search, fused with Qdrant RRF, filtered by ticker and fiscal year.
+- **Rerank:** by RRF plus term overlap.
+- **Visual pages:** ColPali visual pages are added when `RAG_FIN_VISUAL=1`.
+- **Citable IDs:** chunk IDs follow the agents' citation convention (`annual_report_<doc>_p<page>_<part>`), so citation checks and `apply_grounding_policy` work unchanged.
+- **Other domains:** the non-financial domains keep their Chroma pipeline.
+
+**Local commands:**
+
+```powershell
+# 1. Build or refresh the local index (embedded Qdrant; stop the API first, since embedded Qdrant allows one process)
+.venv\Scripts\python.exe -m scripts.financial_ingest ingest --root indexes\financial_qdrant --stages text
+# 2. Serve
+uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
+streamlit run scripts\api_streamlit_app.py
+```
+
+**On Colab:** run notebook cells 1–5, then ingest (or restore), then the **Serve** cells. They install the dependencies from `pyproject.toml`, start uvicorn (one worker) and Streamlit on localhost, and print the proxy URL. The project isn't an installable package, so `pip install -e .` fails; the notebook installs the dependency list instead.
+
+**Verified locally** (mock LLM, hashing vectors, NVIDIA smoke index):
+- `/health` reported `financial_backend=financial_qdrant`;
+- the conversation asked for the year, then answered from Qdrant evidence filtered to NVIDIA FY2025;
+- the answer's citations passed grounding (`grounded`).
+
+**Not yet run on Colab:** the serving cells and the Colab port proxy.
