@@ -2,7 +2,7 @@
 
 Track B template, Week 1: *"A written specification of what the LLM can reply, what it cannot give, and what a correct answer looks like. Plus an evaluation set of 60–100 realistic queries with gold answers, written before any implementation."*
 
-Date: 2026-11-04. Status: **frozen v1**, written before any implementation of the new design. Evaluation set: [data/evaluation/financial_report_qa/eval_set_v1.jsonl](../data/evaluation/financial_report_qa/eval_set_v1.jsonl) (86 queries; readable table in [eval_set_v1.md](../data/evaluation/financial_report_qa/eval_set_v1.md)). Generator: [scripts/build_financial_eval_set.py](../scripts/build_financial_eval_set.py).
+Date: 2026-11-04. Status: **frozen v1**, written before any implementation of the new design. Evaluation set: [data/evaluation/financial_report_qa/eval_set_v1.jsonl](../data/evaluation/financial_report_qa/eval_set_v1.jsonl) (86 queries; readable table in [eval_set_v1.md](../data/evaluation/financial_report_qa/eval_set_v1.md)). Generator: [scripts/evaluation/build_financial_eval_set.py](../scripts/evaluation/build_financial_eval_set.py).
 
 ---
 

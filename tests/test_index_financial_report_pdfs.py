@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-import scripts.index_financial_report_pdfs as indexer
+import scripts.rag.index_financial_report_pdfs as indexer
 
 
 class FakeEmbedder:

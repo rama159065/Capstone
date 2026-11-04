@@ -1,6 +1,6 @@
 # ColPali pooling (1030 → 38 vectors per page) for the Qdrant RAG on a Colab GPU
 
-Status: **analysis + test harness ready; GPU results pending.** Sections 10–12 add Qdrant's published benchmark (checked against their notebooks), the top-20 speed for Colab, and the store → fetch → LLM flow with tested code. Figures marked *measured* were measured in this repo. Figures marked *estimate* need to be confirmed on Colab with [`scripts/colab_colpali_pooling_eval.py`](../scripts/colab_colpali_pooling_eval.py).
+Status: **analysis + test harness ready; GPU results pending.** Sections 10–12 add Qdrant's published benchmark (checked against their notebooks), the top-20 speed for Colab, and the store → fetch → LLM flow with tested code. Figures marked *measured* were measured in this repo. Figures marked *estimate* need to be confirmed on Colab with [`scripts/evaluation/colab_colpali_pooling_eval.py`](../scripts/evaluation/colab_colpali_pooling_eval.py).
 
 ---
 
@@ -48,7 +48,7 @@ Because image patches come first in the sequence and the specials last, pooled v
 
 ## 3. How the current code retrieves visual pages
 
-From [multimodal_rag.py](../scripts/domain_common/multimodal_rag.py):
+From [multimodal_rag.py](../scripts/rag/multimodal_rag.py):
 
 | Step | Today | Consequence |
 |---|---|---|
@@ -166,8 +166,8 @@ Qdrant evaluates nested prefetches in one request, so this is a single `query_po
 
 | File | Change |
 |---|---|
-| `domain_common/colpali_retrieval.py` | Return the image-token mask (or pooled vectors) with `embed_image`; add the pooling settings to the configuration hash so the existing signature guard forces a new index; update the "never pooled" docstring |
-| `domain_common/multimodal_rag.py` `ensure_visual_collection` | Add `mean_rows` and `mean_cols` named vectors; switch `colpali` to `Datatype.FLOAT16`; extend the schema check |
+| `rag/colpali_retrieval.py` | Return the image-token mask (or pooled vectors) with `embed_image`; add the pooling settings to the configuration hash so the existing signature guard forces a new index; update the "never pooled" docstring |
+| `rag/multimodal_rag.py` `ensure_visual_collection` | Add `mean_rows` and `mean_cols` named vectors; switch `colpali` to `Datatype.FLOAT16`; extend the schema check |
 | `multimodal_rag.py` `index_visual_page` | Upsert all four vectors |
 | `multimodal_rag.py` `retrieve_visual` (and the fused path in `retrieve_local`) | Replace the single text prefetch with the three prefetches above |
 | `backfill_visual` | Compute pooled vectors from the stored `colpali` vectors, with no GPU needed (section 2) |
@@ -185,7 +185,7 @@ Qdrant evaluates nested prefetches in one request, so this is a single `query_po
 
 ## 8. The Colab measurement
 
-[`scripts/colab_colpali_pooling_eval.py`](../scripts/colab_colpali_pooling_eval.py) is standalone: copy it to Colab along with `data/raw/financial_report_qa/edgar/pdf_manifest.jsonl`. It downloads the PDFs from SEC using the manifest URLs, renders the pages at the ingest scale (1.5×), encodes them once on the GPU, and derives all 8 variants from the same vectors.
+[`scripts/evaluation/colab_colpali_pooling_eval.py`](../scripts/evaluation/colab_colpali_pooling_eval.py) is standalone: copy it to Colab along with `data/raw/financial_report_qa/edgar/pdf_manifest.jsonl`. It downloads the PDFs from SEC using the manifest URLs, renders the pages at the ingest scale (1.5×), encodes them once on the GPU, and derives all 8 variants from the same vectors.
 
 ```bash
 !pip -q install "transformers>=4.57,<5" "qdrant-client>=1.12,<2" pymupdf sentence-transformers scikit-learn
@@ -337,7 +337,7 @@ Don't put Qdrant storage on the Drive mount. Drive is a network filesystem, whic
 | Query | encode the query (ColPali + MiniLM) → `query_points` with prefetch + rerank → top 20 → fuse with `docs_text` hits → top 5 pages to the answer agent |
 | Session end | snapshot → Drive |
 
-Keep the same root path (`/content/rag`) in every session. The repo stores `image_path` as an absolute path ([multimodal_rag.py:369](../scripts/domain_common/multimodal_rag.py#L369)).
+Keep the same root path (`/content/rag`) in every session. The repo stores `image_path` as an absolute path ([multimodal_rag.py:369](../scripts/rag/multimodal_rag.py#L369)).
 
 ### Code: adapted from Qdrant's notebooks, tested here against an on-disk local Qdrant with synthetic vectors
 

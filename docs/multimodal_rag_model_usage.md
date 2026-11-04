@@ -43,11 +43,11 @@ These components participate in the pipeline but are not LLMs or VLMs.
 
 ## Implementation references
 
-- [Complete-profile model configuration and launcher](../scripts/run_local_multimodal.py)
-- [Model loading and generation backends](../scripts/domain_common/local_models.py)
-- [Retrieval, ingestion, and answer orchestration](../scripts/domain_common/multimodal_rag.py)
-- [ColPali encoder](../scripts/domain_common/colpali_retrieval.py)
-- [Selective OCR](../scripts/domain_common/selective_ocr.py)
+- [Complete-profile model configuration and launcher](../scripts/rag/run_local_multimodal.py)
+- [Model loading and generation backends](../scripts/common/local_models.py)
+- [Retrieval, ingestion, and answer orchestration](../scripts/rag/multimodal_rag.py)
+- [ColPali encoder](../scripts/rag/colpali_retrieval.py)
+- [Selective OCR](../scripts/rag/selective_ocr.py)
 - [ColPali design and validation](colpali_qdrant.md)
 - [OCR design and validation](selective_ocr.md)
 - [Complete local profile guide](local_multimodal_rag.md)

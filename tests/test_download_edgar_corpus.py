@@ -1,8 +1,8 @@
 import hashlib
 import json
 
-from scripts import download_edgar_ars_pdfs as ars
-from scripts import download_edgar_corpus as dc
+from scripts.downloads import download_edgar_ars_pdfs as ars
+from scripts.downloads import download_edgar_corpus as dc
 
 CIK = "0000000042"
 PDF = b"%PDF-1.7 fake annual report"

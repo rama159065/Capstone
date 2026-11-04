@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-import scripts.api_app as api_app
+import scripts.api.api_app as api_app
 
 
 def test_health_and_domains() -> None:
@@ -22,7 +22,7 @@ def test_request_logs_and_response_include_correlation_id(caplog) -> None:
     request_id = "12345678-1234-5678-1234-567812345678"
     client = TestClient(api_app.app)
 
-    with caplog.at_level("INFO", logger="scripts.api_app"):
+    with caplog.at_level("INFO", logger="scripts.api.api_app"):
         response = client.get("/health", headers={"X-Request-ID": request_id})
 
     assert response.status_code == 200

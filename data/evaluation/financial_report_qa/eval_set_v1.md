@@ -1,6 +1,6 @@
 # financial_report_qa evaluation set v1 (frozen)
 
-86 queries; generated 2026-11-04 by `scripts/build_financial_eval_set.py`.
+86 queries; generated 2026-11-04 by `scripts/evaluation/build_financial_eval_set.py`.
 
 | ID | Category | Question | Gold answer | Answerability |
 |---|---|---|---|---|

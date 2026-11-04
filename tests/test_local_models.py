@@ -1,7 +1,7 @@
 import base64
 import json
 
-from scripts.domain_common import local_models
+from scripts.common import local_models
 
 
 def test_llamacpp_serializes_actual_image_bytes(tmp_path, monkeypatch):

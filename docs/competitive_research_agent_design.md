@@ -72,9 +72,9 @@ Measure retrieval recall@k by gold relevant company/year/chunk IDs. Evaluate com
 
 ## Implementation Status
 
-- Index CLI: `scripts/competitive_research/index.py`
-- Agent CLI: `scripts/competitive_research/agent.py`
-- Streamlit/HTML UI: `scripts/competitive_research/html_app.py`
-- Shared runtime: `scripts/domain_common/rag_agent.py`
+- Index CLI: `scripts/domains/competitive_research/index.py`
+- Agent CLI: `scripts/domains/competitive_research/agent.py`
+- Streamlit/HTML UI: `scripts/domains/competitive_research/html_app.py`
+- Shared runtime: `scripts/agents/rag_agent.py`
 - Optional tracing: `--enable-langsmith --langsmith-project <project-name>`
 - Unit tests cover config wiring, indexing helpers, guarded LangGraph orchestration, citation validation, output filtering, and HITL routing.

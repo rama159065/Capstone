@@ -20,7 +20,7 @@ Shared 9-node domain graph; drafts route through output_filter/governance for HI
 | Text chunks per page | 2 | 2 | 2 | ceil(words / 350) — code's per-page window |
 | Embedding | 384-d | 384-d | 384-d | all-MiniLM-L6-v2 (code default); see dimension table for hosted endpoints |
 
-## What the current code stores (verified in `scripts/domain_common/multimodal_rag.py`)
+## What the current code stores (verified in `scripts/rag/multimodal_rag.py`)
 
 | Item | Current implementation | Sizing impact |
 |---|---|---|
@@ -178,9 +178,9 @@ export QDRANT_URL=http://127.0.0.1:6333 RAG_BACKEND=qdrant RAG_LOCAL_DIR=/conten
 python - <<'PY'   # OCR + text + ColPali in ONE pass; no Qwen3-VL captions
 from pathlib import Path
 import json
-from scripts.colpali_index import configure_colpali
+from scripts.rag.colpali_index import configure_colpali
 configure_colpali()               # MiniLM + ColPali v1.3 (4-bit) from indexes/models
-from scripts.domain_common.multimodal_rag import LocalRAG
+from scripts.rag.multimodal_rag import LocalRAG
 rag = LocalRAG()
 try:
     for pdf in sorted(Path("/content/pdfs/incident_postmortem").glob("*.pdf")):
@@ -189,12 +189,12 @@ finally:
     rag.close()
 PY
 # 4. Check the visual index
-python -m scripts.colpali_index status
+python -m scripts.rag.colpali_index status
 # 5. Snapshot both collections to Drive/GCS after every batch
 curl -X POST http://127.0.0.1:6333/collections/docs_text/snapshots
 curl -X POST http://127.0.0.1:6333/collections/visual_pages/snapshots
 # 6. Serve agents on the index
-uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000   # /chat/incident_postmortem, /multimodal/incident_postmortem/...
+uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000   # /chat/incident_postmortem, /multimodal/incident_postmortem/...
 ```
 
 - Before step 3 apply the code changes listed above: OCR-text-only chunking, visual flag independent of OCR, float16 ColPali, sparse index on disk.
@@ -245,9 +245,9 @@ cp -r /content/drive/MyDrive/upload/batch_007 /content/in/incident_postmortem   
 python - <<'PY'   # OCR + text + ColPali in ONE pass; no Qwen3-VL captions
 from pathlib import Path
 import json
-from scripts.colpali_index import configure_colpali
+from scripts.rag.colpali_index import configure_colpali
 configure_colpali()               # MiniLM + ColPali v1.3 (4-bit) from indexes/models
-from scripts.domain_common.multimodal_rag import LocalRAG
+from scripts.rag.multimodal_rag import LocalRAG
 rag = LocalRAG()
 try:
     for pdf in sorted(Path("/content/in/incident_postmortem").glob("*.pdf")):

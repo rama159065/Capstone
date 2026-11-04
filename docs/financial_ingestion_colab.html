@@ -8,19 +8,19 @@ pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:ce
 blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
 <h1>PDF ingestion into Qdrant on Colab</h1>
 <p>Date: 2026-11-04. This implements the PDF part of <a href="financial_rag_final_design.html">financial_rag_final_design.md</a>, sections 5 and 7.</p>
-<ul><li>Code: <a href="../scripts/financial_ingest.py">scripts/financial_ingest.py</a></li><li>Colab session: <a href="../notebooks/colab_financial_ingest.ipynb">notebooks/colab_financial_ingest.ipynb</a></li><li>Tests: <a href="../tests/test_financial_ingest.py">tests/test_financial_ingest.py</a></li></ul>
+<ul><li>Code: <a href="../scripts/rag/financial_ingest.py">scripts/rag/financial_ingest.py</a></li><li>Colab session: <a href="../notebooks/colab_financial_ingest.ipynb">notebooks/colab_financial_ingest.ipynb</a></li><li>Tests: <a href="../tests/test_financial_ingest.py">tests/test_financial_ingest.py</a></li></ul>
 <p><strong>Not covered here:</strong> the 10-K HTML / XBRL facts DB (store A) is a separate step.</p>
 <hr>
 <h2>0. Getting the data (EDGAR → Drive)</h2>
-<p><a href="../scripts/download_edgar_corpus.py">scripts/download_edgar_corpus.py</a> runs as notebook cell 6. For each of the 100 filings in <code>pdf_manifest.jsonl</code> it downloads:</p>
+<p><a href="../scripts/downloads/download_edgar_corpus.py">scripts/downloads/download_edgar_corpus.py</a> runs as notebook cell 6. For each of the 100 filings in <code>pdf_manifest.jsonl</code> it downloads:</p>
 <table><thead><tr><th>Folder</th><th>Content</th><th>100 filings (<strong>measured</strong>)</th></tr></thead><tbody><tr><td><code>pdfs/</code></td><td>ARS PDF (SHA-256 checked; a mismatching file is deleted)</td><td>976 MB</td></tr><tr><td><code>10k/</code></td><td>the 10-K for the same fiscal year, filed on or before the ARS (amendments ignored): primary iXBRL HTML</td><td>420 MB</td></tr><tr><td><code>proxy/</code></td><td>the first DEF 14A filed from 7 days before to 400 days after the 10-K</td><td>255 MB</td></tr><tr><td><code>companyfacts/</code></td><td>XBRL companyfacts JSON, once per company</td><td>122 MB</td></tr><tr><td><code>submissions/</code></td><td>submissions JSON, once per company</td><td>26 MB</td></tr></tbody></table>
 <p><strong>Wells Fargo:</strong> its main 10-K document holds only 2–42 tagged numbers; the statements are in a sibling iXBRL file. Whenever a main document has fewer than 500 tagged numbers, its sibling iXBRL documents are downloaded too, which brings WFC to 7,153–8,081.</p>
 <p><strong>Output:</strong> <code>corpus_manifest.jsonl</code> has one row per <code>filing_id</code> with:</p>
 <ul><li>the ARS, 10-K and proxy accession numbers and URLs;</li><li>local paths and SHA-256;</li><li>iXBRL fact counts;</li><li>an <code>errors</code> field.</li></ul>
 <p><strong>Measured run:</strong> 100/100 filings got a 10-K and a proxy with no errors, in 6.5 minutes on a home connection. No 10-K or proxy was matched twice.</p>
 <ul><li>Tesla's proxy and ARS came 230–263 days after the 10-K. That is genuine: its 2025 and 2026 annual meetings were late.</li><li>One proxy (ADBE FY2022) has no iXBRL tags; it predates pay-versus-performance tagging.</li></ul>
-<pre><code>python -m scripts.download_edgar_corpus --output-dir $DRIVE/edgar --user-agent &quot;name email@domain&quot;
-python -m scripts.download_edgar_corpus --only 10k,companyfacts --tickers NVDA,CVX   # subsets</code></pre>
+<pre><code>python -m scripts.downloads.download_edgar_corpus --output-dir $DRIVE/edgar --user-agent &quot;name email@domain&quot;
+python -m scripts.downloads.download_edgar_corpus --only 10k,companyfacts --tickers NVDA,CVX   # subsets</code></pre>
 <p>Requests are spaced 0.15 s apart, under SEC's limit of 10 per second, and retried only on HTTP 429 or 503. Rerunning skips files that already exist.</p>
 <h2>1. What it writes</h2>
 <table><thead><tr><th>Collection · vector</th><th>Content</th><th>Type / index</th><th>Storage</th></tr></thead><tbody><tr><td><code>docs_text</code> · <code>dense</code></td><td>text window (1,200 chars, 200 overlap) or table part, prefixed with company, year, section, page</td><td>cosine, HNSW m=16, ef_construct=100</td><td>RAM</td></tr><tr><td><code>docs_text</code> · <code>bm25</code></td><td><strong>number-aware</strong> sparse terms: <code>$391,035</code> → <code>$391,035</code>, <code>391,035</code>, <code>391035</code>; <code>2.1%</code> → <code>2.1%</code>, <code>2.1</code>; <code>fy2024</code></td><td>sparse, IDF modifier</td><td>default</td></tr><tr><td><code>visual_pages</code> · <code>colpali</code></td><td>full ColPali v1.3 page multivector (1030 × 128)</td><td>MaxSim, float16, <strong>m=0 (no graph)</strong></td><td><strong>disk (mmap)</strong></td></tr><tr><td><code>visual_pages</code> · <code>mean_rows</code> / <code>mean_cols</code></td><td>32 row means / 32 column means + the 6 special tokens (38 × 128)</td><td>MaxSim, float16, HNSW</td><td>RAM</td></tr><tr><td><code>visual_pages</code> · <code>summary</code></td><td>text vector of the page's readable text</td><td>cosine, HNSW</td><td>RAM</td></tr></tbody></table>
@@ -36,16 +36,16 @@ python -m scripts.download_edgar_corpus --only 10k,companyfacts --tickers NVDA,C
 <ul><li>HNSW building is paused during upload (<code>indexing_threshold=0</code>) and then restored.</li><li>The run waits for the collections to turn green.</li><li>Each collection is snapshotted and streamed to <code>--snapshot-dir</code> (Drive), and the SHA-256 is checked against Qdrant's checksum.</li><li>The local snapshot is deleted. Only the newest <code>--keep-snapshots</code> are kept on Drive.</li><li><code>ingest.sqlite3</code> and the page cache are copied next to the snapshots.</li></ul>
 <h2>3. Commands</h2>
 <pre><code># Colab, after starting the Qdrant server (notebook cell 4)
-python -m scripts.financial_ingest ingest --qdrant-url http://127.0.0.1:6333 \
+python -m scripts.rag.financial_ingest ingest --qdrant-url http://127.0.0.1:6333 \
     --pdf-dir $DRIVE/edgar/pdfs --user-agent &quot;name email@domain&quot; \
     --snapshot-dir $DRIVE/snapshots --stages text,visual
-python -m scripts.financial_ingest status
-python -m scripts.financial_ingest query &quot;total revenue 130,497&quot; --ticker NVDA          # text path
-python -m scripts.financial_ingest query &quot;revenue by market chart&quot; --ticker NVDA --visual
-python -m scripts.financial_ingest restore --snapshot-dir $DRIVE/snapshots              # next session
+python -m scripts.rag.financial_ingest status
+python -m scripts.rag.financial_ingest query &quot;total revenue 130,497&quot; --ticker NVDA          # text path
+python -m scripts.rag.financial_ingest query &quot;revenue by market chart&quot; --ticker NVDA --visual
+python -m scripts.rag.financial_ingest restore --snapshot-dir $DRIVE/snapshots              # next session
 
 # Local smoke run (embedded Qdrant, hashing vectors, no GPU)
-python -m scripts.financial_ingest ingest --root tmp/ingest_smoke --embedding-provider hashing \
+python -m scripts.rag.financial_ingest ingest --root tmp/ingest_smoke --embedding-provider hashing \
     --stages text --limit-filings 3 --ocr none --reset</code></pre>
 <p><strong>Main options:</strong></p>
 <table><thead><tr><th>Option</th><th>Values</th></tr></thead><tbody><tr><td><code>--embedding-provider</code></td><td><code>local</code> (MiniLM, 384-d, GPU if present; default), <code>hosted</code> (<code>EMBEDDING_API_BASE/KEY/MODEL</code>), <code>hashing</code> (offline tests)</td></tr><tr><td><code>--colpali-dtype</code></td><td><code>auto</code>: bf16 on L4/A100, fp16 on T4, fp32 on CPU</td></tr><tr><td><code>--tickers</code>, <code>--limit-filings</code>, <code>--max-pages-per-pdf</code></td><td>subsets for trials</td></tr><tr><td><code>--force</code></td><td>redo finished filings</td></tr></tbody></table>
@@ -63,17 +63,17 @@ python -m scripts.financial_ingest ingest --root tmp/ingest_smoke --embedding-pr
 <h2>6. Known limits</h2>
 <ul><li><strong>Restore:</strong> it copies the snapshot into the server's snapshots folder before recovering, because servers may refuse <code>file://</code> paths outside it. This is the first thing to check in session 2.</li><li><strong>Sections:</strong> a "contents" page mid-report keeps the previous section, and <code>Item 15</code> holds the statements for filers such as Nvidia.</li><li><strong>Garbled pages beyond the OCR limit:</strong> they have no text points; their numbers come from the 10-K HTML (store A).</li><li><strong>Embedded mode</strong> (no <code>--qdrant-url</code>) ignores payload indexes and on-disk settings. Use it for smoke runs only.</li></ul>
 <h2>7. Running the stack locally or on Colab (runtime profile)</h2>
-<p>The same code runs on the PC and on Colab. <a href="../scripts/runtime_profile.py">scripts/runtime_profile.py</a> picks the profile and fills in only the settings you haven't set yourself:</p>
+<p>The same code runs on the PC and on Colab. <a href="../scripts/common/runtime_profile.py">scripts/common/runtime_profile.py</a> picks the profile and fills in only the settings you haven't set yourself:</p>
 <ul><li><strong>Choosing the profile:</strong> <code>RAG_PROFILE=local|colab</code>, or Colab is detected automatically.</li><li><strong>When it runs:</strong> FastAPI applies the profile at startup, and <code>GET /health</code> reports the result under <code>runtime</code>. The Streamlit sidebar shows it next to "Backend connected".</li></ul>
 <table><thead><tr><th></th><th><strong>local</strong> (your PC)</th><th><strong>colab</strong></th></tr></thead><tbody><tr><td>Index folder (<code>RAG_INGEST_DIR</code>)</td><td><code>indexes/financial_qdrant</code></td><td><code>/content/rag</code> (restored from Drive)</td></tr><tr><td>Qdrant</td><td>Embedded in the index folder (no server). <code>QDRANT_URL</code> points to a server if you run one</td><td>Server at <code>http://127.0.0.1:6333</code>, started by notebook cell 4</td></tr><tr><td>Financial retrieval (<code>RAG_BACKEND</code>)</td><td><code>financial_qdrant</code> once <code>ingest.sqlite3</code> exists there, otherwise the existing Chroma index</td><td>same rule</td></tr><tr><td>Text-model device</td><td><code>cpu</code></td><td><code>cuda</code> on a GPU runtime</td></tr><tr><td>Streamlit → API</td><td><code>http://127.0.0.1:8000</code></td><td><code>http://127.0.0.1:8000</code>, same VM; you open Streamlit through the Colab port proxy</td></tr></tbody></table>
 <p><strong>How financial retrieval works with <code>financial_qdrant</code>:</strong> the agents call <code>retrieve_for_agent</code>.</p>
 <ul><li><strong>Hybrid search:</strong> dense and number-aware sparse search, fused with Qdrant RRF, filtered by ticker and fiscal year.</li><li><strong>Rerank:</strong> by RRF plus term overlap.</li><li><strong>Visual pages:</strong> ColPali visual pages are added when <code>RAG_FIN_VISUAL=1</code>.</li><li><strong>Citable IDs:</strong> chunk IDs follow the agents' citation convention (<code>annual_report_&lt;doc&gt;_p&lt;page&gt;_&lt;part&gt;</code>), so citation checks and <code>apply_grounding_policy</code> work unchanged.</li><li><strong>Other domains:</strong> the non-financial domains keep their Chroma pipeline.</li></ul>
 <p><strong>Local commands:</strong></p>
 <pre><code># 1. Build or refresh the local index (embedded Qdrant; stop the API first, since embedded Qdrant allows one process)
-.venv\Scripts\python.exe -m scripts.financial_ingest ingest --root indexes\financial_qdrant --stages text
+.venv\Scripts\python.exe -m scripts.rag.financial_ingest ingest --root indexes\financial_qdrant --stages text
 # 2. Serve
-uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
-streamlit run scripts\api_streamlit_app.py</code></pre>
+uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
+streamlit run scripts\ui\api_streamlit_app.py</code></pre>
 <p><strong>On Colab:</strong> run notebook cells 1–5, then ingest (or restore), then the <strong>Serve</strong> cells. They install the dependencies from <code>pyproject.toml</code>, start uvicorn (one worker) and Streamlit on localhost, and print the proxy URL. The project isn't an installable package, so <code>pip install -e .</code> fails; the notebook installs the dependency list instead.</p>
 <p><strong>Verified locally</strong> (mock LLM, hashing vectors, NVIDIA smoke index):</p>
 <ul><li><code>/health</code> reported <code>financial_backend=financial_qdrant</code>;</li><li>the conversation asked for the year, then answered from Qdrant evidence filtered to NVIDIA FY2025;</li><li>the answer's citations passed grounding (<code>grounded</code>).</li></ul>

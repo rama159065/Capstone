@@ -201,16 +201,16 @@ For Qwen and Transformers, the application appends retrieved source UUIDs after 
 
 | File | Responsibility |
 |---|---|
-| [`scripts/domain_common/multimodal_rag.py`](../scripts/domain_common/multimodal_rag.py) | Ingestion, storage, embeddings, retrieval, reranking integration, answering, and base CLI |
-| [`scripts/domain_common/local_models.py`](../scripts/domain_common/local_models.py) | Lazy encoder/reranker loading, Transformers vision inference, llama.cpp HTTP image requests |
-| [`scripts/run_local_multimodal.py`](../scripts/run_local_multimodal.py) | Complete-profile configuration, downloads, managed model service, ingestion/evaluation/API commands |
-| [`scripts/download_model_files.py`](../scripts/download_model_files.py) | Ranged GGUF downloads and SHA-256 verification against repository metadata |
-| [`scripts/api_app.py`](../scripts/api_app.py) | Multimodal retrieval/chat endpoints and request validation |
-| [`scripts/domain_common/rag_agent.py`](../scripts/domain_common/rag_agent.py) | Existing non-financial retrieval adapter for `RAG_BACKEND=qdrant` |
-| [`scripts/financial_prompting_agent.py`](../scripts/financial_prompting_agent.py) | Existing financial retrieval adapter for Qdrant |
-| [`scripts/generate_multimodal_samples.py`](../scripts/generate_multimodal_samples.py) | Six domain PDFs with text, tables, vector charts, and raster diagrams |
-| [`scripts/generate_multimodal_validation_pdfs.py`](../scripts/generate_multimodal_validation_pdfs.py) | Three independent validation PDFs, including the raster-only chart |
-| [`scripts/evaluate_multimodal_local.py`](../scripts/evaluate_multimodal_local.py) | Actual model/API evaluation and persisted reports |
+| [`scripts/rag/multimodal_rag.py`](../scripts/rag/multimodal_rag.py) | Ingestion, storage, embeddings, retrieval, reranking integration, answering, and base CLI |
+| [`scripts/common/local_models.py`](../scripts/common/local_models.py) | Lazy encoder/reranker loading, Transformers vision inference, llama.cpp HTTP image requests |
+| [`scripts/rag/run_local_multimodal.py`](../scripts/rag/run_local_multimodal.py) | Complete-profile configuration, downloads, managed model service, ingestion/evaluation/API commands |
+| [`scripts/downloads/download_model_files.py`](../scripts/downloads/download_model_files.py) | Ranged GGUF downloads and SHA-256 verification against repository metadata |
+| [`scripts/api/api_app.py`](../scripts/api/api_app.py) | Multimodal retrieval/chat endpoints and request validation |
+| [`scripts/agents/rag_agent.py`](../scripts/agents/rag_agent.py) | Existing non-financial retrieval adapter for `RAG_BACKEND=qdrant` |
+| [`scripts/agents/financial_prompting_agent.py`](../scripts/agents/financial_prompting_agent.py) | Existing financial retrieval adapter for Qdrant |
+| [`scripts/evaluation/generate_multimodal_samples.py`](../scripts/evaluation/generate_multimodal_samples.py) | Six domain PDFs with text, tables, vector charts, and raster diagrams |
+| [`scripts/evaluation/generate_multimodal_validation_pdfs.py`](../scripts/evaluation/generate_multimodal_validation_pdfs.py) | Three independent validation PDFs, including the raster-only chart |
+| [`scripts/evaluation/evaluate_multimodal_local.py`](../scripts/evaluation/evaluate_multimodal_local.py) | Actual model/API evaluation and persisted reports |
 | [`tests/test_multimodal_rag.py`](../tests/test_multimodal_rag.py) | Routing, isolation, metadata filters, updates, retries, adapters, API, and fixture checks |
 | [`tests/test_local_models.py`](../tests/test_local_models.py) | Image-byte serialization in the local inference request |
 | `pyproject.toml`, `uv.lock` | Dependency declarations and resolved dependencies |
@@ -222,7 +222,7 @@ Run commands from the repository root in PowerShell. The current workspace alrea
 ### Start the prepared application
 
 ```powershell
-.venv/Scripts/python.exe -m scripts.run_local_multimodal serve
+.venv/Scripts/python.exe -m scripts.rag.run_local_multimodal serve
 ```
 
 The application listens on `http://127.0.0.1:8000`; interactive API documentation is at `/docs`. The model service listens on `http://127.0.0.1:8081`. The launcher uses one API worker, starts the model child process without a visible window, waits for readiness, and stops its child when the command exits. It refuses an occupied model-service port rather than attaching to an unknown process.
@@ -234,7 +234,7 @@ Python 3.12 or later and Windows x64 are required by the current project/managed
 ```powershell
 uv pip install --python .venv/Scripts/python.exe torch torchvision --index-url https://download.pytorch.org/whl/cpu
 uv pip install --python .venv/Scripts/python.exe "transformers>=4.57,<5" "sentence-transformers>=3,<6" "accelerate>=1,<2"
-.venv/Scripts/python.exe -m scripts.run_local_multimodal prepare
+.venv/Scripts/python.exe -m scripts.rag.run_local_multimodal prepare
 ```
 
 The project also requires its existing FastAPI, Qdrant, PyMuPDF, ReportLab, and agent dependencies; model-runtime installation alone does not provision the entire application. `prepare` downloads Qwen weights and the projector, verifies their SHA-256 checksums, downloads encoder/reranker files, and installs the pinned llama.cpp Windows CPU binary. The ranged downloader persists per-chunk checksums and reuses verified chunks after interrupted transfers. Model preparation needs internet; prepared inference uses local models and localhost requests.
@@ -242,8 +242,8 @@ The project also requires its existing FastAPI, Qdrant, PyMuPDF, ReportLab, and 
 ### Evaluate or query the validation corpus
 
 ```powershell
-.venv/Scripts/python.exe -m scripts.run_local_multimodal evaluate
-.venv/Scripts/python.exe -m scripts.run_local_multimodal query --domain financial_report_qa --query "What is the annual review code?"
+.venv/Scripts/python.exe -m scripts.rag.run_local_multimodal evaluate
+.venv/Scripts/python.exe -m scripts.rag.run_local_multimodal query --domain financial_report_qa --query "What is the annual review code?"
 ```
 
 `evaluate` ingests the three validation files, skipping compatible completed records, and runs all nine checks. `query` uses one retrieved hit. Each command owns and shuts down its model service.
@@ -251,9 +251,9 @@ The project also requires its existing FastAPI, Qdrant, PyMuPDF, ReportLab, and 
 ### Ingest the six-domain samples or your own PDFs
 
 ```powershell
-.venv/Scripts/python.exe -m scripts.run_local_multimodal ingest
-.venv/Scripts/python.exe -m scripts.run_local_multimodal ingest --input C:/path/to/domain-folders
-.venv/Scripts/python.exe -m scripts.run_local_multimodal ingest --force
+.venv/Scripts/python.exe -m scripts.rag.run_local_multimodal ingest
+.venv/Scripts/python.exe -m scripts.rag.run_local_multimodal ingest --input C:/path/to/domain-folders
+.venv/Scripts/python.exe -m scripts.rag.run_local_multimodal ingest --force
 ```
 
 Input layout is `<input>/<domain>/*.pdf`. The complete-profile `ingest` command loops all six domain folders; its `--domain` argument is used for querying, not to restrict that ingestion loop. Missing folders contain no matching files and are skipped. Stop `serve` before using another command against the same embedded index.
@@ -261,7 +261,7 @@ Input layout is `<input>/<domain>/*.pdf`. The complete-profile `ingest` command 
 Python callers can set financial/source metadata explicitly:
 
 ```python
-from scripts.domain_common.multimodal_rag import LocalRAG
+from scripts.rag.multimodal_rag import LocalRAG
 
 rag = LocalRAG()
 try:
@@ -271,7 +271,7 @@ finally:
     rag.close()
 ```
 
-This direct example uses the current process's environment. Call `configure()` from `scripts.run_local_multimodal` first, and supply a running local vision service, when using the complete profile from another Python program.
+This direct example uses the current process's environment. Call `configure()` from `scripts.rag.run_local_multimodal` first, and supply a running local vision service, when using the complete profile from another Python program.
 
 ## 9. API contract and examples
 
@@ -379,7 +379,7 @@ Times are observations from this CPU run, not service guarantees; they exclude i
 
 ```powershell
 .venv/Scripts/python.exe -m pytest -q
-.venv/Scripts/python.exe -m scripts.run_local_multimodal evaluate
+.venv/Scripts/python.exe -m scripts.rag.run_local_multimodal evaluate
 ```
 
 Current regression outcome with OCR and ColPali: **112 passed**. Historical Qwen summary-based model/API outcome: **9/9 passed**. The serialization unit test uses a mocked HTTP response to inspect request bytes; the separate nine inference cases use the actual local model. ColPali and selective OCR have their own actual-model retrieval and storage evaluations.

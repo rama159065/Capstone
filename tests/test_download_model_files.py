@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 import requests
 
-from scripts import download_model_files as downloader
+from scripts.downloads import download_model_files as downloader
 
 
 def test_download_resumes_verified_chunks_and_checks_final_hash(tmp_path, monkeypatch):

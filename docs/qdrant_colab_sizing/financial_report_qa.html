@@ -12,7 +12,7 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 <p>8-node financial LangGraph (security → plain_text → plan → retrieve → evidence_guard → answer → critic ⟲ repair → governance) plus the 7-stage deterministic report generator (<code>generate_financial_report.py</code>). The chat LLM is the hosted ≤8B endpoint (Track B), so agents add only ~1 GB RAM on the Colab side (FastAPI + query embedder + reranker). Retrieval tools: <code>hybrid_retriever</code> (dense + BM25 + RRF + rerank) and, for visual questions, <code>/multimodal/financial_report_qa/visual/retrieve</code> (ColPali MaxSim).</p>
 <h2>Assumptions</h2>
 <table><thead><tr><th>Parameter</th><th>Low</th><th>Typical</th><th>High</th><th>Basis</th></tr></thead><tbody><tr><td>Pages per document</td><td>50</td><td>90</td><td>100</td><td>User range 50–100</td></tr><tr><td>Total pages</td><td>100,000</td><td>180,000</td><td>200,000</td><td>× 2,000 docs</td></tr><tr><td>Words per page (OCR text)</td><td>550</td><td>550</td><td>550</td><td>Corpus type estimate</td></tr><tr><td>Text index source</td><td>OCR text</td><td>OCR text</td><td>OCR text</td><td>All pages OCR'd; OCR text is what gets chunked and embedded (not appended to native text)</td></tr><tr><td>Visual (ColPali) page share</td><td>30%</td><td>30%</td><td>30%</td><td>Design choice: ~30% of pages. Typical visual content here: Statement tables, segment tables, revenue/margin charts and infographics on most MD&amp;A and financial-statement pages.</td></tr><tr><td>Text chunks per page</td><td>2</td><td>2</td><td>2</td><td>ceil(words / 350) — code's per-page window</td></tr><tr><td>Embedding</td><td>384-d</td><td>384-d</td><td>384-d</td><td>all-MiniLM-L6-v2 (code default); see dimension table for hosted endpoints</td></tr></tbody></table>
-<h2>What the current code stores (verified in <code>scripts/domain_common/multimodal_rag.py</code>)</h2>
+<h2>What the current code stores (verified in <code>scripts/rag/multimodal_rag.py</code>)</h2>
 <table><thead><tr><th>Item</th><th>Current implementation</th><th>Sizing impact</th></tr></thead><tbody><tr><td>Text collection <code>docs_text</code></td><td>Per page, 400-word chunks with 350-word stride; named vectors <code>dense</code> (384-d, all-MiniLM-L6-v2, cosine, <code>on_disk=True</code>) + sparse <code>bm25</code> (IDF modifier); <code>on_disk_payload=True</code></td><td>One point per chunk; payload repeats the whole page as <code>grounding_text</code> in every chunk</td></tr><tr><td>Visual collection <code>visual_pages</code></td><td>Only pages flagged visual (tables, images, &gt;4 drawings, empty text, or OCR applied); vectors <code>summary</code> (384-d) + <code>colpali</code> multivector 128-d, MaxSim, <code>hnsw m=0</code>, float32</td><td>~1,030 × 128 × 4 B ≈ <strong>0.53 MB per visual page</strong> — dominates storage</td></tr><tr><td>Query path</td><td>Hybrid RRF over dense+bm25 (prefetch 30 each); visual: prefetch 30 by <code>summary</code>, then ColPali MaxSim rerank</td><td>ColPali vectors only read for 30 pages/query → can stay on disk</td></tr><tr><td>Files outside Qdrant</td><td>Copy of source PDF in <code>objects/&lt;domain&gt;/&lt;doc_id&gt;/</code>, PNG per visual page (1.5× render), OCR JSON artifact per page, SQLite sidecar</td><td>Counted in disk totals below</td></tr><tr><td>Qdrant mode</td><td>Embedded local mode (<code>QdrantClient(path=...)</code>) unless <code>QDRANT_URL</code> is set</td><td><strong>Local mode is pure Python, holds data in process RAM and warns above 20,000 points</strong> — not usable at this scale; run the Qdrant server binary</td></tr><tr><td>Text source</td><td><code>content</code> = native text + table markdown + caption + OCR text appended</td><td>Your design indexes OCR text only → change <code>ingest()</code> to chunk <code>ocr.text</code> (keeps 1× text, not 2×)</td></tr><tr><td>Forced OCR on all pages</td><td><code>visual = ... or ocr.mode != "none"</code></td><td><strong>If OCR runs on every page, every page becomes a ColPali page</strong> — decouple visual detection from OCR (see worst-case row)</td></tr></tbody></table>
 <h2>Point counts</h2>
 <table><thead><tr><th>Collection</th><th>Low</th><th>Typical</th><th>High</th></tr></thead><tbody><tr><td><code>docs_text</code> points (chunks)</td><td>200,000</td><td>360,000</td><td>400,000</td></tr><tr><td><code>visual_pages</code> points (ColPali pages)</td><td>30,000</td><td>54,000</td><td>60,000</td></tr><tr><td>ColPali patch vectors (≈1,030/page)</td><td>30,900,000</td><td>55,620,000</td><td>61,800,000</td></tr></tbody></table>
@@ -49,9 +49,9 @@ export QDRANT_URL=http://127.0.0.1:6333 RAG_BACKEND=qdrant RAG_LOCAL_DIR=/conten
 python - &lt;&lt;&#x27;PY&#x27;   # OCR + text + ColPali in ONE pass; no Qwen3-VL captions
 from pathlib import Path
 import json
-from scripts.colpali_index import configure_colpali
+from scripts.rag.colpali_index import configure_colpali
 configure_colpali()               # MiniLM + ColPali v1.3 (4-bit) from indexes/models
-from scripts.domain_common.multimodal_rag import LocalRAG
+from scripts.rag.multimodal_rag import LocalRAG
 rag = LocalRAG()
 try:
     for pdf in sorted(Path(&quot;/content/pdfs/financial_report_qa&quot;).glob(&quot;*.pdf&quot;)):
@@ -60,12 +60,12 @@ finally:
     rag.close()
 PY
 # 4. Check the visual index
-python -m scripts.colpali_index status
+python -m scripts.rag.colpali_index status
 # 5. Snapshot both collections to Drive/GCS after every batch
 curl -X POST http://127.0.0.1:6333/collections/docs_text/snapshots
 curl -X POST http://127.0.0.1:6333/collections/visual_pages/snapshots
 # 6. Serve agents on the index
-uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000   # /chat/financial_report_qa, /multimodal/financial_report_qa/...</code></pre>
+uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000   # /chat/financial_report_qa, /multimodal/financial_report_qa/...</code></pre>
 <ul><li>Before step 3 apply the code changes listed above: OCR-text-only chunking, visual flag independent of OCR, float16 ColPali, sparse index on disk.</li><li>Validate on 50 documents first: check real pages/doc, visual share vs 30%, and recall@k; then rescale these numbers.</li></ul>
 <h2>Alternative approach: local download + batch upload to Colab</h2>
 <p><strong>Approach A (above):</strong> all PDFs live on Colab/Drive for the whole run. <strong>Approach B:</strong> PDFs are downloaded and kept on the local PC; a batch is uploaded to Colab, processed (OCR text → <code>docs_text</code>, ColPali → <code>visual_pages</code>) and written to Qdrant; then the batch's PDFs, PNGs and OCR JSON are deleted on Colab and the next batch is pushed. Qdrant (and its SQLite sidecar) are the only things that accumulate.</p>
@@ -84,9 +84,9 @@ cp -r /content/drive/MyDrive/upload/batch_007 /content/in/financial_report_qa   
 python - &lt;&lt;&#x27;PY&#x27;   # OCR + text + ColPali in ONE pass; no Qwen3-VL captions
 from pathlib import Path
 import json
-from scripts.colpali_index import configure_colpali
+from scripts.rag.colpali_index import configure_colpali
 configure_colpali()               # MiniLM + ColPali v1.3 (4-bit) from indexes/models
-from scripts.domain_common.multimodal_rag import LocalRAG
+from scripts.rag.multimodal_rag import LocalRAG
 rag = LocalRAG()
 try:
     for pdf in sorted(Path(&quot;/content/in/financial_report_qa&quot;).glob(&quot;*.pdf&quot;)):

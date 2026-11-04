@@ -2,7 +2,7 @@
 
 Date: 2026-11-04. This implements the PDF part of [financial_rag_final_design.md](financial_rag_final_design.md), sections 5 and 7.
 
-- Code: [scripts/financial_ingest.py](../scripts/financial_ingest.py)
+- Code: [scripts/rag/financial_ingest.py](../scripts/rag/financial_ingest.py)
 - Colab session: [notebooks/colab_financial_ingest.ipynb](../notebooks/colab_financial_ingest.ipynb)
 - Tests: [tests/test_financial_ingest.py](../tests/test_financial_ingest.py)
 
@@ -12,7 +12,7 @@ Date: 2026-11-04. This implements the PDF part of [financial_rag_final_design.md
 
 ## 0. Getting the data (EDGAR → Drive)
 
-[scripts/download_edgar_corpus.py](../scripts/download_edgar_corpus.py) runs as notebook cell 6. For each of the 100 filings in `pdf_manifest.jsonl` it downloads:
+[scripts/downloads/download_edgar_corpus.py](../scripts/downloads/download_edgar_corpus.py) runs as notebook cell 6. For each of the 100 filings in `pdf_manifest.jsonl` it downloads:
 
 | Folder | Content | 100 filings (**measured**) |
 |---|---|---|
@@ -35,8 +35,8 @@ Date: 2026-11-04. This implements the PDF part of [financial_rag_final_design.md
 - One proxy (ADBE FY2022) has no iXBRL tags; it predates pay-versus-performance tagging.
 
 ```bash
-python -m scripts.download_edgar_corpus --output-dir $DRIVE/edgar --user-agent "name email@domain"
-python -m scripts.download_edgar_corpus --only 10k,companyfacts --tickers NVDA,CVX   # subsets
+python -m scripts.downloads.download_edgar_corpus --output-dir $DRIVE/edgar --user-agent "name email@domain"
+python -m scripts.downloads.download_edgar_corpus --only 10k,companyfacts --tickers NVDA,CVX   # subsets
 ```
 
 Requests are spaced 0.15 s apart, under SEC's limit of 10 per second, and retried only on HTTP 429 or 503. Rerunning skips files that already exist.
@@ -105,16 +105,16 @@ Numbers are stored only as payload strings. Pooling and float16 change which pag
 
 ```bash
 # Colab, after starting the Qdrant server (notebook cell 4)
-python -m scripts.financial_ingest ingest --qdrant-url http://127.0.0.1:6333 \
+python -m scripts.rag.financial_ingest ingest --qdrant-url http://127.0.0.1:6333 \
     --pdf-dir $DRIVE/edgar/pdfs --user-agent "name email@domain" \
     --snapshot-dir $DRIVE/snapshots --stages text,visual
-python -m scripts.financial_ingest status
-python -m scripts.financial_ingest query "total revenue 130,497" --ticker NVDA          # text path
-python -m scripts.financial_ingest query "revenue by market chart" --ticker NVDA --visual
-python -m scripts.financial_ingest restore --snapshot-dir $DRIVE/snapshots              # next session
+python -m scripts.rag.financial_ingest status
+python -m scripts.rag.financial_ingest query "total revenue 130,497" --ticker NVDA          # text path
+python -m scripts.rag.financial_ingest query "revenue by market chart" --ticker NVDA --visual
+python -m scripts.rag.financial_ingest restore --snapshot-dir $DRIVE/snapshots              # next session
 
 # Local smoke run (embedded Qdrant, hashing vectors, no GPU)
-python -m scripts.financial_ingest ingest --root tmp/ingest_smoke --embedding-provider hashing \
+python -m scripts.rag.financial_ingest ingest --root tmp/ingest_smoke --embedding-provider hashing \
     --stages text --limit-filings 3 --ocr none --reset
 ```
 
@@ -167,7 +167,7 @@ python -m scripts.financial_ingest ingest --root tmp/ingest_smoke --embedding-pr
 
 ## 7. Running the stack locally or on Colab (runtime profile)
 
-The same code runs on the PC and on Colab. [scripts/runtime_profile.py](../scripts/runtime_profile.py) picks the profile and fills in only the settings you haven't set yourself:
+The same code runs on the PC and on Colab. [scripts/common/runtime_profile.py](../scripts/common/runtime_profile.py) picks the profile and fills in only the settings you haven't set yourself:
 - **Choosing the profile:** `RAG_PROFILE=local|colab`, or Colab is detected automatically.
 - **When it runs:** FastAPI applies the profile at startup, and `GET /health` reports the result under `runtime`. The Streamlit sidebar shows it next to "Backend connected".
 
@@ -190,10 +190,10 @@ The same code runs on the PC and on Colab. [scripts/runtime_profile.py](../scrip
 
 ```powershell
 # 1. Build or refresh the local index (embedded Qdrant; stop the API first, since embedded Qdrant allows one process)
-.venv\Scripts\python.exe -m scripts.financial_ingest ingest --root indexes\financial_qdrant --stages text
+.venv\Scripts\python.exe -m scripts.rag.financial_ingest ingest --root indexes\financial_qdrant --stages text
 # 2. Serve
-uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
-streamlit run scripts\api_streamlit_app.py
+uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
+streamlit run scripts\ui\api_streamlit_app.py
 ```
 
 **On Colab:** run notebook cells 1–5, then ingest (or restore), then the **Serve** cells. They install the dependencies from `pyproject.toml`, start uvicorn (one worker) and Streamlit on localhost, and print the proxy URL. The project isn't an installable package, so `pip install -e .` fails; the notebook installs the dependency list instead.

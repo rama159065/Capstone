@@ -369,7 +369,7 @@ Evaluate retrieval separately from final answer quality.
 
 ## Prompting Implementation
 
-The runnable Track B prompting layer is in `scripts/financial_prompting_agent.py`. It uses the existing financial-report hybrid retriever, LangChain `ChatPromptTemplate` for prompt construction, and LangGraph for the bounded guardrail -> planner -> retrieve -> evidence guard -> answer -> output filter -> citation critic -> governance loop.
+The runnable Track B prompting layer is in `scripts/agents/financial_prompting_agent.py`. It uses the existing financial-report hybrid retriever, LangChain `ChatPromptTemplate` for prompt construction, and LangGraph for the bounded guardrail -> planner -> retrieve -> evidence guard -> answer -> output filter -> citation critic -> governance loop.
 
 ### Why This Is Agentic RAG
 
@@ -390,7 +390,7 @@ Implemented techniques:
 Offline smoke run with hashing embeddings:
 
 ```powershell
-python scripts\financial_prompting_agent.py --llm-provider mock --technique all --query "What does Apple say can affect quarterly net sales?" --ticker AAPL --top-k 3 --output output\financial_prompting_mock.json
+python scripts\agents\financial_prompting_agent.py --llm-provider mock --technique all --query "What does Apple say can affect quarterly net sales?" --ticker AAPL --top-k 3 --output output\financial_prompting_mock.json
 ```
 
 Hosted Track B run with the <=8B OpenAI-compatible chat endpoint:
@@ -400,18 +400,18 @@ set LLM_API_BASE=https://your-hosted-endpoint/v1
 set LLM_API_KEY=your_key
 set LLM_MODEL=your-chat-model
 
-python scripts\financial_prompting_agent.py --llm-provider hosted --technique agentic_graph --query "What does Apple say can affect quarterly net sales?" --ticker AAPL --top-k 5
+python scripts\agents\financial_prompting_agent.py --llm-provider hosted --technique agentic_graph --query "What does Apple say can affect quarterly net sales?" --ticker AAPL --top-k 5
 ```
 
 Streamlit chat UI:
 
 ```powershell
-streamlit run scripts\financial_streamlit_app.py
+streamlit run scripts\ui\financial_streamlit_app.py
 ```
 
 The UI supports all prompting techniques, dense/hybrid retrieval, ticker/year/source filters, guardrail toggles, HITL routing display, citations, evidence previews, and raw trace inspection.
 
-For final evaluation, run each technique against the frozen 60-100 query set and compare answer accuracy, citation validity, refusal behavior, tool count, and latency. Keep retrieval recall@k from `scripts/evaluate_financial_rag.py` as a separate metric.
+For final evaluation, run each technique against the frozen 60-100 query set and compare answer accuracy, citation validity, refusal behavior, tool count, and latency. Keep retrieval recall@k from `scripts/evaluation/evaluate_financial_rag.py` as a separate metric.
 
 For the agentic version, also record whether the run ended automatically, refused, or entered human review. This separates normal RAG answer quality from governance behavior.
 
@@ -420,7 +420,7 @@ For the agentic version, also record whether the run ended automatically, refuse
 Use:
 
 ```powershell
-python scripts\evaluate_financial_rag.py --embedding-provider hashing --retrieval-mode hybrid --generate-silver --num-silver-queries 100 --dense-top-k 30 --bm25-top-k 30
+python scripts\evaluation\evaluate_financial_rag.py --embedding-provider hashing --retrieval-mode hybrid --generate-silver --num-silver-queries 100 --dense-top-k 30 --bm25-top-k 30
 ```
 
 Current hashing-embedding silver evaluation:

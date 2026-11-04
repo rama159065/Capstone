@@ -1,6 +1,6 @@
 # Domain Agent Design Template
 
-Use this structure for each non-financial Track B domain. Each domain follows the same core implementation pattern as the financial-report agent and is orchestrated by LangGraph in `scripts/domain_common/rag_agent.py`:
+Use this structure for each non-financial Track B domain. Each domain follows the same core implementation pattern as the financial-report agent and is orchestrated by LangGraph in `scripts/agents/rag_agent.py`:
 
 ```text
 security guardrail

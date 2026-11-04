@@ -5,10 +5,10 @@ from pathlib import Path
 import pymupdf
 import pytest
 
-from scripts.generate_financial_report import ROOT, analyze, generate, parse_row, retrieve_financials
-from scripts.domain_common.resilience import Calls
-from scripts.domain_common.trace_log import TraceLog, current_trace_id, emit
-from scripts.monitor_report_trace import summarize
+from scripts.reports.generate_financial_report import ROOT, analyze, generate, parse_row, retrieve_financials
+from scripts.common.resilience import Calls
+from scripts.observability.trace_log import TraceLog, current_trace_id, emit
+from scripts.observability.monitor_report_trace import summarize
 
 PROFILE = ROOT / "configs/financial_reports/apple_2024.json"
 
@@ -89,8 +89,8 @@ def test_complete_report_artifacts_and_trace_monitor(tmp_path):
 
 
 def test_rag_model_and_result_logs_share_report_trace(tmp_path, monkeypatch):
-    from scripts.domain_common.safe_answer import answer
-    from scripts.domain_common import multimodal_rag as mm
+    from scripts.agents.safe_answer import answer
+    from scripts.rag import multimodal_rag as mm
     class RAG:
         root = tmp_path
         pipeline = "test"

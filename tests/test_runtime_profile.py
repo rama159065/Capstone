@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from scripts import runtime_profile as rp
+from scripts.common import runtime_profile as rp
 
 KEYS = ("RAG_PROFILE", "RAG_INGEST_DIR", "QDRANT_URL", "RAG_BACKEND", "RAG_DEVICE", "API_BASE_URL",
         "HF_HOME", "COLAB_RELEASE_TAG")

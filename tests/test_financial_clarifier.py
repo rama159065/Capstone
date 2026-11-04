@@ -3,8 +3,8 @@ from typing import Any
 from fastapi.testclient import TestClient
 import pytest
 
-import scripts.api_app as api_app
-from scripts.financial_clarifier import Clarifier, ConversationStore
+import scripts.api.api_app as api_app
+from scripts.agents.financial_clarifier import Clarifier, ConversationStore
 
 DIRECTORY = {"AAPL": [2022, 2023, 2024], "MSFT": [2024, 2025, 2026], "V": [2023, 2024, 2025],
              "MA": [2024, 2025], "CVX": [2022, 2023, 2024, 2025]}

@@ -9,7 +9,7 @@ Streaming is not currently implemented. The proposed SSE architecture, event con
 From the repository root, start the server:
 
 ```powershell
-uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
+uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
 ```
 
 Open the interactive Swagger UI at <http://127.0.0.1:8000/docs>, ReDoc at <http://127.0.0.1:8000/redoc>, or the raw OpenAPI schema at <http://127.0.0.1:8000/openapi.json>.
@@ -94,7 +94,7 @@ Example financial chat request:
 | `conversation_id` | string or null | `null` | Returned by the first turn; send it back with each follow-up |
 | `clarify` | boolean | `true` | `false` skips clarification and behaves like `/chat/financial_report_qa` |
 
-[scripts/financial_clarifier.py](../scripts/financial_clarifier.py) reads each turn into slots: intent, companies, fiscal years and measure. It checks them against the companies and years the corpus actually has, from both PDF manifests. It is deterministic and makes no LLM call.
+[scripts/agents/financial_clarifier.py](../scripts/agents/financial_clarifier.py) reads each turn into slots: intent, companies, fiscal years and measure. It checks them against the companies and years the corpus actually has, from both PDF manifests. It is deterministic and makes no LLM call.
 
 | Intent | Needs before agents run | Defaults it states instead of asking |
 |---|---|---|

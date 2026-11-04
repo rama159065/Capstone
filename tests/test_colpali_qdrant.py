@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from qdrant_client import models
 
-from scripts.domain_common import multimodal_rag as mm
+from scripts.rag import multimodal_rag as mm
 
 
 def vector(axis):
@@ -113,7 +113,7 @@ def test_changed_document_and_failure_clear_both_collections(tmp_path):
 
 
 def test_colpali_api_and_model_signature(tmp_path, monkeypatch):
-    from scripts import api_app
+    from scripts.api import api_app
     root = tmp_path / "index"
     rag = mm.LocalRAG(root, colpali_encoder=TestEncoder())
     try:

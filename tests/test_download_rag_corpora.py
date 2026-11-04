@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-import scripts.download_rag_corpora as corpora
+import scripts.downloads.download_rag_corpora as corpora
 
 
 def test_text_and_filename_helpers() -> None:

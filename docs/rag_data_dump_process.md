@@ -15,7 +15,7 @@ In practice, the data dump feeds tools such as dense retrieval, BM25 retrieval, 
 Run:
 
 ```powershell
-python scripts\download_rag_corpora.py --domains all --target-docs 500 --overwrite --sec-user-agent "capstone-rag/0.1 your_email@example.com"
+python scripts\downloads\download_rag_corpora.py --domains all --target-docs 500 --overwrite --sec-user-agent "capstone-rag/0.1 your_email@example.com"
 ```
 
 The downloader writes:
@@ -143,19 +143,19 @@ Use this stack for the annual-report PDF corpus:
 Build the local smoke-test Chroma index:
 
 ```powershell
-python scripts\index_financial_report_pdfs.py --embedding-provider hashing --reset --max-pages-per-pdf 20
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing --reset --max-pages-per-pdf 20
 ```
 
 Build the local smoke-test index with chart/figure retrieval hooks:
 
 ```powershell
-python scripts\index_financial_report_pdfs.py --embedding-provider hashing --reset --max-pages-per-pdf 20 --include-chart-summaries
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing --reset --max-pages-per-pdf 20 --include-chart-summaries
 ```
 
 Build the local smoke-test index with tables, chart/figure hooks, and optional OCR status:
 
 ```powershell
-python scripts\index_financial_report_pdfs.py --embedding-provider hashing --reset --max-pages-per-pdf 20 --include-tables --include-chart-summaries --enable-ocr
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing --reset --max-pages-per-pdf 20 --include-tables --include-chart-summaries --enable-ocr
 ```
 
 For final table coverage, index the full PDFs or raise `--max-pages-per-pdf`; the first 20 pages mostly cover early filing sections and may miss financial statement tables later in the report.
@@ -163,31 +163,31 @@ For final table coverage, index the full PDFs or raise `--max-pages-per-pdf`; th
 Retrieve top-k chunks from the existing Chroma index with dense retrieval:
 
 ```powershell
-python scripts\index_financial_report_pdfs.py --embedding-provider hashing --query-only --retrieval-mode dense --query "What does Apple report about net sales and revenue?" --top-k 5 --filter-ticker AAPL
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing --query-only --retrieval-mode dense --query "What does Apple report about net sales and revenue?" --top-k 5 --filter-ticker AAPL
 ```
 
 Retrieve top-k chunks with hybrid retrieval: BM25 + Chroma dense retrieval, reciprocal rank fusion, and simple reranking:
 
 ```powershell
-python scripts\index_financial_report_pdfs.py --embedding-provider hashing --query-only --retrieval-mode hybrid --query "What does Apple report about net sales and revenue?" --top-k 5 --dense-top-k 30 --bm25-top-k 30 --filter-ticker AAPL
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing --query-only --retrieval-mode hybrid --query "What does Apple report about net sales and revenue?" --top-k 5 --dense-top-k 30 --bm25-top-k 30 --filter-ticker AAPL
 ```
 
 Retrieve only chart/figure summary chunks:
 
 ```powershell
-python scripts\index_financial_report_pdfs.py --embedding-provider hashing --query-only --retrieval-mode hybrid --query "Find annual report chart or figure image for Microsoft" --top-k 3 --filter-source-type chart_summary --filter-ticker MSFT
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing --query-only --retrieval-mode hybrid --query "Find annual report chart or figure image for Microsoft" --top-k 3 --filter-source-type chart_summary --filter-ticker MSFT
 ```
 
 Retrieve only table summary chunks:
 
 ```powershell
-python scripts\index_financial_report_pdfs.py --embedding-provider hashing --query-only --retrieval-mode hybrid --query "Apple table net sales products services" --top-k 5 --filter-source-type table_summary --filter-ticker AAPL
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing --query-only --retrieval-mode hybrid --query "Apple table net sales products services" --top-k 5 --filter-source-type table_summary --filter-ticker AAPL
 ```
 
 Run a 100-query silver retrieval evaluation with current hashing embeddings:
 
 ```powershell
-python scripts\evaluate_financial_rag.py --embedding-provider hashing --retrieval-mode hybrid --generate-silver --num-silver-queries 100 --dense-top-k 30 --bm25-top-k 30
+python scripts\evaluation\evaluate_financial_rag.py --embedding-provider hashing --retrieval-mode hybrid --generate-silver --num-silver-queries 100 --dense-top-k 30 --bm25-top-k 30
 ```
 
 This writes:
@@ -203,7 +203,7 @@ Build the final hosted-embedding Chroma index:
 $env:EMBEDDING_API_BASE="https://your-hosted-endpoint/v1"
 $env:EMBEDDING_API_KEY="your_api_key"
 $env:EMBEDDING_MODEL="your_embedding_model"
-python scripts\index_financial_report_pdfs.py --embedding-provider hosted --reset --include-tables --include-chart-summaries --enable-ocr
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hosted --reset --include-tables --include-chart-summaries --enable-ocr
 ```
 
 The indexer writes:
@@ -221,25 +221,25 @@ indexes/chroma/financial_report_qa_pdfs/index_summary.json
 Download only policy-heavy domains:
 
 ```powershell
-python scripts\download_rag_corpora.py --domains travel_expense hr_policy --target-docs 500 --overwrite
+python scripts\downloads\download_rag_corpora.py --domains travel_expense hr_policy --target-docs 500 --overwrite
 ```
 
 Download only SEC-heavy domains:
 
 ```powershell
-python scripts\download_rag_corpora.py --domains competitive_research financial_report_qa --target-docs 500 --overwrite --sec-user-agent "capstone-rag/0.1 your_email@example.com"
+python scripts\downloads\download_rag_corpora.py --domains competitive_research financial_report_qa --target-docs 500 --overwrite --sec-user-agent "capstone-rag/0.1 your_email@example.com"
 ```
 
 Download financial annual report PDFs:
 
 ```powershell
-python scripts\download_financial_report_pdfs.py --target-pdfs 50 --years 2023 2022 2021 2020 2019 --timeout 5 --user-agent "capstone-rag-pdf/0.1 your_email@example.com"
+python scripts\downloads\download_financial_report_pdfs.py --target-pdfs 50 --years 2023 2022 2021 2020 2019 --timeout 5 --user-agent "capstone-rag-pdf/0.1 your_email@example.com"
 ```
 
 Download public PDF corpora for the remaining Track B domains:
 
 ```powershell
-python scripts\download_domain_pdfs.py --domains procurement_vendor travel_expense competitive_research incident_postmortem hr_policy
+python scripts\downloads\download_domain_pdfs.py --domains procurement_vendor travel_expense competitive_research incident_postmortem hr_policy
 ```
 
 This writes:
@@ -253,20 +253,20 @@ data/raw/domain_pdf_download_summary.json
 Index a smoke RAG corpus for each non-financial domain:
 
 ```powershell
-python scripts\procurement_vendor\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
-python scripts\travel_expense\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
-python scripts\competitive_research\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
-python scripts\incident_postmortem\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
-python scripts\hr_policy\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
+python scripts\domains\procurement_vendor\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
+python scripts\domains\travel_expense\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
+python scripts\domains\competitive_research\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
+python scripts\domains\incident_postmortem\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
+python scripts\domains\hr_policy\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
 ```
 
 Run a guarded domain agent and write an HTML result:
 
 ```powershell
-python scripts\procurement_vendor\agent.py --query "What evidence describes vendor evaluation criteria?" --html-out output\procurement_vendor_agent.html
+python scripts\domains\procurement_vendor\agent.py --query "What evidence describes vendor evaluation criteria?" --html-out output\procurement_vendor_agent.html
 ```
 
-The non-financial domain agents use the shared LangGraph runtime in `scripts/domain_common/rag_agent.py`. The graph runs:
+The non-financial domain agents use the shared LangGraph runtime in `scripts/agents/rag_agent.py`. The graph runs:
 
 ```text
 security_guard -> plain_text_classifier -> planner -> hybrid_retriever -> evidence_guard -> answer_agent -> output_filter -> citation_critic -> governance
@@ -278,19 +278,19 @@ Run a domain agent with optional LangSmith tracing:
 
 ```powershell
 $env:LANGSMITH_API_KEY="your_langsmith_key"
-python scripts\travel_expense\agent.py --enable-langsmith --langsmith-project capstone-travel-expense --query "What documentation is required for travel expenses?"
+python scripts\domains\travel_expense\agent.py --enable-langsmith --langsmith-project capstone-travel-expense --query "What documentation is required for travel expenses?"
 ```
 
 Launch a domain HTML/Streamlit chat UI:
 
 ```powershell
-streamlit run scripts\procurement_vendor\html_app.py
+streamlit run scripts\domains\procurement_vendor\html_app.py
 ```
 
 Download a smoke-test corpus:
 
 ```powershell
-python scripts\download_rag_corpora.py --domains all --target-docs 25 --overwrite --sec-user-agent "capstone-rag/0.1 your_email@example.com"
+python scripts\downloads\download_rag_corpora.py --domains all --target-docs 25 --overwrite --sec-user-agent "capstone-rag/0.1 your_email@example.com"
 ```
 
 ## Current implementation notes

@@ -20,9 +20,9 @@ above the requested `top_k` are null, so use `top_k: 10` to measure all four.
 The ranking evaluated is the evidence returned by the workflow, including any
 filtering it performs; no extra generation or retrieval is triggered for scoring.
 
-`python scripts/evaluate_financial_rag.py` also reports these metrics per query
+`python scripts/evaluation/evaluate_financial_rag.py` also reports these metrics per query
 and as macro averages, and accepts `qrels` in evaluation rows in addition to the
 existing `relevant_chunk_ids` format. Its previous hit-rate recall calculation
 has been corrected to fractional recall. The shared Python scorer is available
-as `scripts.domain_common.retrieval_metrics.retrieval_metrics` for other offline
+as `scripts.rag.retrieval_metrics.retrieval_metrics` for other offline
 retrieval experiments.

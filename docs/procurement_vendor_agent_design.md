@@ -72,9 +72,9 @@ Measure retrieval recall@k separately from answer quality. Security and HITL tes
 
 ## Implementation Status
 
-- Index CLI: `scripts/procurement_vendor/index.py`
-- Agent CLI: `scripts/procurement_vendor/agent.py`
-- Streamlit/HTML UI: `scripts/procurement_vendor/html_app.py`
-- Shared runtime: `scripts/domain_common/rag_agent.py`
+- Index CLI: `scripts/domains/procurement_vendor/index.py`
+- Agent CLI: `scripts/domains/procurement_vendor/agent.py`
+- Streamlit/HTML UI: `scripts/domains/procurement_vendor/html_app.py`
+- Shared runtime: `scripts/agents/rag_agent.py`
 - Optional tracing: `--enable-langsmith --langsmith-project <project-name>`
 - Unit tests cover config wiring, indexing helpers, guarded LangGraph orchestration, citation validation, output filtering, and HITL routing.

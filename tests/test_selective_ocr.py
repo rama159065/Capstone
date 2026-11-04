@@ -3,8 +3,8 @@ from types import SimpleNamespace
 import pymupdf
 import pytest
 
-from scripts.domain_common.multimodal_rag import LocalRAG, ROOT
-from scripts.domain_common.selective_ocr import SelectiveOCR
+from scripts.rag.multimodal_rag import LocalRAG, ROOT
+from scripts.rag.selective_ocr import SelectiveOCR
 
 SAMPLE = ROOT / "data/samples/ocr_validation/financial_report_qa/selective_ocr_sample.pdf"
 

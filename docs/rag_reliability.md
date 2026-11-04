@@ -71,7 +71,7 @@ retried as if it were a transport error.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
-.\.venv\Scripts\python.exe -m scripts.evaluate_rag_resilience
+.\.venv\Scripts\python.exe -m scripts.evaluation.evaluate_rag_resilience
 ```
 
 The second command writes `output/resilience_evaluation/summary.json` and
@@ -84,7 +84,7 @@ Validation completed: 158 tests passed in the full suite; the dedicated offline
 resilience evaluation passed all 25 cases. The final financial-workflow adjustment
 was additionally checked with its 13-test module.
 
-The existing `scripts.evaluate_multimodal_local` live evaluation now requires the
+The existing `scripts.evaluation.evaluate_multimodal_local` live evaluation now requires the
 appropriate result status as well as expected answer content. A fallback excerpt
 containing the expected number no longer counts as an accurate generated answer.
 No new live-model benchmark was run for this implementation. Earlier validation

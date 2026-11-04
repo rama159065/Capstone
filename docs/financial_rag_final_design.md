@@ -32,7 +32,7 @@ Labels:
 | Finding (**measured**) | Consequence |
 |---|---|
 | **20.3% of text pages (2,820 of 13,865) in 49 of the 100 EDGAR ARS PDFs have a garbled text layer.** Fonts lack a character map; for example Chevron's 123 pages give 409k characters of junk. 24 documents are more than half garbled. | PDF text extraction alone **loses those numbers**. |
-| The current OCR rule only runs on sparse text, `�` characters or large scans ([selective_ocr.py:82-88](../scripts/domain_common/selective_ocr.py#L82-L88)), so it **never runs on garbled pages** | A text-quality check must force OCR, or another text source must be used |
+| The current OCR rule only runs on sparse text, `�` characters or large scans ([selective_ocr.py:82-88](../scripts/rag/selective_ocr.py#L82-L88)), so it **never runs on garbled pages** | A text-quality check must force OCR, or another text source must be used |
 | RapidOCR (forced full-page) on Chevron: **all 5 statement figures recovered** (pages 58–61) after removing commas and spaces before comparing, but **18 s per page** on CPU (2 threads, 2× render). It also drops some thousands separators: `(8,001)` → `(8001)`. | OCR is accurate enough as a fallback, but ~29k garbled pages (1,000 docs) would take **~145 CPU-hours**. Use it only where the 10-K doesn't cover the page, on GPU, and always compare digits after normalising. |
 | The **10-K HTML** for the same fiscal year has clean text: Chevron 569k characters, **all 5 statement figures present**, **3,146 tagged XBRL facts**. Nvidia 1,218 facts; Merck 3,244 facts. | **Use the 10-K HTML/iXBRL as the text and number source.** Use the ARS PDF for page images (ColPali) and the glossy front section. |
 | XBRL figures in the PDF text layer: **85 of 96 (89%)**. 7 of 8 companies 100%; Chevron 0% (garbled) | The clean PDFs are reliable. The garbled ones are the whole gap. |
@@ -285,7 +285,7 @@ Rules:
 | **Exact-figure accuracy** | 500+ auto-generated questions from the facts DB ("{company} {concept label} FY{year}"), gold = XBRL value | **target ≥ 98%** exact match after unit normalisation; 100% for figures the facts tool returns |
 | Coverage of statement figures in text | XBRL value present in chunk text | 89% in PDF text (**measured**); **target ≥ 99%** with 10-K HTML text (Chevron 5/5 **measured**) |
 | Text retrieval | Recall@10 on the brief's 60–100 hand-written gold queries (evidence pages labelled) | target ≥ 0.90 |
-| Visual retrieval | `vs_full_top20@200` recall/NDCG from [colab_colpali_pooling_eval.py](../scripts/colab_colpali_pooling_eval.py) + hand-written chart queries | Recall@20 ≥ 0.90, NDCG@20 ≥ 0.93 (published 0.917 / 0.952) |
+| Visual retrieval | `vs_full_top20@200` recall/NDCG from [colab_colpali_pooling_eval.py](../scripts/evaluation/colab_colpali_pooling_eval.py) + hand-written chart queries | Recall@20 ≥ 0.90, NDCG@20 ≥ 0.93 (published 0.917 / 0.952) |
 | Citation correctness | Every cited `chunk_id`/page resolves and contains the quoted number | target 100% |
 | Refusal on missing data | Questions about figures a company doesn't report | target ≥ 95% say "not disclosed" with the place searched; 0 invented values |
 | Failure taxonomy | Retrieval miss, reasoning error, tool-call error, unsupported claim, routing, malformed output (as the brief asks) | reported per run |
@@ -401,9 +401,9 @@ How a request flows:
 4. The only internet calls are to the provided LLM and embeddings endpoints, which take most of the response time.
 
 The existing code already supports this layout:
-- `QDRANT_URL` switches `LocalRAG` to server mode ([multimodal_rag.py:103](../scripts/domain_common/multimodal_rag.py#L103)).
+- `QDRANT_URL` switches `LocalRAG` to server mode ([multimodal_rag.py:103](../scripts/rag/multimodal_rag.py#L103)).
 - `RAG_BACKEND=qdrant` routes both agents to Qdrant.
-- Streamlit's API base URL defaults to `http://127.0.0.1:8000` ([api_streamlit_app.py:20](../scripts/api_streamlit_app.py#L20)).
+- Streamlit's API base URL defaults to `http://127.0.0.1:8000` ([api_streamlit_app.py:20](../scripts/ui/api_streamlit_app.py#L20)).
 - `run_local_multimodal serve` already starts uvicorn with `workers=1`.
 
 #### Which runtime
@@ -427,8 +427,8 @@ curl -X POST "http://127.0.0.1:6333/collections/visual_pages/snapshots/upload?pr
 export RAG_BACKEND=qdrant QDRANT_URL=http://127.0.0.1:6333 RAG_LOCAL_DIR=/content/rag RAG_COLPALI_DEVICE=cuda
 export LLM_API_BASE=... LLM_MODEL=... EMBEDDING_API_BASE=... EMBEDDING_MODEL=...   # LLM_API_KEY / EMBEDDING_API_KEY via userdata.get
 # 4. API and UI (API on localhost only; Streamlit is the only exposed port)
-nohup uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000 --workers 1 > api.log 2>&1 &
-nohup streamlit run scripts/api_streamlit_app.py --server.port 8501 --server.address 127.0.0.1 > ui.log 2>&1 &
+nohup uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000 --workers 1 > api.log 2>&1 &
+nohup streamlit run scripts/ui/api_streamlit_app.py --server.port 8501 --server.address 127.0.0.1 > ui.log 2>&1 &
 # 5. warm up: load ColPali, run ~20 fixed queries (fills the page cache; first ColPali call took 47 s on CPU)
 # 6. expose Streamlit: Colab port proxy (only you, signed in to Google) or a cloudflared quick tunnel (public URL)
 ```
@@ -441,7 +441,7 @@ At session end, run a snapshot plus `checkpoints.sqlite` and copy them to Drive,
 |---|---|---|
 | Colab port proxy (`google.colab.output` / `kernel.proxyPort`) | Only the signed-in notebook user | Your own testing |
 | cloudflared quick tunnel → Streamlit only | Anyone with the URL | Demos to reviewers. **Add a Streamlit password** (Streamlit secrets) and keep FastAPI on `127.0.0.1` |
-| Exposing FastAPI itself | Anyone with the URL | Only after adding an API-key check. Today `api_app.py` has **no authentication and CORS `*`** ([api_app.py:367-368](../scripts/api_app.py#L367-L368)), so a public URL would spend the LLM quota for anyone who finds it |
+| Exposing FastAPI itself | Anyone with the URL | Only after adding an API-key check. Today `api_app.py` has **no authentication and CORS `*`** ([api_app.py:367-368](../scripts/api/api_app.py#L367-L368)), so a public URL would spend the LLM quota for anyone who finds it |
 
 #### Limits to plan around
 
@@ -510,8 +510,8 @@ A **Pro plan ($9.99/month, 100 CU)** covers ingest plus ~40 h/month of T4 demos 
 | # | Change | Files |
 |---|---|---|
 | 1 | Download the matching **10-K HTML** per ARS (submissions API, `reportDate` match); store `tenk_accession`, `tenk_url`, `filing_id` | `download_edgar_ars_pdfs.py` (new option) |
-| 2 | **10-K HTML parser:** Items/sections → chunks; `<table>` → markdown with row and column headers + unit line; `ix:nonFraction` → facts (concept, context period, dimensions, scale, sign) | new `scripts/domain_common/edgar_html.py` |
-| 3 | **Facts DB + tools** `get_fact`, `get_facts_series`, `compute_ratio` (formula registry), used by Flow A and Flow B | new `scripts/domain_common/financial_facts.py`; `financial_prompting_agent.py` |
+| 2 | **10-K HTML parser:** Items/sections → chunks; `<table>` → markdown with row and column headers + unit line; `ix:nonFraction` → facts (concept, context period, dimensions, scale, sign) | new `scripts/rag/edgar_html.py` |
+| 3 | **Facts DB + tools** `get_fact`, `get_facts_series`, `compute_ratio` (formula registry), used by Flow A and Flow B | new `scripts/rag/financial_facts.py`; `financial_prompting_agent.py` |
 | 4 | **Text-quality check** (common-word share < 5% → garbled). Garbled ARS pages: skip text if the 10-K covers them, otherwise GPU OCR. ColPali still runs on visual pages | `selective_ocr.py`, `multimodal_rag.py` |
 | 5 | **Number-aware sparse tokenizer** (keep `391,035`, `391035`, `6.08`, `%`, `$`, fiscal-year tokens) | `multimodal_rag.tokens`/`sparse`; the financial indexer |
 | 6 | **Number grounding check** in the output stage: every number must match a fact, a cited chunk or a registered formula | `api_app.apply_grounding_policy`, `safe_answer` |
@@ -519,7 +519,7 @@ A **Pro plan ($9.99/month, 100 CU)** covers ingest plus ~40 h/month of T4 demos 
 | 8 | Payload fields `filing_id`, `doc_kind`, `section`, `fiscal_year`; tenant index on `ticker`; `query_points_groups` | `multimodal_rag.py` |
 | 9 | **Router:** figure questions → facts first; visual retrieval only for chart/visual intents | planner in `financial_prompting_agent.py` |
 | 10 | Evaluation: XBRL-generated numeric questions + 60–100 gold queries + chart queries | `eval/` + `colab_colpali_pooling_eval.py` |
-| 11 | **Chart value extractor** (section 4.1): PDF text labels in chart regions; two-scale crop OCR for pixel-only and garbled regions; geometry checks (tick sequence, label position, bar height, totals); cross-source matching (10-K, `ecd` XBRL); `chart_value` rows with tier and box | new `scripts/domain_common/chart_values.py`; facts DB schema |
+| 11 | **Chart value extractor** (section 4.1): PDF text labels in chart regions; two-scale crop OCR for pixel-only and garbled regions; geometry checks (tick sequence, label position, bar height, totals); cross-source matching (10-K, `ecd` XBRL); `chart_value` rows with tier and box | new `scripts/rag/chart_values.py`; facts DB schema |
 | 12 | **Review screen** in Streamlit: page image with candidate boxes, approve or correct → T6, audited | `api_streamlit_app.py`, new API route |
 | 13 | Number grounding check also accepts T1–T4/T6 `chart_value` ids, and rejects T5 values in reports | `api_app.apply_grounding_policy` |
 

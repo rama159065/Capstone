@@ -5,7 +5,7 @@ import numpy as np
 import pymupdf
 import pytest
 
-from scripts import financial_ingest as fi
+from scripts.rag import financial_ingest as fi
 
 
 class FakeColPali:
@@ -146,7 +146,7 @@ def test_ingest_end_to_end_and_resume(tmp_path, corpus):
 
 
 def test_agent_adapter_returns_citable_evidence(tmp_path, corpus, monkeypatch):
-    from scripts.financial_prompting_agent import extract_citations
+    from scripts.agents.financial_prompting_agent import extract_citations
     client = fi.connect(None, tmp_path / "root")
     run = fi.Ingest(args_for(tmp_path, corpus, stages="text"), client=client)
     run.run()

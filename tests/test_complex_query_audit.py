@@ -8,7 +8,7 @@ from uuid import uuid4
 import pymupdf
 import pytest
 
-from scripts.domain_common import multimodal_rag as mm
+from scripts.rag import multimodal_rag as mm
 
 
 @pytest.fixture
@@ -57,7 +57,7 @@ def test_four_visual_pages_report_omitted_images(rag, monkeypatch):
 
 
 def test_local_prompt_preserves_later_page_and_rejects_unstructured_answer(rag, monkeypatch):
-    from scripts.domain_common import local_models
+    from scripts.common import local_models
     hits = evidence(2, long_first=True)
     monkeypatch.setattr(rag, "retrieve", lambda *a, **kw: hits)
     prompts = []

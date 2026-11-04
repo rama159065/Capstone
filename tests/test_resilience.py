@@ -7,8 +7,8 @@ from uuid import uuid4
 
 import pytest
 
-from scripts.domain_common.resilience import Calls, CallFailure
-from scripts.domain_common.safe_answer import answer
+from scripts.common.resilience import Calls, CallFailure
+from scripts.agents.safe_answer import answer
 
 
 def test_completed_call_is_not_repeated():
@@ -85,7 +85,7 @@ def hit():
 
 
 def test_no_evidence_never_calls_model(tmp_path, monkeypatch):
-    from scripts.domain_common import multimodal_rag as mm
+    from scripts.rag import multimodal_rag as mm
     monkeypatch.setattr(mm, "ollama", lambda *a: pytest.fail("must not generate"))
     result = answer(FakeRAG(tmp_path, []), "hr_policy", "What is revenue?", provider="ollama")
     assert result["final_status"] == "insufficient_evidence"
@@ -94,7 +94,7 @@ def test_no_evidence_never_calls_model(tmp_path, monkeypatch):
 
 
 def test_verified_passage_and_replayed_request(tmp_path, monkeypatch):
-    from scripts.domain_common import multimodal_rag as mm
+    from scripts.rag import multimodal_rag as mm
     row, invoked = hit(), []
     def model(*args):
         invoked.append(1)
@@ -115,7 +115,7 @@ def test_verified_passage_and_replayed_request(tmp_path, monkeypatch):
 @pytest.mark.parametrize("response", ["", "not json", '{"selections":null}',
     '{"selections":[{"source_id":"unknown","quote":"999"}],"unanswered":[]}'])
 def test_bad_generation_degrades_without_returning_invention(tmp_path, monkeypatch, response):
-    from scripts.domain_common import multimodal_rag as mm
+    from scripts.rag import multimodal_rag as mm
     monkeypatch.setattr(mm, "ollama", lambda *a: response)
     result = answer(FakeRAG(tmp_path, [hit()]), "hr_policy", "revenue", provider="ollama")
     assert result["final_status"] == "partial_evidence"
@@ -137,14 +137,14 @@ def test_retrieval_failure_is_visible_and_safe(tmp_path):
 @pytest.mark.parametrize("hits", [None, [None, {"chunk_id": "x", "text": None}],
                                    [{"chunk_id": "x", "text": "Image-only page; no readable text extracted."}]])
 def test_empty_and_malformed_tool_results_do_not_generate(tmp_path, monkeypatch, hits):
-    from scripts.domain_common import multimodal_rag as mm
+    from scripts.rag import multimodal_rag as mm
     monkeypatch.setattr(mm, "ollama", lambda *a: pytest.fail("must not generate"))
     result = answer(FakeRAG(tmp_path, hits), "hr_policy", "revenue", provider="ollama")
     assert result["final_status"] == "insufficient_evidence"
 
 
 def test_model_caption_cannot_verify_a_fact(tmp_path, monkeypatch):
-    from scripts.domain_common import multimodal_rag as mm
+    from scripts.rag import multimodal_rag as mm
     row = hit() | {"visual_captioned": True}
     monkeypatch.setattr(mm, "ollama", lambda *a: pytest.fail("caption is not grounding evidence"))
     result = answer(FakeRAG(tmp_path, [row]), "hr_policy", "revenue", provider="ollama")
@@ -153,7 +153,7 @@ def test_model_caption_cannot_verify_a_fact(tmp_path, monkeypatch):
 
 
 def test_omitted_context_cannot_receive_a_citation(tmp_path, monkeypatch):
-    from scripts.domain_common import multimodal_rag as mm
+    from scripts.rag import multimodal_rag as mm
     row = hit() | {"page_context": "x" * 25000}
     monkeypatch.setattr(mm, "ollama", lambda *a: pytest.fail("nothing fits the budget"))
     result = answer(FakeRAG(tmp_path, [row]), "hr_policy", "revenue", provider="ollama")

@@ -27,14 +27,14 @@ Implemented domains:
 - Incident postmortem drafter
 - HR policy navigator
 
-The financial domain has a richer dedicated implementation. The remaining domains share a common LangGraph RAG and guarded-agent runtime in `scripts/domain_common/rag_agent.py`.
+The financial domain has a richer dedicated implementation. The remaining domains share a common LangGraph RAG and guarded-agent runtime in `scripts/agents/rag_agent.py`.
 
 ## Implementation Status
 
 | Area | Status |
 |---|---|
 | Financial PDF RAG | Implemented with PDF verification, chunking, Chroma, BM25, RRF, reranking, optional table summaries, optional chart-summary chunks, and top-k query mode. |
-| Non-financial domain RAG | Implemented for procurement, travel/expense, competitive research, incident postmortem, and HR policy using the shared `scripts/domain_common/rag_agent.py` runtime. |
+| Non-financial domain RAG | Implemented for procurement, travel/expense, competitive research, incident postmortem, and HR policy using the shared `scripts/agents/rag_agent.py` runtime. |
 | Agent orchestration | Implemented with LangGraph nodes for security, plain-text validation, planning, hybrid retrieval, evidence guard, answer generation, output filtering, citation criticism, and governance/HITL. |
 | Guardrails and HITL | Implemented for input filtering, evidence prompt-injection filtering, output content filtering, citation validation, and human-review routing. |
 | API backend and UI | Implemented with FastAPI backend endpoints plus Streamlit frontends, including an API-backed Streamlit app for the final architecture. |
@@ -46,20 +46,19 @@ The financial domain has a richer dedicated implementation. The remaining domain
 ```text
 docs/                         Design notes and capstone documentation
 scripts/
-  domain_common/              Shared LangGraph PDF RAG, guardrails, HITL, HTML rendering
-  procurement_vendor/         Domain config, index CLI, agent CLI, Streamlit app
-  travel_expense/             Domain config, index CLI, agent CLI, Streamlit app
-  competitive_research/       Domain config, index CLI, agent CLI, Streamlit app
-  incident_postmortem/        Domain config, index CLI, agent CLI, Streamlit app
-  hr_policy/                  Domain config, index CLI, agent CLI, Streamlit app
-  download_domain_pdfs.py     Downloads PDFs for non-financial domains
-  api_app.py                  FastAPI backend for all domains
-  api_streamlit_app.py        Streamlit frontend that calls the FastAPI backend
-  download_financial_report_pdfs.py
-  index_financial_report_pdfs.py
-  financial_prompting_agent.py
-  financial_streamlit_app.py
-  evaluate_financial_rag.py
+  api/            FastAPI backend for all domains (api_app.py)
+  ui/             Streamlit front ends: API-backed chat (api_streamlit_app.py), standalone financial app
+  agents/         Financial agent, shared domain LangGraph agent (guardrails, HITL, HTML), clarifier, safe answer
+  rag/            Ingestion, indexing and retrieval: Chroma/BM25 indexer, Qdrant ingest (financial_ingest.py),
+                  multimodal RAG, ColPali, selective OCR, retrieval metrics
+  observability/  JSONL traces, LangSmith helpers, report-trace monitor
+  downloads/      Corpus and model downloaders (EDGAR ARS/10-K, domain PDFs, models)
+  evaluation/     Eval set builder, prompt baselines, retrieval/OCR/ColPali evaluations, validation-data generators
+  reports/        Deterministic financial report generation
+  common/         Repo paths, runtime profile (local/colab), resilience, local models
+  domains/        procurement_vendor, travel_expense, competitive_research, incident_postmortem, hr_policy:
+                  DomainConfig + index/agent/html_app wrappers
+notebooks/                    Colab ingestion and serving notebook
 tests/                        Unit tests
 ```
 
@@ -98,24 +97,24 @@ Optional OCR support for scanned pages, tables, or chart images requires Tessera
 Run a small local smoke test with deterministic hashing embeddings:
 
 ```powershell
-python scripts\download_financial_report_pdfs.py --target-pdfs 5
-python scripts\index_financial_report_pdfs.py --embedding-provider hashing --limit-pdfs 5 --max-pages-per-pdf 10 --reset
-python scripts\financial_prompting_agent.py --llm-provider mock --technique agentic_graph --query "What does Apple say can affect quarterly net sales?" --ticker AAPL
+python scripts\downloads\download_financial_report_pdfs.py --target-pdfs 5
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing --limit-pdfs 5 --max-pages-per-pdf 10 --reset
+python scripts\agents\financial_prompting_agent.py --llm-provider mock --technique agentic_graph --query "What does Apple say can affect quarterly net sales?" --ticker AAPL
 ```
 
 For a non-financial domain smoke test:
 
 ```powershell
-python scripts\download_domain_pdfs.py --domains travel_expense
-python scripts\travel_expense\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
-python scripts\travel_expense\agent.py --query "What documentation is required for travel expenses?"
+python scripts\downloads\download_domain_pdfs.py --domains travel_expense
+python scripts\domains\travel_expense\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
+python scripts\domains\travel_expense\agent.py --query "What documentation is required for travel expenses?"
 ```
 
 Start the final API-side demo stack:
 
 ```powershell
-uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
-streamlit run scripts\api_streamlit_app.py
+uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
+streamlit run scripts\ui\api_streamlit_app.py
 ```
 
 ## Data Download
@@ -123,19 +122,19 @@ streamlit run scripts\api_streamlit_app.py
 Download financial annual report PDFs:
 
 ```powershell
-python scripts\download_financial_report_pdfs.py --target-pdfs 100
+python scripts\downloads\download_financial_report_pdfs.py --target-pdfs 100
 ```
 
 Download the public PDF corpora for the other Track B domains:
 
 ```powershell
-python scripts\download_domain_pdfs.py
+python scripts\downloads\download_domain_pdfs.py
 ```
 
 Optional raw JSON/API corpora for the recommended domains can also be downloaded for corpus analysis and future retrieval expansion:
 
 ```powershell
-python scripts\download_rag_corpora.py --domains all --target-docs 500 --overwrite --sec-user-agent "capstone-rag/0.1 your_email@example.com"
+python scripts\downloads\download_rag_corpora.py --domains all --target-docs 500 --overwrite --sec-user-agent "capstone-rag/0.1 your_email@example.com"
 ```
 
 PDF manifests are written to:
@@ -149,7 +148,7 @@ data/raw/<domain>/pdf_manifest.jsonl
 Fast local smoke-test mode with deterministic hashing embeddings:
 
 ```powershell
-python scripts\index_financial_report_pdfs.py --embedding-provider hashing --reset
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing --reset
 ```
 
 Hosted embedding mode for final capstone runs:
@@ -158,7 +157,7 @@ Hosted embedding mode for final capstone runs:
 $env:EMBEDDING_API_BASE="https://your-hosted-endpoint/v1"
 $env:EMBEDDING_API_KEY="your-key"
 $env:EMBEDDING_MODEL="your-embedding-model"
-python scripts\index_financial_report_pdfs.py --embedding-provider hosted --reset
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hosted --reset
 ```
 
 The financial indexer writes:
@@ -172,17 +171,17 @@ The financial indexer writes:
 Each non-financial domain has the same command pattern.
 
 ```powershell
-python scripts\procurement_vendor\index.py --embedding-provider hashing --reset
-python scripts\travel_expense\index.py --embedding-provider hashing --reset
-python scripts\competitive_research\index.py --embedding-provider hashing --reset
-python scripts\incident_postmortem\index.py --embedding-provider hashing --reset
-python scripts\hr_policy\index.py --embedding-provider hashing --reset
+python scripts\domains\procurement_vendor\index.py --embedding-provider hashing --reset
+python scripts\domains\travel_expense\index.py --embedding-provider hashing --reset
+python scripts\domains\competitive_research\index.py --embedding-provider hashing --reset
+python scripts\domains\incident_postmortem\index.py --embedding-provider hashing --reset
+python scripts\domains\hr_policy\index.py --embedding-provider hashing --reset
 ```
 
 For quick smoke tests, limit pages:
 
 ```powershell
-python scripts\hr_policy\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
+python scripts\domains\hr_policy\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
 ```
 
 ## Retrieval Strategy
@@ -206,7 +205,7 @@ The current shared non-financial runtime indexes PDF chunks from `data/raw/<doma
 Financial agent, offline mock mode:
 
 ```powershell
-python scripts\financial_prompting_agent.py --llm-provider mock --technique all --query "What does Apple say can affect quarterly net sales?" --ticker AAPL
+python scripts\agents\financial_prompting_agent.py --llm-provider mock --technique all --query "What does Apple say can affect quarterly net sales?" --ticker AAPL
 ```
 
 Financial agent with a hosted OpenAI-compatible <=8B chat API:
@@ -215,23 +214,23 @@ Financial agent with a hosted OpenAI-compatible <=8B chat API:
 $env:LLM_API_BASE="https://your-hosted-endpoint/v1"
 $env:LLM_API_KEY="your-key"
 $env:LLM_MODEL="your-chat-model"
-python scripts\financial_prompting_agent.py --llm-provider hosted --technique agentic_graph --query "What are revenue risks?" --ticker AAPL
+python scripts\agents\financial_prompting_agent.py --llm-provider hosted --technique agentic_graph --query "What are revenue risks?" --ticker AAPL
 ```
 
 Other domain agents:
 
 ```powershell
-python scripts\procurement_vendor\agent.py --query "What evidence describes vendor evaluation criteria?"
-python scripts\travel_expense\agent.py --query "What documentation is required for travel expenses?"
-python scripts\competitive_research\agent.py --query "Compare competitor risk language about market demand."
-python scripts\incident_postmortem\agent.py --query "What should be included in an incident postmortem?"
-python scripts\hr_policy\agent.py --query "What does the FMLA guide say about requesting leave?"
+python scripts\domains\procurement_vendor\agent.py --query "What evidence describes vendor evaluation criteria?"
+python scripts\domains\travel_expense\agent.py --query "What documentation is required for travel expenses?"
+python scripts\domains\competitive_research\agent.py --query "Compare competitor risk language about market demand."
+python scripts\domains\incident_postmortem\agent.py --query "What should be included in an incident postmortem?"
+python scripts\domains\hr_policy\agent.py --query "What does the FMLA guide say about requesting leave?"
 ```
 
 To write an HTML report:
 
 ```powershell
-python scripts\hr_policy\agent.py --query "What does the FMLA guide say about requesting leave?" --html-out output\hr_policy_agent.html
+python scripts\domains\hr_policy\agent.py --query "What does the FMLA guide say about requesting leave?" --html-out output\hr_policy_agent.html
 ```
 
 ## Streamlit Chat UIs
@@ -239,24 +238,24 @@ python scripts\hr_policy\agent.py --query "What does the FMLA guide say about re
 API-backed Streamlit UI for the final architecture:
 
 ```powershell
-uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
-streamlit run scripts\api_streamlit_app.py
+uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
+streamlit run scripts\ui\api_streamlit_app.py
 ```
 
 Financial UI:
 
 ```powershell
-streamlit run scripts\financial_streamlit_app.py
+streamlit run scripts\ui\financial_streamlit_app.py
 ```
 
 Domain-specific UIs:
 
 ```powershell
-streamlit run scripts\procurement_vendor\html_app.py
-streamlit run scripts\travel_expense\html_app.py
-streamlit run scripts\competitive_research\html_app.py
-streamlit run scripts\incident_postmortem\html_app.py
-streamlit run scripts\hr_policy\html_app.py
+streamlit run scripts\domains\procurement_vendor\html_app.py
+streamlit run scripts\domains\travel_expense\html_app.py
+streamlit run scripts\domains\competitive_research\html_app.py
+streamlit run scripts\domains\incident_postmortem\html_app.py
+streamlit run scripts\domains\hr_policy\html_app.py
 ```
 
 ## FastAPI Backend
@@ -264,7 +263,7 @@ streamlit run scripts\hr_policy\html_app.py
 Run the backend:
 
 ```powershell
-uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
+uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
 ```
 
 Interactive docs are available at `http://127.0.0.1:8000/docs` (Swagger UI) and `http://127.0.0.1:8000/redoc` (ReDoc). The raw OpenAPI schema is at `http://127.0.0.1:8000/openapi.json`. See [docs/fastapi_api.md](docs/fastapi_api.md) for request fields, response shapes, error codes, examples, rate limits, and tracing setup. Streaming is not implemented; see the [proposed FastAPI streaming design](docs/fastapi_streaming_design.md).
@@ -309,61 +308,61 @@ Use hashing embeddings and mock LLM mode for local smoke tests. For final capsto
 ### Financial Report QA
 
 ```powershell
-python scripts\download_financial_report_pdfs.py --target-pdfs 100
-python scripts\index_financial_report_pdfs.py --embedding-provider hashing --reset
-python scripts\financial_prompting_agent.py --llm-provider mock --technique agentic_graph --query "What does Apple say can affect quarterly net sales?" --ticker AAPL
-streamlit run scripts\financial_streamlit_app.py
+python scripts\downloads\download_financial_report_pdfs.py --target-pdfs 100
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing --reset
+python scripts\agents\financial_prompting_agent.py --llm-provider mock --technique agentic_graph --query "What does Apple say can affect quarterly net sales?" --ticker AAPL
+streamlit run scripts\ui\financial_streamlit_app.py
 ```
 
 Optional top-k retrieval check:
 
 ```powershell
-python scripts\index_financial_report_pdfs.py --embedding-provider hashing --query-only --retrieval-mode hybrid --query "What does Apple report about net sales and revenue?" --top-k 5 --filter-ticker AAPL
+python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing --query-only --retrieval-mode hybrid --query "What does Apple report about net sales and revenue?" --top-k 5 --filter-ticker AAPL
 ```
 
 ### Procurement And Vendor Review
 
 ```powershell
-python scripts\download_domain_pdfs.py --domains procurement_vendor
-python scripts\procurement_vendor\index.py --embedding-provider hashing --reset
-python scripts\procurement_vendor\agent.py --query "What evidence describes vendor evaluation criteria?" --html-out output\procurement_vendor_agent.html
-streamlit run scripts\procurement_vendor\html_app.py
+python scripts\downloads\download_domain_pdfs.py --domains procurement_vendor
+python scripts\domains\procurement_vendor\index.py --embedding-provider hashing --reset
+python scripts\domains\procurement_vendor\agent.py --query "What evidence describes vendor evaluation criteria?" --html-out output\procurement_vendor_agent.html
+streamlit run scripts\domains\procurement_vendor\html_app.py
 ```
 
 ### Travel And Expense Policy
 
 ```powershell
-python scripts\download_domain_pdfs.py --domains travel_expense
-python scripts\travel_expense\index.py --embedding-provider hashing --reset
-python scripts\travel_expense\agent.py --query "What documentation is required for travel expenses?" --html-out output\travel_expense_agent.html
-streamlit run scripts\travel_expense\html_app.py
+python scripts\downloads\download_domain_pdfs.py --domains travel_expense
+python scripts\domains\travel_expense\index.py --embedding-provider hashing --reset
+python scripts\domains\travel_expense\agent.py --query "What documentation is required for travel expenses?" --html-out output\travel_expense_agent.html
+streamlit run scripts\domains\travel_expense\html_app.py
 ```
 
 ### Competitive Research
 
 ```powershell
-python scripts\download_domain_pdfs.py --domains competitive_research
-python scripts\competitive_research\index.py --embedding-provider hashing --reset
-python scripts\competitive_research\agent.py --query "Compare competitor risk language about market demand." --html-out output\competitive_research_agent.html
-streamlit run scripts\competitive_research\html_app.py
+python scripts\downloads\download_domain_pdfs.py --domains competitive_research
+python scripts\domains\competitive_research\index.py --embedding-provider hashing --reset
+python scripts\domains\competitive_research\agent.py --query "Compare competitor risk language about market demand." --html-out output\competitive_research_agent.html
+streamlit run scripts\domains\competitive_research\html_app.py
 ```
 
 ### Incident Postmortem
 
 ```powershell
-python scripts\download_domain_pdfs.py --domains incident_postmortem
-python scripts\incident_postmortem\index.py --embedding-provider hashing --reset
-python scripts\incident_postmortem\agent.py --query "What should be included in an incident postmortem?" --html-out output\incident_postmortem_agent.html
-streamlit run scripts\incident_postmortem\html_app.py
+python scripts\downloads\download_domain_pdfs.py --domains incident_postmortem
+python scripts\domains\incident_postmortem\index.py --embedding-provider hashing --reset
+python scripts\domains\incident_postmortem\agent.py --query "What should be included in an incident postmortem?" --html-out output\incident_postmortem_agent.html
+streamlit run scripts\domains\incident_postmortem\html_app.py
 ```
 
 ### HR Policy Navigator
 
 ```powershell
-python scripts\download_domain_pdfs.py --domains hr_policy
-python scripts\hr_policy\index.py --embedding-provider hashing --reset
-python scripts\hr_policy\agent.py --query "What does the FMLA guide say about requesting leave?" --html-out output\hr_policy_agent.html
-streamlit run scripts\hr_policy\html_app.py
+python scripts\downloads\download_domain_pdfs.py --domains hr_policy
+python scripts\domains\hr_policy\index.py --embedding-provider hashing --reset
+python scripts\domains\hr_policy\agent.py --query "What does the FMLA guide say about requesting leave?" --html-out output\hr_policy_agent.html
+streamlit run scripts\domains\hr_policy\html_app.py
 ```
 
 ## Guardrails, Governance, and HITL
@@ -403,19 +402,19 @@ $env:LANGSMITH_PROJECT="capstone-financial-report-qa"
 Run the financial agent with LangSmith tracing:
 
 ```powershell
-python scripts\financial_prompting_agent.py --enable-langsmith --langsmith-project capstone-financial-report-qa --llm-provider mock --technique agentic_graph --query "What does Apple say can affect quarterly net sales?" --ticker AAPL
+python scripts\agents\financial_prompting_agent.py --enable-langsmith --langsmith-project capstone-financial-report-qa --llm-provider mock --technique agentic_graph --query "What does Apple say can affect quarterly net sales?" --ticker AAPL
 ```
 
 Run retrieval evaluation with LangSmith tracing:
 
 ```powershell
-python scripts\evaluate_financial_rag.py --enable-langsmith --langsmith-project capstone-financial-rag-eval --embedding-provider hashing
+python scripts\evaluation\evaluate_financial_rag.py --enable-langsmith --langsmith-project capstone-financial-rag-eval --embedding-provider hashing
 ```
 
 Run any generic domain agent with LangSmith tracing:
 
 ```powershell
-python scripts\hr_policy\agent.py --enable-langsmith --langsmith-project capstone-hr-policy --query "What does the FMLA employee guide say about requesting leave?"
+python scripts\domains\hr_policy\agent.py --enable-langsmith --langsmith-project capstone-hr-policy --query "What does the FMLA employee guide say about requesting leave?"
 ```
 
 Each trace includes tags and metadata for domain, retrieval mode, LLM provider, embedding provider, top-k settings, guardrail status, and HITL status. If `--enable-langsmith` is used without `LANGSMITH_API_KEY`, the run still completes locally and reports LangSmith as disabled in the JSON output.
@@ -425,13 +424,13 @@ Each trace includes tags and metadata for domain, retrieval mode, LLM provider, 
 Generate a silver retrieval set and measure recall separately from answer quality:
 
 ```powershell
-python scripts\evaluate_financial_rag.py --embedding-provider hashing --generate-silver
+python scripts\evaluation\evaluate_financial_rag.py --embedding-provider hashing --generate-silver
 ```
 
 Run evaluation:
 
 ```powershell
-python scripts\evaluate_financial_rag.py --embedding-provider hashing
+python scripts\evaluation\evaluate_financial_rag.py --embedding-provider hashing
 ```
 
 The evaluation reports recall@k and related retrieval metrics without calling the LLM.
@@ -443,7 +442,7 @@ Before a final demo or report run:
 - Download enough PDFs to reach the required corpus size for the selected domain.
 - Rebuild indexes with hosted embeddings instead of hashing embeddings.
 - Use hosted chat mode for the final Agentic RAG answer path through FastAPI.
-- Run `uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000` and `streamlit run scripts\api_streamlit_app.py` for the final API-backed demo.
+- Run `uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000` and `streamlit run scripts\ui\api_streamlit_app.py` for the final API-backed demo.
 - Run retrieval recall@k evaluation separately from answer-quality evaluation.
 - Capture LangSmith traces for at least representative successful, refused, and HITL-routed runs.
 - Keep generated data, indexes, HTML reports, and eval artifacts out of git.
@@ -478,8 +477,8 @@ Current coverage includes:
 
 See [the local setup guide](docs/local_multimodal_rag.md) for PDF ingestion, hybrid retrieval, image-aware local answers, and six included sample PDFs covering all domains. Set `RAG_BACKEND=qdrant` to use Qdrant from the existing app.
 
-The complete CPU profile uses learned embeddings, a cross-encoder reranker, and a local Qwen vision model. Run `.venv/Scripts/python.exe -m scripts.run_local_multimodal evaluate` to validate text, tables, and an image-only chart; run the same module with `serve` to start the prepared local API and model service.
+The complete CPU profile uses learned embeddings, a cross-encoder reranker, and a local Qwen vision model. Run `.venv/Scripts/python.exe -m scripts.rag.run_local_multimodal evaluate` to validate text, tables, and an image-only chart; run the same module with `serve` to start the prepared local API and model service.
 
-For ColPali page multivectors and Qdrant MaxSim retrieval, see [ColPali implementation and Qdrant storage](docs/colpali_qdrant.md). Backfill the existing index with `python -m scripts.colpali_index backfill`, then start the API with `python -m scripts.run_local_multimodal serve --colpali`.
+For ColPali page multivectors and Qdrant MaxSim retrieval, see [ColPali implementation and Qdrant storage](docs/colpali_qdrant.md). Backfill the existing index with `python -m scripts.rag.colpali_index backfill`, then start the API with `python -m scripts.rag.run_local_multimodal serve --colpali`.
 
-Selective OCR now adds scanned-page and embedded-image text to the same text-vector collection. Use `python -m scripts.ocr_index` to backfill existing PDFs; see [OCR implementation and validation](docs/selective_ocr.md).
+Selective OCR now adds scanned-page and embedded-image text to the same text-vector collection. Use `python -m scripts.rag.ocr_index` to backfill existing PDFs; see [OCR implementation and validation](docs/selective_ocr.md).

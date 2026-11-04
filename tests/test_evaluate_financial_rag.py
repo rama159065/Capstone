@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-import scripts.evaluate_financial_rag as eval_rag
+import scripts.evaluation.evaluate_financial_rag as eval_rag
 
 
 def write_jsonl(path, rows) -> None:

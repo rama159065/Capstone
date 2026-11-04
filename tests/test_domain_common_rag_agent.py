@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import scripts.domain_common.rag_agent as rag
-from scripts.procurement_vendor.domain_config import DOMAIN_CONFIG as PROCUREMENT_CONFIG
+import scripts.agents.rag_agent as rag
+from scripts.domains.procurement_vendor.domain_config import DOMAIN_CONFIG as PROCUREMENT_CONFIG
 
 
 def sample_hit(text: str = "Vendor evaluation criteria evidence.") -> dict[str, object]:

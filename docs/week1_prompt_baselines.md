@@ -2,7 +2,7 @@
 
 Date: 2026-11-04. This is the Track B Week 1 deliverable: a single agent with a single prompt, five prompting strategies compared systematically on the frozen evaluation set, and a record of how the small model fails.
 
-- Code: [scripts/prompt_baselines.py](../scripts/prompt_baselines.py), with tests in [tests/test_prompt_baselines.py](../tests/test_prompt_baselines.py)
+- Code: [scripts/evaluation/prompt_baselines.py](../scripts/evaluation/prompt_baselines.py), with tests in [tests/test_prompt_baselines.py](../tests/test_prompt_baselines.py)
 - Evaluation set: [eval_set_v1](../data/evaluation/financial_report_qa/eval_set_v1.md), frozen before implementation
 - Task specification: [week1_task_specification.md](week1_task_specification.md)
 - Raw outputs: `output/prompt_baselines/<run>/` (`responses.jsonl`, `scores.jsonl`, `summary.json`, `report.md`)
@@ -189,7 +189,7 @@ These questions need the visual/OCR path and the chart-value facts (design secti
 
 | Observed break | Mitigation |
 |---|---|
-| Retrieval misses (largest effect) | Company/year filters from a planner; number-aware hybrid retrieval and the XBRL facts tool ([financial_ingest.py](../scripts/financial_ingest.py), design sections 3–4). Measure retrieval separately (oracle vs real) |
+| Retrieval misses (largest effect) | Company/year filters from a planner; number-aware hybrid retrieval and the XBRL facts tool ([financial_ingest.py](../scripts/rag/financial_ingest.py), design sections 3–4). Measure retrieval separately (oracle vs real) |
 | Wrong row, period or unit; arithmetic | Numbers come from the **facts tool**, not from the model reading tables. Code computes ratios with `Decimal` and states the formula. The model writes words around facts it doesn't produce |
 | Invented numbers, "however…" contradictions | **Number grounding check** before release: every number must match a fact or a cited chunk, otherwise withhold or send to review (extends `apply_grounding_policy`) |
 | Advice, injection, out-of-scope | A **router/guard node before the LLM** (rules + classifier) returns the refusal. The model is never asked to decide whether to refuse; decomposition shows why |
@@ -212,10 +212,10 @@ These questions need the visual/OCR path and the chart-value facts (design secti
 
 ```powershell
 $env:LLM_API_BASE="https://<provided-endpoint>/v1"; $env:LLM_API_KEY="..."; $env:LLM_MODEL="<provided-model>"
-.venv\Scripts\python.exe -m scripts.prompt_baselines --run-id hosted_v1_oracle --context oracle
-.venv\Scripts\python.exe -m scripts.prompt_baselines --run-id hosted_v1_bm25 --context bm25
+.venv\Scripts\python.exe -m scripts.evaluation.prompt_baselines --run-id hosted_v1_oracle --context oracle
+.venv\Scripts\python.exe -m scripts.evaluation.prompt_baselines --run-id hosted_v1_bm25 --context bm25
 # Re-score a finished run after a scorer change:
-.venv\Scripts\python.exe -m scripts.prompt_baselines --run-id hosted_v1_oracle --report-only
+.venv\Scripts\python.exe -m scripts.evaluation.prompt_baselines --run-id hosted_v1_oracle --report-only
 ```
 
 **Notes:**

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-import scripts.financial_prompting_agent as agent
+import scripts.agents.financial_prompting_agent as agent
 
 
 def sample_config() -> agent.AgentConfig:

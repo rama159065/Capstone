@@ -40,9 +40,9 @@ Labels: **measured** = measured in this repo; **published** = from Qdrant's blog
 
 | Source | Use | Script | State |
 |---|---|---|---|
-| **SEC EDGAR Form ARS PDFs** (official) | Main RAG corpus: text, tables, charts | [scripts/download_edgar_ars_pdfs.py](../scripts/download_edgar_ars_pdfs.py) | 100 PDFs in `data/raw/financial_report_qa/edgar/`, SHA-256 checked (**measured**) |
-| AnnualReports.com PDFs | Apple, and the existing report profile | [scripts/download_financial_report_pdfs.py](../scripts/download_financial_report_pdfs.py) | 30 PDFs (AAPL, MSFT, NVDA, AMZN), committed |
-| SEC companyfacts (XBRL) | Tagged numbers to cross-check reports and numeric answers | `fetch_financial_sec_facts` in [download_rag_corpora.py](../scripts/download_rag_corpora.py) | 500 records |
+| **SEC EDGAR Form ARS PDFs** (official) | Main RAG corpus: text, tables, charts | [scripts/downloads/download_edgar_ars_pdfs.py](../scripts/downloads/download_edgar_ars_pdfs.py) | 100 PDFs in `data/raw/financial_report_qa/edgar/`, SHA-256 checked (**measured**) |
+| AnnualReports.com PDFs | Apple, and the existing report profile | [scripts/downloads/download_financial_report_pdfs.py](../scripts/downloads/download_financial_report_pdfs.py) | 30 PDFs (AAPL, MSFT, NVDA, AMZN), committed |
+| SEC companyfacts (XBRL) | Tagged numbers to cross-check reports and numeric answers | `fetch_financial_sec_facts` in [download_rag_corpora.py](../scripts/downloads/download_rag_corpora.py) | 500 records |
 | 10-K HTML (Inline XBRL) | Optional later, for years before 2023 or companies without ARS | none yet | Not used; render to PDF with PyMuPDF if needed (tested: Apple FY2024, 154 pages in 0.5 s) |
 
 ### 2.2 Recommendations
@@ -206,12 +206,12 @@ Recommendations:
 | File | Change | Section |
 |---|---|---|
 | `.gitignore` | Ignore `data/raw/financial_report_qa/edgar/pdfs/` | 2 |
-| `scripts/domain_common/colpali_retrieval.py` | Return the image-token mask or pooled vectors; add pooling and datatype to the signature; GPU dtype handling; update the "never pooled" docstring | 3 |
-| `scripts/domain_common/multimodal_rag.py` | `ensure_visual_collection`: 4 named vectors, float16, schema check · `index_visual_page`: upsert pooled vectors · `retrieve_visual` / `retrieve_local`: three prefetches + rerank, filters · `ingest`: manifest metadata, visual threshold, table fallback · `backfill_visual`: pool from stored vectors · payload indexes | 3, 4 |
-| `scripts/run_local_multimodal.py` / `scripts/colpali_index.py` | Colab profile: `QDRANT_URL`, `RAG_COLPALI_DEVICE=cuda`, no quantization, fixed `RAG_LOCAL_DIR`; manifest-driven ingest command | 3, 5 |
-| `scripts/financial_prompting_agent.py` | Compile with a checkpointer; add `conversation_memory`, `report_facts`, `report_handoff` | 6 |
-| `scripts/generate_financial_report.py` | Split into node functions; new Flow A graph module | 6 |
-| `scripts/api_app.py` | Report job endpoints; `conversation_id` on chat | 6 |
+| `scripts/rag/colpali_retrieval.py` | Return the image-token mask or pooled vectors; add pooling and datatype to the signature; GPU dtype handling; update the "never pooled" docstring | 3 |
+| `scripts/rag/multimodal_rag.py` | `ensure_visual_collection`: 4 named vectors, float16, schema check · `index_visual_page`: upsert pooled vectors · `retrieve_visual` / `retrieve_local`: three prefetches + rerank, filters · `ingest`: manifest metadata, visual threshold, table fallback · `backfill_visual`: pool from stored vectors · payload indexes | 3, 4 |
+| `scripts/rag/run_local_multimodal.py` / `scripts/rag/colpali_index.py` | Colab profile: `QDRANT_URL`, `RAG_COLPALI_DEVICE=cuda`, no quantization, fixed `RAG_LOCAL_DIR`; manifest-driven ingest command | 3, 5 |
+| `scripts/agents/financial_prompting_agent.py` | Compile with a checkpointer; add `conversation_memory`, `report_facts`, `report_handoff` | 6 |
+| `scripts/reports/generate_financial_report.py` | Split into node functions; new Flow A graph module | 6 |
+| `scripts/api/api_app.py` | Report job endpoints; `conversation_id` on chat | 6 |
 | `pyproject.toml` | Add `langgraph-checkpoint-sqlite`; run `uv sync` (`pandas` is declared but missing from `.venv`) | 6 |
 | New: snapshot and restore helper | Create, copy and restore snapshots + SQLite files + PNG tar on Colab | 5 |
 
@@ -239,7 +239,7 @@ Keep tests offline: hashing embeddings, mock LLM and fake ColPali, as today. Use
 
 | Step | Work | Done when |
 |---|---|---|
-| 1 | Run the Colab pooling evaluation ([scripts/colab_colpali_pooling_eval.py](../scripts/colab_colpali_pooling_eval.py)), 10–25 PDFs, with 40–60 hand-written chart and table queries | `results.md` gives the section 10 numbers |
+| 1 | Run the Colab pooling evaluation ([scripts/evaluation/colab_colpali_pooling_eval.py](../scripts/evaluation/colab_colpali_pooling_eval.py)), 10–25 PDFs, with 40–60 hand-written chart and table queries | `results.md` gives the section 10 numbers |
 | 2 | Data housekeeping: `.gitignore`, manifest committed, `uv sync`, install `langgraph-checkpoint-sqlite` | Clean `git status`; tests pass |
 | 3 | Ingest changes (3.1–3.9) + Qdrant schema (4.1) + tests | New tests pass; small sample ingest works offline |
 | 4 | Retrieval changes (4.1–4.6) + tests | Top-20 query returns payload only; filters work |

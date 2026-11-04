@@ -3,7 +3,7 @@ import shutil
 import pymupdf
 import pytest
 
-from scripts.domain_common import multimodal_rag as mm
+from scripts.rag import multimodal_rag as mm
 
 
 @pytest.fixture
@@ -79,9 +79,9 @@ def test_failed_ingestion_records_retryable_status(rag, tmp_path):
 
 def test_api_and_existing_domain_retrieval_use_local_store(rag, monkeypatch):
     from fastapi.testclient import TestClient
-    from scripts import api_app
-    from scripts.domain_common.rag_agent import retrieve_hybrid
-    from scripts.hr_policy.domain_config import DOMAIN_CONFIG
+    from scripts.api import api_app
+    from scripts.agents.rag_agent import retrieve_hybrid
+    from scripts.domains.hr_policy.domain_config import DOMAIN_CONFIG
     rag.ingest("hr_policy", sample("hr_policy"))
     monkeypatch.setattr(mm, "_instance", rag)
     monkeypatch.setenv("RAG_BACKEND", "qdrant")
@@ -100,7 +100,7 @@ def test_api_and_existing_domain_retrieval_use_local_store(rag, monkeypatch):
 
 
 def test_financial_retrieval_uses_local_store(rag, monkeypatch):
-    from scripts.financial_prompting_agent import retrieve_evidence
+    from scripts.agents.financial_prompting_agent import retrieve_evidence
     from types import SimpleNamespace
     rag.ingest("financial_report_qa", sample("financial_report_qa"), ticker="DEMO", year=2026)
     monkeypatch.setattr(mm, "_instance", rag)

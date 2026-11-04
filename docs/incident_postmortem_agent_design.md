@@ -72,9 +72,9 @@ Evaluate retrieval recall@k separately from postmortem quality. Security and HIT
 
 ## Implementation Status
 
-- Index CLI: `scripts/incident_postmortem/index.py`
-- Agent CLI: `scripts/incident_postmortem/agent.py`
-- Streamlit/HTML UI: `scripts/incident_postmortem/html_app.py`
-- Shared runtime: `scripts/domain_common/rag_agent.py`
+- Index CLI: `scripts/domains/incident_postmortem/index.py`
+- Agent CLI: `scripts/domains/incident_postmortem/agent.py`
+- Streamlit/HTML UI: `scripts/domains/incident_postmortem/html_app.py`
+- Shared runtime: `scripts/agents/rag_agent.py`
 - Optional tracing: `--enable-langsmith --langsmith-project <project-name>`
 - Unit tests cover config wiring, indexing helpers, guarded LangGraph orchestration, citation validation, output filtering, and HITL routing.

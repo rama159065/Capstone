@@ -72,22 +72,22 @@ Run from the repository root using the project environment:
 
 ```powershell
 uv pip install --python .venv/Scripts/python.exe "bitsandbytes>=0.48,<1"
-.venv/Scripts/python.exe -m scripts.prepare_colpali
+.venv/Scripts/python.exe -m scripts.downloads.prepare_colpali
 
 # Write existing page images into the same local Qdrant database.
-.venv/Scripts/python.exe -m scripts.colpali_index backfill --domain financial_report_qa
-.venv/Scripts/python.exe -m scripts.colpali_index status
-.venv/Scripts/python.exe -m scripts.colpali_index query --domain financial_report_qa --query "Which quarter has the highest revenue in the chart?"
+.venv/Scripts/python.exe -m scripts.rag.colpali_index backfill --domain financial_report_qa
+.venv/Scripts/python.exe -m scripts.rag.colpali_index status
+.venv/Scripts/python.exe -m scripts.rag.colpali_index query --domain financial_report_qa --query "Which quarter has the highest revenue in the chart?"
 
 # Include ColPali in new PDF ingestion and normal multimodal API retrieval.
-.venv/Scripts/python.exe -m scripts.run_local_multimodal ingest --colpali
-.venv/Scripts/python.exe -m scripts.run_local_multimodal serve --colpali
+.venv/Scripts/python.exe -m scripts.rag.run_local_multimodal ingest --colpali
+.venv/Scripts/python.exe -m scripts.rag.run_local_multimodal serve --colpali
 
 # Real-checkpoint storage and MaxSim validation.
-.venv/Scripts/python.exe -m scripts.evaluate_colpali
+.venv/Scripts/python.exe -m scripts.evaluation.evaluate_colpali
 ```
 
-`python -m scripts.run_local_multimodal prepare --colpali` prepares both Qwen and ColPali. The official ColPali weight shards total approximately 5.85 GB, plus processor/tokenizer files. Downloads use persistent connections, verified byte ranges, per-chunk checksums for resuming interrupted runs, and final SHA-256 verification. Model files live under `indexes/models/colpali-v1.3-hf`.
+`python -m scripts.rag.run_local_multimodal prepare --colpali` prepares both Qwen and ColPali. The official ColPali weight shards total approximately 5.85 GB, plus processor/tokenizer files. Downloads use persistent connections, verified byte ranges, per-chunk checksums for resuming interrupted runs, and final SHA-256 verification. Model files live under `indexes/models/colpali-v1.3-hf`.
 
 The embedded Qdrant database must have one owning process; stop `serve` before backfill or inspection. ColPali backfill/query commands do not start Qwen. Model failures are surfaced; no synthetic vectors or caption-only substitutes are written as ColPali embeddings.
 
@@ -109,11 +109,11 @@ The optional `colpali` dependency extra declares bitsandbytes. Existing text-mod
 
 | File | Responsibility |
 |---|---|
-| `scripts/domain_common/colpali_retrieval.py` | Actual checkpoint loading and image/query multivectors |
-| `scripts/domain_common/multimodal_rag.py` | Both collections, backfill, query fusion, and cleanup |
-| `scripts/prepare_colpali.py` | Official checkpoint preparation |
-| `scripts/colpali_index.py` | Backfill, status, and visual-query CLI |
-| `scripts/evaluate_colpali.py` | Actual vector writes, table/chart queries, idempotence, and reopen persistence |
+| `scripts/rag/colpali_retrieval.py` | Actual checkpoint loading and image/query multivectors |
+| `scripts/rag/multimodal_rag.py` | Both collections, backfill, query fusion, and cleanup |
+| `scripts/downloads/prepare_colpali.py` | Official checkpoint preparation |
+| `scripts/rag/colpali_index.py` | Backfill, status, and visual-query CLI |
+| `scripts/evaluation/evaluate_colpali.py` | Actual vector writes, table/chart queries, idempotence, and reopen persistence |
 | `tests/test_colpali_qdrant.py` | Real Qdrant integration using deterministic test vectors |
 
 The integration change passes **104 regression tests**. The controlled-vector tests verify actual Qdrant storage, matrix dimensions, MaxSim arithmetic, filters, merge behavior, backfill deduplication, model signatures, persisted reopening, and failure/update cleanup. They do not measure checkpoint accuracy.

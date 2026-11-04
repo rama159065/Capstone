@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 
-import scripts.download_financial_report_pdfs as pdfs
+import scripts.downloads.download_financial_report_pdfs as pdfs
 
 
 class FakeUrlopen:

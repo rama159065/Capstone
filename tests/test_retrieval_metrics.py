@@ -1,7 +1,7 @@
 import math
 import pytest
 from fastapi.testclient import TestClient
-from scripts.domain_common.retrieval_metrics import retrieval_metrics, response_metrics
+from scripts.rag.retrieval_metrics import retrieval_metrics, response_metrics
 
 
 def test_fractional_recall_and_linear_graded_ndcg():
@@ -24,10 +24,10 @@ def test_duplicates_missing_and_empty_judgments():
 
 
 def test_metrics_across_rag_routes(monkeypatch):
-    from scripts import api_app
+    from scripts.api import api_app
     monkeypatch.setattr(api_app, 'retrieve_evidence', lambda config: [{'chunk_id': 'a'}])
     monkeypatch.setattr(api_app, 'retrieve_hybrid', lambda *args, **kwargs: [{'chunk_id': 'a'}])
-    from scripts.domain_common import multimodal_rag as mm
+    from scripts.rag import multimodal_rag as mm
     monkeypatch.setattr(mm, 'retrieve_local', lambda *args, **kwargs: [{'chunk_id': 'a'}])
     class FakeRag:
         def retrieve_visual(self, *args, **kwargs):
@@ -48,7 +48,7 @@ def test_metrics_across_rag_routes(monkeypatch):
         assert invalid.status_code == 422
 
 def test_chat_metrics_use_financial_ids_and_domain_evidence(monkeypatch):
-    from scripts import api_app
+    from scripts.api import api_app
     monkeypatch.setattr(api_app, 'run_technique', lambda *a, **kw: {})
     monkeypatch.setattr(api_app, 'summarize_result', lambda result: {
         'final_status': 'insufficient_evidence', 'evidence_chunk_ids': ['a']})

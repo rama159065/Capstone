@@ -68,11 +68,11 @@ OCR reads labels and printed values; it does not by itself reconstruct table-cel
 New ingestion applies selective OCR automatically. To enrich PDFs already in the existing learned-embedding database, stop any process owning embedded Qdrant and run:
 
 ```powershell
-.venv/Scripts/python.exe -m scripts.ocr_index --domain financial_report_qa
+.venv/Scripts/python.exe -m scripts.rag.ocr_index --domain financial_report_qa
 # Omit --domain to process all indexed domains.
-.venv/Scripts/python.exe -m scripts.ocr_index
+.venv/Scripts/python.exe -m scripts.rag.ocr_index
 # Re-run recognition with the current configuration.
-.venv/Scripts/python.exe -m scripts.ocr_index --force
+.venv/Scripts/python.exe -m scripts.rag.ocr_index --force
 ```
 
 The CLI defaults to `indexes/multimodal_full` and the existing local MiniLM encoder. It reads managed source PDFs and sidecars, adds accepted OCR text, re-embeds page chunks, upserts them into `docs_text`, and removes obsolete chunk IDs if the page's chunk count shrinks. It also refreshes existing visual summary vectors while preserving ColPali vectors. No Qwen or ColPali model load is needed for this backfill.
@@ -115,7 +115,7 @@ New OCR fixture pages were added to `docs_text` for this check; they were not ad
 Reproduce:
 
 ```powershell
-.venv/Scripts/python.exe -m scripts.evaluate_ocr
+.venv/Scripts/python.exe -m scripts.evaluation.evaluate_ocr
 .venv/Scripts/python.exe -m pytest tests/test_selective_ocr.py -q
 ```
 
@@ -136,9 +136,9 @@ Run the full regression suite with `.venv/Scripts/python.exe -m pytest -q`.
 
 | File | Responsibility |
 |---|---|
-| `scripts/domain_common/selective_ocr.py` | Selection, lazy RapidOCR, confidence filtering, coordinates, and sidecars |
-| `scripts/domain_common/multimodal_rag.py` | Normal ingestion and OCR backfill into existing vector collections |
-| `scripts/ocr_index.py` | Existing-index backfill CLI |
-| `scripts/generate_ocr_validation_pdf.py` | Independent scanned/image-region fixtures |
-| `scripts/evaluate_ocr.py` | Actual OCR/vector-storage/retrieval validation |
+| `scripts/rag/selective_ocr.py` | Selection, lazy RapidOCR, confidence filtering, coordinates, and sidecars |
+| `scripts/rag/multimodal_rag.py` | Normal ingestion and OCR backfill into existing vector collections |
+| `scripts/rag/ocr_index.py` | Existing-index backfill CLI |
+| `scripts/evaluation/generate_ocr_validation_pdf.py` | Independent scanned/image-region fixtures |
+| `scripts/evaluation/evaluate_ocr.py` | Actual OCR/vector-storage/retrieval validation |
 | `tests/test_selective_ocr.py` | Routing, provenance, persistence, failure, and vector-preservation checks |

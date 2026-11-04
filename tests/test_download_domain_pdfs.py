@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 
-import scripts.download_domain_pdfs as domain_pdfs
+import scripts.downloads.download_domain_pdfs as domain_pdfs
 
 
 class FakeUrlopen:

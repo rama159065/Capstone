@@ -56,7 +56,7 @@ outside this report's scope.
 From the repository root in PowerShell:
 
 ```powershell
-.\.venv\Scripts\python.exe -m scripts.generate_financial_report `
+.\.venv\Scripts\python.exe -m scripts.reports.generate_financial_report `
   --profile configs/financial_reports/apple_2024.json
 ```
 
@@ -73,7 +73,7 @@ person or agent must inspect those images before recording visual approval.
 To associate follow-up reports with the same logical conversation/work item:
 
 ```powershell
-.\.venv\Scripts\python.exe -m scripts.generate_financial_report `
+.\.venv\Scripts\python.exe -m scripts.reports.generate_financial_report `
   --profile configs/financial_reports/apple_2024.json `
   --thread-id <existing-thread-uuid>
 ```
@@ -84,7 +84,7 @@ run receives a new `trace_id`, even when the logical thread is reused.
 ## Optional RAG evidence supplement
 
 ```powershell
-.\.venv\Scripts\python.exe -m scripts.generate_financial_report `
+.\.venv\Scripts\python.exe -m scripts.reports.generate_financial_report `
   --profile configs/financial_reports/apple_2024.json --provider llamacpp
 ```
 
@@ -197,7 +197,7 @@ means generation succeeded.
 After inspecting **every** preview page:
 
 ```powershell
-.\.venv\Scripts\python.exe -m scripts.generate_financial_report `
+.\.venv\Scripts\python.exe -m scripts.reports.generate_financial_report `
   --record-visual-review <manifest-path>
 ```
 
@@ -236,8 +236,8 @@ Artifact events include `chart.generated`, `report.file_written`,
 Failures include `span.failed`, `report.failed` and `rag.supplement_failed`.
 
 ```powershell
-.\.venv\Scripts\python.exe -m scripts.monitor_report_trace --trace-id <run-uuid>
-.\.venv\Scripts\python.exe -m scripts.monitor_report_trace --thread-id <logical-thread-uuid>
+.\.venv\Scripts\python.exe -m scripts.observability.monitor_report_trace --trace-id <run-uuid>
+.\.venv\Scripts\python.exe -m scripts.observability.monitor_report_trace --thread-id <logical-thread-uuid>
 Get-Content <jsonl-log-path> -Wait
 ```
 

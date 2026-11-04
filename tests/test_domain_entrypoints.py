@@ -4,7 +4,7 @@ import importlib
 
 import pytest
 
-from scripts.domain_common.rag_agent import DomainConfig
+from scripts.agents.rag_agent import DomainConfig
 
 
 DOMAINS = (
@@ -18,7 +18,7 @@ DOMAINS = (
 
 @pytest.mark.parametrize("domain", DOMAINS)
 def test_domain_config_integrity(domain: str) -> None:
-    module = importlib.import_module(f"scripts.{domain}.domain_config")
+    module = importlib.import_module(f"scripts.domains.{domain}.domain_config")
     config = module.DOMAIN_CONFIG
 
     assert isinstance(config, DomainConfig)
@@ -33,7 +33,7 @@ def test_domain_config_integrity(domain: str) -> None:
 
 @pytest.mark.parametrize("domain", DOMAINS)
 def test_domain_index_entrypoint_delegates_config(domain: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    module = importlib.import_module(f"scripts.{domain}.index")
+    module = importlib.import_module(f"scripts.domains.{domain}.index")
     called: dict[str, str] = {}
 
     def fake_index_cli(config: DomainConfig) -> int:
@@ -48,7 +48,7 @@ def test_domain_index_entrypoint_delegates_config(domain: str, monkeypatch: pyte
 
 @pytest.mark.parametrize("domain", DOMAINS)
 def test_domain_agent_entrypoint_delegates_config(domain: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    module = importlib.import_module(f"scripts.{domain}.agent")
+    module = importlib.import_module(f"scripts.domains.{domain}.agent")
     called: dict[str, str] = {}
 
     def fake_agent_cli(config: DomainConfig) -> int:
@@ -63,7 +63,7 @@ def test_domain_agent_entrypoint_delegates_config(domain: str, monkeypatch: pyte
 
 @pytest.mark.parametrize("domain", DOMAINS)
 def test_domain_html_app_entrypoint_delegates_config(domain: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    module = importlib.import_module(f"scripts.{domain}.html_app")
+    module = importlib.import_module(f"scripts.domains.{domain}.html_app")
     called: dict[str, str] = {}
 
     def fake_streamlit_app(config: DomainConfig) -> None:

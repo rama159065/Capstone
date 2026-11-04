@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from scripts import prompt_baselines as pb
+from scripts.evaluation import prompt_baselines as pb
 
 
 def item(category, gold_answer, gold_value=None, question="Q?", answerability="answerable", doc="edgar_ars_X_2025"):
