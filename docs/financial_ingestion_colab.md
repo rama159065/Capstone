@@ -181,7 +181,8 @@ The same code runs on the PC and on Colab. [scripts/common/runtime_profile.py](.
 
 **How financial retrieval works with `financial_qdrant`:** the agents call `retrieve_for_agent`.
 - **Hybrid search:** dense and number-aware sparse search, fused with Qdrant RRF, filtered by ticker and fiscal year.
-- **Rerank:** by RRF plus term overlap.
+- **Rerank:** by RRF plus term overlap. Set `RAG_RERANKER_MODEL` (for example `indexes/models/ms-marco-MiniLM-L-6-v2`) to rerank text hits with the cross-encoder instead. If the model fails, the overlap order stays and hits carry the warning `reranker_unavailable`.
+- **Relevance floor:** with the cross-encoder on, the agent gives `insufficient_evidence` if the best text score is below `RAG_MIN_RERANK_SCORE` (default `-4`). `/retrieve` still returns the ranked hits.
 - **Visual pages:** ColPali visual pages are added when `RAG_FIN_VISUAL=1`.
 - **Citable IDs:** chunk IDs follow the agents' citation convention (`annual_report_<doc>_p<page>_<part>`), so citation checks and `apply_grounding_policy` work unchanged.
 - **Other domains:** the non-financial domains keep their Chroma pipeline.

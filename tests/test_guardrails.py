@@ -50,3 +50,13 @@ def test_company_scope_check_fails_closed() -> None:
     assert checks.company_scope_check(evidence, ["b"], ["AAPL"])["foreign_chunk_ids"] == ["b"]
     assert checks.company_scope_check(evidence, ["c"], ["AAPL"])["valid"] is False        # no ticker: can't be verified
     assert checks.company_scope_check(evidence, ["gone"], ["AAPL"])["valid"] is False     # not retrieved
+
+
+def test_relevance_floor_judges_only_the_best_cross_encoder_score():
+    good, weak, table = ({"chunk_id": c, "rerank_score": v, "reranked": True} for c, v in (("a", 4.2), ("b", -9.0), ("c", -6.0)))
+    page = {"chunk_id": "page", "rerank_score": 0.01}
+    assert checks.relevance_floor([good, table, page], -4) == [good, table, page]      # low table beside a good hit stays
+    assert checks.relevance_floor([weak, table, page], -4) == [page]                  # ColPali page has no text score
+    assert checks.relevance_floor([weak, table], -4) == []
+    assert checks.relevance_floor([page], -4) == [page]                               # overlap scores use another scale
+    assert checks.relevance_floor([], -4) == []

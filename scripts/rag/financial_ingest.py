@@ -810,7 +810,8 @@ def overlap(query, text):
 def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30):
     """Evidence for the financial agents from docs_text (+ visual_pages when RAG_FIN_VISUAL=1).
 
-    Hybrid dense + sparse with Qdrant RRF, then a rerank by RRF + term overlap (numbers kept whole).
+    Hybrid dense + sparse with Qdrant RRF, then a rerank by RRF + term overlap (numbers kept whole),
+    or by the cross-encoder when RAG_RERANKER_MODEL is set.
     Hits use the agent's evidence format, so citation checks work unchanged.
     """
     with _serving_lock:
@@ -841,7 +842,30 @@ def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30):
                      "rrf_score": entry["rrf"], "rerank_score": entry["rrf"] + 0.02 * overlap(query, p.get("text", "")),
                      "retrieval_paths": entry["paths"], "metadata": dict(p)})
     hits.sort(key=lambda h: h["rerank_score"], reverse=True)
-    return hits[:top_k]
+    return cross_encoder_rerank(query, hits, top_k) if os.getenv("RAG_RERANKER_MODEL") else hits[:top_k]
+
+
+def cross_encoder_rerank(query, hits, top_k):
+    """Order text hits by cross-encoder score; on failure keep the overlap order and say so.
+
+    ColPali pages are found from pixels, so their text can't judge them: the best one keeps a slot, unscored.
+    """
+    from scripts.common.local_models import reranker
+    text_hits = [h for h in hits if "text" in h["retrieval_paths"]]
+    visual_hits = [h for h in hits if "text" not in h["retrieval_paths"]][:1]
+    try:
+        scores = reranker(os.environ["RAG_RERANKER_MODEL"]).predict([(query, h["text"]) for h in text_hits]) if text_hits else []
+        if len(scores) != len(text_hits) or not all(np.isfinite(float(s)) for s in scores):
+            raise ValueError("Invalid reranker scores")
+    except Exception:
+        for hit in hits:
+            hit["retrieval_warnings"] = ["reranker_unavailable"]
+        return hits[:top_k]
+    for hit, score in zip(text_hits, scores):
+        hit["rerank_score"] = float(score)
+        hit["reranked"] = True
+    text_hits.sort(key=lambda h: h["rerank_score"], reverse=True)
+    return text_hits[:max(top_k - len(visual_hits), 0)] + visual_hits[:top_k]
 
 
 def status(args):

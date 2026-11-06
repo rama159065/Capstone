@@ -159,6 +159,51 @@ def test_agent_adapter_returns_citable_evidence(tmp_path, corpus, monkeypatch):
     assert fi.retrieve_for_agent("total net sales", ticker="OTHER") == []
 
 
+def rerank_hits():
+    return [{"chunk_id": name, "text": name, "rerank_score": 0.03 - i / 100, "retrieval_paths": paths}
+            for i, (name, paths) in enumerate([("narrative", ["text"]), ("page", ["visual"]), ("table", ["text"]), ("other", ["text"])])]
+
+
+def test_cross_encoder_orders_text_and_keeps_the_best_visual_page(monkeypatch):
+    class Model:
+        def predict(self, pairs):
+            return [{"narrative": -2.0, "table": 5.0, "other": 1.0}[text] for _, text in pairs]
+    monkeypatch.setenv("RAG_RERANKER_MODEL", "stub")
+    monkeypatch.setattr("scripts.common.local_models.reranker", lambda name: Model())
+    hits = fi.cross_encoder_rerank("q", rerank_hits(), 3)
+    assert [h["chunk_id"] for h in hits] == ["table", "other", "page"]
+    assert hits[0]["rerank_score"] == 5.0 and hits[0]["reranked"] and "reranked" not in hits[2]
+
+
+@pytest.mark.parametrize("failure", ["raises", "nan", "short"])
+def test_cross_encoder_failure_keeps_the_existing_order_and_warns(monkeypatch, failure):
+    class Model:
+        def predict(self, pairs):
+            if failure == "raises":
+                raise RuntimeError("model missing")
+            return [float("nan")] * len(pairs) if failure == "nan" else [1.0]
+    monkeypatch.setenv("RAG_RERANKER_MODEL", "stub")
+    monkeypatch.setattr("scripts.common.local_models.reranker", lambda name: Model())
+    hits = fi.cross_encoder_rerank("q", rerank_hits(), 2)
+    assert [h["chunk_id"] for h in hits] == ["narrative", "page"]
+    assert hits[0]["retrieval_warnings"] == ["reranker_unavailable"] and "reranked" not in hits[0]
+
+
+def test_retrieve_for_agent_uses_the_reranker_only_when_configured(tmp_path, corpus, monkeypatch):
+    client = fi.connect(None, tmp_path / "root")
+    run = fi.Ingest(args_for(tmp_path, corpus, stages="text"), client=client)
+    run.run()
+    monkeypatch.setattr(fi, "_serving", {"client": client, "embedder": run.embedder})
+    monkeypatch.delenv("RAG_RERANKER_MODEL", raising=False)
+    assert "reranked" not in fi.retrieve_for_agent("total net sales", ticker="TEST")[0]
+    class Model:
+        def predict(self, pairs):
+            return [1.0] * len(pairs)
+    monkeypatch.setenv("RAG_RERANKER_MODEL", "stub")
+    monkeypatch.setattr("scripts.common.local_models.reranker", lambda name: Model())
+    assert fi.retrieve_for_agent("total net sales", ticker="TEST")[0]["reranked"]
+
+
 def test_failed_pdf_is_recorded_and_skipped(tmp_path, corpus):
     row = json.loads(corpus.read_text(encoding="utf-8"))
     corpus.write_text(json.dumps({**row, "content_sha256": "0" * 64}) + "\n", encoding="utf-8")

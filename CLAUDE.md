@@ -88,6 +88,7 @@ Domain names are hardcoded in several places: `api/api_app.py` (`NON_FINANCIAL_D
 - `observability/trace_log.py`: ContextVar-based JSONL traces (`TraceLog`, `emit`) that are propagated into worker threads through `copy_context`. `emit` does nothing when no trace is active.
 - `agents/safe_answer.py` is fail-closed. It splits multi-part queries (at most 8), drops unusable hits, and never treats generated prose as verified fact.
 - `api_app.apply_grounding_policy` withholds the generated answer when citations don't validate against the retrieved chunk IDs. This is consistency checking, not entailment.
+- Financial rerank: `financial_ingest.retrieve_for_agent` uses the cross-encoder when `RAG_RERANKER_MODEL` is set; `guardrails.checks.relevance_floor` then stops answers when the best text score is below `RAG_MIN_RERANK_SCORE`. Agents call `answer_evidence`; `/retrieve` calls `retrieve_evidence` and has no floor.
 - Financial coverage: `financial_clarifier.question_scope` decides whether the filings can answer (company, single-figure year, measures banks don't report). `run_technique` uses it to return `not_available` with no figure, and `guardrails.checks.company_scope_check` withholds answers citing a company the question didn't ask about. A company added to the corpus needs entries in `NAMES`, `ALIASES` and `SECTORS` in `financial_clarifier.py`; tests check this against the manifests and the frozen evaluation set.
 
 ### API (`scripts/api/api_app.py`)

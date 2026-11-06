@@ -511,6 +511,11 @@ def safe_json_loads(text: str, fallback: dict[str, Any]) -> dict[str, Any]:
     return fallback
 
 
+def answer_evidence(config: AgentConfig) -> list[dict[str, Any]]:
+    """Evidence to answer from: /retrieve keeps showing ranked hits, but answering needs a relevant one."""
+    return guard_checks.relevance_floor(retrieve_evidence(config), float(os.getenv("RAG_MIN_RERANK_SCORE", "-4")))
+
+
 def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
     if os.getenv("RAG_BACKEND") == "financial_qdrant":   # collections built by scripts/rag/financial_ingest.py
         from scripts.rag.financial_ingest import retrieve_for_agent
@@ -727,7 +732,7 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
         run_config = AgentConfig(
             **{**config.__dict__, "query": state["query"], "source_type": planned_source_type}
         )
-        return {"evidence": retrieve_evidence(run_config)}
+        return {"evidence": answer_evidence(run_config)}
 
     def evidence_guard_node(state: AgentState) -> AgentState:
         guard = evidence_prompt_injection_guard(state.get("evidence", []))
@@ -855,7 +860,7 @@ def _run_technique(technique: str, llm_provider: str, config: AgentConfig) -> di
     if guarded_config is None:
         return guard_context or refusal_result(technique, "Request refused.")
 
-    evidence = retrieve_evidence(guarded_config)
+    evidence = answer_evidence(guarded_config)
     evidence_guard = evidence_prompt_injection_guard(evidence) if guarded_config.enable_guardrails else {"safe": True, "flagged_chunks": [], "risk_labels": []}
     security = (guard_context or {}).get("security")
     plain_text = (guard_context or {}).get("plain_text")

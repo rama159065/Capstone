@@ -57,7 +57,7 @@ caption as proof. Ingestion is not automatically started by this code change.
 - `RAG_HTTP_TIMEOUT_SECONDS`: model/remote Qdrant timeout, default 45.
 - Multimodal API `timeout_seconds`: request budget, greater than zero and at most
   600 seconds. Default 60.
-- Existing `RAG_MIN_RERANK_SCORE` controls rejection when reranking succeeds.
+- Existing `RAG_MIN_RERANK_SCORE` controls rejection when reranking succeeds. The multimodal answer step applies it to each hit; the financial agent applies it to the best text hit only, so a low-scoring table beside a good hit stays.
 - Existing LangSmith configuration remains opt-in and needs credentials. Local
   trace fields do not contain raw prompts, keys, service errors or document text.
   Enabling LangSmith may transmit tool inputs/outputs under its normal behavior.

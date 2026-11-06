@@ -79,6 +79,14 @@ def company_scope_check(evidence: list[dict[str, Any]], cited_ids: Iterable[Any]
     return {"valid": not foreign, "expected_tickers": sorted(allowed), "foreign_chunk_ids": foreign}
 
 
+def relevance_floor(evidence: list[dict[str, Any]], floor: float) -> list[dict[str, Any]]:
+    """Drop cross-encoder hits when even the best is below the floor; a low-scoring table beside a good hit stays."""
+    scored = [float(hit["rerank_score"]) for hit in evidence if hit.get("reranked")]
+    if scored and max(scored) < floor:
+        return [hit for hit in evidence if not hit.get("reranked")]
+    return evidence
+
+
 def output_filter(answer: str, injection: list[str], code: list[str],
                   review_terms: Iterable[tuple[Iterable[str], str]] = ()) -> dict[str, Any]:
     """Block echoed injections, code and secrets; send policy-sensitive wording to review."""

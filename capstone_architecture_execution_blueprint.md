@@ -132,7 +132,7 @@ This is what `scripts/rag/financial_ingest.py` creates. It replaces the first dr
 
 ### 3.2 Retrieval
 
-- **Text:** dense + sparse prefetch (50 each) → Qdrant RRF → rerank by RRF + term overlap, filtered by company and year.
+- **Text:** dense + sparse prefetch (50 each) → Qdrant RRF → rerank by RRF + term overlap, or by the cross-encoder when `RAG_RERANKER_MODEL` is set, filtered by company and year.
 - **Visual:** `mean_rows`, `mean_cols` and `summary` prefetch (200 each) → exact MaxSim on the full vectors.
 - **Fusion:** text and visual results are fused with RRF (`retrieve_for_agent`).
 - **Figures:** come from the XBRL facts tool first (section 5, day 4).

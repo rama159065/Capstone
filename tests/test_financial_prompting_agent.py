@@ -290,3 +290,19 @@ def test_hosted_excerpts_from_only_other_companies_give_no_answer(monkeypatch) -
     result = agent.run_technique("baseline_rag", "hosted", sample_config())
 
     assert result["final_status"] == "insufficient_evidence" and "cvx_chunk" not in result["answer"]
+
+
+@pytest.mark.parametrize("technique", ["baseline_rag", "agentic_graph"])
+def test_evidence_below_the_relevance_floor_gives_no_answer(monkeypatch, technique):
+    low = {**sample_evidence()[0], "rerank_score": -10.0, "reranked": True}
+    monkeypatch.setattr(agent, "retrieve_evidence", lambda config: [low])
+    monkeypatch.delenv("RAG_MIN_RERANK_SCORE", raising=False)
+    result = agent.run_technique(technique, "mock", sample_config())
+    assert result["final_status"] == "insufficient_evidence"
+    assert result["evidence"] == [] and low["chunk_id"] not in result["answer"]
+
+
+def test_evidence_above_the_floor_is_still_used(monkeypatch):
+    good = {**sample_evidence()[0], "rerank_score": 4.2, "reranked": True}
+    monkeypatch.setattr(agent, "retrieve_evidence", lambda config: [good])
+    assert agent.answer_evidence(sample_config()) == [good]
