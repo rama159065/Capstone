@@ -150,6 +150,10 @@ def table_segments(rows):
     segments, current, header, unit, gap, previous = [], [], "", "", 0, None
     for cells in rows:
         text = " | ".join(cells)
+        if current and " | " in current[-1] and re.fullmatch(r"\([A-Za-z ,-]+\)", text):
+            label, values = current[-1].split(" | ", 1)
+            current[-1] = f"{label} {text} | {values}"
+            continue
         match = UNIT_LINE.search(text)
         if match and not is_table_row(cells):
             unit = match.group(0).strip(" )")
@@ -197,8 +201,8 @@ def parse_pdf(path):
                 narrative = "\n".join(" ".join(r) for r in rows if not is_table_row(r))
             else:
                 blocks = [b[4] for b in sorted(page.get_text("blocks"), key=lambda b: (b[1], b[0])) if b[6] == 0]
-                narrative = "\n".join(b.strip() for b in blocks
-                                      if not (segments and b.strip() and all(x.strip() in in_table for x in b.splitlines() if x.strip())))
+                narrative = "\n".join(x.strip() for b in blocks for x in b.splitlines()
+                                      if x.strip() and not (segments and (x.strip() in in_table or NUMERIC_CELL.match(x.strip()) or x.strip() == "$")))
             narrative = re.sub(r"[ \t]+", " ", narrative).strip()
             pages.append(ParsedPage(page=number, narrative=narrative, tables=segments, ocr_used=ocr_used, visual=has_visual(page, raw)))
     return pages
@@ -324,7 +328,7 @@ def vlm_targets(pages, limit=int(os.getenv("VLM_MAX_PAGES", "0"))):
 def load_vlm():
     from transformers import AutoProcessor, BitsAndBytesConfig, Qwen2_5_VLForConditionalGeneration
     quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True)
-    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(VLM_MODEL, quantization_config=quant, device_map="auto")
+    model = Qwen2_5_VLForConditionalGeneration.from_pretrained(VLM_MODEL, quantization_config=quant, device_map={"": 0})  # 4-bit weights must stay on the GPU
     return model, AutoProcessor.from_pretrained(VLM_MODEL, min_pixels=256 * 28 * 28, max_pixels=1280 * 28 * 28)
 
 def transcribe_page(model, processor, doc, number, prompt=VLM_PROMPT):
@@ -424,7 +428,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True)
 tokenizer = AutoTokenizer.from_pretrained(CFG.qwen_model)
-model = AutoModelForCausalLM.from_pretrained(CFG.qwen_model, quantization_config=quant, device_map="auto")
+model = AutoModelForCausalLM.from_pretrained(CFG.qwen_model, quantization_config=quant, device_map={"": 0})  # 4-bit weights must stay on the GPU
 # No repetition_penalty: it pushes the model away from digits already in the context, which corrupts copied figures.
 text_pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=140, do_sample=False,
                      return_full_text=False, pad_token_id=tokenizer.eos_token_id)
@@ -588,6 +592,54 @@ def figure_in_evidence(printed, value, scale, evidence_numbers):
                 return True
     return False
 
+QUESTION_STOPWORDS = {"what", "was", "were", "which", "who", "how", "many", "much", "did", "does", "the", "and", "for", "from", "with", "that",
+                      "this", "has", "had", "its", "are", "chevron", "corporation", "company", "report", "year", "end", "per", "day", "total"}
+
+def content_words(text):
+    return {word.rstrip("s") for word in re.findall(r"[a-z]{3,}", text.lower()) if word not in QUESTION_STOPWORDS}
+
+def table_cells(line):
+    return [cell.strip() for cell in line.replace("Columns:", "").split("|") if cell.strip()]
+
+def year_of(cell):
+    years = re.findall(r"\b(?:19|20)\d{2}\b", cell)
+    return years[-1] if len(years) == 1 and len(cell) < 30 else None
+
+def in_year_column(header, cells, figure, year):
+    """Values align with the header from the right. If the counts differ the row can't be checked, so it isn't blocked."""
+    printed, value, scale = figure
+    columns = header[next(i for i, cell in enumerate(header) if year_of(cell)):]
+    values = [cell for cell in cells if re.fullmatch(r"[$(\s]*[\d,.]+[)%\s]*", cell)]
+    if len(values) != len(columns):
+        return True
+    return any(year_of(column) == year and figure_in_evidence(printed, value, scale, numbers_in(cell))
+               for column, cell in zip(columns, values))
+
+def figure_placement(question, figure, docs):
+    """Printed somewhere is not enough: the figure must sit beside the asked item and, in a table, under the asked year."""
+    printed, value, scale = figure
+    words = content_words(question)
+    years = re.findall(r"\b(?:19|20)\d{2}\b", question)
+    year = years[0] if len(set(years)) == 1 else None
+    outcome = "figure_not_beside_item"
+    for doc in docs:
+        lines, header = doc.page_content.splitlines(), None
+        for index, line in enumerate(lines):
+            cells = table_cells(line)
+            if sum(bool(year_of(cell)) for cell in cells) >= 2:
+                header = cells
+                continue
+            if not figure_in_evidence(printed, value, scale, numbers_in(line)):
+                continue
+            nearby = " ".join(lines[max(0, index - 2):index + 2])
+            if words and not content_words(nearby) & words:
+                continue
+            if year and header and len(cells) > 1 and not in_year_column(header, cells, figure, year):
+                outcome = "figure_in_other_year_column"
+                continue
+            return "ok"
+    return outcome
+
 def evidence_block(docs):
     parts, used = [], 0
     for doc in docs:
@@ -616,9 +668,15 @@ def gate_answer(question, raw, docs):
         if year not in context:
             return GateDecision(reason=f"year_{year}_not_in_evidence")
     evidence_numbers = numbers_in(context) + numbers_in(question)
-    for printed, value, scale in numbers_in(text):
+    asked = numbers_in(question)
+    for figure in numbers_in(text):
+        printed, value, scale = figure
         if not figure_in_evidence(printed, value, scale, evidence_numbers):
             return GateDecision(reason=f"unsupported_figure_{printed}")
+        if not figure_in_evidence(printed, value, scale, asked):
+            placement = figure_placement(question, figure, docs)
+            if placement != "ok":
+                return GateDecision(reason=placement)
     cited = sorted(set(parsed.cited_pages) | {int(n) for n in CITATION.findall(text)})
     if any(page not in pages for page in cited):
         return GateDecision(reason="citation_outside_evidence")
@@ -725,9 +783,16 @@ def number_match(result, gold):
     hit = any(same_figure(p, v, s, target, Decimal(gold.scale)) or same_figure(p, v, Decimal(1), target) for p, v, s in figures)
     return hit and len(figures) <= 2
 
+ABBREVIATION = re.compile(r"(?:\b[A-Za-z]|\b(?:Dr|Mr|Mrs|Ms|Inc|Corp|Co|Ltd|No|St|vs|p\.l\.c))\.$")
+
 def claims_of(answer):
-    text = CITATION.sub("", answer)
-    return [c.strip() for c in re.split(r"(?<=[.!?])\s+", text) if len(c.strip()) > 2]
+    claims = []
+    for piece in re.split(r"(?<=[.!?])\s+", CITATION.sub("", answer).strip()):
+        if claims and ABBREVIATION.search(claims[-1]):
+            claims[-1] = f"{claims[-1]} {piece}"
+        else:
+            claims.append(piece)
+    return [c.strip() for c in claims if len(c.strip()) > 2]
 
 def judge_claim(context, claim):
     """An unreadable verdict counts as unsupported."""
@@ -798,12 +863,14 @@ else:
     previous = previous[previous.architecture != ARCHITECTURE] if len(previous) else previous
     pd.concat([previous, pd.DataFrame([metrics.model_dump()])]).sort_values("architecture").to_csv(board, index=False)
 
+    def verdict(value, passed):
+        return "not measured" if value is None else "PASS" if passed else "FAIL"
     def pct(x):
         return "n/a" if x is None else f"{x:.1%}"
     print(f"\n=== {ARCHITECTURE}: {metrics.questions} questions, scored on the LLM's own answers only ===")
     print(f"Numeric number match rate : {pct(metrics.numeric_number_match_rate)} (tables {pct(metrics.number_match_tables)}, narrative {pct(metrics.number_match_narrative)}, charts {pct(metrics.number_match_charts)})")
-    print(f"Faithfulness              : {pct(metrics.faithfulness)}  target > {FAITHFULNESS_TARGET:.0%}  {'PASS' if metrics.faithfulness_pass else 'FAIL'}")
-    print(f"Negative refusal accuracy : {pct(metrics.negative_refusal_accuracy)}  target > {REFUSAL_TARGET:.0%}  {'PASS' if metrics.negative_refusal_pass else 'FAIL'}")
+    print(f"Faithfulness              : {pct(metrics.faithfulness)}  target > {FAITHFULNESS_TARGET:.0%}  {verdict(metrics.faithfulness, metrics.faithfulness_pass)}")
+    print(f"Negative refusal accuracy : {pct(metrics.negative_refusal_accuracy)}  target > {REFUSAL_TARGET:.0%}  {verdict(metrics.negative_refusal_accuracy, metrics.negative_refusal_pass)}")
     print(f"Text fact accuracy        : {pct(metrics.text_fact_accuracy)}")
     print(f"False refusals            : {pct(metrics.false_refusal_rate)} of answerable questions (ground truth shown instead)")
     print(f"Gold page retrieved       : {pct(metrics.gold_page_retrieved)}")
@@ -812,6 +879,11 @@ else:
     print(f"\n{len(misses)} misses:")
     with pd.option_context("display.max_colwidth", 90, "display.width", 220, "display.max_rows", None):
         print(misses.to_string(index=False))
+    checked = results[results.answered & (results.type == "numeric")]
+    if len(checked):
+        wrong_passed = int(((checked.faithfulness == 1) & ~checked.correct).sum())
+        right_failed = int(((checked.faithfulness < 1) & checked.correct).sum())
+        print(f"Judge against gold figures : passed {wrong_passed} wrong answers, failed {right_failed} right answers, of {len(checked)}")
     unsupported = results[results.unsupported_claims.map(len) > 0][["id", "unsupported_claims"]]
     if len(unsupported):
         print("\nClaims the faithfulness judge did not support:")
@@ -1021,7 +1093,7 @@ from transformers import ColPaliForRetrieval, ColPaliProcessor
 COLPALI_MODEL = "vidore/colpali-v1.3-hf"
 COLPALI_PAGES = 3
 processor_cp = ColPaliProcessor.from_pretrained(COLPALI_MODEL)
-colpali = ColPaliForRetrieval.from_pretrained(COLPALI_MODEL, torch_dtype=torch.bfloat16 if DEVICE == "cuda" else torch.float32, device_map=DEVICE).eval()
+colpali = ColPaliForRetrieval.from_pretrained(COLPALI_MODEL, dtype=torch.bfloat16 if DEVICE == "cuda" else torch.float32, device_map=DEVICE).eval()
 
 client = QdrantClient(":memory:")
 client.create_collection("visual_pages", vectors_config=VectorParams(size=128, distance=Distance.COSINE,
