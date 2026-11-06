@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts.agents.financial_clarifier import question_scope
 from scripts.guardrails import checks as guard_checks, patterns as guard_patterns
 from scripts.prompts import financial as prompts
 from scripts.observability.langsmith_utils import (
@@ -890,8 +891,20 @@ def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dic
         result = {"technique": technique, "final_status": "tool_error",
                   "answer": "No answer found because a required service failed or timed out.", "evidence": [],
                   "citation_check": {"valid": False, "cited_chunk_ids": []}}
+    scope = {"expected": [], "coverage": None}
     if result.get("final_status") not in {"refused", "tool_error"}:
+        scope = question_scope(config.query, config.ticker)
+    if scope["coverage"]:
+        # The filings can't answer this, so nothing retrieved or generated may stand in for it.
+        for key in ("parsed", "samples", "subquestions"):
+            result.pop(key, None)
+        result.update(answer=scope["coverage"]["message"], final_status="not_available", coverage=scope["coverage"],
+                      evidence=[], citation_check={"valid": False, "cited_chunk_ids": []})
+    elif result.get("final_status") not in {"refused", "tool_error"}:
         evidence = result.get("evidence", [])
+        if scope["expected"] and llm_provider != "mock":
+            # An unfiltered search can return other companies; their excerpts must not become the answer.
+            evidence = result["evidence"] = [h for h in evidence if str(h.get("ticker") or "").upper() in scope["expected"]]
         if not evidence:
             result.update(answer="No answer found in the available evidence.", final_status="insufficient_evidence",
                           citation_check={"valid": False, "cited_chunk_ids": []})
@@ -903,6 +916,14 @@ def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dic
                 str(h["text"])[:1000] + " [" + str(h["chunk_id"]) + "]" for h in rows),
                 final_status="evidence_only" if rows else "insufficient_evidence",
                 citation_check={"valid": bool(rows), "cited_chunk_ids": [h["chunk_id"] for h in rows]})
+        if scope["expected"]:
+            cited = (result.get("citation_check") or {}).get("cited_chunk_ids") or []
+            result["company_check"] = guard_checks.company_scope_check(evidence, cited, scope["expected"])
+            if not result["company_check"]["valid"]:
+                for key in ("parsed", "samples", "subquestions"):
+                    result.pop(key, None)
+                result.update(answer="Answer withheld: it cited filings from a company the question didn't ask about.",
+                              final_status="not_grounded", citation_check={"valid": False, "cited_chunk_ids": cited})
     if llm_provider != "mock":
         result.pop("parsed", None)
         result.pop("samples", None)
@@ -921,6 +942,8 @@ def summarize_result(result: dict[str, Any]) -> dict[str, Any]:
         "technique": result.get("technique"),
         "final_status": result.get("final_status"),
         "answer": result.get("answer"),
+        "coverage": result.get("coverage"),
+        "company_check": result.get("company_check"),
         "parsed": result.get("parsed"),
         "subquestions": result.get("subquestions"),
         "plan": result.get("plan"),

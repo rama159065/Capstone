@@ -365,3 +365,23 @@ def test_unknown_domain_returns_404() -> None:
     response = client.post("/chat/not_a_domain", json={"query": "hello"})
 
     assert response.status_code == 404
+
+
+def test_grounding_policy_keeps_not_available_reply() -> None:
+    result = {"final_status": "not_available", "answer": "I don't have filings for Exxon Mobil.",
+              "coverage": {"reason": "company_not_in_filings"}, "citation_check": {"valid": False, "cited_chunk_ids": []}, "evidence": []}
+
+    response = api_app.apply_grounding_policy(result)
+
+    assert response["answer"] == "I don't have filings for Exxon Mobil." and response["final_status"] == "not_available"
+    assert response["grounding"]["status"] == "not_applicable" and "company_not_in_filings" in response["grounding"]["reason"]
+    assert "company_not_in_filings" in api_app.explain_chat_result(response)
+
+
+def test_grounding_policy_explains_citation_from_another_company() -> None:
+    result = {"final_status": "not_grounded", "answer": "Withheld.", "company_check": {"valid": False, "foreign_chunk_ids": ["c1"]},
+              "citation_check": {"valid": False, "cited_chunk_ids": ["c1"]}, "evidence": [{"chunk_id": "c1"}]}
+
+    response = api_app.apply_grounding_policy(result)
+
+    assert response["answer"] is None and "didn't ask about" in response["grounding"]["reason"]

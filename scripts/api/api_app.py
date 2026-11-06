@@ -562,6 +562,8 @@ def explain_chat_result(result: dict[str, Any]) -> str:
     """Summarize the observable evidence and checks behind a chat outcome."""
     status = str(result.get("final_status") or "unknown")
     grounding = result.get("grounding") or {}
+    if status == "not_available":
+        return str(grounding.get("reason") or "The filings can't answer this question.")
     if grounding.get("status") == "not_grounded":
         return str(grounding["reason"])
     security = result.get("security") or {}
@@ -621,6 +623,15 @@ def apply_grounding_policy(result: dict[str, Any]) -> dict[str, Any]:
             "reason": "The request was refused before an answer was provided.",
         }
         return result
+    if result.get("final_status") == "not_available":
+        coverage = result.get("coverage") or {}
+        result["grounding"] = {
+            "status": "not_applicable",
+            "evidence_count": 0,
+            "cited_chunk_ids": [],
+            "reason": f"No figure was given because the filings can't answer this ({coverage.get('reason', 'not available')}).",
+        }
+        return result
 
     evidence = result.get("evidence") or result.get("evidence_preview") or []
     evidence_ids = {
@@ -661,7 +672,10 @@ def apply_grounding_policy(result: dict[str, Any]) -> dict[str, Any]:
 
     result["answer"] = None
     result["final_status"] = "not_grounded"
-    if not evidence_ids:
+    company_check = result.get("company_check") or {}
+    if company_check.get("valid") is False:
+        reason = "The answer was withheld because it cited filings from a company the question didn't ask about."
+    elif not evidence_ids:
         reason = "The answer was withheld because no retrieved evidence was available."
     elif not cited_ids:
         reason = "The answer was withheld because it did not cite any retrieved evidence."
@@ -842,7 +856,8 @@ def run_financial_report(spec: dict[str, Any]) -> dict[str, Any]:
     summary="Chat turn with clarification",
     description=(
         "Checks whether the question names a company, fiscal year and measure that the corpus covers. "
-        "If something is missing or ambiguous it returns `needs_clarification` with questions and options, and "
+        "If something is missing, ambiguous or not available it returns `needs_clarification` with questions and "
+        "options, plus `coverage` with the reason when the filings can't answer it, and "
         "keeps the partial request under `conversation_id` (in memory, per process, 30-minute TTL). "
         "A complete question runs the financial agents; a report request runs the report pipeline after "
         "the user confirms. Advice, prediction and prompt-injection messages go straight to the guarded agent."

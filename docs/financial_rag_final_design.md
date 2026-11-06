@@ -342,6 +342,7 @@ How a small model writes a good report:
 | Derivable from tagged figures (e.g. gross profit = revenue − cost of revenue) | The value with the formula shown, marked "derived" |
 | Only in a prior/next filing's comparatives | The value from that filing, marked with its source year |
 | Not found anywhere | **"Not disclosed in the FY2025 10-K/annual report (searched: XBRL facts, Item 7, Item 8)"**, with no estimate. The section is flagged for review if the metric is mandatory. |
+| Company or year with no filings, or a measure a bank doesn't report | **Implemented:** `not_available` with the reason and what is available, with no figure. See [fastapi_api.md](fastapi_api.md#when-the-filings-cant-answer) |
 
 **Tools for the agents:** `get_fact`, `get_facts_series`, `compute_ratio` (deterministic, formula registry), `search_text`, `search_visual`, `get_page_image` (render on demand), `make_chart`, `cite`. The agent flows (Flow A report job, Flow B Q&A, checkpoints, approvals) are as designed in [financial_report_agentic_ai_recommendations.md](financial_report_agentic_ai_recommendations.md).
 

@@ -10,6 +10,23 @@ Five step-by-step notebooks build the financial-report copilot up layer by layer
 | 04 | [04_visual_rag_colpali.ipynb](04_visual_rag_colpali.ipynb) | Charts and tables as **ColPali image multivectors** in Qdrant (full vectors, exact MaxSim); chart questions, descriptive and exact-number queries; optional vision model | NVIDIA FY2026, Chevron FY2022 | **GPU** |
 | 05 | [05_final_qdrant_colpali_rag.ipynb](05_final_qdrant_colpali_rag.ipynb) | Final design: text + OCR + ColPali **mean pooling** (rows/columns) with full-vector rerank. Pooled-only vs prefetch → rerank vs exhaustive; hybrid evidence; **clarifier → LangGraph agent** on the eval set | the four above | **GPU** |
 
+**Standalone:** [06_chat_templates_pydantic_standalone.ipynb](06_chat_templates_pydantic_standalone.ipynb) doesn't need the repo. Upload that one file to Colab and run it.
+- It reads the same four PDFs and prints each file name.
+- It asks a Qwen model with zero-shot, few-shot and chain-of-thought templates.
+- It validates every reply with Pydantic.
+- It uses Qwen3-VL-8B on a Colab GPU by default, or any OpenAI-compatible endpoint.
+- Set `SEC_USER_AGENT` in its cell 1.
+
+**Standalone:** [07_langgraph_pdf_to_chroma_text_and_images.ipynb](07_langgraph_pdf_to_chroma_text_and_images.ipynb) also doesn't need the repo, and needs no LLM.
+- A LangGraph pipeline reads the same four PDFs with a LangChain loader and splitter.
+- It writes two Chroma collections: `financial_text` (MiniLM, 384-d) and `financial_images` (CLIP, 512-d). The PNG files stay on disk.
+- Running it again embeds nothing new. Typed questions and images can both search the image collection.
+- Measured on CPU: 2,337 chunks and 118 images in about 100 s; database 23 MB, PNG files 55 MB.
+- Text search found the gold figure for 2 of 4 test questions. In image search, 5 of 6 test charts were found: first within their PDF for 3, second for 2. The one-word query "chart" missed.
+- Most stored images are photos or ruled tables, and CLIP doesn't read numbers. Chroma can't run the ColPali MaxSim search, so this notebook compares with the Qdrant design and doesn't replace it. It hasn't been run on a GPU.
+
+The steps below apply only to notebooks 01–05.
+
 ## Running on Colab
 
 1. **Open a notebook:** File → Open notebook → GitHub. Use repo `rama159065/Capstone`, branch `finance_report_qa_agent`.
@@ -45,7 +62,7 @@ All five notebooks were executed end to end with:
 - real OCR;
 - the fake ColPali encoder, plus a separate real-ColPali check.
 
-These runs show that the pipeline works. Model-quality numbers need the hosted endpoint.
+These runs show that the pipeline works. Model-quality numbers need the hosted endpoint. They predate the financial agent's coverage checks (`not_available` and the company check), so answered counts may differ on a rerun.
 
 | Notebook | Measured |
 |---|---|

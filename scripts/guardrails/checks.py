@@ -71,6 +71,14 @@ def evidence_guard(hits: list[dict[str, Any]], injection: list[str], code: list[
             "risk_labels": sorted({label for row in flagged for label in row["risk_labels"]})}
 
 
+def company_scope_check(evidence: list[dict[str, Any]], cited_ids: Iterable[Any], expected: Iterable[str]) -> dict[str, Any]:
+    """Every cited chunk must come from a company the question asked about; an unknown chunk fails closed."""
+    tickers = {str(hit.get("chunk_id")): str(hit.get("ticker") or "").upper() for hit in evidence}
+    allowed = {ticker.upper() for ticker in expected}
+    foreign = sorted({str(chunk_id) for chunk_id in cited_ids if tickers.get(str(chunk_id)) not in allowed})
+    return {"valid": not foreign, "expected_tickers": sorted(allowed), "foreign_chunk_ids": foreign}
+
+
 def output_filter(answer: str, injection: list[str], code: list[str],
                   review_terms: Iterable[tuple[Iterable[str], str]] = ()) -> dict[str, Any]:
     """Block echoed injections, code and secrets; send policy-sensitive wording to review."""

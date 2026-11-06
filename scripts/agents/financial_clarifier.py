@@ -6,6 +6,11 @@ asks for it, offering the options the corpus actually has, and remembers the
 partial request under a ``conversation_id``. Only a complete request reaches
 the agents; a full report additionally needs an explicit confirmation.
 
+Questions the filings can't answer are said so plainly, with what is available:
+a company or year we hold no filings for, or a measure a bank doesn't report.
+``question_scope`` gives the agent the same decision for callers that skip the
+clarifier, and the companies its citations must belong to.
+
 Deterministic on purpose: no LLM call, so behaviour is predictable, testable and
 free. Guard-worthy messages (advice, predictions, prompt injection) are passed
 straight through so the agent's guardrails refuse them; we never ask follow-up
@@ -23,6 +28,7 @@ questions about them.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from functools import lru_cache
 import json
 from pathlib import Path
 import re
@@ -42,7 +48,13 @@ NAMES = {"AAPL": "Apple", "MSFT": "Microsoft", "NVDA": "NVIDIA", "AMZN": "Amazon
          "COST": "Costco", "PG": "Procter & Gamble", "NFLX": "Netflix", "JNJ": "Johnson & Johnson",
          "ABBV": "AbbVie", "BAC": "Bank of America", "KO": "Coca-Cola", "AMD": "AMD", "CVX": "Chevron",
          "PEP": "PepsiCo", "TMO": "Thermo Fisher", "ADBE": "Adobe", "WFC": "Wells Fargo", "PFE": "Pfizer",
-         "HD": "Home Depot", "TSLA": "Tesla", "CRM": "Salesforce", "XOM": "Exxon Mobil", "LLY": "Eli Lilly"}
+         "HD": "Home Depot", "TSLA": "Tesla", "CRM": "Salesforce", "XOM": "Exxon Mobil", "LLY": "Eli Lilly",
+         "MRK": "Merck", "META": "Meta", "UNH": "UnitedHealth", "ORCL": "Oracle", "ABT": "Abbott", "AMGN": "Amgen", "CSCO": "Cisco",
+         "INTC": "Intel", "IBM": "IBM", "QCOM": "Qualcomm", "TXN": "Texas Instruments", "HON": "Honeywell",
+         "CAT": "Caterpillar", "GE": "GE", "MMM": "3M", "DE": "Deere", "LMT": "Lockheed Martin", "RTX": "RTX",
+         "DIS": "Disney", "MCD": "McDonald's", "NKE": "Nike", "SBUX": "Starbucks", "LOW": "Lowe's", "TGT": "Target",
+         "UPS": "UPS", "GS": "Goldman Sachs", "MS": "Morgan Stanley", "C": "Citigroup", "AXP": "American Express",
+         "T": "AT&T", "VZ": "Verizon"}
 ALIASES = {"AAPL": ["apple"], "MSFT": ["microsoft"], "NVDA": ["nvidia"], "AMZN": ["amazon"],
            "GOOGL": ["alphabet", "google"], "AVGO": ["broadcom"], "JPM": ["jpmorgan", "jp morgan", "chase"],
            "WMT": ["walmart", "wal-mart"], "V": ["visa"], "MA": ["mastercard"], "COST": ["costco"],
@@ -51,7 +63,28 @@ ALIASES = {"AAPL": ["apple"], "MSFT": ["microsoft"], "NVDA": ["nvidia"], "AMZN":
            "BAC": ["bank of america", "bofa"], "KO": ["coca-cola", "coca cola", "coke"],
            "AMD": ["advanced micro devices"], "CVX": ["chevron"], "PEP": ["pepsico", "pepsi"],
            "TMO": ["thermo fisher"], "ADBE": ["adobe"], "WFC": ["wells fargo"], "PFE": ["pfizer"],
-           "HD": ["home depot"], "TSLA": ["tesla"], "CRM": ["salesforce"], "XOM": ["exxon"], "LLY": ["eli lilly", "lilly"]}
+           "HD": ["home depot"], "TSLA": ["tesla"], "CRM": ["salesforce"], "XOM": ["exxon mobil", "exxonmobil", "exxon"],
+           "LLY": ["eli lilly", "lilly"], "MRK": ["merck"], "META": ["meta platforms", "meta"], "UNH": ["unitedhealth"],
+           "ORCL": ["oracle"], "ABT": ["abbott"], "AMGN": ["amgen"], "CSCO": ["cisco"], "INTC": ["intel"],
+           "IBM": ["ibm"], "QCOM": ["qualcomm"], "TXN": ["texas instruments"], "HON": ["honeywell"],
+           "CAT": ["caterpillar"], "GE": ["general electric", "ge aerospace"], "MMM": ["3m"], "DE": ["deere"],
+           "LMT": ["lockheed martin", "lockheed"], "RTX": ["raytheon"], "DIS": ["disney"], "MCD": ["mcdonald's", "mcdonalds"],
+           "NKE": ["nike"], "SBUX": ["starbucks"], "LOW": ["lowe's", "lowes"], "TGT": ["target corporation", "target corp"],
+           "UPS": ["united parcel service"], "GS": ["goldman sachs", "goldman"], "MS": ["morgan stanley"],
+           "C": ["citigroup", "citibank"], "AXP": ["american express", "amex"], "T": ["at&t"], "VZ": ["verizon"]}
+# Our own sector map: SEC industry codes file Amazon under catalog retail and Netflix under video tape rental.
+SECTORS = {"Technology and telecom": "AAPL ADBE AMD AMZN AVGO CRM CSCO GOOGL IBM INTC META MSFT NFLX NVDA ORCL QCOM T TXN VZ",
+           "Consumer and retail": "COST DIS HD KO LOW MCD NKE PEP PG SBUX TGT TSLA UPS WMT",
+           "Banks and finance": "AXP BAC C GS JPM MA MS V WFC",
+           "Healthcare": "ABBV ABT AMGN JNJ LLY MRK PFE TMO UNH",
+           "Industrials": "CAT DE GE HON LMT MMM RTX",
+           "Energy": "CVX XOM"}
+SECTOR_OF = {ticker: sector for sector, tickers in SECTORS.items() for ticker in tickers.split()}
+# Banks' income statements have no cost of revenue. JPM, BAC and WFC filings carry no XBRL value for these measures.
+# Visa and Mastercard aren't here: they are payment networks and do report operating income.
+BANKS = {"JPM", "BAC", "WFC", "C", "GS", "MS"}
+NOT_REPORTED_BY_BANKS = {"gross profit", "gross margin", "operating income", "operating margin"}
+BANK_MEASURES = ["Net revenue", "Net income", "Net interest income"]
 METRICS = {  # canonical name -> phrases, matched longest first
     "diluted EPS": ["diluted eps", "diluted earnings per share", "earnings per share", "eps"],
     "free cash flow": ["free cash flow", "fcf"],
@@ -62,7 +95,9 @@ METRICS = {  # canonical name -> phrases, matched longest first
     "operating income": ["operating income", "operating profit", "ebit"],
     "gross profit": ["gross profit"],
     "net income": ["net income", "net earnings", "net profit", "profit", "earnings"],
-    "revenue": ["revenue", "revenues", "net sales", "total sales", "sales", "top line", "turnover"],
+    "net interest income": ["net interest income"],
+    "deposits": ["total deposits", "deposits"],
+    "revenue": ["net revenue", "revenue", "revenues", "net sales", "total sales", "sales", "top line", "turnover"],
     "total assets": ["total assets", "assets"], "total liabilities": ["total liabilities", "liabilities"],
     "long-term debt": ["long-term debt", "long term debt", "total debt", "debt"],
     "shareholders' equity": ["shareholders' equity", "stockholders' equity", "shareholders equity", "equity"],
@@ -96,6 +131,18 @@ FOLLOW_UP = re.compile(r"^\s*(and|also|what about|how about|same for|now|then)\b
 RESET = re.compile(r"^\s*(new question|start over|restart|reset)\b", re.I)
 LATEST = re.compile(r"\b(latest|most recent|last (fiscal )?year|this year|current year|recent)\b", re.I)
 ALL_YEARS = re.compile(r"\b(all( years)?|every year|all available)\b", re.I)
+ALONE = re.compile(r"\b(alone|only)\s*[.!]*\s*$", re.I)
+NAME_RUN = r"[A-Z][A-Za-z&.\-]*(?:\s+[A-Z][A-Za-z&.\-]*)*(?![A-Za-z0-9])"
+UNKNOWN_NAME = re.compile(  # Intel's, Reliance Industries', revenue of Contoso, did Tata Motors, and Acme Holdings
+    rf"\b({NAME_RUN})'(?:s\b|(?=\s|$))"
+    rf"|\b(?:of|for|at|by|from|about|did|does|has|had|and|vs\.?|versus|with|against)\s+({NAME_RUN})"
+    rf"|\b([A-Z][A-Za-z&.\-]*(?:\s+[A-Z][A-Za-z&.\-]*)*\s+(?:Inc|Corp|Corporation|Ltd|Limited|LLC|PLC|Industries|Motors|Holdings|Group))\b")
+NOT_A_NAME = frozenset("""a about according all also an and annual api april are ars at august board by cagr capex cash ceo cfo
+    chart company compare comparison companies debt december did do does earnings ebit edgar eps equity february fcf
+    financial fiscal for form from fy gaap give gross how in income is item january july june latest list march margin
+    may me net non-gaap note november october of on operating or page please profit report reports revenue revenues roa
+    roe sales sec segment september show statement statements table tell the their total us usa u.s. usd vs was we were
+    what when where which who why with xbrl year years""".split())
 INTENT_CHOICES = {"Key figures": "figure", "Explain performance": "explain",
                   "Trend over the years": "trend", "Full financial report": "report"}
 
@@ -114,6 +161,11 @@ def load_directory(paths=MANIFESTS):
 
 def name(ticker):
     return NAMES.get(ticker, ticker)
+
+
+def join_names(names):
+    names = list(names)
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
 
 
 @dataclass
@@ -136,6 +188,7 @@ class Conversation:
     turns: int = 0
     assumptions: list[str] = field(default_factory=list)
     unknown_companies: list[str] = field(default_factory=list)
+    banks_without_metric: list[str] = field(default_factory=list)
     updated: float = field(default_factory=time.time)
 
 
@@ -156,7 +209,7 @@ class Clarifier:
         # Upper-case tickers (AAPL, NVDA); single letters only as $V or "ticker V".
         for match in re.finditer(r"(?:\$|\bticker\s+)?\b([A-Z]{1,5})\b", text):
             ticker = match.group(1)
-            if ticker in self.directory and (len(ticker) > 1 or match.group(0)[0] in "$t"):
+            if (ticker in self.directory or ticker in NAMES) and (len(ticker) > 1 or match.group(0)[0] in "$t"):
                 found.append((match.start(), ticker))
         ordered = []
         for _, ticker in sorted(found):
@@ -205,9 +258,20 @@ class Clarifier:
 
     @staticmethod
     def unknown_names(text):
-        """Possessive company-like names we have no alias for ("Intel's revenue")."""
-        known = {alias for aliases in ALIASES.values() for alias in aliases}
-        return [n for n in re.findall(r"\b([A-Z][A-Za-z&.\-]+)'s\b", text) if n.lower() not in known]
+        """Company-like names we have no alias for ("Intel's revenue", "revenue of Reliance Industries")."""
+        for alias in sorted({a for aliases in ALIASES.values() for a in aliases}, key=len, reverse=True):
+            text = re.sub(rf"(?<![A-Za-z]){re.escape(alias)}(?:'s|')?(?![A-Za-z])", " ", text, flags=re.I)
+        found = []
+        for match in UNKNOWN_NAME.finditer(text):
+            words = next(group for group in match.groups() if group).split()
+            while words and words[0].lower().rstrip(".") in NOT_A_NAME:
+                words.pop(0)
+            while words and words[-1].lower().rstrip(".") in NOT_A_NAME:
+                words.pop()
+            candidate = " ".join(words)
+            if len(candidate) > 1 and candidate not in found:
+                found.append(candidate)
+        return found
 
     def parse(self, text):
         companies = self.companies_in(text)
@@ -266,6 +330,9 @@ class Clarifier:
         slots.latest = (slots.latest or parsed.latest) and not parsed.years
         slots.all_years = slots.all_years or parsed.all_years
         slots.metric = parsed.metric or slots.metric
+        covered = [c for c in slots.companies if c in self.directory]
+        if len(covered) == 1 and "companies" in conversation.pending and ALONE.search(text):
+            slots.intent, slots.companies = "figure", covered
 
         missing = self.missing(conversation)
         if not missing or (missing != ["confirm"] and (CONTINUE.match(text) or conversation.turns >= MAX_CLARIFICATION_TURNS)):
@@ -276,13 +343,27 @@ class Clarifier:
     def restart(self, conversation, text):
         conversation.__dict__.update(Conversation(conversation.conversation_id, original_query=text).__dict__)
 
+    def uncovered(self, slots, query):
+        """Names of the companies the question asks about that we hold no filings for."""
+        covered = [c for c in slots.companies if c in self.directory]
+        names = [name(c) for c in slots.companies if c not in self.directory]
+        if len(covered) < (2 if slots.intent == "comparison" else 1):
+            names += [n for n in self.unknown_names(query) if n not in names]
+        return names
+
+    def banks_without(self, slots):
+        """Covered banks that don't report the requested measure."""
+        if slots.intent not in {"figure", "comparison", "trend"} or slots.metric not in NOT_REPORTED_BY_BANKS:
+            return []
+        return [c for c in slots.companies if c in BANKS and c in self.directory]
+
     def missing(self, conversation):
         slots, missing = conversation.slots, []
         if slots.intent is None:
             missing.append("intent")
         covered = [c for c in slots.companies if c in self.directory]
-        conversation.unknown_companies = ([c for c in slots.companies if c not in self.directory]
-                                          or (self.unknown_names(conversation.original_query) if not covered else []))
+        conversation.unknown_companies = self.uncovered(slots, conversation.original_query)
+        conversation.banks_without_metric = self.banks_without(slots)
         if len(covered) < (2 if slots.intent == "comparison" else 1):
             missing.append("companies" if slots.intent == "comparison" else "company")
         elif slots.intent in {"figure", "comparison", "report"}:
@@ -291,7 +372,7 @@ class Clarifier:
                 slots.years, slots.latest = [available[-1]], False
             if not slots.years or any(y not in available for y in slots.years):
                 missing.append("year")
-        if slots.intent in {"figure", "comparison", "trend"} and not slots.metric:
+        if slots.intent in {"figure", "comparison", "trend"} and (not slots.metric or conversation.banks_without_metric):
             missing.append("metric")
         if slots.intent == "report" and not missing and slots.confirmed is not True:
             missing.append("confirm")
@@ -301,9 +382,65 @@ class Clarifier:
         sets = [set(self.directory.get(c, [])) for c in companies]
         return sorted(set.intersection(*sets)) if sets else []
 
+    def similar_companies(self, slots, limit=3):
+        """Covered companies in the same sector as a company we don't have."""
+        sectors = {SECTOR_OF[c] for c in slots.companies if c not in self.directory and c in SECTOR_OF}
+        return [t for t in self.directory if SECTOR_OF.get(t) in sectors and t not in slots.companies][:limit]
+
+    def company_not_available(self, slots, unknown):
+        """The reply and machine-readable reason when we hold no filings for a company."""
+        covered = [c for c in slots.companies if c in self.directory]
+        similar = self.similar_companies(slots)
+        if covered:
+            text = (f"I don't have filings for {join_names(unknown)}, so I can't make this comparison. "
+                    f"I can answer for {join_names(name(c) for c in covered)} alone.")
+        else:
+            text = f"I don't have filings for {join_names(unknown)}, so I can't answer this from my documents."
+        if similar:
+            text += f" Similar companies I do have: {join_names(name(c) for c in similar)}."
+        return {"status": "not_available", "reason": "company_not_in_filings", "missing": unknown,
+                "similar": similar, "message": text}
+
+    @staticmethod
+    def metric_not_applicable(slots, banks):
+        """The reply and machine-readable reason when a bank doesn't report the measure."""
+        verb = "doesn't" if len(banks) == 1 else "don't"
+        text = (f"{join_names(name(c) for c in banks)} {verb} report {slots.metric}, because a bank's income statement "
+                "has no such line. I won't calculate a substitute. "
+                f"I can give {BANK_MEASURES[0].lower()}, {BANK_MEASURES[1].lower()} or {BANK_MEASURES[2].lower()} instead.")
+        return {"status": "not_available", "reason": "metric_not_applicable", "metric": slots.metric,
+                "companies": banks, "alternatives": BANK_MEASURES, "message": text}
+
+    def scope(self, query, ticker=None):
+        """What the agent needs when the clarifier was skipped or overridden.
+
+        Returns the companies citations must belong to, and why the filings can't answer the question (or None).
+        An empty directory means coverage is unknown, so nothing is decided.
+        """
+        if not self.directory:
+            return {"expected": [], "coverage": None}
+        slots = self.parse(query)
+        if not slots.companies and ticker:
+            slots.companies = [ticker.upper()]
+        covered = [c for c in slots.companies if c in self.directory]
+        unknown = self.uncovered(slots, query)
+        coverage = None
+        if unknown:
+            coverage = self.company_not_available(slots, unknown)
+        elif self.banks_without(slots):
+            coverage = self.metric_not_applicable(slots, self.banks_without(slots))
+        elif slots.intent == "figure" and len(covered) == 1 and len(slots.years) == 1:
+            available = self.directory[covered[0]]
+            if slots.years[0] not in available:
+                coverage = {"status": "not_available", "reason": "year_not_in_filings", "missing": [f"FY{slots.years[0]}"],
+                            "available": available, "message": (
+                                f"I don't have {name(covered[0])}'s FY{slots.years[0]} report. "
+                                f"I have {', '.join(f'FY{y}' for y in available)}.")}
+        return {"expected": covered, "coverage": coverage}
+
     def ask(self, conversation, message, missing):
         conversation.pending = missing
-        slots, questions = conversation.slots, []
+        slots, questions, coverage = conversation.slots, [], None
         covered = [c for c in slots.companies if c in self.directory]
         for slot in missing:
             if slot == "intent":
@@ -311,18 +448,34 @@ class Clarifier:
                 questions.append({"slot": "intent", "question": f"What would you like to know about {subject}?",
                                   "options": list(INTENT_CHOICES)})
             elif slot in {"company", "companies"}:
-                prefix = (f"{', '.join(conversation.unknown_companies)} is not in the corpus. "
-                          if conversation.unknown_companies else "")
                 ask = "Which companies should I compare (two or more)?" if slot == "companies" else "Which company?"
+                prefix, first = "", []
+                if conversation.unknown_companies:
+                    coverage = self.company_not_available(slots, conversation.unknown_companies)
+                    prefix = coverage["message"] + " "
+                    ask = (f"Which company should I compare with {join_names(name(c) for c in covered)} instead?"
+                           if covered else "Which company should I use instead?")
+                    first = coverage["similar"]
+                alone = [f"{name(covered[0])} only"] if slot == "companies" and len(covered) == 1 and prefix else []
+                others = [t for t in self.directory if t not in first and t not in covered]
                 questions.append({"slot": slot, "question": prefix + ask,
-                                  "options": [f"{name(t)} ({t})" for t in self.directory]})
+                                  "options": alone + [f"{name(t)} ({t})" for t in first + others]})
             elif slot == "year":
                 available = self.common_years(covered)
                 outside = [y for y in slots.years if y not in available]
-                prefix = (f"FY{', FY'.join(map(str, outside))} is not in the filings I have. " if outside else "")
+                prefix = ""
+                if outside:
+                    prefix = (f"FY{', FY'.join(map(str, outside))} is not in the filings I have"
+                              + (f"; the latest is FY{available[-1]}. " if available else ". "))
+                    coverage = {"status": "not_available", "reason": "year_not_in_filings",
+                                "missing": [f"FY{y}" for y in outside], "available": available}
                 who = " and ".join(name(c) for c in covered)
                 questions.append({"slot": "year", "question": f"{prefix}Which fiscal year for {who}?",
                                   "options": [f"FY{y}" for y in reversed(available)] + ["Latest"]})
+            elif slot == "metric" and conversation.banks_without_metric:
+                coverage = self.metric_not_applicable(slots, conversation.banks_without_metric)
+                questions.append({"slot": "metric", "question": coverage["message"] + " Which measure?",
+                                  "options": list(BANK_MEASURES)})
             elif slot == "metric":
                 questions.append({"slot": "metric", "question": "Which measure?",
                                   "options": ["Revenue", "Net income", "Diluted EPS", "Operating margin",
@@ -334,7 +487,7 @@ class Clarifier:
                 questions.append({"slot": "confirm", "question": f"Generate the full financial report for {name(spec['ticker'])} "
                                   f"FY{spec['year']}? It takes a few minutes.{note}", "options": ["Yes", "No"]})
         text = message or " ".join(q["question"] for q in questions)
-        return self.result(conversation, "needs_clarification", message=text, questions=questions)
+        return self.result(conversation, "needs_clarification", message=text, questions=questions, coverage=coverage)
 
     def ready(self, conversation, forced=False):
         """Fill stated defaults and hand over to the agent (answer) or the report generator (report)."""
@@ -410,6 +563,16 @@ class Clarifier:
                    "clarification_turns": conversation.turns, **extra}
         payload.setdefault("questions", [])
         return payload
+
+
+@lru_cache(maxsize=1)
+def default_clarifier():
+    return Clarifier()
+
+
+def question_scope(query, ticker=None):
+    """Companies the citations must belong to, and why the filings can't answer the question (or None)."""
+    return default_clarifier().scope(query, ticker)
 
 
 class ConversationStore:

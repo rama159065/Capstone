@@ -301,7 +301,7 @@ Enable LangSmith for API calls by setting `LANGSMITH_API_KEY` and either passing
 
 API access logs include request IDs, route, status, and duration without recording request bodies or prompts. Each response returns `X-Request-ID`; when LangSmith tracing is active, the ID is attached as trace metadata. See [docs/fastapi_api.md](docs/fastapi_api.md#request-logging-and-trace-correlation).
 
-Chat endpoints return generated answers only when citations validate against retrieved evidence; otherwise the answer is withheld and the response explains the grounding failure. This verifies evidence/citation consistency, not semantic entailment or factual correctness.
+Chat endpoints return generated answers only when citations validate against retrieved evidence; otherwise the answer is withheld and the response explains the grounding failure. This verifies evidence/citation consistency, not semantic entailment or factual correctness. Financial chat also returns `not_available` when the filings can't answer the question; see [docs/fastapi_api.md](docs/fastapi_api.md#when-the-filings-cant-answer).
 
 ## Execute By Domain
 
@@ -377,6 +377,7 @@ The agent flow includes:
 - Retrieval evidence guard against injected instructions inside retrieved chunks
 - Output content filter for generated prompt-injection echoes, executable payloads, secrets, sensitive data, and domain-sensitive recommendations
 - Citation validation against retrieved chunk IDs
+- Financial agent only: a plain "not available" reply, with no figure, for a company or year without filings or a measure a bank doesn't report; answers citing a company the question didn't ask about are withheld
 - Human review routing for high-impact decisions, unsafe evidence, low confidence, or citation failure
 - HTML/JSON audit artifacts for review
 

@@ -95,7 +95,7 @@ def render_result(result: dict[str, Any]) -> None:
     status = result.get("final_status", "unknown")
     if status in {"refused", "error"}:
         st.error(status)
-    elif status == "pending_human_review":
+    elif status in {"pending_human_review", "not_available", "not_grounded"}:
         st.warning(status)
     else:
         st.success(status)
