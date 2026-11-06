@@ -11,6 +11,26 @@ HERE = Path(__file__).parent
 BASE_PACKAGES = ("langchain-core langchain-community langchain-huggingface langchain-text-splitters "
                  "pydantic>=2 pymupdf rapidocr onnxruntime sentence-transformers accelerate bitsandbytes pandas")
 
+COLAB_OPTIONS = r'''
+# @title Run options
+USE_DRIVE = True  # @param {type:"boolean"}
+DRIVE_FOLDER = "rag_arch"  # @param {type:"string"}
+QUICK_TEST = False  # @param {type:"boolean"}
+
+# With Drive, the PDF, VLM cache, results and scoreboard survive a disconnect and are shared by all seven notebooks.
+# A quick test evaluates 6 questions and sends 3 pages to the VLM: it checks the notebook runs, so don't report its scores.
+import os
+if USE_DRIVE:
+    from google.colab import drive
+    drive.mount("/content/drive")
+    os.environ["RAG_WORK_DIR"] = f"/content/drive/MyDrive/{DRIVE_FOLDER}"
+for name, value in {"EVAL_LIMIT": "6", "VLM_MAX_PAGES": "3"}.items():
+    if QUICK_TEST:
+        os.environ[name] = value
+    else:
+        os.environ.pop(name, None)
+'''
+
 CONFIG = r'''
 import gc, glob, hashlib, json, os, re, shutil, statistics, time
 from decimal import Decimal, ROUND_HALF_UP
@@ -307,7 +327,7 @@ import base64, io
 from PIL import Image
 
 VLM_MODEL = os.getenv("VLM_MODEL", "Qwen/Qwen2.5-VL-3B-Instruct")
-VLM_CACHE = CFG.work_dir / f"vlm_pages_{PDF_SHA[:12]}.jsonl"   # shared by notebooks 04 and 06; copy it to Drive to keep it between sessions
+VLM_CACHE = CFG.work_dir / f"vlm_pages_{PDF_SHA[:12]}.jsonl"   # shared by notebooks 04 and 06
 VLM_MAX_NEW_TOKENS = 1200
 class VlmPage(BaseModel):
     """One cached transcription. A line that fails validation is transcribed again."""
@@ -1070,7 +1090,7 @@ print("Qdrant index ready")
                    "Ingest cost: a Colab GPU, for ColPali page embeddings and the chart transcription."),
         "index_title": "ColPali multivectors and hybrid text in Qdrant",
         "index_text": "Two Qdrant collections: `visual_pages` (ColPali multivectors compared with MaxSim) and `text_chunks` (dense + sparse via `QdrantVectorStore`). The reranker orders the text hits; the top ColPali page always keeps a slot, because a chart page can score low on text alone.",
-        "code": [VLM_CODE.replace('VLM_CACHE = CFG.work_dir / f"vlm_pages_{PDF_SHA[:12]}.jsonl"   # shared by notebooks 04 and 06; copy it to Drive to keep it between sessions',
+        "code": [VLM_CODE.replace('VLM_CACHE = CFG.work_dir / f"vlm_pages_{PDF_SHA[:12]}.jsonl"   # shared by notebooks 04 and 06',
                                  'VLM_CACHE = CFG.work_dir / f"vlm_charts_{PDF_SHA[:12]}.jsonl"'), r'''
 CHART_PROMPT = """Read the charts on this annual report page. For each chart give its title and unit, then one line per printed value saying exactly which series, bar or year it belongs to, using the legend and colours. For example: "S&P 500, 2024: $197". Copy numbers exactly. Skip any point with no printed number. Output only those lines."""
 chart_pages = [p.page for p in PAGES if p.visual and len(re.findall(r"\d", p.narrative)) > 10]
@@ -1182,9 +1202,10 @@ def build(arch):
 
 **What it measures:** numeric number match rate, faithfulness (target > 0.98) and negative refusal accuracy (target > 0.95), scored on the LLM's own answers. A ground-truth fallback never counts as a correct LLM answer.
 
-**To run:** choose a T4 GPU, then Runtime > Run all, and upload the PDF when asked. The gold questions were written for `{PDF_NAME}`; any other PDF still works for your own questions."""),
+**To run:** choose a T4 GPU, then Runtime > Run all. Allow Google Drive access when asked, or untick `USE_DRIVE` in the run options to keep everything in `/content`, which is lost when the runtime ends. Upload the PDF when asked; with Drive you only do this once, because the other notebooks find it in the same folder. Tick `QUICK_TEST` for a short check before a full run. The gold questions were written for `{PDF_NAME}`; any other PDF still works for your own questions."""),
         md("## Step 1: Environment setup"),
         code(install, tags=["colab-install"]),
+        code(COLAB_OPTIONS, tags=["colab-install"]),
         md("## Step 2: Upload the PDF and set the configuration"),
         code(f'ARCHITECTURE = "{arch["name"]}"\nEXPECTED_PDF = "{PDF_NAME}"\nEXPECTED_SHA256 = "{PDF_SHA256}"\n' + CONFIG.strip()),
         md("""## Step 3: Parse text, tables and scanned pages
