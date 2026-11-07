@@ -227,12 +227,41 @@ def parse_pdf(path):
             pages.append(ParsedPage(page=number, narrative=narrative, tables=segments, ocr_used=ocr_used, visual=has_visual(page, raw)))
     return pages
 
+def linear_rows(segment):
+    """Write each value beside its year and each row under its group, so nothing depends on counting columns."""
+    cells = segment.header.split(" | ")
+    first_year = next((i for i, cell in enumerate(cells) if YEAR_CELL.match(cell)), None)
+    years = cells[first_year:] if first_year is not None else []
+    if len(years) < 2 or len(set(years)) != len(years) or not all(YEAR_CELL.match(y) for y in years):
+        return segment.rows  # no year columns, or repeated ones such as one set per segment: leave as printed
+    rows, group = [], ""
+    for row in segment.rows:
+        parts = row.split(" | ")
+        split_label = re.fullmatch(r"(\$?\s*\(?[\d,.]+\)?)\s+(\(.+\))", parts[0])
+        if split_label:  # a value that landed on the same baseline as its unit, under a two-line label
+            parts = [f"{group} {split_label.group(2)}".strip(), split_label.group(1), *parts[1:]]
+            group = ""
+        if len(parts) == 1:
+            group = row if not re.search(r"\d\s*$", row) or re.search(r"[A-Za-z]\d$", row) else group
+            rows.append(row)
+            continue
+        values = parts[-len(years):]
+        label = " ".join(parts[:-len(years)]).strip()
+        if len(parts) <= len(years) or not all(NUMERIC_CELL.match(v) for v in values):
+            rows.append(row)
+            continue
+        named = f"{group} > {label}" if group and not label.lower().startswith(("total", group.lower())) and not label.startswith("(") else label
+        rows.append(f"{named}: " + "; ".join(f"{y}={v}" for y, v in zip(years, values)))
+        if label.lower().startswith("total"):
+            group = ""
+    return rows
+
 def table_chunks(segment, max_chars=1400):
     """Split long tables between rows, repeating the column header and unit in every piece."""
     head = "\n".join(x for x in [f"Units: {segment.unit}" if segment.unit else "",
                                  f"Columns: {segment.header}" if segment.header else ""] if x)
     pieces, current = [], []
-    for row in segment.rows:
+    for row in linear_rows(segment):
         if current and sum(map(len, current)) + len(head) + len(row) > max_chars:
             pieces.append(head + "\n" + "\n".join(current))
             current = []
@@ -441,6 +470,8 @@ def decimal_drift_report(pages, transcripts):
 '''
 
 ANSWER = r'''
+from functools import partial
+
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
@@ -448,13 +479,15 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True)
 tokenizer = AutoTokenizer.from_pretrained(CFG.qwen_model)
+if "qwen3" in CFG.qwen_model.lower():  # thinking would break the JSON reply and use up the token limit
+    tokenizer.apply_chat_template = partial(tokenizer.apply_chat_template, enable_thinking=False)
 model = AutoModelForCausalLM.from_pretrained(CFG.qwen_model, quantization_config=quant, device_map={"": 0})  # 4-bit weights must stay on the GPU
 # No repetition_penalty: it pushes the model away from digits already in the context, which corrupts copied figures.
 text_pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=140, do_sample=False,
                      return_full_text=False, pad_token_id=tokenizer.eos_token_id)
 for attribute in ("temperature", "top_p", "top_k"):
     setattr(model.generation_config, attribute, None)
-CHAT_LLM = ChatHuggingFace(llm=HuggingFacePipeline(pipeline=text_pipe), model_id=CFG.qwen_model)
+CHAT_LLM = ChatHuggingFace(llm=HuggingFacePipeline(pipeline=text_pipe), model_id=CFG.qwen_model, tokenizer=tokenizer)
 print(f"Loaded {CFG.qwen_model}; GPU memory in use: {torch.cuda.memory_allocated() / 1e9:.1f} GB")
 '''
 
@@ -549,19 +582,17 @@ Reply with one JSON object and nothing else, with these keys:
 
 Rules:
 1. Copy figures exactly as printed, with the unit shown in the evidence. Do not calculate, round or estimate.
-2. In a table, take the value from the row that matches the item and the column that matches the year.
+2. In a table, take the value from the row that matches the item, and within that row the value after the year asked about, such as 2023=388. "Group > Item" means the item belongs to that group.
 3. The evidence must state the item for the same company and the same year as the question. If it does not, set "in_report" to false and "answer" to null. Never substitute another year, company or similar item.
 
 Examples:
 Evidence: [p.4] Units: Millions of dollars
-Columns: 2024 | 2023
-Total widgets revenue | 410 | 388
+Total widgets revenue: 2024=410; 2023=388
 Question: What was widgets revenue in 2023?
 Answer: {{"in_report": true, "answer": "Widgets revenue was $388 million in 2023.", "cited_pages": [4]}}
 
 Evidence: [p.4] Units: Millions of dollars
-Columns: 2024 | 2023
-Total widgets revenue | 410 | 388
+Total widgets revenue: 2024=410; 2023=388
 Question: What was widgets revenue in 2019?
 Answer: {{"in_report": false, "answer": null, "cited_pages": []}}
 
@@ -654,7 +685,11 @@ def figure_placement(question, figure, docs):
             nearby = " ".join(lines[max(0, index - 2):index + 2])
             if words and not content_words(nearby) & words:
                 continue
-            if year and header and len(cells) > 1 and not in_year_column(header, cells, figure, year):
+            pairs = re.findall(r"\b((?:19|20)\d{2})=([^;]+)", line)
+            if year and pairs and not any(y == year and figure_in_evidence(printed, value, scale, numbers_in(v)) for y, v in pairs):
+                outcome = "figure_in_other_year_column"
+                continue
+            if year and header and len(cells) > 1 and not pairs and not in_year_column(header, cells, figure, year):
                 outcome = "figure_in_other_year_column"
                 continue
             return "ok"
@@ -861,7 +896,7 @@ def score(rows):
         number_match_narrative=rate(numeric[numeric.kind == "narrative"].correct),
         number_match_charts=rate(numeric[numeric.kind == "chart"].correct),
         text_fact_accuracy=rate(text.correct),
-        faithfulness=rate(answered.faithfulness),
+        faithfulness=rate(answered.faithfulness.dropna()),
         negative_refusal_accuracy=rate(negative.correct),
         false_refusal_rate=rate(~answerable.answered),
         fallback_rate=rate(frame.status == "GROUND_TRUTH_FALLBACK"),
@@ -1214,7 +1249,7 @@ Each printed line is rebuilt from word positions, so table rows keep their colum
         md(f"## Step 4: {arch['index_title']}\n{arch['index_text']}"),
         *[code(part) for part in arch["code"]],
         md(f"""## Step 5: Load Qwen in 4-bit through LangChain
-`Qwen2.5-7B-Instruct` takes about 5 GB of VRAM at 4-bit. Set the `QWEN_MODEL` environment variable to try another model, such as `Qwen/Qwen3-8B`, but note that `Qwen/Qwen2.5-8B-Instruct` isn't a published model."""),
+`Qwen2.5-7B-Instruct` takes about 5.6 GB of VRAM at 4-bit. Set the `QWEN_MODEL` environment variable to try another model, such as `Qwen/Qwen3-8B`, but note that `Qwen/Qwen2.5-8B-Instruct` isn't a published model."""),
         code(ANSWER),
         md("""## Step 6: Grounded answer chain and fallback
 The LCEL chain is `prompt | Qwen | parser`, and `PydanticOutputParser` validates the reply against `LLMAnswer`. The gates then withhold any answer where:
@@ -1241,6 +1276,353 @@ When the LLM refuses or an answer is withheld, `final_answer` becomes the gold a
             "nbformat": 4, "nbformat_minor": 5}
 
 
+PORTAL_SETUP = r'''
+# @title Company and SEC contact
+TICKER = "CVX"  # @param {type:"string"}
+FISCAL_YEAR = 2024  # @param {type:"integer"}
+SEC_CONTACT = ""  # @param {type:"string"}
+# The SEC asks every automated client to identify itself: enter "your name your@email". It is sent only to sec.gov.
+
+import os
+SEC_USER_AGENT = SEC_CONTACT or os.getenv("SEC_USER_AGENT", "")
+ARCHITECTURE = "portal_comparison"
+'''
+
+PORTAL_CODE = r'''
+import urllib.request
+from datetime import date
+
+SEC_CACHE = Path(os.getenv("SEC_CACHE_DIR") or CFG.work_dir / "sec_cache")
+KNOWN_CIKS = {"CVX": "0000093410"}
+
+class Filing(BaseModel):
+    form: str
+    accession: str
+    report_date: str
+    filing_date: str
+    primary_document: str
+    cik: str
+
+    @computed_field
+    @property
+    def url(self) -> str:
+        return f"https://www.sec.gov/Archives/edgar/data/{int(self.cik)}/{self.accession.replace('-', '')}/{self.primary_document}"
+
+class Fact(BaseModel):
+    concept: str
+    label: str
+    description: str = ""
+    unit: str
+    value: Decimal
+    start: Optional[str] = None
+    end: str
+
+def sec_download(url, target):
+    """Reuse a saved copy if there is one. SEC allows 10 requests a second; this makes very few."""
+    if target.exists():
+        return target
+    if "@" not in SEC_USER_AGENT:
+        raise ValueError(f"{target.name} isn't saved yet, so it must be fetched: set SEC_CONTACT to 'your name your@email'.")
+    request = urllib.request.Request(url, headers={"User-Agent": SEC_USER_AGENT})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        body = response.read()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(body)
+    time.sleep(0.2)
+    return target
+
+def company_cik(ticker):
+    if ticker.upper() in KNOWN_CIKS:
+        return KNOWN_CIKS[ticker.upper()]
+    path = sec_download("https://www.sec.gov/files/company_tickers.json", SEC_CACHE / "company_tickers.json")
+    for row in json.loads(path.read_text(encoding="utf-8")).values():
+        if row["ticker"].upper() == ticker.upper():
+            return f"{int(row['cik_str']):010d}"
+    raise ValueError(f"The SEC has no ticker {ticker}")
+
+def annual_filings(cik):
+    path = sec_download(f"https://data.sec.gov/submissions/CIK{cik}.json", SEC_CACHE / "submissions" / f"CIK{cik}.json")
+    recent = json.loads(path.read_text(encoding="utf-8"))["filings"]["recent"]
+    rows = zip(recent["form"], recent["accessionNumber"], recent["reportDate"], recent["filingDate"], recent["primaryDocument"])
+    return [Filing(form=f, accession=a, report_date=r, filing_date=d, primary_document=p, cik=cik) for f, a, r, d, p in rows if f in ("10-K", "ARS")]
+
+def filing_facts(cik, accession):
+    """Annual and year-end facts from one filing only, so the portal can't answer beyond what that filing reports."""
+    path = sec_download(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json", SEC_CACHE / "companyfacts" / f"CIK{cik}.json")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    facts = {}
+    for taxonomy in data["facts"].values():
+        for concept, body in taxonomy.items():
+            for unit, values in body["units"].items():
+                for row in values:
+                    if row["accn"] != accession or (row["end"][:4] == "2100"):
+                        continue
+                    start = row.get("start")
+                    if start and (date.fromisoformat(row["end"]) - date.fromisoformat(start)).days < 330:
+                        continue
+                    facts.setdefault((concept, row["end"][:4]), Fact(concept=concept, label=body.get("label") or concept, description=body.get("description") or "", unit=unit,
+                                                                     value=Decimal(str(row["val"])), start=start, end=row["end"]))
+    return data.get("entityName", ""), facts
+
+CIK = company_cik(TICKER)
+FILINGS = annual_filings(CIK)
+print(pd.DataFrame([f.model_dump() for f in FILINGS])[["form", "report_date", "filing_date", "url"]].head(8).to_string(index=False))
+TARGET = next(f for f in FILINGS if f.form == "10-K" and f.report_date.startswith(str(FISCAL_YEAR)))
+ENTITY, FACTS = filing_facts(CIK, TARGET.accession)
+print(f"\n{ENTITY}: {len(FACTS)} annual facts in the FY{FISCAL_YEAR} 10-K, accession {TARGET.accession}")
+
+if "@" in SEC_USER_AGENT:  # the filings themselves, to read or to index later; the comparison below doesn't need them
+    for filing in [TARGET, *[f for f in FILINGS if f.form == "ARS" and f.report_date.startswith(str(FISCAL_YEAR))]]:
+        print("saved", sec_download(filing.url, CFG.work_dir / "filings" / filing.primary_document))
+'''
+
+PORTAL_ANSWER = r'''
+class FactRoute(BaseModel):
+    """Qwen only picks what to look up. The figure always comes from the SEC data."""
+    company: str = ""
+    concept: Optional[str] = None
+    year: Optional[int] = None
+
+ROUTE_PROMPT = """You choose which SEC XBRL fact answers a question about {entity}.
+
+Reply with one JSON object and nothing else, with these keys:
+"company": the company the question asks about
+"concept": the exact concept name from the list that states what was asked, or null if none does
+"year": the year asked about, or null if none is given
+
+Choose null unless the concept means the same thing as the question. A similar concept is not enough.
+
+Examples:
+Question: What was Globex's revenue in 2023?
+Concepts: Revenues: Revenues | Assets: Assets
+Answer: {{"company": "Globex", "concept": "Revenues", "year": 2023}}
+
+Question: How many trees did Globex plant?
+Concepts: Assets: Assets | Revenues: Revenues
+Answer: {{"company": "Globex", "concept": null, "year": null}}"""
+
+ROUTE_CHAIN = ChatPromptTemplate.from_messages([
+    ("system", ROUTE_PROMPT), ("human", "Question: {question}\nConcepts: {concepts}\nAnswer:"),
+]) | CHAT_LLM | StrOutputParser()
+ROUTE_PARSER = PydanticOutputParser(pydantic_object=FactRoute)
+
+LLM_ONLY_PROMPT = """You answer questions about companies from your own knowledge. You have no documents and no internet access.
+
+Reply with one JSON object and nothing else, with these keys:
+"in_report": true if you know the answer, false if you don't
+"answer": one short sentence with the figure, or null
+"cited_pages": []
+
+If you aren't sure, set "in_report" to false and "answer" to null. Never guess."""
+
+LLM_ONLY_CHAIN = ChatPromptTemplate.from_messages([
+    ("system", LLM_ONLY_PROMPT), ("human", "Question: {question}\nAnswer:"),
+]) | CHAT_LLM | StrOutputParser()
+
+CATALOG = {fact.concept: fact.label for fact in FACTS.values()}
+DESCRIPTIONS = {fact.concept: content_words(fact.description) for fact in FACTS.values()}
+
+def concept_words(concept, label):
+    return content_words(re.sub(r"(?<=[a-z])(?=[A-Z])", " ", concept) + " " + label)
+
+def shortlist(question, size=15):
+    """Over 300 concepts won't fit in a useful prompt. Prefer words in the name, then in the SEC's description, then short general names."""
+    words = content_words(question)
+    scored = [(3 * len(concept_words(c, l) & words) + len(DESCRIPTIONS[c] & words), c) for c, l in CATALOG.items()]
+    return [c for score, c in sorted(scored, key=lambda pair: (-pair[0], len(pair[1]), pair[1])) if score][:size]
+
+def format_fact(fact):
+    value = fact.value
+    if fact.unit == "USD":
+        millions = value / Decimal(10) ** 6
+        text = f"${abs(millions):,.0f} million" if abs(value) >= 10 ** 6 else f"${abs(value):,.2f}"
+    elif fact.unit == "USD/shares":
+        text = f"${abs(value):,.2f} per share"
+    elif fact.unit == "pure":
+        text = f"{abs(value) * 100:,.1f}%"
+    else:
+        text = f"{abs(value):,.0f} {fact.unit}"
+    return ("-" if value < 0 else "") + text
+
+def build_result(question, started, answer, raw, reason, context=""):
+    if answer:
+        final, source, status = answer, "llm", "LLM_ANSWER"
+    else:
+        final, source = ground_truth_for(question, [])
+        status = "GROUND_TRUTH_FALLBACK"
+    return GroundedResult(question=question, status=status, final_answer=final, final_source=source, llm_answer=answer, llm_raw=raw,
+                          withheld_reason="" if answer else reason, context=context, retrieval_s=0, total_s=round(time.time() - started, 3))
+
+def ask_llm_only(question):
+    """No evidence and so no gates beyond the schema: this is what the model does when left alone."""
+    started = time.time()
+    raw = LLM_ONLY_CHAIN.invoke({"question": question})
+    try:
+        parsed = ANSWER_PARSER.parse(raw)
+    except OutputParserException:
+        return build_result(question, started, None, raw, "invalid_llm_output")
+    if not parsed.in_report or REFUSAL_WORDS.search(parsed.answer):
+        return build_result(question, started, None, raw, "llm_refused")
+    return build_result(question, started, parsed.answer.strip(), raw, "")
+
+def ask_portal(question):
+    """Qwen picks a concept, code fetches the fact and writes the sentence, so no figure can come from the model."""
+    started = time.time()
+    candidates = shortlist(question)
+    if not candidates:
+        return build_result(question, started, None, "", "no_matching_concept")
+    listing = " | ".join(f"{c}: {CATALOG[c]}" for c in candidates)
+    raw = ROUTE_CHAIN.invoke({"entity": ENTITY, "question": question, "concepts": listing})
+    try:
+        route = ROUTE_PARSER.parse(raw)
+    except OutputParserException:
+        return build_result(question, started, None, raw, "invalid_llm_output")
+    if ENTITY.split()[0].lower() not in route.company.lower():
+        return build_result(question, started, None, raw, "other_company")
+    if not route.concept:
+        return build_result(question, started, None, raw, "llm_refused")
+    if route.concept not in candidates:
+        return build_result(question, started, None, raw, "concept_not_offered")
+    year = route.year or FISCAL_YEAR
+    fact = FACTS.get((route.concept, str(year)))
+    if fact is None:
+        return build_result(question, started, None, raw, f"no_fact_for_{year}")
+    answer = f"{fact.label}, year ended {fact.end[:4]}: {format_fact(fact)}."
+    return build_result(question, started, answer, raw, "", context=f"SEC XBRL {fact.concept}, accession {TARGET.accession}, period end {fact.end}")
+
+for question in ["What were Chevron's total assets at year-end 2023?", "What was net production of natural gas in 2023?", "How much bitcoin does Chevron hold on its balance sheet?"]:
+    show(ask_portal(question))
+'''
+
+PORTAL_EVAL = r'''
+def evaluate(mode, ask_fn):
+    global ARCHITECTURE
+    ARCHITECTURE = mode
+    rows = []
+    gold_rows = GOLD_SET[:CFG.eval_limit] if CFG.eval_limit else GOLD_SET
+    for index, gold in enumerate(gold_rows, start=1):
+        result = ask_fn(gold.question)
+        answered = bool(result.llm_answer)
+        if gold.type == "numeric":
+            correct = number_match(result, gold)
+        elif gold.type == "negative":
+            correct = not answered
+        else:
+            correct = answered and all(k in result.llm_answer.lower() for k in gold.keywords)
+        rows.append(EvalRow(**result.model_dump(), id=gold.id, type=gold.type, kind=gold.kind, gold=gold.ground_truth, answered=answered, correct=correct))
+        print(f"{index:>2}/{len(gold_rows)} {gold.id} {'ok ' if correct else 'MISS'} {(result.llm_answer or result.withheld_reason)[:90]}")
+    frame, metrics = score(rows)
+    frame.drop(columns=["context"]).to_csv(CFG.work_dir / f"results_{mode}.csv", index=False)
+    return frame
+
+if TICKER == "CVX" and FISCAL_YEAR == 2024:
+    LLM_ONLY_RESULTS = evaluate("llm_only", ask_llm_only)
+    PORTAL_RESULTS = evaluate("portal_xbrl", ask_portal)
+else:
+    print("The gold questions only cover Chevron FY2024, so the evaluation is skipped for", TICKER, FISCAL_YEAR)
+'''
+
+PORTAL_COMPARE = r'''
+def in_filing(gold):
+    """Could the portal answer this at all? True if the gold figure is among the filing's facts."""
+    target = gold.decimal * gold.scale
+    return any(abs(f.value) == target or (f.unit == "pure" and f.value * 100 == gold.decimal) for f in FACTS.values())
+
+REACHABLE = {g.id for g in GOLD_SET if g.type == "numeric" and in_filing(g)}
+
+def summarise(path):
+    data = pd.read_csv(path)
+    numeric, negative, text = (data[data.type == t] for t in ("numeric", "negative", "text"))
+    answerable, answered = data[data.type != "negative"], data[(data.type != "negative") & data.answered]
+    share = lambda frame: frame.correct.mean() if len(frame) else float("nan")
+    return {"approach": path.stem.replace("results_", ""), "questions": len(data), "number match": share(numeric),
+            "tables": share(numeric[numeric.kind == "table"]), "narrative": share(numeric[numeric.kind == "narrative"]), "charts": share(numeric[numeric.kind == "chart"]),
+            f"portal's {len(REACHABLE)} questions": share(numeric[numeric.id.isin(REACHABLE)]), "text facts": share(text),
+            "negative refusal": share(negative), "false refusals": (~answerable.answered).mean(),
+            "wrong when answering": (~answered.correct).mean() if len(answered) else float("nan"), "median s": data.total_s.median()}
+
+paths = sorted(CFG.work_dir.glob("results_*.csv"))
+COMPARISON = pd.DataFrame([summarise(p) for p in paths]).set_index("approach")
+COMPARISON.to_csv(CFG.work_dir / "portal_vs_rag_comparison.csv")
+print(f"The portal can reach {len(REACHABLE)} of {sum(g.type == 'numeric' for g in GOLD_SET)} numeric questions: {sorted(REACHABLE)}\n")
+display_table = COMPARISON.copy()
+for column in display_table.columns:
+    if column not in ("questions", "median s"):
+        display_table[column] = display_table[column].map(lambda x: "n/a" if pd.isna(x) else f"{x:.1%}")
+print(display_table.T.to_string())
+if not any(p.stem not in ("results_llm_only", "results_portal_xbrl") for p in paths):
+    print("\nNo RAG results here yet. Run notebooks 01 to 07 with the same work folder, then rerun this cell.")
+
+portal = pd.read_csv(CFG.work_dir / "results_portal_xbrl.csv").set_index("id")
+for path in paths:
+    if path.stem in ("results_llm_only", "results_portal_xbrl"):
+        continue
+    other = pd.read_csv(path).set_index("id")
+    shared = portal.index.intersection(other.index)
+    print(f"\n{path.stem.replace('results_', '')}: portal right and RAG wrong {sorted(i for i in shared if portal.correct[i] and not other.correct[i])}"
+          f"\n  RAG right and portal wrong {sorted(i for i in shared if other.correct[i] and not portal.correct[i] and other.type[i] != 'negative')}")
+'''
+
+PORTAL_SAVE = r'''
+try:
+    from google.colab import files
+    for name in ["portal_vs_rag_comparison.csv", "results_llm_only.csv", "results_portal_xbrl.csv"]:
+        if (CFG.work_dir / name).exists():
+            files.download(str(CFG.work_dir / name))
+except ImportError:
+    print("Results are in", CFG.work_dir)
+'''
+
+
+def build_portal():
+    gold = json.dumps(EVAL_SET, indent=0)
+    cells = [
+        md("""# Portal without RAG, compared with RAG
+### Annual report questions answered three ways, scored the same way
+
+| Approach | Where the figure comes from |
+|---|---|
+| **LLM only** | Qwen's memory, with no documents and no internet |
+| **Portal (SEC EDGAR XBRL)** | The SEC's data for one 10-K. Qwen only picks which fact to look up; code fetches it and writes the sentence |
+| **RAG** | The annual report PDF, from the results of notebooks 01 to 07 |
+
+**Keeping it fair:**
+- The portal is limited to the FY2024 10-K, otherwise it could answer questions about years the report doesn't cover.
+- Every approach uses the same 66 gold questions and the same scoring code, and the same Qwen model unless you change `QWEN_MODEL`.
+- These questions were written from the annual report PDF, so they favour RAG. The table therefore also scores every approach on just the questions the portal can reach.
+- Faithfulness isn't compared: LLM only has no evidence to check against, and the portal's sentence is built from the fact by code.
+
+**To run:** choose a T4 GPU and enter your contact in `SEC_CONTACT`, as the SEC requires. To include RAG, use the same `DRIVE_FOLDER` as notebooks 01 to 07, then Runtime > Run all."""),
+        md("## Step 1: Environment setup"),
+        code(f"# Colab: Runtime > Change runtime type > T4 GPU first.\n!nvidia-smi -L\n!pip install -q {BASE_PACKAGES}", tags=["colab-install"]),
+        code(COLAB_OPTIONS, tags=["colab-install"]),
+        code(PORTAL_SETUP),
+        code(CONFIG.split("def locate_pdf")[0].strip() + "\n\nGOLD_VALID = True  # this notebook reads no PDF; the gold questions are for Chevron FY2024"),
+        md("## Step 2: Load Qwen in 4-bit through LangChain"),
+        code(ANSWER),
+        md("## Step 3: Gold questions and scoring helpers\nThe same code the seven RAG notebooks use."),
+        code(GOLD_MODELS.strip() + "\n\nGOLD_SET = TypeAdapter(list[GoldQuestion]).validate_python(" + gold + ')\nGOLD_BY_QUESTION = {row.question.strip().lower(): row for row in GOLD_SET}\n\n' + GROUNDING.strip()),
+        code(EVAL),
+        md("## Step 4: Fetch the company's filings and facts from SEC EDGAR\n`submissions` lists the 10-K and annual report filings, and `companyfacts` holds the tagged XBRL figures. Downloads are saved and reused."),
+        code(PORTAL_CODE),
+        md("## Step 5: Answer without RAG\nIn the portal approach Qwen chooses a concept and code does the lookup, so a wrong answer means the wrong concept was chosen, not that a figure was invented."),
+        code(PORTAL_ANSWER),
+        md("## Step 6: Evaluate LLM only and the portal"),
+        code(PORTAL_EVAL),
+        md("""## Step 7: Compare with RAG
+- **Number match:** the share of numeric questions answered with the gold figure.
+- **Portal's questions:** the same score on only the questions whose figure is in the 10-K's XBRL. Use it to compare accuracy where the portal has the data.
+- **Wrong when answering:** of the answers given to answerable questions, the share that were wrong. This is the risk of trusting an answer.
+- **False refusals:** answerable questions that got no answer."""),
+        code(PORTAL_COMPARE),
+        md("## Step 8: Download the results"),
+        code(PORTAL_SAVE),
+    ]
+    return {"cells": cells, "metadata": {"accelerator": "GPU", "colab": {"gpuType": "T4", "name": "08_portal_vs_rag.ipynb"},
+                                         "kernelspec": {"display_name": "Python 3", "name": "python3"}},
+            "nbformat": 4, "nbformat_minor": 5}
+
+
 if __name__ == "__main__":
     for arch in ARCHITECTURES:
         notebook = build(arch)
@@ -1248,3 +1630,8 @@ if __name__ == "__main__":
             cell["id"] = f"cell-{index:02d}"
         (HERE / arch["file"]).write_text(json.dumps(notebook, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         print("wrote", arch["file"], len(notebook["cells"]), "cells")
+    notebook = build_portal()
+    for index, cell in enumerate(notebook["cells"]):
+        cell["id"] = f"cell-{index:02d}"
+    (HERE / "08_portal_vs_rag.ipynb").write_text(json.dumps(notebook, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    print("wrote 08_portal_vs_rag.ipynb", len(notebook["cells"]), "cells")
