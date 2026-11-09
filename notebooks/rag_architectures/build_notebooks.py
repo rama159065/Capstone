@@ -9,7 +9,7 @@ from eval_set_cvx_2024 import EVAL_SET, PDF_NAME, PDF_SHA256
 
 HERE = Path(__file__).parent
 BASE_PACKAGES = ("langchain-core langchain-community langchain-huggingface langchain-text-splitters "
-                 "pydantic>=2 pymupdf rapidocr onnxruntime sentence-transformers accelerate bitsandbytes pandas")
+                 "'pydantic>=2' pymupdf rapidocr onnxruntime sentence-transformers accelerate bitsandbytes pandas")
 
 COLAB_OPTIONS = r'''
 # @title Run options
@@ -358,6 +358,7 @@ from PIL import Image
 VLM_MODEL = os.getenv("VLM_MODEL", "Qwen/Qwen2.5-VL-3B-Instruct")
 VLM_CACHE = CFG.work_dir / f"vlm_pages_{PDF_SHA[:12]}.jsonl"   # shared by notebooks 04 and 06
 VLM_MAX_NEW_TOKENS = 1200
+VLM_MAX_PIXELS = 1280 * 28 * 28  # about 1,280 visual tokens per page
 class VlmPage(BaseModel):
     """One cached transcription. A line that fails validation is transcribed again."""
     page: int = Field(ge=1)
@@ -378,11 +379,14 @@ def load_vlm():
     from transformers import AutoProcessor, BitsAndBytesConfig, Qwen2_5_VLForConditionalGeneration
     quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True)
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(VLM_MODEL, quantization_config=quant, device_map={"": 0})  # 4-bit weights must stay on the GPU
-    return model, AutoProcessor.from_pretrained(VLM_MODEL, min_pixels=256 * 28 * 28, max_pixels=1280 * 28 * 28)
+    return model, AutoProcessor.from_pretrained(VLM_MODEL)
 
 def transcribe_page(model, processor, doc, number, prompt=VLM_PROMPT):
     from qwen_vl_utils import process_vision_info
     image = Image.open(io.BytesIO(doc[number - 1].get_pixmap(dpi=150, colorspace=pymupdf.csRGB, alpha=False).tobytes("png")))
+    scale = (VLM_MAX_PIXELS / (image.width * image.height)) ** 0.5
+    if scale < 1:  # shrink here: the processor's min_pixels/max_pixels options are removed in transformers 5.23
+        image = image.resize((int(image.width * scale), int(image.height * scale)), Image.Resampling.LANCZOS)
     messages = [{"role": "user", "content": [{"type": "image", "image": image}, {"type": "text", "text": prompt}]}]
     text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     images, videos = process_vision_info(messages)
@@ -1409,11 +1413,9 @@ ROUTE_PARSER = PydanticOutputParser(pydantic_object=FactRoute)
 LLM_ONLY_PROMPT = """You answer questions about companies from your own knowledge. You have no documents and no internet access.
 
 Reply with one JSON object and nothing else, with these keys:
-"in_report": true if you know the answer, false if you don't
+"in_report": true if you can answer, false if you can't
 "answer": one short sentence with the figure, or null
-"cited_pages": []
-
-If you aren't sure, set "in_report" to false and "answer" to null. Never guess."""
+"cited_pages": []"""
 
 LLM_ONLY_CHAIN = ChatPromptTemplate.from_messages([
     ("system", LLM_ONLY_PROMPT), ("human", "Question: {question}\nAnswer:"),
@@ -1481,10 +1483,13 @@ def ask_portal(question):
         return build_result(question, started, None, raw, "other_company")
     if not route.concept:
         return build_result(question, started, None, raw, "llm_refused")
-    if route.concept not in candidates:
+    # Qwen sometimes replies with the label, or "name: label". Accept an exact match on either, and nothing looser.
+    named = {name.lower(): c for c in candidates for name in (c, CATALOG[c], f"{c}: {CATALOG[c]}")}
+    concept = named.get(route.concept.strip().lower())
+    if concept is None:
         return build_result(question, started, None, raw, "concept_not_offered")
     year = route.year or FISCAL_YEAR
-    fact = FACTS.get((route.concept, str(year)))
+    fact = FACTS.get((concept, str(year)))
     if fact is None:
         return build_result(question, started, None, raw, f"no_fact_for_{year}")
     answer = f"{fact.label}, year ended {fact.end[:4]}: {format_fact(fact)}."

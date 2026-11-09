@@ -1,10 +1,10 @@
 # Notebooks
 
-Five step-by-step notebooks build the financial-report copilot up layer by layer. Each one imports the repo's code (`scripts/...`) instead of copying it. Each runs on **Google Colab** with a few filings, or locally from the repo root. A sixth notebook, `colab_financial_ingest.ipynb`, ingests the full corpus and serves the API + UI.
+Five step-by-step notebooks build the financial-report copilot up layer by layer. Notebooks 02–05 import the repo's code (`scripts/...`) instead of copying it; 01 is self-contained. Each runs on **Google Colab** with a few filings, or locally from the repo root. A sixth notebook, `colab_financial_ingest.ipynb`, ingests the full corpus and serves the API + UI.
 
 | # | Notebook | What it tests | Filings | Runtime |
 |---|---|---|---|---|
-| 01 | [01_chat_templates_pydantic.ipynb](01_chat_templates_pydantic.ipynb) | Zero-shot, few-shot and chain-of-thought templates; LLM-chosen **tool call** (Pydantic `ToolCall`) to **SEC XBRL** as the external source; answers validated as Pydantic `FinancialAnswer`, plus citation and number grounding | none (XBRL API) | CPU |
+| 01 | [01_chat_templates_pydantic.ipynb](01_chat_templates_pydantic.ipynb) | **Standalone** (no repo clone). All five prompt techniques: zero-shot, few-shot, chain-of-thought, self-consistency and decomposition; LLM-chosen **tool call** (Pydantic `ToolCall`) to **SEC XBRL** as the external source; answers validated as Pydantic `FinancialAnswer`, plus citation and number grounding | none (XBRL API) | CPU |
 | 02 | [02_text_rag_chat_templates.ipynb](02_text_rag_chat_templates.ipynb) | Text-only RAG (Qdrant `docs_text`, hybrid + rerank) + templates. Scenarios: filtered, unfiltered, `k=2`, a garbled filing | AMD FY2025, AbbVie FY2025, NVIDIA FY2026, Chevron FY2022 | CPU or GPU |
 | 03 | [03_ocr_rag.ipynb](03_ocr_rag.ipynb) | Full-page OCR of garbled statements checked against XBRL; image-region OCR of a chart (2 passes); QA with no OCR, front-first OCR and full OCR | Chevron FY2022 | GPU recommended |
 | 04 | [04_visual_rag_colpali.ipynb](04_visual_rag_colpali.ipynb) | Charts and tables as **ColPali image multivectors** in Qdrant (full vectors, exact MaxSim); chart questions, descriptive and exact-number queries; optional vision model | NVIDIA FY2026, Chevron FY2022 | **GPU** |
@@ -25,7 +25,7 @@ Five step-by-step notebooks build the financial-report copilot up layer by layer
 - Text search found the gold figure for 2 of 4 test questions. In image search, 5 of 6 test charts were found: first within their PDF for 3, second for 2. The one-word query "chart" missed.
 - Most stored images are photos or ruled tables, and CLIP doesn't read numbers. Chroma can't run the ColPali MaxSim search, so this notebook compares with the Qdrant design and doesn't replace it. It hasn't been run on a GPU.
 
-The steps below apply only to notebooks 01–05.
+**01 is standalone too:** upload that one file to Colab, set `SEC_CONTACT` in its settings cell, and run all cells. It needs no clone or GitHub token. The steps below apply to notebooks 02–05.
 
 ## Running on Colab
 

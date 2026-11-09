@@ -1,0 +1,18 @@
+{
+  "architecture": "04_vlm_chroma",
+  "questions": 66,
+  "numeric_number_match_rate": 0.5,
+  "number_match_tables": 0.6153846153846154,
+  "number_match_narrative": 0.5,
+  "number_match_charts": 0.125,
+  "text_fact_accuracy": 0.8333333333333334,
+  "faithfulness": 0.8181818181818182,
+  "negative_refusal_accuracy": 1.0,
+  "false_refusal_rate": 0.2826086956521739,
+  "fallback_rate": 0.5,
+  "gold_page_retrieved": 0.6739130434782609,
+  "median_retrieval_s": 0.016,
+  "median_total_s": 4.441,
+  "faithfulness_pass": false,
+  "negative_refusal_pass": true
+}

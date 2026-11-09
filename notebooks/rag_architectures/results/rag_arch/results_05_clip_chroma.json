@@ -1,0 +1,18 @@
+{
+  "architecture": "05_clip_chroma",
+  "questions": 66,
+  "numeric_number_match_rate": 0.225,
+  "number_match_tables": 0.2692307692307692,
+  "number_match_narrative": 0.3333333333333333,
+  "number_match_charts": 0.0,
+  "text_fact_accuracy": 0.0,
+  "faithfulness": 0.8571428571428571,
+  "negative_refusal_accuracy": 1.0,
+  "false_refusal_rate": 0.6956521739130435,
+  "fallback_rate": 0.7878787878787878,
+  "gold_page_retrieved": 0.30434782608695654,
+  "median_retrieval_s": 0.016,
+  "median_total_s": 7.0245,
+  "faithfulness_pass": false,
+  "negative_refusal_pass": true
+}
