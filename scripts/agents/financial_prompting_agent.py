@@ -66,6 +66,7 @@ class AgentConfig:
     enable_guardrails: bool = True
     enable_human_review: bool = True
     max_query_chars: int = 4000
+    sector: str | None = None        # e.g. "banking" or "Oil and gas"; only the sector-corpus backends filter on it
 
 
 class MockResponse:
@@ -519,7 +520,12 @@ def answer_evidence(config: AgentConfig) -> list[dict[str, Any]]:
 def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
     if os.getenv("RAG_BACKEND") == "financial_qdrant":   # collections built by scripts/rag/financial_ingest.py
         from scripts.rag.financial_ingest import retrieve_for_agent
-        return retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year)
+        return retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
+                                  sector=config.sector)
+    if os.getenv("RAG_BACKEND") == "financial_vlm":      # Chroma index built by scripts/rag/vlm_ingest.py
+        from scripts.rag import vlm_ingest
+        return vlm_ingest.retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
+                                             sector=config.sector)
     if os.getenv("RAG_BACKEND") == "qdrant":
         from scripts.rag.multimodal_rag import retrieve_local
         return retrieve_local("financial_report_qa", config.query, config.top_k,

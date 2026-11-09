@@ -45,11 +45,11 @@ Requests are spaced 0.15 s apart, under SEC's limit of 10 per second, and retrie
 
 | Collection · vector | Content | Type / index | Storage |
 |---|---|---|---|
-| `docs_text` · `dense` | text window (1,200 chars, 200 overlap) or table part, prefixed with company, year, section, page | cosine, HNSW m=16, ef_construct=100 | RAM |
-| `docs_text` · `bm25` | **number-aware** sparse terms: `$391,035` → `$391,035`, `391,035`, `391035`; `2.1%` → `2.1%`, `2.1`; `fy2024` | sparse, IDF modifier | default |
-| `visual_pages` · `colpali` | full ColPali v1.3 page multivector (1030 × 128) | MaxSim, float16, **m=0 (no graph)** | **disk (mmap)** |
-| `visual_pages` · `mean_rows` / `mean_cols` | 32 row means / 32 column means + the 6 special tokens (38 × 128) | MaxSim, float16, HNSW | RAM |
-| `visual_pages` · `summary` | text vector of the page's readable text | cosine, HNSW | RAM |
+| `annual_reports_text` · `dense` | text window (1,200 chars, 200 overlap) or table part, prefixed with company, year, section, page | cosine, HNSW m=16, ef_construct=100 | RAM |
+| `annual_reports_text` · `bm25` | **number-aware** sparse terms: `$391,035` → `$391,035`, `391,035`, `391035`; `2.1%` → `2.1%`, `2.1`; `fy2024` | sparse, IDF modifier | default |
+| `annual_reports_visual` · `colpali` | full ColPali v1.3 page multivector (1030 × 128) | MaxSim, float16, **m=0 (no graph)** | **disk (mmap)** |
+| `annual_reports_visual` · `mean_rows` / `mean_cols` | 32 row means / 32 column means + the 6 special tokens (38 × 128) | MaxSim, float16, HNSW | RAM |
+| `annual_reports_visual` · `summary` | text vector of the page's readable text | cosine, HNSW | RAM |
 
 ### Payload on every point
 
@@ -78,14 +78,14 @@ Numbers are stored only as payload strings. Pooling and float16 change which pag
    - **Scale:** the "in millions…" phrase.
    - **Section:** taken from the `Item N` headings. A page listing four or more items is treated as a table of contents.
    - **Page type:** `table`, `chart` (more than 60 vector shapes), `image` (more than 8% of the page), `outlined_text`, `blank` or `text`.
-   - **Garbled check:** fewer than 5% common English stopwords among at least 40 words, or replacement characters.
+   - **Garbled check:** fewer than 5% common English stopwords among at least 40 words, replacement characters, or font-encoding garbage (more than 30% non-ASCII among at least 40 letters and symbols).
 3. **OCR (RapidOCR, `--ocr garbled`).** Pages that are garbled or have outlined text are OCR'd, front section first.
    - The default limit is `--ocr-max-pages-per-filing 20`; `0` means all such pages.
    - Their broken native text is **never** indexed. A page that is not OCR'd is still covered by ColPali.
-4. **`text` stage → `docs_text`.**
+4. **`text` stage → `annual_reports_text`.**
    - The filing's old points are deleted first, so a retry can't leave stale chunks.
    - Prose windows and table parts are embedded in batches of 128.
-5. **`visual` stage → `visual_pages`.** This covers table, chart, image, outlined-text and garbled pages (`--visual-pages all` takes every non-blank page).
+5. **`visual` stage → `annual_reports_visual`.** This covers table, chart, image, outlined-text and garbled pages (`--visual-pages all` takes every non-blank page).
    - Each page is rendered at 1.5×, encoded by ColPali in batches of `--colpali-batch`, and pooled into rows and columns.
    - Full and pooled vectors and the summary go into one point.
    - Page images are not stored; they are rendered on demand.
@@ -173,7 +173,7 @@ The same code runs on the PC and on Colab. [scripts/common/runtime_profile.py](.
 
 | | **local** (your PC) | **colab** |
 |---|---|---|
-| Index folder (`RAG_INGEST_DIR`) | `indexes/financial_qdrant` | `/content/rag` (restored from Drive) |
+| Index folder (`RAG_INGEST_DIR`) | `indexes/financial_qdrant` | `/content/rag/colpali_qdrant`, the folder `colab_pipeline` writes (this notebook sets `/content/rag` itself in cell 2). See [annual_report_rag_structure.md](annual_report_rag_structure.md) |
 | Qdrant | Embedded in the index folder (no server). `QDRANT_URL` points to a server if you run one | Server at `http://127.0.0.1:6333`, started by notebook cell 4 |
 | Financial retrieval (`RAG_BACKEND`) | `financial_qdrant` once `ingest.sqlite3` exists there, otherwise the existing Chroma index | same rule |
 | Text-model device | `cpu` | `cuda` on a GPU runtime |

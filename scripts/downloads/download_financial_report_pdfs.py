@@ -15,6 +15,7 @@ import argparse
 import hashlib
 import json
 import socket
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -22,6 +23,11 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
+
+ROOT = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from scripts.common.companies import sector_of  # noqa: E402
 
 
 DEFAULT_OUTPUT_DIR = Path("data/raw/financial_report_qa")
@@ -190,6 +196,7 @@ def main() -> int:
                     "document_id": f"annual_report_{company.exchange}_{company.ticker}_{year}",
                     "company": company.name,
                     "ticker": company.ticker,
+                    "sector": sector_of(company.ticker),
                     "exchange": company.exchange,
                     "year": year,
                     "title": f"{company.name} annual report {year}",

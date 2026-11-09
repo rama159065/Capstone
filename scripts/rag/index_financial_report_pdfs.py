@@ -8,6 +8,13 @@ Recommended capstone mode:
 
 Local smoke-test mode, no network/model download:
     python scripts\\rag\\index_financial_report_pdfs.py --embedding-provider hashing
+
+Sector corpus (scripts/downloads/download_annual_report_corpus.py): pass the corpus
+folder as --manifest; it reads <dir>/<sector>/pdf_manifest.jsonl. Every chunk gets
+``sector`` / ``sector_slug`` metadata, and --filter-sector narrows retrieval:
+    python scripts\\rag\\index_financial_report_pdfs.py --manifest data/raw/financial_report_qa/annual_reports ^
+        --sectors banking,insurance --index-dir indexes/chroma/annual_reports --collection annual_reports ^
+        --chunks-out data/processed/annual_reports/pdf_chunks.jsonl --reset
 """
 
 from __future__ import annotations
@@ -20,6 +27,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 import urllib.request
 from dataclasses import dataclass
@@ -32,6 +40,15 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 from rank_bm25 import BM25Okapi
 from sklearn.feature_extraction.text import HashingVectorizer
+
+ROOT = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from scripts.common.sector_corpus import (  # noqa: E402
+    parse_sectors,
+    read_manifest as read_corpus_manifest,
+    resolve_local_path,
+)
 
 
 DEFAULT_MANIFEST = Path("data/raw/financial_report_qa/pdf_manifest.jsonl")
@@ -51,6 +68,8 @@ class PdfReport:
     source_url: str
     local_path: Path
     content_sha256: str
+    sector: str = "unknown"
+    sector_slug: str = "unknown"
 
 
 @dataclass(frozen=True)
@@ -109,25 +128,24 @@ class HostedEmbeddings:
         return [row["embedding"] for row in rows]
 
 
-def read_manifest(path: Path) -> list[PdfReport]:
+def read_manifest(path: Path, sectors: str | None = None) -> list[PdfReport]:
+    """Reports from a manifest file, or from a sector corpus folder (<dir>/<sector>/pdf_manifest.jsonl)."""
     reports = []
-    with path.open("r", encoding="utf-8") as handle:
-        for line in handle:
-            if not line.strip():
-                continue
-            row = json.loads(line)
-            reports.append(
-                PdfReport(
-                    document_id=str(row["document_id"]),
-                    title=str(row["title"]),
-                    ticker=str(row["ticker"]),
-                    company=str(row["company"]),
-                    year=int(row["year"]),
-                    source_url=str(row["source_url"]),
-                    local_path=Path(row["local_path"]),
-                    content_sha256=str(row["content_sha256"]),
-                )
+    for row in read_corpus_manifest(path, sectors):
+        reports.append(
+            PdfReport(
+                document_id=str(row["document_id"]),
+                title=str(row["title"]),
+                ticker=str(row["ticker"]),
+                company=str(row["company"]),
+                year=int(row["year"]),
+                source_url=str(row["source_url"]),
+                local_path=resolve_local_path(row, ROOT),
+                content_sha256=str(row["content_sha256"]),
+                sector=str(row["sector"]),
+                sector_slug=str(row["sector_slug"]),
             )
+        )
     return reports
 
 
@@ -174,6 +192,7 @@ def verify_and_extract(
     stats = {
         "document_id": report.document_id,
         "ticker": report.ticker,
+        "sector": report.sector,
         "year": report.year,
         "path": str(report.local_path),
         "page_count": len(reader.pages),
@@ -211,6 +230,8 @@ def build_chunks(
                 "title": report.title,
                 "ticker": report.ticker,
                 "company": report.company,
+                "sector": report.sector,
+                "sector_slug": report.sector_slug,
                 "year": report.year,
                 "page": page_number,
                 "source_url": report.source_url,
@@ -319,6 +340,8 @@ def extract_table_summary_chunks(
                         "title": report.title,
                         "ticker": report.ticker,
                         "company": report.company,
+                        "sector": report.sector,
+                        "sector_slug": report.sector_slug,
                         "year": report.year,
                         "page": page_index,
                         "source_url": report.source_url,
@@ -460,6 +483,8 @@ def extract_chart_summary_chunks(
                 "title": report.title,
                 "ticker": report.ticker,
                 "company": report.company,
+                "sector": report.sector,
+                "sector_slug": report.sector_slug,
                 "year": report.year,
                 "page": page_number,
                 "source_url": report.source_url,
@@ -512,6 +537,7 @@ def build_query_filter(
     source_type: str | None,
     ticker: str | None,
     year: int | None,
+    sector: str | None = None,
 ) -> dict[str, object] | None:
     filters: list[dict[str, object]] = []
     if source_type:
@@ -520,6 +546,11 @@ def build_query_filter(
         filters.append({"ticker": ticker.upper()})
     if year:
         filters.append({"year": year})
+    sectors = sorted(parse_sectors(sector) or [])
+    if len(sectors) == 1:
+        filters.append({"sector_slug": sectors[0]})
+    elif sectors:
+        filters.append({"sector_slug": {"$in": sectors}})
     if not filters:
         return None
     if len(filters) == 1:
@@ -546,8 +577,12 @@ def metadata_matches_filter(
     source_type: str | None,
     ticker: str | None,
     year: int | None,
+    sector: str | None = None,
 ) -> bool:
     if source_type and metadata.get("source_type") != source_type:
+        return False
+    sectors = parse_sectors(sector)
+    if sectors and metadata.get("sector_slug") not in sectors:
         return False
     if ticker and str(metadata.get("ticker", "")).upper() != ticker.upper():
         return False
@@ -563,6 +598,7 @@ def bm25_search(
     source_type: str | None = None,
     ticker: str | None = None,
     year: int | None = None,
+    sector: str | None = None,
 ) -> list[dict[str, object]]:
     filtered_rows = [
         row for row in chunk_rows
@@ -571,6 +607,7 @@ def bm25_search(
             source_type=source_type,
             ticker=ticker,
             year=year,
+            sector=sector,
         )
     ]
     if not filtered_rows:
@@ -636,9 +673,10 @@ def retrieve_top_k(
     source_type: str | None = None,
     ticker: str | None = None,
     year: int | None = None,
+    sector: str | None = None,
 ) -> list[dict[str, object]]:
     query_embedding = embedder.embed_documents([query])[0]
-    where = build_query_filter(source_type=source_type, ticker=ticker, year=year)
+    where = build_query_filter(source_type=source_type, ticker=ticker, year=year, sector=sector)
     result = collection.query(
         query_embeddings=[query_embedding],
         n_results=top_k,
@@ -737,6 +775,7 @@ def retrieve_hybrid_top_k(
     source_type: str | None = None,
     ticker: str | None = None,
     year: int | None = None,
+    sector: str | None = None,
 ) -> list[dict[str, object]]:
     dense_hits = retrieve_top_k(
         collection=collection,
@@ -746,6 +785,7 @@ def retrieve_hybrid_top_k(
         source_type=source_type,
         ticker=ticker,
         year=year,
+        sector=sector,
     )
     lexical_hits = bm25_search(
         chunk_rows=chunk_rows,
@@ -754,6 +794,7 @@ def retrieve_hybrid_top_k(
         source_type=source_type,
         ticker=ticker,
         year=year,
+        sector=sector,
     )
 
     fused: dict[str, dict[str, object]] = {}
@@ -812,7 +853,13 @@ def write_jsonl(path: Path, rows: Iterable[dict[str, object]]) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=DEFAULT_MANIFEST,
+        help="A pdf_manifest.jsonl, or a sector corpus folder (reads <dir>/<sector>/pdf_manifest.jsonl).",
+    )
+    parser.add_argument("--sectors", help="Index only these sectors (comma-separated names or slugs).")
     parser.add_argument("--chunks-out", type=Path, default=DEFAULT_CHUNKS_OUT)
     parser.add_argument("--chart-images-dir", type=Path, default=DEFAULT_CHART_IMAGES_DIR)
     parser.add_argument("--index-dir", type=Path, default=DEFAULT_INDEX_DIR)
@@ -863,6 +910,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--filter-source-type", help="Optional metadata filter, e.g. annual_report_pdf or chart_summary.")
     parser.add_argument("--filter-ticker", help="Optional ticker metadata filter, e.g. AAPL.")
     parser.add_argument("--filter-year", type=int, help="Optional annual report year metadata filter.")
+    parser.add_argument("--filter-sector", help="Optional sector filter, e.g. banking or 'Oil and gas,insurance'.")
     parser.add_argument("--reset", action="store_true")
     return parser.parse_args()
 
@@ -885,6 +933,7 @@ def main() -> int:
                 source_type=args.filter_source_type,
                 ticker=args.filter_ticker,
                 year=args.filter_year,
+                sector=args.filter_sector,
             )
         else:
             chunk_rows = load_chunk_rows(args.chunks_out)
@@ -901,11 +950,12 @@ def main() -> int:
                 source_type=args.filter_source_type,
                 ticker=args.filter_ticker,
                 year=args.filter_year,
+                sector=args.filter_sector,
             )
         print_retrieval_results(args.query, hits, retrieval_mode=args.retrieval_mode)
         return 0
 
-    reports = read_manifest(args.manifest)
+    reports = read_manifest(args.manifest, args.sectors)
     if args.limit_pdfs:
         reports = reports[:args.limit_pdfs]
     if not reports:
@@ -987,6 +1037,10 @@ def main() -> int:
 
     summary = {
         "pdf_reports": len(reports),
+        "reports_by_sector": {
+            sector: sum(1 for report in reports if report.sector == sector)
+            for sector in sorted({report.sector for report in reports})
+        },
         "verified_reports": len(verification_rows),
         "chunks": len(chunks),
         "chart_summary_chunks": sum(
@@ -1038,6 +1092,7 @@ def main() -> int:
                 source_type=args.filter_source_type,
                 ticker=args.filter_ticker,
                 year=args.filter_year,
+                sector=args.filter_sector,
             )
         else:
             chunk_rows = load_chunk_rows(args.chunks_out)
@@ -1054,6 +1109,7 @@ def main() -> int:
                 source_type=args.filter_source_type,
                 ticker=args.filter_ticker,
                 year=args.filter_year,
+                sector=args.filter_sector,
             )
         print_retrieval_results(args.query, hits, retrieval_mode=args.retrieval_mode)
     return 0

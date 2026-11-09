@@ -11,11 +11,19 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
+import sys
 import urllib.error
 import urllib.request
 from typing import Any
 
 import streamlit as st
+
+ROOT = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.common.companies import SECTOR_NAMES  # noqa: E402 - after the repo is on sys.path
 
 
 DEFAULT_API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")   # set by the runtime profile
@@ -85,6 +93,7 @@ def build_payload(domain: str, query: str, settings: dict[str, Any]) -> dict[str
                 "retrieval_mode": settings["retrieval_mode"],
                 "ticker": settings["ticker"] or None,
                 "year": settings["year"],
+                "sector": ",".join(settings.get("sectors") or []) or None,
                 "self_consistency_samples": settings["self_consistency_samples"],
             }
         )
@@ -214,6 +223,9 @@ def sidebar() -> dict[str, Any]:
         "clarify": st.sidebar.toggle("Ask clarifying questions (financial)", True,
                                      help="Ask for a missing company, year or measure before running the agents."),
         "ticker": st.sidebar.text_input("Financial ticker (optional)", "").strip().upper(),
+        "sectors": st.sidebar.multiselect(
+            "Financial sectors (optional)", list(SECTOR_NAMES),
+            help="Limit evidence to these sectors of the annual-report corpus (ColPali/Qdrant and VLM indexes)."),
         "year": None,
         "source_type": st.sidebar.text_input("Source type filter", "").strip(),
         "top_k": st.sidebar.slider("Final top k", 1, 20, 5),

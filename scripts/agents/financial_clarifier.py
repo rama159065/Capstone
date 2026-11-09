@@ -38,51 +38,21 @@ from typing import Any
 import uuid
 
 from scripts.common.paths import ROOT  # noqa: E402 - repo root
+from scripts.common.companies import (  # noqa: E402
+    ALIASES as COMPANY_ALIASES, AMBIGUOUS_TICKERS, BANKING, NAMES as COMPANY_NAMES, SECTOR_NAMES,
+    SECTOR_OF as COMPANY_SECTORS, normalize_ticker)
 MANIFESTS = (ROOT / "data/raw/financial_report_qa/edgar/pdf_manifest.jsonl",
-             ROOT / "data/raw/financial_report_qa/pdf_manifest.jsonl")
+             ROOT / "data/raw/financial_report_qa/pdf_manifest.jsonl",
+             ROOT / "data/raw/financial_report_qa/annual_reports/pdf_manifest.jsonl")   # sector corpus, once downloaded
 REPORT_PROFILES = ROOT / "configs/financial_reports"
 MAX_CLARIFICATION_TURNS = 3
 
-NAMES = {"AAPL": "Apple", "MSFT": "Microsoft", "NVDA": "NVIDIA", "AMZN": "Amazon", "GOOGL": "Alphabet",
-         "AVGO": "Broadcom", "JPM": "JPMorgan Chase", "WMT": "Walmart", "V": "Visa", "MA": "Mastercard",
-         "COST": "Costco", "PG": "Procter & Gamble", "NFLX": "Netflix", "JNJ": "Johnson & Johnson",
-         "ABBV": "AbbVie", "BAC": "Bank of America", "KO": "Coca-Cola", "AMD": "AMD", "CVX": "Chevron",
-         "PEP": "PepsiCo", "TMO": "Thermo Fisher", "ADBE": "Adobe", "WFC": "Wells Fargo", "PFE": "Pfizer",
-         "HD": "Home Depot", "TSLA": "Tesla", "CRM": "Salesforce", "XOM": "Exxon Mobil", "LLY": "Eli Lilly",
-         "MRK": "Merck", "META": "Meta", "UNH": "UnitedHealth", "ORCL": "Oracle", "ABT": "Abbott", "AMGN": "Amgen", "CSCO": "Cisco",
-         "INTC": "Intel", "IBM": "IBM", "QCOM": "Qualcomm", "TXN": "Texas Instruments", "HON": "Honeywell",
-         "CAT": "Caterpillar", "GE": "GE", "MMM": "3M", "DE": "Deere", "LMT": "Lockheed Martin", "RTX": "RTX",
-         "DIS": "Disney", "MCD": "McDonald's", "NKE": "Nike", "SBUX": "Starbucks", "LOW": "Lowe's", "TGT": "Target",
-         "UPS": "UPS", "GS": "Goldman Sachs", "MS": "Morgan Stanley", "C": "Citigroup", "AXP": "American Express",
-         "T": "AT&T", "VZ": "Verizon"}
-ALIASES = {"AAPL": ["apple"], "MSFT": ["microsoft"], "NVDA": ["nvidia"], "AMZN": ["amazon"],
-           "GOOGL": ["alphabet", "google"], "AVGO": ["broadcom"], "JPM": ["jpmorgan", "jp morgan", "chase"],
-           "WMT": ["walmart", "wal-mart"], "V": ["visa"], "MA": ["mastercard"], "COST": ["costco"],
-           "PG": ["procter & gamble", "procter and gamble", "p&g"], "NFLX": ["netflix"],
-           "JNJ": ["johnson & johnson", "johnson and johnson", "j&j"], "ABBV": ["abbvie"],
-           "BAC": ["bank of america", "bofa"], "KO": ["coca-cola", "coca cola", "coke"],
-           "AMD": ["advanced micro devices"], "CVX": ["chevron"], "PEP": ["pepsico", "pepsi"],
-           "TMO": ["thermo fisher"], "ADBE": ["adobe"], "WFC": ["wells fargo"], "PFE": ["pfizer"],
-           "HD": ["home depot"], "TSLA": ["tesla"], "CRM": ["salesforce"], "XOM": ["exxon mobil", "exxonmobil", "exxon"],
-           "LLY": ["eli lilly", "lilly"], "MRK": ["merck"], "META": ["meta platforms", "meta"], "UNH": ["unitedhealth"],
-           "ORCL": ["oracle"], "ABT": ["abbott"], "AMGN": ["amgen"], "CSCO": ["cisco"], "INTC": ["intel"],
-           "IBM": ["ibm"], "QCOM": ["qualcomm"], "TXN": ["texas instruments"], "HON": ["honeywell"],
-           "CAT": ["caterpillar"], "GE": ["general electric", "ge aerospace"], "MMM": ["3m"], "DE": ["deere"],
-           "LMT": ["lockheed martin", "lockheed"], "RTX": ["raytheon"], "DIS": ["disney"], "MCD": ["mcdonald's", "mcdonalds"],
-           "NKE": ["nike"], "SBUX": ["starbucks"], "LOW": ["lowe's", "lowes"], "TGT": ["target corporation", "target corp"],
-           "UPS": ["united parcel service"], "GS": ["goldman sachs", "goldman"], "MS": ["morgan stanley"],
-           "C": ["citigroup", "citibank"], "AXP": ["american express", "amex"], "T": ["at&t"], "VZ": ["verizon"]}
-# Our own sector map: SEC industry codes file Amazon under catalog retail and Netflix under video tape rental.
-SECTORS = {"Technology and telecom": "AAPL ADBE AMD AMZN AVGO CRM CSCO GOOGL IBM INTC META MSFT NFLX NVDA ORCL QCOM T TXN VZ",
-           "Consumer and retail": "COST DIS HD KO LOW MCD NKE PEP PG SBUX TGT TSLA UPS WMT",
-           "Banks and finance": "AXP BAC C GS JPM MA MS V WFC",
-           "Healthcare": "ABBV ABT AMGN JNJ LLY MRK PFE TMO UNH",
-           "Industrials": "CAT DE GE HON LMT MMM RTX",
-           "Energy": "CVX XOM"}
-SECTOR_OF = {ticker: sector for sector, tickers in SECTORS.items() for ticker in tickers.split()}
-# Banks' income statements have no cost of revenue. JPM, BAC and WFC filings carry no XBRL value for these measures.
+# Names, aliases and sectors of every company in the corpora (the 13 sectors of the sector corpus plan).
+NAMES, ALIASES, SECTOR_OF = COMPANY_NAMES, COMPANY_ALIASES, COMPANY_SECTORS
+SECTORS = {sector: " ".join(sorted(t for t, s in SECTOR_OF.items() if s == sector)) for sector in SECTOR_NAMES}
+# Banks' income statements have no cost of revenue (JPM, BAC and WFC filings carry no XBRL value for these measures).
 # Visa and Mastercard aren't here: they are payment networks and do report operating income.
-BANKS = {"JPM", "BAC", "WFC", "C", "GS", "MS"}
+BANKS = {t for t, sector in SECTOR_OF.items() if sector == BANKING} | {"GS", "MS"}
 NOT_REPORTED_BY_BANKS = {"gross profit", "gross margin", "operating income", "operating margin"}
 BANK_MEASURES = ["Net revenue", "Net income", "Net interest income"]
 METRICS = {  # canonical name -> phrases, matched longest first
@@ -199,20 +169,27 @@ class Clarifier:
 
     # ------------------------------------------------------------------ parsing
     def companies_in(self, text):
-        found = []
-        lower = " " + text.lower() + " "
+        found = []                                                  # (start, end, ticker)
+        lower = text.lower()
         for ticker, aliases in ALIASES.items():
             for alias in aliases:
-                if re.search(rf"(?<![a-z]){re.escape(alias)}(?![a-z])", lower):
-                    found.append((lower.index(alias), ticker))
+                match = re.search(rf"(?<![a-z]){re.escape(alias)}(?![a-z])", lower)
+                if match:
+                    found.append((match.start(), match.end(), ticker))
                     break
-        # Upper-case tickers (AAPL, NVDA); single letters only as $V or "ticker V".
-        for match in re.finditer(r"(?:\$|\bticker\s+)?\b([A-Z]{1,5})\b", text):
-            ticker = match.group(1)
-            if (ticker in self.directory or ticker in NAMES) and (len(ticker) > 1 or match.group(0)[0] in "$t"):
-                found.append((match.start(), ticker))
+        # Upper-case tickers (AAPL, NVDA, BRK-B / BRK.B). Single letters and word-like tickers (AR, ICE, NOW)
+        # only as $V or "ticker V".
+        for match in re.finditer(r"(?:\$|\bticker\s+)?\b([A-Z]{1,5}(?:[.-][A-Z])?)\b", text):
+            ticker = normalize_ticker(match.group(1))
+            explicit = match.group(0)[0] in "$t"
+            if (ticker in self.directory or ticker in NAMES) and (
+                    explicit or (len(ticker) > 1 and ticker not in AMBIGUOUS_TICKERS)):
+                found.append((match.start(1), match.end(1), ticker))
+        # The longest name wins: "GE Vernova" is not also GE, "Cheniere Energy Partners" not also Cheniere.
+        found = [f for f in found if not any(o[0] <= f[0] and f[1] <= o[1] and (o[1] - o[0]) > (f[1] - f[0])
+                                             and o[2] != f[2] for o in found)]
         ordered = []
-        for _, ticker in sorted(found):
+        for _, _, ticker in sorted(found):
             if ticker not in ordered:
                 ordered.append(ticker)
         return ordered

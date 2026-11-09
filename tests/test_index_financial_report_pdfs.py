@@ -124,3 +124,34 @@ def test_embedder_env_validation(monkeypatch) -> None:
     assert isinstance(indexer.get_embedder("hashing", 8), indexer.HashingEmbeddings)
     with pytest.raises(RuntimeError, match="Missing hosted embedding"):
         indexer.get_embedder("hosted", 8)
+
+
+def test_sector_metadata_filters_and_corpus_folder(tmp_path) -> None:
+    folder = tmp_path / "corpus" / "oil_and_gas"
+    folder.mkdir(parents=True)
+    (folder / "EDGAR_ARS_XOM_2025.pdf").write_bytes(b"%PDF-1.7\n")
+    row = {"document_id": "edgar_ars_XOM_2025", "title": "Exxon 2025", "ticker": "XOM", "company": "Exxon", "year": 2025,
+           "source_url": "https://example.test/x.pdf", "local_path": "EDGAR_ARS_XOM_2025.pdf", "content_sha256": "abc",
+           "sector": "Oil and gas", "sector_slug": "oil_and_gas"}
+    (folder / "pdf_manifest.jsonl").write_text(__import__("json").dumps(row) + "\n", encoding="utf-8")
+
+    [report] = indexer.read_manifest(tmp_path / "corpus")
+    assert report.sector == "Oil and gas" and report.local_path == folder / "EDGAR_ARS_XOM_2025.pdf"
+    assert indexer.read_manifest(tmp_path / "corpus", "banking") == []
+    chunk = indexer.build_chunks(report, [(1, "Upstream production. " * 20)], chunk_size=180, chunk_overlap=20)[0]
+    assert chunk.metadata["sector"] == "Oil and gas" and chunk.metadata["sector_slug"] == "oil_and_gas"
+
+    assert indexer.build_query_filter(None, None, None, "Oil and gas") == {"sector_slug": "oil_and_gas"}
+    assert indexer.build_query_filter(None, "xom", None, "banking,oil_and_gas") == {
+        "$and": [{"ticker": "XOM"}, {"sector_slug": {"$in": ["banking", "oil_and_gas"]}}]
+    }
+    rows = [{"chunk_id": "a", "text": "upstream production barrels", "metadata": chunk.metadata},
+            {"chunk_id": "b", "text": "upstream production barrels", "metadata": {"sector_slug": "banking"}}]
+    assert [h["chunk_id"] for h in indexer.bm25_search(rows, "upstream barrels", 5, sector="oil_and_gas")] == ["a"]
+
+
+def test_legacy_manifest_paths_still_resolve() -> None:
+    reports = indexer.read_manifest(indexer.ROOT / "data/raw/financial_report_qa/pdf_manifest.jsonl")
+    assert reports and all(r.sector != "unknown" for r in reports)        # sector comes from the ticker
+    assert next(r for r in reports if r.ticker == "AAPL").sector_slug == "technology_and_it"
+    assert str(reports[0].local_path).replace("\\", "/").endswith(".pdf")

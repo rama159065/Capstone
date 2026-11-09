@@ -385,3 +385,23 @@ def test_grounding_policy_explains_citation_from_another_company() -> None:
     response = api_app.apply_grounding_policy(result)
 
     assert response["answer"] is None and "didn't ask about" in response["grounding"]["reason"]
+
+
+def test_financial_requests_pass_the_sector_filter_to_the_agent(monkeypatch) -> None:
+    seen: dict[str, Any] = {}
+
+    def fake_run_technique(technique: str, llm_provider: str, config: Any) -> dict[str, Any]:
+        seen["chat"] = config.sector
+        return {"technique": technique, "final_status": "insufficient_evidence", "answer": "", "evidence": []}
+
+    def fake_retrieve(config: Any) -> list[dict[str, Any]]:
+        seen["retrieve"] = config.sector
+        return []
+
+    monkeypatch.setattr(api_app, "run_technique", fake_run_technique)
+    monkeypatch.setattr(api_app, "retrieve_evidence", fake_retrieve)
+    client = TestClient(api_app.app)
+    body = {"query": "net interest income", "sector": "banking", "llm_provider": "mock"}
+    assert client.post("/chat/financial_report_qa", json=body).status_code == 200
+    assert client.post("/retrieve/financial_report_qa", json={"query": "net interest income", "sector": "banking"}).status_code == 200
+    assert seen == {"chat": "banking", "retrieve": "banking"}

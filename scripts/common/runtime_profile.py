@@ -7,9 +7,14 @@ it, Colab is detected automatically.
 
 | Setting | local | colab |
 |---|---|---|
-| ``RAG_INGEST_DIR`` (state, page cache) | ``indexes/financial_qdrant`` | ``/content/rag`` |
+| ``RAG_INGEST_DIR`` (ColPali/Qdrant index: state, page cache) | ``indexes/financial_qdrant`` | ``/content/rag/colpali_qdrant`` |
+| ``RAG_VLM_DIR`` (VLM/Chroma index) | ``indexes/financial_vlm`` | ``/content/rag/vlm_chroma`` |
 | ``QDRANT_URL`` | unset: embedded Qdrant in ``RAG_INGEST_DIR`` (one process at a time) | ``http://127.0.0.1:6333`` (server started by the notebook) |
-| ``RAG_BACKEND`` for financial QA | ``financial_qdrant`` once an ingest exists, else the Chroma index | same |
+| ``RAG_BACKEND`` for financial QA | ``financial_qdrant`` once its ingest exists, else ``financial_vlm`` once that one exists, else the older Chroma index | same |
+
+The Colab folders are the ones ``scripts/rag/colab_pipeline.py`` writes (``<work>/<pipeline>``), so the API
+serves the corpus that notebook ingested. The older ``colab_financial_ingest.ipynb`` sets ``RAG_INGEST_DIR``
+itself, which still wins.
 | ``RAG_DEVICE`` (text models) | ``cpu`` | ``cuda`` if a GPU is present |
 | ``API_BASE_URL`` (Streamlit → FastAPI) | ``http://127.0.0.1:8000`` | ``http://127.0.0.1:8000`` (same VM) |
 """
@@ -23,9 +28,10 @@ from pathlib import Path
 from scripts.common.paths import ROOT  # noqa: E402 - repo root
 LOGGER = logging.getLogger(__name__)
 PROFILES = {
-    "local": {"RAG_INGEST_DIR": str(ROOT / "indexes/financial_qdrant"), "RAG_DEVICE": "cpu",
-              "API_BASE_URL": "http://127.0.0.1:8000"},
-    "colab": {"RAG_INGEST_DIR": "/content/rag", "QDRANT_URL": "http://127.0.0.1:6333",
+    "local": {"RAG_INGEST_DIR": str(ROOT / "indexes/financial_qdrant"), "RAG_VLM_DIR": str(ROOT / "indexes/financial_vlm"),
+              "RAG_DEVICE": "cpu", "API_BASE_URL": "http://127.0.0.1:8000"},
+    "colab": {"RAG_INGEST_DIR": "/content/rag/colpali_qdrant", "RAG_VLM_DIR": "/content/rag/vlm_chroma",
+              "QDRANT_URL": "http://127.0.0.1:6333",
               "API_BASE_URL": "http://127.0.0.1:8000", "HF_HOME": "/content/hf_cache"},
 }
 _applied: dict | None = None
@@ -64,14 +70,15 @@ def apply_profile(profile=None, *, force=False):
             os.environ[key] = value
         chosen[key] = os.environ[key]
     index_ready = (Path(os.environ["RAG_INGEST_DIR"]) / "ingest.sqlite3").exists()
-    if not os.getenv("RAG_BACKEND") and index_ready:
-        os.environ["RAG_BACKEND"] = "financial_qdrant"
+    vlm_ready = (Path(os.environ["RAG_VLM_DIR"]) / "vlm_ingest.sqlite3").exists()
+    if not os.getenv("RAG_BACKEND") and (index_ready or vlm_ready):
+        os.environ["RAG_BACKEND"] = "financial_qdrant" if index_ready else "financial_vlm"
     backend = os.getenv("RAG_BACKEND") or "chroma"
-    _applied = {"profile": profile, "financial_backend": backend, "index_ready": index_ready,
+    _applied = {"profile": profile, "financial_backend": backend, "index_ready": index_ready, "vlm_index_ready": vlm_ready,
                 "qdrant": os.getenv("QDRANT_URL") or "embedded", **chosen}
     if backend == "chroma":
-        LOGGER.info("runtime_profile=%s financial_backend=chroma (no Qdrant ingest under %s yet)",
-                    profile, os.environ["RAG_INGEST_DIR"])
+        LOGGER.info("runtime_profile=%s financial_backend=chroma (no ingest under %s or %s yet)",
+                    profile, os.environ["RAG_INGEST_DIR"], os.environ["RAG_VLM_DIR"])
     else:
         LOGGER.info("runtime_profile=%s financial_backend=%s qdrant=%s", profile, backend, _applied["qdrant"])
     return _applied
@@ -80,4 +87,5 @@ def apply_profile(profile=None, *, force=False):
 def describe():
     """Safe summary for /health: no keys or secrets."""
     info = apply_profile()
-    return {key: info[key] for key in ("profile", "financial_backend", "index_ready", "qdrant", "RAG_INGEST_DIR")}
+    return {key: info[key] for key in ("profile", "financial_backend", "index_ready", "vlm_index_ready", "qdrant",
+                                       "RAG_INGEST_DIR", "RAG_VLM_DIR")}

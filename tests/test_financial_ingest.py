@@ -212,3 +212,118 @@ def test_failed_pdf_is_recorded_and_skipped(tmp_path, corpus):
     assert not run.state.done("edgar_ars_TEST_2025", "text", run.pipeline["text"])
     status = run.state.db.execute("SELECT status, error FROM filings").fetchone()
     assert status[0] == "failed" and "SHA-256" in status[1]
+
+
+@pytest.fixture
+def sector_corpus(tmp_path):
+    """<corpus>/banking/{pdf_manifest.jsonl, EDGAR_ARS_TEST_2025.pdf}, as the sector downloader writes it."""
+    folder = tmp_path / "corpus" / "banking"
+    folder.mkdir(parents=True)
+    pdf = folder / "EDGAR_ARS_TEST_2025.pdf"
+    make_pdf(pdf)
+    row = {"document_id": "edgar_ars_TEST_2025", "company": "Test Bank", "ticker": "TEST", "cik": "0000000001",
+           "year": 2025, "title": "Test Bank annual report 2025", "source_url": "https://example.invalid/x.pdf",
+           "sector": "Banking", "sector_slug": "banking", "sic": "6021", "local_path": pdf.name,
+           "content_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest()}
+    (folder / "pdf_manifest.jsonl").write_text(json.dumps(row) + "\n", encoding="utf-8")
+    return tmp_path / "corpus"
+
+
+def test_sector_corpus_folder_is_ingested_with_a_sector_field(tmp_path, sector_corpus, monkeypatch):
+    client = fi.connect(None, tmp_path / "root")
+    run = fi.Ingest(args_for(tmp_path, sector_corpus, stages="text", pdf_dir=None), client=client)
+    assert run.run() == {"complete": 1}
+    points = client.scroll(fi.TEXT, limit=100, with_payload=True)[0]
+    assert points and all(p.payload["sector"] == "Banking" and p.payload["sector_slug"] == "banking" for p in points)
+
+    assert fi.search_text(client, run.embedder, "391035", 3, fi.query_filter(sector="Banking"))
+    assert fi.search_text(client, run.embedder, "391035", 3, fi.query_filter(sector="banking,insurance"))
+    assert not fi.search_text(client, run.embedder, "391035", 3, fi.query_filter(sector="insurance"))
+    monkeypatch.setattr(fi, "_serving", {"client": client, "embedder": run.embedder})
+    hits = fi.retrieve_for_agent("total net sales 391,035", top_k=1, sector="banking")
+    assert hits[0]["sector"] == "Banking"
+    assert fi.retrieve_for_agent("total net sales", sector="oil_and_gas") == []
+
+    other = fi.Ingest(args_for(tmp_path, sector_corpus, stages="text", pdf_dir=None, sectors="insurance",
+                               root=str(tmp_path / "root2")), client=fi.connect(None, tmp_path / "root2"))
+    assert other.run() == {}                                               # sector filter: nothing selected
+
+
+def test_tag_sectors_adds_the_field_to_older_points(tmp_path, corpus, sector_corpus):
+    client = fi.connect(None, tmp_path / "root")
+    fi.Ingest(args_for(tmp_path, corpus, stages="text"), client=client).run()       # legacy manifest: no sector
+    assert {p.payload["sector"] for p in client.scroll(fi.TEXT, limit=100, with_payload=True)[0]} == {"unknown"}
+    client.close()
+    args = fi.build_parser().parse_args(["tag-sectors", "--root", str(tmp_path / "root"), "--manifest", str(sector_corpus)])
+    assert fi.tag_sectors(args) == {"banking": 1}
+    client = fi.connect(None, tmp_path / "root")
+    assert {p.payload["sector_slug"] for p in client.scroll(fi.TEXT, limit=100, with_payload=True)[0]} == {"banking"}
+
+
+def test_colpali_can_be_limited_to_table_and_chart_pages(tmp_path, corpus):
+    client = fi.connect(None, tmp_path / "root")
+    fi.Ingest(args_for(tmp_path, corpus, stages="visual", visual_pages="tables_charts"),
+              colpali=FakeColPali(), client=client).run()
+    assert [p.payload["page"] for p in client.scroll(fi.VISUAL, limit=100, with_payload=True)[0]] == [2]
+
+
+@pytest.mark.parametrize("every, expected", [(1, 3), (2, 2), (0, 1)])
+def test_snapshot_every_n_batches_and_always_after_the_last(tmp_path, corpus, monkeypatch, every, expected):
+    row = json.loads(corpus.read_text(encoding="utf-8"))
+    corpus.write_text("".join(json.dumps({**row, "document_id": f"edgar_ars_TEST_{n}"}) + "\n" for n in range(3)),
+                      encoding="utf-8")
+    taken = []
+    monkeypatch.setattr(fi, "is_server", lambda client: True)          # snapshots need a server; record them instead
+    monkeypatch.setattr(fi, "set_bulk", lambda *a: None)
+    monkeypatch.setattr(fi, "wait_green", lambda *a: None)
+    monkeypatch.setattr(fi, "snapshot", lambda client, url, name, dest, keep: taken.append(name) or dest / name)
+    args = args_for(tmp_path, corpus, stages="text", batch_size=1, snapshot_every=every,
+                    snapshot_dir=tmp_path / "drive")
+    assert fi.Ingest(args, client=fi.connect(None, tmp_path / "root")).run() == {"complete": 3}
+    assert taken == [fi.TEXT] * expected
+    assert (tmp_path / "drive" / "ingest.sqlite3").exists()
+
+
+def test_visual_page_selection_is_shared_by_colpali_and_the_vlm():
+    from scripts.rag import vlm_ingest as vi
+    kinds = ["text", "table", "chart", "image", "outlined_text", "blank", "text"]
+    pages = [{"page": n, "page_type": k, "garbled": n == 7,
+              "visual": k in {"table", "chart", "image", "outlined_text"} or n == 7} for n, k in enumerate(kinds, 1)]
+    picked = lambda mode: [p["page"] for p in fi.visual_targets(pages, mode)]
+    assert picked("tables_charts_images") == [2, 3, 4]          # no unreadable or plain text pages
+    assert picked("tables_charts") == [2, 3]
+    assert picked("rule") == picked("visual") == [2, 3, 4, 5, 7]
+    assert picked("all") == [1, 2, 3, 4, 5, 7]
+    assert [p["page"] for p in vi.vlm_targets(pages, "tables_charts_images", limit=2)] == [2, 3]
+    with pytest.raises(ValueError, match="unknown page selection"):
+        fi.visual_targets(pages, "charts")
+
+
+def test_collections_have_their_own_names_and_an_old_index_is_reported(tmp_path, corpus):
+    from qdrant_client import models
+    assert (fi.TEXT, fi.VISUAL) == ("annual_reports_text", "annual_reports_visual")
+    assert not {fi.TEXT, fi.VISUAL} & {"docs_text", "visual_pages"}          # LocalRAG's names
+
+    client = fi.connect(None, tmp_path / "localrag")                            # LocalRAG's docs_text: not ours
+    client.create_collection("docs_text", vectors_config={"dense": models.VectorParams(size=4, distance=models.Distance.COSINE)})
+    client.upsert("docs_text", points=[models.PointStruct(id=1, vector={"dense": [1, 0, 0, 0]}, payload={"domain": "hr_policy"})])
+    assert fi.legacy_index(client) == []
+    fi.ensure_collections(client, 384, visual=False)                            # shares the store without touching it
+    assert client.count("docs_text").count == 1 and client.collection_exists(fi.TEXT)
+
+    old = fi.connect(None, tmp_path / "old")                                     # an index from before the rename
+    old.create_collection("docs_text", vectors_config={"dense": models.VectorParams(size=4, distance=models.Distance.COSINE)})
+    old.upsert("docs_text", points=[models.PointStruct(id=1, vector={"dense": [1, 0, 0, 0]}, payload={"doc_kind": "ARS"})])
+    assert fi.legacy_index(old) == ["docs_text"]
+    with pytest.raises(ValueError, match="before the rename"):
+        fi.Ingest(args_for(tmp_path, corpus, root=tmp_path / "old", stages="text"), client=old)
+
+
+def test_font_encoding_garbage_counts_as_garbled_but_normal_text_does_not():
+    costco = "×¬»³ è‰Ú·²¿²½·¿´ Í¬¿¬»³»²¬­ ¿²¼ Í«°°´»³»²¬¿®§ Ü¿¬¿ ÝÑÍÌÝÑ ÉØÑÔÛÍßÔÛ ÝÑÎÐÑÎßÌ×ÑÒ ×ÒÜÛÈ ÌÑ Ý " * 2
+    clean = ("Net sales increased 5% to $249.6 billion — driven by membership fees, Café and Société Générale "
+             "deposits; the Company’s results are described in Item 7. ") * 4
+    assert fi.non_ascii_garbage(costco)
+    assert not fi.non_ascii_garbage(clean)                   # a few dashes, quotes and accents are normal
+    assert not fi.non_ascii_garbage("±²³ ¤ µ")              # too short to judge
+    assert fi.ANALYSIS_VERSION == 2                          # cached page analyses are redone with the new rule

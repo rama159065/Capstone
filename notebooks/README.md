@@ -5,7 +5,7 @@ Five step-by-step notebooks build the financial-report copilot up layer by layer
 | # | Notebook | What it tests | Filings | Runtime |
 |---|---|---|---|---|
 | 01 | [01_chat_templates_pydantic.ipynb](01_chat_templates_pydantic.ipynb) | **Standalone** (no repo clone). All five prompt techniques: zero-shot, few-shot, chain-of-thought, self-consistency and decomposition; LLM-chosen **tool call** (Pydantic `ToolCall`) to **SEC XBRL** as the external source; answers validated as Pydantic `FinancialAnswer`, plus citation and number grounding | none (XBRL API) | CPU |
-| 02 | [02_text_rag_chat_templates.ipynb](02_text_rag_chat_templates.ipynb) | Text-only RAG (Qdrant `docs_text`, hybrid + rerank) + templates. Scenarios: filtered, unfiltered, `k=2`, a garbled filing | AMD FY2025, AbbVie FY2025, NVIDIA FY2026, Chevron FY2022 | CPU or GPU |
+| 02 | [02_text_rag_chat_templates.ipynb](02_text_rag_chat_templates.ipynb) | Text-only RAG (Qdrant `annual_reports_text`, hybrid + rerank) + templates. Scenarios: filtered, unfiltered, `k=2`, a garbled filing | AMD FY2025, AbbVie FY2025, NVIDIA FY2026, Chevron FY2022 | CPU or GPU |
 | 03 | [03_ocr_rag.ipynb](03_ocr_rag.ipynb) | Full-page OCR of garbled statements checked against XBRL; image-region OCR of a chart (2 passes); QA with no OCR, front-first OCR and full OCR | Chevron FY2022 | GPU recommended |
 | 04 | [04_visual_rag_colpali.ipynb](04_visual_rag_colpali.ipynb) | Charts and tables as **ColPali image multivectors** in Qdrant (full vectors, exact MaxSim); chart questions, descriptive and exact-number queries; optional vision model | NVIDIA FY2026, Chevron FY2022 | **GPU** |
 | 05 | [05_final_qdrant_colpali_rag.ipynb](05_final_qdrant_colpali_rag.ipynb) | Final design: text + OCR + ColPali **mean pooling** (rows/columns) with full-vector rerank. Pooled-only vs prefetch → rerank vs exhaustive; hybrid evidence; **clarifier → LangGraph agent** on the eval set | the four above | **GPU** |
@@ -29,17 +29,18 @@ Five step-by-step notebooks build the financial-report copilot up layer by layer
 
 ## Running on Colab
 
-1. **Open a notebook:** File → Open notebook → GitHub. Use repo `rama159065/Capstone`, branch `finance_report_qa_agent`.
-2. **Choose a runtime:** set it to **GPU** for notebooks 03–05.
-3. **Add Colab secrets** (🔑 panel; turn on notebook access):
+1. **Package the code** on your PC, from the repo root: `python -m scripts.common.colab_bundle`. Upload the resulting `output/colab/capstone_code.zip` (about 3.5 MB) to Google Drive as `MyDrive/capstone_rag/capstone_code.zip`. Rebuild and upload it again after you change code. The zip holds `scripts/`, `tests/`, `configs/`, the corpus plans and manifests, and small samples, including uncommitted work. It carries no PDFs, indexes or models.
+2. **Open a notebook:** upload the `.ipynb` to Colab (File → Upload notebook), or open it from GitHub.
+3. **Choose a runtime:** set it to **GPU** for notebooks 03–05.
+4. **Add Colab secrets** (🔑 panel; turn on notebook access):
 
    | Secret | When needed |
    |---|---|
-   | `GITHUB_TOKEN` | while the repo is private (read-only "Contents" permission is enough) |
+   | `GITHUB_TOKEN` | only without the code zip: the setup cell then clones the private repo (read-only "Contents" permission is enough) |
    | `SEC_USER_AGENT` | always: `your-name your.email@domain`. SEC requires a contact address |
    | `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL` | for the provided Track B endpoint. Without them, notebooks 01–04 use a small Hugging Face stand-in on the GPU and notebook 05's agent uses the mock |
 
-4. **Run all cells.** Cell 0 clones the branch, installs what that notebook needs, and loads the secrets. PDFs are downloaded from EDGAR and SHA-256-checked.
+5. **Run all cells.** Cell 0 mounts Drive and unpacks the code zip to `/content/Capstone`. It unpacks again only when the zip is a new build (`BUNDLE_INFO.json` records the commit and build time). If there is no zip on Drive, it asks you to upload one, and if you cancel it clones the branch. It then installs what that notebook needs and loads the secrets. PDFs are downloaded from EDGAR and SHA-256-checked. `colab_financial_ingest.ipynb` and `colab_rag_pipelines.ipynb` get their code the same way.
 
 **Settings** (set them before the config cell with `os.environ[...] = ...`):
 

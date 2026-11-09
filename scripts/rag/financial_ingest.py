@@ -2,12 +2,12 @@
 
 Implements the PDF part of docs/financial_rag_final_design.md (sections 3-7):
 
-* ``docs_text``: native PDF text and tables, cut into chunks, with a dense
+* ``annual_reports_text``: native PDF text and tables, cut into chunks, with a dense
   vector and a number-aware sparse vector ("bm25", IDF modifier) that keeps
   ``391,035`` / ``391035`` / ``$6.08`` / ``2.1%`` as whole terms. Pages whose
-  text layer is garbled are OCR'd (RapidOCR) or left to the visual path; their
-  broken text is never indexed.
-* ``visual_pages``: ColPali full multivectors (1030 x 128, float16, on disk,
+  text layer is garbled (broken English or font-encoding symbols) are OCR'd
+  (RapidOCR) or left to the visual path; their broken text is never indexed.
+* ``annual_reports_visual``: ColPali full multivectors (1030 x 128, float16, on disk,
   no HNSW) used only for reranking, mean-pooled rows and columns (38 x 128
   each, special tokens kept, in RAM, HNSW) for the first stage, and a text
   ``summary`` vector. Numbers never pass through these vectors: they stay as
@@ -19,11 +19,26 @@ skips finished work. After each batch the collections can be snapshotted to
 Drive (``--snapshot-dir``) and restored in the next session (``restore``).
 The 10-K HTML / XBRL facts DB (store A of the design) is a separate step.
 
+The collection names are this corpus's own, so ``LocalRAG`` (scripts/rag/multimodal_rag.py, which uses
+``docs_text`` / ``visual_pages``) can share a Qdrant server with it. Indexes built before the rename used
+those names too: ``restore`` maps their snapshots to the new names, and an old live index stops with a
+message instead of being shadowed by empty collections.
+
     python -m scripts.rag.financial_ingest ingest --qdrant-url http://127.0.0.1:6333 \
         --pdf-dir /content/drive/MyDrive/capstone_rag/pdfs --snapshot-dir /content/drive/MyDrive/capstone_rag/snapshots
     python -m scripts.rag.financial_ingest status --qdrant-url http://127.0.0.1:6333
     python -m scripts.rag.financial_ingest query "Chevron net oil-equivalent production" --ticker CVX --visual
     python -m scripts.rag.financial_ingest restore --qdrant-url http://127.0.0.1:6333 --snapshot-dir ...
+
+``--manifest`` also takes the sector corpus folder written by
+scripts/downloads/download_annual_report_corpus.py (one sub-folder and manifest per
+sector); ``--sectors banking,insurance`` ingests some of them. Every point carries
+``sector`` / ``sector_slug`` (payload-indexed), so one collection serves all sectors and
+``query --sector banking`` / ``retrieve_for_agent(..., sector=...)`` narrow to one.
+``tag-sectors`` adds the fields to filings ingested before they existed.
+
+    python -m scripts.rag.financial_ingest ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking
+    python -m scripts.rag.financial_ingest query "net interest income" --sector banking
 
 Without ``--qdrant-url`` (or ``QDRANT_URL``) it uses embedded Qdrant under
 ``--root``: fine for smoke runs, too slow for the corpus. The Colab session is
@@ -52,23 +67,26 @@ import numpy as np
 import pymupdf
 from qdrant_client import QdrantClient, models
 
+from scripts.common.companies import sector_of
+from scripts.common.sector_corpus import parse_sectors, read_manifest as read_corpus_manifest, sector_slug
 from scripts.rag.multimodal_rag import dense, term_id
 
 from scripts.common.paths import ROOT  # noqa: E402 - repo root
 DOMAIN = "financial_report_qa"
 MANIFEST = ROOT / "data/raw/financial_report_qa/edgar/pdf_manifest.jsonl"
 DEFAULT_ROOT = Path(os.getenv("RAG_INGEST_DIR", ROOT / "indexes/financial_qdrant"))
-TEXT, VISUAL = "docs_text", "visual_pages"
+TEXT, VISUAL = "annual_reports_text", "annual_reports_visual"
+LEGACY = {TEXT: "docs_text", VISUAL: "visual_pages"}      # names before the rename (shared with LocalRAG)
 GRID = 32                          # ColPali v1.3: 32 x 32 image patches + special tokens
 INDEXING_THRESHOLD = 10_000        # KB; Qdrant's default, restored after bulk upload
-ANALYSIS_VERSION = 1
+ANALYSIS_VERSION = 2                  # 2: font-encoding garbage counts as garbled (non_ascii_garbage)
 CHUNK_CHARS, OVERLAP_CHARS, TABLE_CHARS = 1200, 200, 3000
 RENDER_SCALE = 1.5                 # same scale as the pooling evaluation
 STOPWORDS = frozenset("the of and to in a is for on that by with as are be this from or at an our we".split())
 SCALE = re.compile(r"\b(?:in|amounts in|dollars in)\s+(thousands|millions|billions)\b[^)\n]{0,60}", re.I)
 ITEM = re.compile(r"^\s*item\s+(1a|1b|1c|7a|9a|9b|9c|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16)\b", re.I | re.M)
 TERM = re.compile(r"\$?\d[\d,]*(?:\.\d+)?%?|[a-z]+\d*")
-KEYWORD_FIELDS = ("domain", "doc_id", "filing_id", "section", "content_type", "page_type", "doc_kind")
+KEYWORD_FIELDS = ("domain", "doc_id", "filing_id", "section", "content_type", "page_type", "doc_kind", "sector_slug")
 INTEGER_FIELDS = ("fiscal_year", "year", "page")
 
 
@@ -146,10 +164,24 @@ def table_markdown(table):
     return [" | ".join(rows[0]), " | ".join(["---"] * width)] + [" | ".join(r) for r in rows[1:]]
 
 
+def non_ascii_garbage(text, min_chars=40, share=.30):
+    """Font-encoding garbage: fonts without a character map give Latin-1/Latin-Extended symbols
+    (Costco 2024: "èçé ´±½¿¬·±²­") that the stopword check can't see, because few [a-z] words remain.
+
+    Garbled when at least `min_chars` non-ASCII characters make up more than `share` of the page's
+    letters and symbols. On the 100 local EDGAR PDFs (14,701 pages) 95% of pages are under 10% non-ASCII;
+    this rule adds 155 pages (Costco 2024, Alphabet 2022-24, J&J exhibits, Chevron chart labels), all garbage.
+    """
+    chars = [c for c in text if not c.isspace() and not c.isdigit()]
+    odd = sum(ord(c) > 127 for c in chars)
+    return odd >= min_chars and odd / len(chars) > share
+
+
 def analyse_page(page):
     text = page.get_text(sort=True).strip()
     words = re.findall(r"[a-z]+", text.lower())
-    garbled = (len(words) >= 40 and sum(w in STOPWORDS for w in words) / len(words) < .05) or text.count("�") > 5
+    garbled = ((len(words) >= 40 and sum(w in STOPWORDS for w in words) / len(words) < .05) or text.count("�") > 5
+               or non_ascii_garbage(text))
     try:
         tables = [t for t in map(table_markdown, page.find_tables().tables) if t]
     except Exception:
@@ -183,6 +215,28 @@ def analyse_pdf(path, max_pages=None):
             info["page"] = number
             pages.append(info)
     return pages
+
+
+VISUAL_PAGE_MODES = ("tables_charts_images", "tables_charts", "rule", "visual", "all")
+
+
+def visual_targets(pages, mode):
+    """Pages that go to ColPali (pipeline 1) or the VLM (pipeline 2).
+
+    tables_charts_images: pages classified table, chart or image
+    tables_charts:        table and chart pages only
+    rule / visual:        tables, charts, images and unreadable text pages (garbled or outlined)
+    all:                  every page that isn't blank
+    """
+    if mode == "all":
+        return [p for p in pages if p["page_type"] != "blank"]
+    if mode == "tables_charts_images":
+        return [p for p in pages if p["page_type"] in {"table", "chart", "image"}]
+    if mode == "tables_charts":
+        return [p for p in pages if p["page_type"] in {"table", "chart"}]
+    if mode in {"rule", "visual"}:
+        return [p for p in pages if p["visual"]]
+    raise ValueError(f"unknown page selection {mode!r}; choose from {VISUAL_PAGE_MODES}")
 
 
 def readable_text(page):
@@ -370,7 +424,32 @@ def is_server(client):
     return not isinstance(client._client, QdrantLocal)
 
 
+def legacy_index(client):
+    """Old-named collections that hold this pipeline's data (not LocalRAG's), when the new ones don't exist."""
+    found = []
+    for new, old in LEGACY.items():
+        if client.collection_exists(new) or not client.collection_exists(old):
+            continue
+        if old == LEGACY[VISUAL]:
+            ours = "mean_rows" in client.get_collection(old).config.params.vectors
+        else:
+            ours = client.count(old, count_filter=models.Filter(must=[models.FieldCondition(
+                key="doc_kind", match=models.MatchValue(value="ARS"))]), exact=True).count > 0
+        if ours:
+            found.append(old)
+    return found
+
+
+def check_legacy(client):
+    old = legacy_index(client)
+    if old:
+        raise ValueError(f"this index uses the collection names from before the rename ({', '.join(old)}). "
+                         f"Restore it from its Drive snapshots (restore maps them to {TEXT} / {VISUAL}), "
+                         "or re-ingest into a new --root / with --reset.")
+
+
 def ensure_collections(client, dim, visual=True):
+    check_legacy(client)
     multi = models.MultiVectorConfig(comparator=models.MultiVectorComparator.MAX_SIM)
     cosine = models.Distance.COSINE
     if not client.collection_exists(TEXT):
@@ -395,7 +474,7 @@ def ensure_collections(client, dim, visual=True):
         if size != dim:
             raise ValueError(f"{name}.{vector} has dimension {size}, the embedder gives {dim}. Use a new --root/--reset.")
         if name == VISUAL and "mean_rows" not in info.config.params.vectors:
-            raise ValueError("visual_pages exists without pooled vectors (created by LocalRAG?). Use --reset.")
+            raise ValueError(f"{VISUAL} exists without pooled vectors. Use --reset.")
         for field in KEYWORD_FIELDS + ("ticker",) + INTEGER_FIELDS:
             if field in (info.payload_schema or {}):
                 continue
@@ -428,9 +507,13 @@ def doc_filter(doc_id):
     return models.Filter(must=[models.FieldCondition(key="doc_id", match=models.MatchValue(value=doc_id))])
 
 
-def query_filter(ticker=None, year=None):
+def query_filter(ticker=None, year=None, sector=None):
+    """Payload filter; `sector` takes one or more names or slugs ("banking", "Oil and gas,insurance")."""
     conditions = [models.FieldCondition(key=k, match=models.MatchValue(value=v))
                   for k, v in (("ticker", ticker and ticker.upper()), ("fiscal_year", year)) if v]
+    sectors = parse_sectors(sector)
+    if sectors:
+        conditions.append(models.FieldCondition(key="sector_slug", match=models.MatchAny(any=sorted(sectors))))
     return models.Filter(must=conditions) if conditions else None
 
 
@@ -470,7 +553,7 @@ def restore(args):
         raise SystemExit("restore needs a Qdrant server (--qdrant-url)")
     source, root = Path(args.snapshot_dir), Path(args.root)
     for collection in (TEXT, VISUAL):
-        files = sorted(source.glob(f"{collection}-*.snapshot"), key=lambda p: p.stat().st_mtime)
+        files = sorted(source.glob(f"{collection}-*.snapshot"), key=lambda p: p.stat().st_mtime)             or sorted(source.glob(f"{LEGACY[collection]}-*.snapshot"), key=lambda p: p.stat().st_mtime)   # before the rename
         if not files:
             print(f"{collection}: no snapshot in {source}")
             continue
@@ -496,8 +579,9 @@ def restore(args):
 
 # ----------------------------------------------------------------------------- ingest
 
-def read_manifest(path):
-    return [json.loads(line) for line in Path(path).read_text(encoding="utf-8").split("\n") if line.strip()]
+def read_manifest(path, sectors=None):
+    """Rows of a manifest file, or of a sector corpus folder (<dir>/<sector>/pdf_manifest.jsonl), optionally some sectors."""
+    return read_corpus_manifest(path, sectors)
 
 
 def sha256_file(path):
@@ -508,8 +592,29 @@ def sha256_file(path):
     return digest.hexdigest()
 
 
+def pdf_candidates(row, pdf_dir):
+    """Where the filing's PDF may be; the first is where --download-missing puts it.
+
+    With --pdf-dir: <pdf_dir>/<sector>/<file> for sector corpora, then <pdf_dir>/<file> (flat folder).
+    Without it: next to the manifest (local_path is relative to it), then the older edgar/pdfs layout.
+    """
+    rel = Path(row["local_path"].replace("\\", "/"))
+    name, out = rel.name, []
+    if pdf_dir:
+        if row.get("sector_slug") and row["sector_slug"] != "unknown":
+            out.append(Path(pdf_dir) / row["sector_slug"] / name)
+        out.append(Path(pdf_dir) / name)
+    if row.get("_manifest_dir"):
+        base = Path(row["_manifest_dir"])
+        repo_relative = rel.parts[:1] == ("data",)                  # older manifests: data\raw\...\pdfs\x.pdf
+        out += [ROOT / rel if repo_relative else base / rel, base / "pdfs" / name]
+    out.append(ROOT / rel)
+    return out
+
+
 def resolve_pdf(row, pdf_dir, download=False, user_agent=None):
-    path = Path(pdf_dir) / Path(row["local_path"].replace("\\", "/")).name
+    candidates = pdf_candidates(row, pdf_dir)
+    path = next((c for c in candidates if c.exists()), candidates[0])
     if not path.exists():
         if not download:
             raise FileNotFoundError(f"{path} is missing (copy it from Drive or pass --download-missing)")
@@ -528,8 +633,11 @@ def resolve_pdf(row, pdf_dir, download=False, user_agent=None):
 
 def filing_payload(row):
     year = int(row["year"])
+    sector = row.get("sector") or sector_of(row["ticker"]) or "unknown"
     return {"domain": DOMAIN, "doc_id": row["document_id"], "filing_id": f"{row['ticker']}_FY{year}",
             "doc_kind": "ARS", "ticker": row["ticker"].upper(), "company": row.get("company"), "cik": row.get("cik"),
+            "sector": sector, "sector_slug": row.get("sector_slug") or sector_slug(sector),
+            "sic": row.get("sic"),
             "year": year, "fiscal_year": year, "accession_number": row.get("accession_number"),
             "filing_date": row.get("filing_date"), "source_url": row.get("source_url"),
             "source_type": row.get("source_type", "annual_report_pdf"), "content_sha256": row.get("content_sha256"),
@@ -641,7 +749,7 @@ class Ingest:
         return [s for s in self.stages if self.args.force or not self.state.done(row["document_id"], s, self.pipeline[s])]
 
     def run(self):
-        rows = read_manifest(self.args.manifest)
+        rows = read_manifest(self.args.manifest, self.args.sectors)
         if self.args.tickers:
             wanted = {t.strip().upper() for t in self.args.tickers.split(",")}
             rows = [r for r in rows if r["ticker"].upper() in wanted]
@@ -649,7 +757,9 @@ class Ingest:
         todo = [r for r in rows if self.pending(r)]
         print(f"{len(rows)} filings selected, {len(todo)} with pending stages {self.stages}", flush=True)
         summary = Counter()
-        for start in range(0, len(todo), self.args.batch_size):
+        batches = range(0, len(todo), self.args.batch_size)
+        every = getattr(self.args, "snapshot_every", 1)
+        for number, start in enumerate(batches, 1):
             batch = todo[start:start + self.args.batch_size]
             free = shutil.disk_usage(self.root).free / 2**30
             if free < 10:
@@ -662,13 +772,16 @@ class Ingest:
                         summary[self.run_stage(stage, row, pdf, pages)] += 1
             finally:
                 set_bulk(self.client, collections, False)
-            if self.args.snapshot_dir and is_server(self.client):
+            # A snapshot copies the whole collection, so at full scale snapshot every few batches, or only
+            # after the last one (--snapshot-every 0): a disconnect then loses at most that run's work.
+            due = number == len(batches) or (every > 0 and number % every == 0)
+            if self.args.snapshot_dir and is_server(self.client) and due:
                 wait_green(self.client, collections)
                 for name in collections:
                     print(f"snapshot -> {snapshot(self.client, self.args.qdrant_url, name, Path(self.args.snapshot_dir), self.args.keep_snapshots)}", flush=True)
                 self.state.backup(Path(self.args.snapshot_dir) / "ingest.sqlite3")
                 shutil.copytree(self.root / "pages", Path(self.args.snapshot_dir) / "pages", dirs_exist_ok=True)
-            print(f"batch {start // self.args.batch_size + 1}: {dict(summary)}", flush=True)
+            print(f"batch {number}/{len(batches)}: {dict(summary)}", flush=True)
         return dict(summary)
 
     def prepare(self, batch):
@@ -734,7 +847,7 @@ class Ingest:
 
     def write_visual(self, row, pdf, pages):
         from PIL import Image
-        targets = [p for p in pages if p["page_type"] != "blank"] if self.args.visual_pages == "all" else [p for p in pages if p["visual"]]
+        targets = visual_targets(pages, self.args.visual_pages)
         self.client.delete(VISUAL, models.FilterSelector(filter=doc_filter(row["document_id"])), wait=True)
         base = filing_payload(row)
         with pymupdf.open(pdf) as document:
@@ -807,8 +920,8 @@ def overlap(query, text):
     return len(wanted & set(terms(text))) / len(wanted) if wanted else 0.0
 
 
-def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30):
-    """Evidence for the financial agents from docs_text (+ visual_pages when RAG_FIN_VISUAL=1).
+def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30, sector=None):
+    """Evidence for the financial agents from the text collection (+ the visual one when RAG_FIN_VISUAL=1).
 
     Hybrid dense + sparse with Qdrant RRF, then a rerank by RRF + term overlap (numbers kept whole),
     or by the cross-encoder when RAG_RERANKER_MODEL is set.
@@ -818,9 +931,11 @@ def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30):
         if "client" not in _serving:
             root = Path(os.getenv("RAG_INGEST_DIR", DEFAULT_ROOT))
             args = argparse.Namespace(root=root, embedding_provider="hashing", embedding_model=None)
-            _serving.update(client=connect(os.getenv("QDRANT_URL"), root), embedder=recorded_embedder(args))
+            client = connect(os.getenv("QDRANT_URL"), root)
+            check_legacy(client)
+            _serving.update(client=client, embedder=recorded_embedder(args))
         client, embedder = _serving["client"], _serving["embedder"]
-        flt = query_filter(ticker, year)
+        flt = query_filter(ticker, year, sector)
         fused = {}
         for rank, hit in enumerate(search_text(client, embedder, query, max(candidates, top_k), flt), 1):
             fused[hit.payload["chunk_id"]] = {"payload": hit.payload, "rrf": 1 / (60 + rank), "paths": ["text"]}
@@ -836,6 +951,7 @@ def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30):
         p = entry["payload"]
         hits.append({"chunk_id": p["chunk_id"], "text": p.get("text", ""), "title": p.get("title"),
                      "source_type": p.get("source_type"), "ticker": p.get("ticker"), "year": p.get("fiscal_year"),
+                     "sector": p.get("sector"),
                      "page": p.get("page"), "source_url": p.get("source_url"), "local_path": p.get("pdf_name"),
                      "image_path": None, "section": p.get("section"), "scale": p.get("scale"),
                      "preview": re.sub(r"\s+", " ", p.get("text", ""))[:500],
@@ -868,6 +984,24 @@ def cross_encoder_rerank(query, hits, top_k):
     return text_hits[:max(top_k - len(visual_hits), 0)] + visual_hits[:top_k]
 
 
+def tag_sectors(args):
+    """Write sector / sector_slug / sic onto points ingested before the field existed (no re-embedding)."""
+    client = connect(args.qdrant_url, args.root, not args.no_grpc, args.timeout)
+    collections = [n for n in (TEXT, VISUAL) if client.collection_exists(n)]
+    for name in collections:
+        if "sector_slug" not in (client.get_collection(name).payload_schema or {}):
+            client.create_payload_index(name, "sector_slug", field_schema=models.PayloadSchemaType.KEYWORD, wait=True)
+    tagged = Counter()
+    for row in read_manifest(args.manifest, args.sectors):
+        base = filing_payload(row)
+        fields = {k: base[k] for k in ("sector", "sector_slug", "sic")}
+        for name in collections:
+            client.set_payload(name, payload=fields, points=doc_filter(row["document_id"]), wait=True)
+        tagged[fields["sector_slug"]] += 1
+    print(json.dumps({"filings_tagged_by_sector": dict(sorted(tagged.items()))}, indent=2))
+    return dict(tagged)
+
+
 def status(args):
     client = connect(args.qdrant_url, args.root, not args.no_grpc, args.timeout)
     state = Path(args.root) / "ingest.sqlite3"
@@ -883,9 +1017,9 @@ def status(args):
     return report
 
 
-def recorded_embedder(args):
-    """The embedder the index was built with (from ingest.sqlite3), else the command-line choice."""
-    state = Path(args.root) / "ingest.sqlite3"
+def recorded_embedder(args, state_name="ingest.sqlite3"):
+    """The embedder the index was built with (from the state DB), else the command-line choice."""
+    state = Path(args.root) / state_name
     if state.exists():
         with sqlite3.connect(state) as db:
             row = db.execute("SELECT value FROM settings WHERE key='embedding'").fetchone()
@@ -902,7 +1036,7 @@ def recorded_embedder(args):
 def query(args):
     client = connect(args.qdrant_url, args.root, not args.no_grpc, args.timeout)
     embedder = recorded_embedder(args)
-    flt = query_filter(args.ticker, args.year)
+    flt = query_filter(args.ticker, args.year, args.sector)
     started = time.time()
     hits = [("text", h) for h in search_text(client, embedder, args.text, args.top_k, flt)]
     if args.visual:
@@ -910,7 +1044,8 @@ def query(args):
                                                       embedder, args.text, args.top_k, flt)]
     for path, hit in hits:
         p = hit.payload
-        print(json.dumps({"path": path, "score": round(hit.score, 4), "doc_id": p["doc_id"], "page": p["page"],
+        print(json.dumps({"path": path, "score": round(hit.score, 4), "doc_id": p["doc_id"], "sector": p.get("sector"),
+                          "page": p["page"],
                           "section": p.get("section"), "type": p.get("content_type"), "scale": p.get("scale"),
                           "preview": re.sub(r"\s+", " ", p.get("text", ""))[:160]}))
     print(f"{len(hits)} hits in {time.time() - started:.2f}s (including query encoding)")
@@ -929,16 +1064,20 @@ def build_parser():
     common.add_argument("--colpali-dtype", choices=["auto", "bfloat16", "float16", "float32"], default="auto")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    ingest = sub.add_parser("ingest", parents=[common], help="write PDFs into docs_text and visual_pages")
-    ingest.add_argument("--manifest", type=Path, default=MANIFEST)
-    ingest.add_argument("--pdf-dir", type=Path, default=MANIFEST.parent / "pdfs")
+    ingest = sub.add_parser("ingest", parents=[common], help=f"write PDFs into {TEXT} and {VISUAL}")
+    ingest.add_argument("--manifest", type=Path, default=MANIFEST,
+                        help="a pdf_manifest.jsonl, or a sector corpus folder (reads <dir>/<sector>/pdf_manifest.jsonl)")
+    ingest.add_argument("--pdf-dir", type=Path, help="where the PDFs are (default: next to the manifest)")
+    ingest.add_argument("--sectors", help="comma-separated sector names or slugs, e.g. banking,oil_and_gas")
     ingest.add_argument("--download-missing", action="store_true", help="fetch missing PDFs from EDGAR (SHA-256 checked)")
     ingest.add_argument("--user-agent", default=os.getenv("SEC_USER_AGENT"))
     ingest.add_argument("--tickers", help="comma-separated subset")
     ingest.add_argument("--limit-filings", type=int)
     ingest.add_argument("--max-pages-per-pdf", type=int, help="smoke runs only")
     ingest.add_argument("--stages", default="text,visual", help="text (CPU), visual (GPU) or both")
-    ingest.add_argument("--visual-pages", choices=["rule", "all"], default="rule")
+    ingest.add_argument("--visual-pages", choices=["rule", "tables_charts_images", "tables_charts", "all"], default="rule",
+                        help="rule: tables, charts, pictures and unreadable pages; tables_charts_images: table, chart "
+                             "and picture pages; tables_charts: only those two")
     ingest.add_argument("--colpali-batch", type=int, default=4)
     ingest.add_argument("--ocr", choices=["garbled", "none"], default="garbled")
     ingest.add_argument("--ocr-cuda", action="store_true", help="RapidOCR on GPU (needs onnxruntime-gpu)")
@@ -946,15 +1085,22 @@ def build_parser():
     ingest.add_argument("--batch-size", type=int, default=10, help="filings between snapshots")
     ingest.add_argument("--workers", type=int, default=2, help="processes for page analysis")
     ingest.add_argument("--snapshot-dir", type=Path, help="e.g. a Drive folder; snapshot after every batch")
+    ingest.add_argument("--snapshot-every", type=int, default=1,
+                        help="snapshot after every N batches; 0 = only after the last batch of this run")
     ingest.add_argument("--keep-snapshots", type=int, default=1)
     ingest.add_argument("--force", action="store_true", help="redo finished filings")
     ingest.add_argument("--reset", action="store_true", help="drop both collections and the ingest state first")
 
     sub.add_parser("status", parents=[common])
+    tag = sub.add_parser("tag-sectors", parents=[common], help="add sector fields to filings ingested before they existed")
+    tag.add_argument("--manifest", type=Path, default=MANIFEST,
+                     help="manifest file or sector corpus folder; rows without a sector get it from the ticker")
+    tag.add_argument("--sectors", help="comma-separated subset")
     search = sub.add_parser("query", parents=[common])
     search.add_argument("text")
     search.add_argument("--ticker")
     search.add_argument("--year", type=int)
+    search.add_argument("--sector", help="one or more sector names or slugs, comma-separated")
     search.add_argument("--top-k", type=int, default=5)
     search.add_argument("--visual", action="store_true", help="also run the ColPali path (loads the model)")
 
@@ -968,6 +1114,8 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
     if args.command == "ingest":
         Ingest(args).run()
+    elif args.command == "tag-sectors":
+        tag_sectors(args)
     elif args.command == "status":
         status(args)
     elif args.command == "query":

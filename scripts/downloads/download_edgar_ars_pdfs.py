@@ -32,6 +32,11 @@ from pathlib import Path
 
 import pymupdf
 
+ROOT = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists())
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from scripts.common.companies import sector_of  # noqa: E402
+
 
 DEFAULT_OUTPUT_DIR = Path("data/raw/financial_report_qa/edgar")
 DEFAULT_TARGET_PDFS = 100
@@ -231,6 +236,7 @@ def main() -> int:
                 "document_id": f"edgar_ars_{ticker}_{year}",
                 "company": company,
                 "ticker": ticker,
+                "sector": sector_of(ticker),
                 "cik": cik,
                 "year": year,
                 "title": f"{company} annual report to shareholders {year}",

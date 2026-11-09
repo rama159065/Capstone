@@ -1212,7 +1212,181 @@ class ColPaliHybridRetriever(BaseRetriever):
 RETRIEVER = ColPaliHybridRetriever()
 print("ColPali + hybrid Qdrant retriever ready")
 ''']},
+    {
+        "file": "09_ocr_bm25.ipynb", "name": "09_ocr_bm25", "title": "OCR of chart and picture pages + BM25",
+        "packages": "rank_bm25",
+        "summary": "RapidOCR reads the rendered chart and picture pages, so text that exists only as pixels (chart titles, axis labels, values in images) becomes searchable. BM25 stays the retriever, so the comparison with notebook 01 isolates the effect of OCR. This is notebook 03's OCR study applied to the shared gold set.",
+        "traits": ("Charts and images: OCR reads printed labels and values, two passes at different scales; a value counts only when both passes agree. OCR can't tie a value to its series or read an unlabelled bar.",
+                   "Tables and figures: from the text layer as in notebook 01; pages without a usable text layer were already OCR'd by the parser.",
+                   "Ingest cost: free, CPU only. About 2-5 s per page per pass, and only chart and picture pages are read; results are cached."),
+        "index_title": "OCR of chart and picture pages, then a BM25 index",
+        "index_text": "Each page with a chart or picture is rendered at 144 and 216 dpi and read by RapidOCR. Short lines (chart titles, axis labels, values, legends) that the text layer lacks are added to the page's text in reading order, when their confidence is at least 0.6 and the other pass read the same numbers. Upside-down axis text is dropped. `NATIVE_CHUNKS` keeps the index without OCR for the comparison in step 6b.",
+        "code": [BM25_CODE, r'''
+from collections import Counter
+import numpy as np
+
+OCR_CACHE = CFG.work_dir / f"ocr_visual_{PDF_SHA[:12]}.json"
+OCR_DPIS = (144, 216)            # two render scales, as in notebook 03 (scale 2 and 3)
+OCR_MIN_SCORE = 0.6
+LABEL_MAX_CHARS = 70             # longer lines are paragraphs, which the text layer already has
+NUM_TOKEN = re.compile(r"\d[\d,]*(?:\.\d+)?")
+
+class OcrLine(BaseModel):
+    text: str
+    score: float = Field(ge=0, le=1)
+    x: float
+    y: float
+
+class OcrPage(BaseModel):
+    page: int = Field(ge=1)
+    passes: dict[int, list[OcrLine]]
+    seconds: float
+
+def ocr_lines(page, dpi):
+    global _ocr_engine
+    from rapidocr import RapidOCR
+    _ocr_engine = _ocr_engine or RapidOCR(params={"Global.log_level": "error"})
+    pix = page.get_pixmap(dpi=dpi, colorspace=pymupdf.csRGB, alpha=False)
+    result = _ocr_engine(np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, 3))
+    if result.boxes is None:
+        return []
+    ratio = 72 / dpi
+    return [OcrLine(text=text.strip(), score=float(score), x=min(p[0] for p in box) * ratio, y=min(p[1] for p in box) * ratio)
+            for box, text, score in zip(result.boxes, result.txts, result.scores) if text.strip()]
+
+def run_ocr(targets):
+    """Resumable: pages already read stay in OCR_CACHE, so a disconnect loses only the page in progress."""
+    done = {}
+    if OCR_CACHE.exists():
+        try:
+            done = {int(k): OcrPage.model_validate(v) for k, v in json.loads(OCR_CACHE.read_text(encoding="utf-8")).items()}
+        except (ValidationError, json.JSONDecodeError):
+            done = {}
+    todo = [n for n in targets if n not in done]
+    print(f"OCR: {len(done)} pages cached, {len(todo)} to read at {OCR_DPIS} dpi")
+    with pymupdf.open(PDF_PATH) as doc:
+        for index, number in enumerate(todo, start=1):
+            started = time.time()
+            done[number] = OcrPage(page=number, passes={dpi: ocr_lines(doc[number - 1], dpi) for dpi in OCR_DPIS},
+                                   seconds=time.time() - started)
+            OCR_CACHE.write_text(json.dumps({k: v.model_dump() for k, v in done.items()}), encoding="utf-8")
+            print(f"  page {number} ({index}/{len(todo)}): {sum(map(len, done[number].passes.values()))} lines in {done[number].seconds:.1f}s")
+    return done
+
+def squash(text):
+    return re.sub(r"[\s$,]", "", text.lower())
+
+def chart_labels(ocr_page, native_text):
+    """Short lines from the first pass that the text layer lacks, kept only if confident, not upside down,
+    and the second pass read the same numbers."""
+    native = squash(native_text)
+    first, second = (ocr_page.passes[dpi] for dpi in OCR_DPIS)
+    seen_again = {n.replace(",", "") for line in second if line.score >= OCR_MIN_SCORE for n in NUM_TOKEN.findall(line.text)}
+    kept, why = [], Counter()
+    for line in sorted(first, key=lambda l: (round(l.y / 4), l.x)):
+        numbers = [n.replace(",", "") for n in NUM_TOKEN.findall(line.text)]
+        if len(line.text) > LABEL_MAX_CHARS:
+            why["paragraph (already in the text layer)"] += 1
+        elif line.score < OCR_MIN_SCORE:
+            why["low confidence"] += 1
+        elif re.match(r"^%|^[\d.,]+-$", line.text) or re.fullmatch(r"[%\dOolISs.,-]+", line.text) and not re.search(r"\d", line.text[0]):
+            why["upside down or rotated"] += 1
+        elif numbers and not all(n in seen_again for n in numbers):
+            why["passes disagree"] += 1
+        elif squash(line.text) in native:
+            why["already in the text layer"] += 1
+        else:
+            kept.append(line.text)
+    return kept, why
+
+NATIVE_CHUNKS = CHUNKS                       # the notebook 01 index, without image OCR
+visual_pages = [p.page for p in PAGES if p.visual and not p.ocr_used]
+OCR_PAGES = run_ocr(visual_pages)
+OCR_ADDED, OCR_REPORT = {}, []
+with pymupdf.open(PDF_PATH) as doc:
+    native_text = {n: doc[n - 1].get_text() for n in OCR_PAGES}
+for item in PAGES:
+    if item.page in OCR_PAGES:
+        kept, why = chart_labels(OCR_PAGES[item.page], native_text[item.page])
+        OCR_ADDED[item.page] = kept
+        OCR_REPORT.append({"page": item.page, "lines added": len(kept), **why})
+        if kept:
+            item.narrative = (item.narrative + "\n\nText read by OCR from the page image (chart titles, labels and values):\n" + "\n".join(kept)).strip()
+CHUNKS = make_chunks(PAGES)
+print(f"OCR read {len(OCR_PAGES)} chart and picture pages; {sum(map(len, OCR_ADDED.values()))} lines added; "
+      f"{len(NATIVE_CHUNKS)} chunks without OCR, {len(CHUNKS)} with it")
+with pd.option_context("display.width", 200):
+    print(pd.DataFrame(OCR_REPORT).fillna(0).set_index("page").astype(int).to_string())
+''', r'''
+RETRIEVER = BM25Retriever.from_documents(CHUNKS, k=CFG.top_k, preprocess_func=bm25_tokens)
+print("BM25 index ready:", len(CHUNKS), "chunks")
+''']},
 ]
+
+OCR_DIAGNOSTICS = r'''
+# What OCR changed, before any LLM call: is each gold figure in the native text or only in the OCR text,
+# and does BM25 bring it into the top-5 evidence with and without OCR?
+OCR_ALL_PAGES = False   # True also OCRs every page, as if the PDF were scanned: about 12 min on a 16-core CPU, longer on Colab's 2 cores; cached
+
+def figure_tokens(gold):
+    plain = gold.value.replace(",", "")
+    return {plain, plain.rstrip("0").rstrip(".") if "." in plain else plain}
+
+def has_figure(text, gold):
+    return bool(figure_tokens(gold) & {n.replace(",", "") for n in NUM_TOKEN.findall(text)})
+
+indexes = {"native text (notebook 01)": NATIVE_CHUNKS, "native + chart OCR (this notebook)": CHUNKS}
+if OCR_ALL_PAGES:
+    started = time.time()
+    all_cache = CFG.work_dir / f"ocr_all_pages_{PDF_SHA[:12]}.json"
+    cached = json.loads(all_cache.read_text(encoding="utf-8")) if all_cache.exists() else {}
+    real_check, real_words = looks_garbled, ocr_words
+
+    def cached_words(page):
+        key = str(page.number + 1)
+        if key not in cached:
+            cached[key] = [[float(w[0]), float(w[1]), float(w[2]), float(w[3]), str(w[4])] for w in real_words(page)]  # numpy floats don't serialise
+            all_cache.write_text(json.dumps(cached), encoding="utf-8")
+        return [tuple(w) for w in cached[key]]
+
+    looks_garbled, ocr_words = (lambda text: True), cached_words   # route every page through OCR
+    try:
+        indexes["OCR on every page (as if scanned)"] = make_chunks(parse_pdf(PDF_PATH))
+    finally:
+        looks_garbled, ocr_words = real_check, real_words
+    print(f"OCR of every page took {time.time() - started:.0f}s")
+
+numeric = [g for g in GOLD_SET if g.type == "numeric"]
+coverage = []
+with pymupdf.open(PDF_PATH) as doc:
+    for g in numeric:
+        native = any(has_figure(doc[p - 1].get_text(), g) for p in g.pages if p)
+        ocr_only = any(has_figure("\n".join(OCR_ADDED.get(p, [])), g) for p in g.pages if p)
+        coverage.append({"id": g.id, "kind": g.kind, "in native text": native, "in OCR text": ocr_only})
+coverage = pd.DataFrame(coverage)
+print("Gold figure present on its page:")
+print(coverage.groupby("kind")[["in native text", "in OCR text"]].sum().astype(int).to_string())
+
+retrieval = []
+for name, chunks in indexes.items():
+    bm25 = BM25Retriever.from_documents(chunks, k=CFG.top_k, preprocess_func=bm25_tokens)
+    for g in numeric:
+        docs = bm25.invoke(g.question)
+        retrieval.append({"index": name, "id": g.id, "kind": g.kind,
+                          "gold page in top 5": any(d.metadata["page"] in g.pages for d in docs),
+                          "gold figure in top 5": any(has_figure(d.page_content, g) for d in docs)})
+retrieval = pd.DataFrame(retrieval)
+summary = retrieval.groupby(["index", "kind"])[["gold page in top 5", "gold figure in top 5"]].mean().unstack("kind")
+print("\nBM25 retrieval on the 40 numeric questions (share with the gold page / gold figure in the top 5):")
+with pd.option_context("display.width", 220):
+    print(summary.round(2).to_string())
+    print(retrieval.groupby("index")[["gold page in top 5", "gold figure in top 5"]].mean().round(2).to_string())
+changed = retrieval.pivot_table(index="id", columns="index", values="gold figure in top 5", aggfunc="first")
+changed = changed[changed.nunique(axis=1) > 1]
+if len(changed):
+    print("\nQuestions whose evidence changed with OCR:")
+    print(changed.to_string())
+'''
 
 
 def md(text):
@@ -1222,6 +1396,12 @@ def md(text):
 def code(text, tags=()):
     meta = {"tags": list(tags)} if tags else {}
     return {"cell_type": "code", "execution_count": None, "metadata": meta, "outputs": [], "source": text.strip().splitlines(keepends=True)}
+
+
+next(a for a in ARCHITECTURES if a["name"] == "09_ocr_bm25")["after_gold"] = [
+    md("""## Step 6b: What OCR changed
+Before any LLM call, as in notebook 03: is each gold figure in the native text layer or only in the OCR text, and does BM25 bring it into the top-5 evidence? Three indexes are compared: native text only (notebook 01), native text plus chart OCR (this notebook), and OCR on every page, which shows what a scanned copy of the same report would lose. The third is off by default because it OCRs all 116 pages (about 12 minutes on a 16-core CPU, longer on Colab's 2 cores). Set `OCR_ALL_PAGES = True` in the cell to run it; its OCR is cached in the work folder."""),
+    code(OCR_DIAGNOSTICS)]
 
 
 def build(arch):
@@ -1264,6 +1444,7 @@ The LCEL chain is `prompt | Qwen | parser`, and `PydanticOutputParser` validates
 
 When the LLM refuses or an answer is withheld, `final_answer` becomes the gold answer for a gold question. For any other question it becomes the closest passage, clearly labelled as not a confirmed answer."""),
         code(GOLD_MODELS.strip() + "\n\nGOLD_SET = TypeAdapter(list[GoldQuestion]).validate_python(" + gold + ')\nGOLD_BY_QUESTION = {row.question.strip().lower(): row for row in GOLD_SET}\n\n' + GROUNDING.strip()),
+        *arch.get("after_gold", []),
         md("## Step 7: Try your own questions"),
         code('DEMO_QUESTIONS = [\n    "What was Chevron\'s net income in 2024?",\n    "In the five-year cumulative total returns graph, what was $100 invested in Chevron stock worth at the end of 2024?",\n    "How much bitcoin does Chevron hold?",\n]\n' + DEMO.strip()),
         md("""## Step 8: Evaluate against the gold questions

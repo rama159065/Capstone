@@ -156,6 +156,9 @@ class FinancialChatRequest(ChatRequest):
     )
     ticker: str | None = Field(None, description="Optional company ticker to filter financial evidence.")
     year: int | None = Field(None, description="Optional fiscal/reporting year filter.")
+    sector: str | None = Field(None, max_length=200, description=(
+        "Optional sector filter for the annual-report corpus, e.g. 'banking' or 'Oil and gas' (comma-separated "
+        "for several). Applies to the financial_qdrant and financial_vlm backends."))
     self_consistency_samples: int = Field(
         3, ge=1, le=5, description="Number of answer samples for the self-consistency technique."
     )
@@ -190,6 +193,7 @@ class RetrieveRequest(RetrievalEvaluationRequest):
     )
     ticker: str | None = Field(None, description="Optional company ticker filter for financial evidence.")
     year: int | None = Field(None, description="Optional fiscal/reporting year filter.")
+    sector: str | None = Field(None, max_length=200, description="Optional sector filter for financial evidence (annual-report corpus).")
     enable_langsmith: bool = Field(False, description="Request LangSmith tracing for this operation.")
     langsmith_project: str | None = Field(
         None, description="Optional LangSmith project name; uses a domain-specific default if omitted."
@@ -695,6 +699,7 @@ def financial_config_from_request(request: FinancialChatRequest | RetrieveReques
         query=request.query,
         ticker=getattr(request, "ticker", None),
         year=getattr(request, "year", None),
+        sector=getattr(request, "sector", None),
         source_type=request.source_type,
         top_k=request.top_k,
         dense_top_k=request.dense_top_k,
@@ -975,6 +980,7 @@ def retrieve_financial(request: RetrieveRequest) -> dict[str, Any]:
             "source_type": request.source_type,
             "ticker": request.ticker,
             "year": request.year,
+            "sector": request.sector,
             **trace_request_metadata(),
         },
     )
@@ -990,6 +996,7 @@ def retrieve_financial(request: RetrieveRequest) -> dict[str, Any]:
                 "title": hit.get("title"),
                 "ticker": hit.get("ticker"),
                 "year": hit.get("year"),
+                "sector": hit.get("sector"),
                 "page": hit.get("page"),
                 "source_url": hit.get("source_url"),
                 "image_path": hit.get("image_path"),

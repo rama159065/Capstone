@@ -131,7 +131,8 @@ RUN_TIMES = [  # estimates for a free Colab T4 with Qwen3-8B, scaled from local 
     ("06 VLM + Qdrant", "12–18 min", "2–5 min, reusing 04's transcriptions (or 45–120 min without them)", "25–40 min", "40–65 min (or 1.5–3 h)"),
     ("07 ColPali + Qdrant", "12–18 min", "20–45 min (ColPali page embeddings plus chart transcription)", "30–45 min", "1–1.75 h"),
     ("08 Portal vs RAG", "10–15 min", "under 1 min", "10–20 min", "20–35 min"),
-    ("All eight", "", "", "", "about 6.5–10 hours"),
+    ("09 OCR + BM25", "10–15 min", "5–15 min (OCR of the chart pages twice, plus every page for the comparison; CPU)", "25–40 min", "40–70 min"),
+    ("All nine", "", "", "", "about 7–11 hours"),
 ]
 
 
@@ -147,7 +148,7 @@ READINESS = [  # quick test on 8 Nov 2026: real PDF, 6 questions, local 6 GB GPU
 def colab_guide():
     rows = "".join(f"<tr><td class='id'>{html.escape(name)}</td>" + "".join(f"<td>{html.escape(c)}</td>" for c in cells) + "</tr>"
                    for name, *cells in READINESS)
-    return f"""<h2>Running notebooks 04–08 on Colab</h2>
+    return f"""<h2>Running notebooks 04–09 on Colab</h2>
 <p class="lead">Each notebook is self-contained: the 66 gold questions, the parser, the answer checks and the metrics are inside it, and it imports nothing from the repository. You need only the notebook and the PDF; notebook 08 doesn't use the PDF, it downloads from the SEC.</p>
 <table class="times"><thead><tr><th>Notebook</th><th>Quick test</th><th>Number match</th><th>Faithfulness</th><th>Time</th></tr></thead><tbody>{rows}</tbody></table>
 <p class="lead" style="margin-top:8px">Checked on 8 Nov 2026 with the real PDF, 6 questions each, on a local 6 GB GPU with transformers 5.22.1 and torch 2.14.1. Six questions confirm the notebook runs; they are not scores. Colab installs the newest packages on the day, so a later release could still change something.</p>
@@ -155,7 +156,7 @@ def colab_guide():
 <p class="lead">Put <code>{PDF_NAME}</code> in Google Drive at <code>My Drive / rag_arch / {PDF_NAME}</code> before running. The folder name is <code>rag_arch</code>, all lowercase, and every notebook uses it. If the PDF isn't there, the notebook shows an upload button partway through the run and saves the file into the folder; uploading first lets you run all cells unattended. The notebook checks the file's fingerprint: with a different PDF it still answers questions but skips the scoring.</p>
 <h3>2. Run each notebook</h3>
 <ol class="lead">
-<li>File → Upload notebook, and pick one of <code>04</code>–<code>08</code> from <code>notebooks/rag_architectures/</code>.</li>
+<li>File → Upload notebook, and pick one of <code>04</code>–<code>09</code> from <code>notebooks/rag_architectures/</code>.</li>
 <li>Runtime → Change runtime type → <b>T4 GPU</b>.</li>
 <li>In the "Run options" cell keep <code>USE_DRIVE = True</code> and <code>DRIVE_FOLDER = "rag_arch"</code>, and set <code>QUICK_TEST = False</code> for real scores; a quick run overwrites the results file.</li>
 <li>Notebook 08 only: set <code>SEC_CONTACT</code> to your name and email. The SEC requires it, and it is sent only to sec.gov. Left blank, the notebook stops and asks for it.</li>
@@ -174,7 +175,7 @@ def colab_guide():
 RESULTS = Path(__file__).parent / "results"
 RUN_NAMES = {"01_bm25_only": "01 BM25", "02_dense_chroma": "02 Dense", "03_bm25_chroma_rerank": "03 Hybrid + rerank",
              "04_vlm_chroma": "04 VLM + Chroma", "05_clip_chroma": "05 CLIP", "06_vlm_qdrant": "06 VLM + Qdrant",
-             "07_colpali_qdrant": "07 ColPali + Qdrant", "portal_xbrl": "08 Portal (SEC XBRL)"}
+             "07_colpali_qdrant": "07 ColPali + Qdrant", "portal_xbrl": "08 Portal (SEC XBRL)", "09_ocr_bm25": "09 OCR + BM25"}
 
 
 def load_runs():
@@ -233,7 +234,7 @@ def scoreboard(runs):
 def run_times_table():
     rows = []
     for name, setup, index, evaluation, total in RUN_TIMES:
-        strong = name == "All eight"
+        strong = name == "All nine"
         cells = "".join(f"<td>{html.escape(c)}</td>" for c in (setup, index, evaluation))
         total_cell = f"<td class='num'><b>{html.escape(total)}</b></td>"
         rows.append(f"<tr{' class=\"total\"' if strong else ''}><td class='id'>{html.escape(name)}</td>{cells}{total_cell}</tr>")

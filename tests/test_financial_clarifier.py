@@ -349,3 +349,50 @@ def test_conversation_endpoint_clarifies_then_runs_agent(monkeypatch, tmp_path):
 
     direct = client.post("/conversation/financial_report_qa", json={"query": "revenue?", "clarify": False}).json()
     assert direct["status"] == "answered" and calls[-1][0] == "revenue?"
+
+
+def test_every_sector_corpus_company_is_mapped_with_the_plan_sector():
+    from scripts.agents.financial_clarifier import BANKS, METRICS, NOT_A_NAME
+    from scripts.common.companies import SECTOR_NAMES
+    plan = [json.loads(line) for line in
+            (ROOT / "data/raw/financial_report_qa/annual_reports/corpus_plan.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert len({r["ticker"] for r in plan}) == 281
+    wrong = {r["ticker"]: (SECTOR_OF.get(r["ticker"]), r["sector"]) for r in plan if SECTOR_OF.get(r["ticker"]) != r["sector"]}
+    assert wrong == {}
+    assert set(SECTOR_OF.values()) == set(SECTOR_NAMES)
+    owners = {}
+    phrases = {p for values in METRICS.values() for p in values}
+    for ticker, aliases in ALIASES.items():
+        assert aliases and NAMES[ticker], ticker
+        for alias in aliases:
+            assert alias == alias.lower() and alias not in phrases and alias not in NOT_A_NAME, (ticker, alias)
+            assert owners.setdefault(alias, ticker) == ticker, f"{alias!r} is used by {owners[alias]} and {ticker}"
+    assert {"JPM", "TFC", "COF", "GS", "MS"} <= BANKS and not BANKS & {"V", "MA", "AXP", "SCHW", "PGR"}
+
+
+@pytest.mark.parametrize("question, expected", [
+    ("What was Truist's net interest income in 2025?", ["TFC"]),
+    ("Berkshire Hathaway float in 2024", ["BRK-B"]),
+    ("BRK.B operating earnings 2024", ["BRK-B"]),
+    ("GE Vernova revenue in 2025", ["GEV"]),
+    ("Compare GE and GE Vernova backlog", ["GE", "GEV"]),
+    ("Cheniere Energy Partners distributions in 2024", ["CQP"]),
+    ("Cheniere revenue in 2024", ["LNG"]),
+    ("What was AR turnover for Walmart in 2025?", ["WMT"]),        # AR = accounts receivable, not Antero
+    ("$AR production in 2024", ["AR"]),
+    ("Did ICE engines matter for GM in 2024?", ["GM"]),
+    ("Compare Williams-Sonoma and Williams Companies revenue", ["WSM", "WMB"]),
+    ("Progressive Corp combined ratio vs Allstate", ["PGR", "ALL"]),
+])
+def test_corpus_company_names_and_tickers_are_recognised(question, expected):
+    assert Clarifier({}).companies_in(question) == expected
+
+
+def test_manifests_without_a_sector_get_it_from_the_ticker(tmp_path):
+    from scripts.common.sector_corpus import read_manifest
+    path = tmp_path / "pdf_manifest.jsonl"
+    path.write_text("".join(json.dumps({"ticker": t, "local_path": "x.pdf"}) + "\n" for t in ("JPM", "XOM", "ZZZZ")),
+                    encoding="utf-8")
+    assert [(r["sector"], r["sector_slug"]) for r in read_manifest(path)] == [
+        ("Banking", "banking"), ("Oil and gas", "oil_and_gas"), ("unknown", "unknown")]
+    assert [r["ticker"] for r in read_manifest(path, "oil_and_gas")] == ["XOM"]

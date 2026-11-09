@@ -145,6 +145,60 @@ PDF manifests are written to:
 data/raw/<domain>/pdf_manifest.jsonl
 ```
 
+### Sector annual-report corpus (1,004 EDGAR ARS PDFs, 13 sectors)
+
+The corpus planned in `docs/annual_report_corpus_plan.html`. The plan ships as `data/raw/financial_report_qa/annual_reports/corpus_plan.jsonl`. The downloader writes one folder and one manifest per sector, plus a combined manifest; every row carries `sector` / `sector_slug` / `sic`:
+
+```text
+data/raw/financial_report_qa/annual_reports/
+  pdf_manifest.jsonl               all sectors (local_path = banking/EDGAR_ARS_JPM_2025.pdf)
+  banking/pdf_manifest.jsonl       banking only (local_path = EDGAR_ARS_JPM_2025.pdf)
+  banking/EDGAR_ARS_JPM_2025.pdf
+  oil_and_gas/...
+```
+
+```powershell
+python -m scripts.downloads.download_annual_report_corpus --dry-run                       # per-sector counts and GB, no network
+python -m scripts.downloads.download_annual_report_corpus --user-agent "capstone-research you@example.com" --sectors banking,oil_and_gas --max-per-sector 20
+# Index by sector: pass the corpus folder as the manifest; every chunk gets sector metadata.
+python -m scripts.rag.financial_ingest ingest --manifest data\raw\financial_report_qa\annual_reports --sectors banking
+python -m scripts.rag.financial_ingest query "net interest income" --sector banking
+python scripts\rag\index_financial_report_pdfs.py --manifest data\raw\financial_report_qa\annual_reports --sectors banking --filter-sector banking --query "net interest income"
+```
+
+- **Reruns:** downloads are resumable. PDFs already in `data/raw/financial_report_qa/edgar/pdfs` are hard-linked or copied instead of fetched.
+- **One collection for all sectors:** sectors are a payload-indexed field, not separate collections.
+- **Older indexes:** `financial_ingest tag-sectors --manifest <corpus>` adds the field to points ingested before it existed.
+- **On Colab:** see the "sector corpus" cells in `notebooks/colab_financial_ingest.ipynb`. Use `--output-dir` to put the corpus on Drive.
+
+### Two ingestion pipelines for visual pages
+
+Both pipelines read the same manifests (a file or the sector corpus folder, with `--sectors`), and both put `sector`, `ticker`, `fiscal_year` and a citable `chunk_id` on every point.
+
+| | Pipeline 1: ColPali, `scripts.rag.financial_ingest` | Pipeline 2: VLM, `scripts.rag.vlm_ingest` |
+|---|---|---|
+| Visual pages become | ColPali multivectors: mean-pooled rows/columns in RAM (first stage), full 1030×128 on disk (MaxSim rerank) | Markdown written by a VLM (tables as Markdown tables, charts as labelled values), then chunked and embedded |
+| Pages | `--visual-pages rule` (tables, charts, pictures, unreadable pages), `tables_charts` or `all` | `--vlm-pages visual`, `tables_charts` or `all`; other pages keep their text layer |
+| Store | Qdrant `annual_reports_visual` (+ `annual_reports_text` for text) | Chroma (default) or Qdrant `vlm_text` (`--store qdrant`) |
+| Model | `vidore/colpali-v1.3-hf` | `--vlm transformers` (Qwen2.5-VL-3B, 4-bit on GPU), `--vlm openai` (llama.cpp / vLLM / Ollama endpoint) or `mock` |
+| Numbers | stay as exact strings in the payload, never in vectors | figures the text layer doesn't print are flagged as `unverified_numbers` |
+
+```powershell
+python -m scripts.rag.financial_ingest ingest --manifest data\raw\financial_report_qa\annual_reports --sectors banking --stages visual --visual-pages tables_charts
+python -m scripts.rag.vlm_ingest ingest --manifest data\raw\financial_report_qa\annual_reports --sectors banking --vlm transformers
+python -m scripts.rag.vlm_ingest query "net interest income" --sector banking
+```
+
+**On Colab:** first run `python -m scripts.common.colab_bundle` and upload `output/colab/capstone_code.zip` to `MyDrive/capstone_rag/`; every notebook that imports `scripts` unpacks it (see `notebooks/README.md`). Then open `notebooks/colab_rag_pipelines.ipynb`, choose `PIPELINE` (`colpali_qdrant` or `vlm_chroma`), the sectors and `SMOKE_TEST`, then Run all. Its defaults are the full plan: all 13 sectors (`SECTORS = ""`), every planned PDF (`MAX_PER_SECTOR = 0`), and ColPali on every page. It calls `scripts/rag/colab_pipeline.py`, which you can also run from a terminal:
+- **Live index:** on the VM's local disk. Each sector's PDFs are copied there from Drive before ingesting (`stage_pdfs`).
+- **Drive:** the PDFs by sector, the VLM transcriptions, and a copy of the index (a Qdrant snapshot or the Chroma folder after each sector; `snapshot_every=N` snapshots every N batches of 10 filings instead).
+- **Next session:** the index is restored from Drive, and finished filings are skipped.
+
+```powershell
+python -m scripts.rag.colab_pipeline run --pipeline vlm_chroma --sectors banking --vlm openai --qdrant-url ""   # local
+python -m scripts.rag.colab_pipeline status --pipeline colpali_qdrant --qdrant-url ""
+```
+
 ## Financial RAG Index
 
 Fast local smoke-test mode with deterministic hashing embeddings:
