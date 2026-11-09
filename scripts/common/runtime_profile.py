@@ -2,8 +2,10 @@
 
 FastAPI calls :func:`apply_profile` at import, and the notebook does the same before
 starting the API and Streamlit. Every value is a default only: an environment variable
-you set yourself always wins. Choose a profile with ``RAG_PROFILE=local|colab``; without
-it, Colab is detected automatically.
+you set yourself always wins. Choose a profile with ``RAG_PROFILE=local|server|colab``; without
+it, Colab is detected automatically and anything else is ``local``. ``server`` is for Docker
+(``docker-compose.yml``) or any VM: the same index folders as ``local``, Qdrant at
+``http://qdrant:6333`` and conversations in ``indexes/state/conversations.sqlite3``.
 
 | Setting | local | colab |
 |---|---|---|
@@ -30,6 +32,10 @@ LOGGER = logging.getLogger(__name__)
 PROFILES = {
     "local": {"RAG_INGEST_DIR": str(ROOT / "indexes/financial_qdrant"), "RAG_VLM_DIR": str(ROOT / "indexes/financial_vlm"),
               "RAG_DEVICE": "cpu", "API_BASE_URL": "http://127.0.0.1:8000"},
+    # Docker / any server: repo-relative index folders (mounted volumes) and the compose service names.
+    "server": {"RAG_INGEST_DIR": str(ROOT / "indexes/financial_qdrant"), "RAG_VLM_DIR": str(ROOT / "indexes/financial_vlm"),
+               "QDRANT_URL": "http://qdrant:6333", "RAG_DEVICE": "cpu", "API_BASE_URL": "http://api:8000",
+               "CONVERSATION_DB": str(ROOT / "indexes/state/conversations.sqlite3")},
     "colab": {"RAG_INGEST_DIR": "/content/rag/colpali_qdrant", "RAG_VLM_DIR": "/content/rag/vlm_chroma",
               "QDRANT_URL": "http://127.0.0.1:6333",
               "API_BASE_URL": "http://127.0.0.1:8000", "HF_HOME": "/content/hf_cache"},

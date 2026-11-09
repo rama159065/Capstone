@@ -6,6 +6,8 @@ Run locally:
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import contextvars
 import logging
@@ -36,6 +38,9 @@ from scripts.agents.rag_agent import (
 )
 from scripts.common.runtime_profile import apply_profile, describe as describe_runtime
 from scripts.agents.financial_clarifier import Clarifier, ConversationStore, name as company_name
+from scripts.common.agent_limits import max_steps
+from scripts.common.companies import NAMES as COMPANY_NAMES, SECTOR_NAMES, SECTOR_OF
+from scripts.common.sector_corpus import parse_sectors, sector_slug
 from scripts.agents.financial_prompting_agent import (
     AgentConfig,
     retrieve_evidence,
@@ -65,9 +70,28 @@ RUNTIME = apply_profile()   # local or colab defaults, before any retrieval runs
 request_id_context: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "api_request_id", default=None
 )
-RATE_LIMIT_REQUESTS = 60
+
+
+def env_int(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, default))
+    except ValueError:
+        return default
+
+
+# Deployment settings: every one is an environment variable (see .env.example).
+RATE_LIMIT_REQUESTS = env_int("RATE_LIMIT_PER_MINUTE", 60)
 RATE_LIMIT_WINDOW_SECONDS = 60
 RATE_LIMIT_MAX_CLIENTS = 10_000
+CORS_ALLOW_ORIGINS = [o.strip() for o in os.getenv("CORS_ALLOW_ORIGINS", "*").split(",") if o.strip()] or ["*"]
+API_AUTH_TOKEN = os.getenv("API_AUTH_TOKEN", "").strip()          # empty = no authentication (local runs)
+PUBLIC_PATHS = {"/health", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}
+DEFAULT_LLM_PROVIDER = os.getenv("DEFAULT_LLM_PROVIDER", "mock")
+DEFAULT_EMBEDDING_PROVIDER = os.getenv("DEFAULT_EMBEDDING_PROVIDER", "hashing")
+if DEFAULT_LLM_PROVIDER not in {"mock", "hosted"} or DEFAULT_EMBEDDING_PROVIDER not in {"hashing", "hosted"}:
+    raise ValueError("DEFAULT_LLM_PROVIDER must be mock|hosted and DEFAULT_EMBEDDING_PROVIDER hashing|hosted")
+ANSWER_CACHE_SECONDS = env_int("ANSWER_CACHE_SECONDS", 0)            # 0 = off
+ANSWER_CACHE_MAX = env_int("ANSWER_CACHE_MAX", 256)
 
 
 class RetrievalEvaluationRequest(BaseModel):
@@ -114,11 +138,11 @@ class ChatRequest(RetrievalEvaluationRequest):
         description="Question to answer using the selected domain's indexed evidence.",
     )
     llm_provider: Literal["mock", "hosted"] = Field(
-        "mock",
+        default_factory=lambda: DEFAULT_LLM_PROVIDER,
         description="Chat backend. Hosted mode requires the LLM endpoint environment variables.",
     )
     embedding_provider: Literal["hashing", "hosted"] = Field(
-        "hashing",
+        default_factory=lambda: DEFAULT_EMBEDDING_PROVIDER,
         description="Embedding backend used for dense retrieval.",
     )
     hash_dimensions: int = Field(
@@ -383,7 +407,7 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ALLOW_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -392,6 +416,53 @@ app.state.rate_limiter = InMemoryRateLimiter()
 
 
 app.router.route_class = MetricsRoute
+
+
+def authorized(request: Request) -> bool:
+    """True when no API key is configured, the path is public, or the request carries the key."""
+    if not API_AUTH_TOKEN or request.url.path in PUBLIC_PATHS or request.method == "OPTIONS":
+        return True
+    supplied = request.headers.get("X-API-Key") or ""
+    bearer = request.headers.get("Authorization") or ""
+    if not supplied and bearer.lower().startswith("bearer "):
+        supplied = bearer[7:].strip()
+    return hmac.compare_digest(supplied.encode("utf-8"), API_AUTH_TOKEN.encode("utf-8"))
+
+
+class AnswerCache:
+    """Answers to identical requests for ``ANSWER_CACHE_SECONDS`` (per process; saves LLM quota on repeats)."""
+
+    NOT_CACHED = {"error", "tool_error", "step_limit"}
+
+    def __init__(self, ttl_seconds: int, max_items: int) -> None:
+        self.ttl, self.max = ttl_seconds, max_items
+        self.items: OrderedDict[str, tuple[float, str]] = OrderedDict()
+        self.lock = Lock()
+
+    @staticmethod
+    def key(route: str, request: BaseModel) -> str:
+        body = request.model_dump(exclude={"enable_langsmith", "langsmith_project"}, mode="json")
+        return hashlib.sha256(json.dumps([route, body], sort_keys=True).encode("utf-8")).hexdigest()
+
+    def get_or_run(self, route: str, request: BaseModel, run) -> dict[str, Any]:
+        if self.ttl <= 0:
+            return run()
+        key, now = self.key(route, request), time.monotonic()
+        with self.lock:
+            hit = self.items.get(key)
+            if hit and hit[0] > now:
+                self.items.move_to_end(key)
+                return {**json.loads(hit[1]), "cache": "hit"}
+        result = run()
+        if result.get("final_status") not in self.NOT_CACHED:
+            with self.lock:
+                self.items[key] = (now + self.ttl, json.dumps(result, default=str))
+                while len(self.items) > self.max:
+                    self.items.popitem(last=False)
+        return result
+
+
+ANSWER_CACHE = AnswerCache(ANSWER_CACHE_SECONDS, ANSWER_CACHE_MAX)
 
 
 @app.middleware("http")
@@ -409,7 +480,17 @@ async def log_request_and_enforce_rate_limit(request: Request, call_next):
     response = None
     try:
         retry_after = request.app.state.rate_limiter.check(client_id)
-        if retry_after is not None:
+        if not authorized(request):
+            response = JSONResponse(
+                status_code=401,
+                content=ApiErrorResponse(
+                    error="unauthorized",
+                    message="Missing or invalid API key: send it as 'X-API-Key' or 'Authorization: Bearer <key>'.",
+                    request_id=request_id,
+                ).model_dump(exclude_none=True),
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        elif retry_after is not None:
             response = JSONResponse(
                 status_code=429,
                 content=ApiErrorResponse(
@@ -736,6 +817,11 @@ def health() -> HealthResponse:
         "service": "capstone-agentic-rag-api",
         "domains": list(ALL_DOMAINS),
         "runtime": describe_runtime(),
+        "auth_required": bool(API_AUTH_TOKEN),
+        "conversation_store": "sqlite" if CONVERSATIONS.path else "memory",
+        "agent_max_steps": max_steps(),
+        "answer_cache_seconds": ANSWER_CACHE.ttl,
+        "defaults": {"llm_provider": DEFAULT_LLM_PROVIDER, "embedding_provider": DEFAULT_EMBEDDING_PROVIDER},
     }
 
 
@@ -770,6 +856,29 @@ def domains() -> DomainsResponse:
     return {"domains": rows}
 
 
+@app.get(
+    "/companies",
+    summary="List the companies the financial corpus covers",
+    description=(
+        "Tickers with company name, sector and the fiscal years that have a filing in the corpus or the served "
+        "index. Optional `sector` (names or slugs, comma-separated) narrows the list. The UI builds its ticker "
+        "and year pickers from this."
+    ),
+    tags=["System"],
+    response_model=ApiResponse,
+    responses=API_ERROR_RESPONSES,
+)
+def companies(sector: str | None = None) -> dict[str, Any]:
+    wanted = parse_sectors(sector)
+    rows = [
+        {"ticker": ticker, "company": COMPANY_NAMES.get(ticker, ticker), "sector": SECTOR_OF.get(ticker),
+         "years": years}
+        for ticker, years in get_clarifier().directory.items()
+        if not wanted or sector_slug(SECTOR_OF.get(ticker) or "") in wanted
+    ]
+    return {"count": len(rows), "sectors": list(SECTOR_NAMES), "companies": rows}
+
+
 @app.post(
     "/chat/financial_report_qa",
     summary="Answer a financial-report question",
@@ -784,6 +893,10 @@ def domains() -> DomainsResponse:
     responses=API_ERROR_RESPONSES,
 )
 def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
+    return ANSWER_CACHE.get_or_run("chat_financial", request, lambda: _chat_financial(request))
+
+
+def _chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
     langsmith = configure_request_tracing(
         enabled=request.enable_langsmith,
         project_name=request.langsmith_project or "capstone-financial-report-qa-api",
@@ -825,7 +938,8 @@ def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
     }
 
 
-CONVERSATIONS = ConversationStore()
+CONVERSATIONS = ConversationStore(ttl_seconds=env_int("CONVERSATION_TTL_SECONDS", 1800),
+                                  path=os.getenv("CONVERSATION_DB") or None)
 _clarifier: Clarifier | None = None
 
 
@@ -863,7 +977,8 @@ def run_financial_report(spec: dict[str, Any]) -> dict[str, Any]:
         "Checks whether the question names a company, fiscal year and measure that the corpus covers. "
         "If something is missing, ambiguous or not available it returns `needs_clarification` with questions and "
         "options, plus `coverage` with the reason when the filings can't answer it, and "
-        "keeps the partial request under `conversation_id` (in memory, per process, 30-minute TTL). "
+        "keeps the partial request under `conversation_id` (30-minute TTL; in SQLite when `CONVERSATION_DB` is set, "
+        "so it survives restarts, otherwise in memory). "
         "A complete question runs the financial agents; a report request runs the report pipeline after "
         "the user confirms. Advice, prediction and prompt-injection messages go straight to the guarded agent."
     ),
@@ -875,6 +990,7 @@ def converse_financial(request: ConversationRequest) -> dict[str, Any]:
     conversation = CONVERSATIONS.get(request.conversation_id)
     if request.clarify:
         outcome = get_clarifier().step(conversation, request.query, ticker=request.ticker, year=request.year)
+        CONVERSATIONS.save(conversation)
     else:
         outcome = {"status": "ready", "action": "answer", "conversation_id": conversation.conversation_id,
                    "resolved_query": request.query, "ticker": request.ticker, "year": request.year, "questions": []}
@@ -907,6 +1023,10 @@ def chat_domain(domain: str, request: ChatRequest) -> dict[str, Any]:
     if domain == FINANCIAL_DOMAIN:
         return chat_financial(FinancialChatRequest(**request.model_dump()))
     domain_config = get_domain_config(domain)
+    return ANSWER_CACHE.get_or_run(f"chat_{domain}", request, lambda: _chat_domain(domain, domain_config, request))
+
+
+def _chat_domain(domain: str, domain_config: DomainConfig, request: ChatRequest) -> dict[str, Any]:
     langsmith = configure_request_tracing(
         enabled=request.enable_langsmith,
         project_name=request.langsmith_project or f"capstone-{domain}-api",

@@ -28,12 +28,14 @@ from typing import Any, Literal, TypedDict
 import chromadb
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
+from langgraph.errors import GraphRecursionError
 from langgraph.graph import END, StateGraph
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts.common.agent_limits import STEP_LIMIT_ANSWER, graph_config, max_steps
 from scripts.agents.financial_clarifier import question_scope
 from scripts.guardrails import checks as guard_checks, patterns as guard_patterns
 from scripts.prompts import financial as prompts
@@ -838,7 +840,11 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
     graph.add_conditional_edges("critic_step", should_repair, {"repair": "answer_step", "finish": "governance_step"})
     graph.add_edge("governance_step", END)
     app = graph.compile()
-    final_state = app.invoke({"query": config.query, "repair_count": 0})
+    try:
+        final_state = app.invoke({"query": config.query, "repair_count": 0}, config=graph_config())
+    except GraphRecursionError:
+        final_state = {"final_status": "step_limit", "answer": STEP_LIMIT_ANSWER,
+                       "citation_check": {"valid": False, "reason": f"step limit of {max_steps()} reached"}}
     return {
         "technique": "agentic_graph",
         "final_status": final_state.get("final_status"),

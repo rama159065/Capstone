@@ -29,8 +29,9 @@ from scripts.common.paths import ROOT
 
 DEFAULT_OUT = ROOT / "output/colab/capstone_code.zip"
 INFO_NAME = "BUNDLE_INFO.json"
-TOP_FILES = {"pyproject.toml", "uv.lock", "README.md", "CLAUDE.md"}
-FOLDERS = ("scripts/", "tests/", "configs/", "data/evaluation/", "data/samples/")
+TOP_FILES = {"pyproject.toml", "uv.lock", "README.md", "CLAUDE.md", "Dockerfile", "docker-compose.yml", ".dockerignore",
+             ".env.example"}
+FOLDERS = ("scripts/", "tests/", "configs/", "deploy/", "data/evaluation/", "data/samples/")
 
 
 def included(path: str) -> bool:

@@ -73,6 +73,8 @@ Smoke runs (`SMOKE_TEST = True`) write to `<pipeline>_smoke` folders and embedde
 
 ## 4. Serving
 
+Deployment (Docker Compose, a VM, HTTPS, settings and costs): [deployment.md](deployment.md).
+
 [scripts/common/runtime_profile.py](../scripts/common/runtime_profile.py) fills the defaults; anything you set yourself wins:
 
 | | local | colab |
@@ -95,16 +97,17 @@ python -m scripts.rag.colab_pipeline query --pipeline colpali_qdrant "net intere
 python -m scripts.rag.colab_pipeline run --pipeline colpali_qdrant --qdrant-url "" --embedding-provider hashing --sectors banking --max-per-sector 2
 ```
 
-## 6. Sizes (estimates; the pilot replaces them)
+## 6. Sizes (page mix measured on the 100 local filings; scaled to ~147,600 pages)
 
 | Item | Size |
 |---|---|
 | PDFs | 11.3 GB (Drive, and staged per sector on local disk) |
-| ColPali full vectors | ~264 KB per selected page: ~17–29 GB for table, chart and image pages (44–75% of ~148k pages) |
-| Pooled vectors (RAM) | ~19 KB per selected page: ~1.3–2.2 GB |
+| Page mix (measured: 14,701 pages) | text or blank 68.9%, table 10.4%, chart or image 7.7%, unreadable 13.1% |
+| ColPali full vectors | ~264 KB per selected page: **~7 GB** for table, chart and image pages (18.0%, ~26,600 pages) |
+| Pooled vectors (RAM) | ~19 KB per selected page: **~0.5 GB** |
 | Snapshot rotation | the new snapshot is written before the old one is deleted: up to 2× on Drive and a local copy on the VM |
 
 ## 7. Known limits
 
-- **VLM at full scale:** one page at a time with `transformers` is too slow for ~89k pages; serve Qwen2.5-VL with vLLM and use `vlm="openai"`.
+- **VLM at full scale:** one page at a time with `transformers` is too slow for the ~46,000 pages `vlm_pages="visual"` selects (tables, charts, images and unreadable pages); serve Qwen2.5-VL with vLLM and use `vlm="openai"`.
 - **Not implemented** from [financial_rag_final_design.md](financial_rag_final_design.md): the 10-K HTML/iXBRL text source and the facts DB. Numbers come from the ARS PDFs only.

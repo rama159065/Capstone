@@ -553,7 +553,8 @@ def restore(args):
         raise SystemExit("restore needs a Qdrant server (--qdrant-url)")
     source, root = Path(args.snapshot_dir), Path(args.root)
     for collection in (TEXT, VISUAL):
-        files = sorted(source.glob(f"{collection}-*.snapshot"), key=lambda p: p.stat().st_mtime)             or sorted(source.glob(f"{LEGACY[collection]}-*.snapshot"), key=lambda p: p.stat().st_mtime)   # before the rename
+        files = (sorted(source.glob(f"{collection}-*.snapshot"), key=lambda p: p.stat().st_mtime)
+                 or sorted(source.glob(f"{LEGACY[collection]}-*.snapshot"), key=lambda p: p.stat().st_mtime))  # before the rename
         if not files:
             print(f"{collection}: no snapshot in {source}")
             continue

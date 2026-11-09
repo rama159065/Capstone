@@ -96,7 +96,23 @@ Domain names are hardcoded in several places: `api/api_app.py` (`NON_FINANCIAL_D
 - Financial coverage: `financial_clarifier.question_scope` decides whether the filings can answer (company, single-figure year, measures banks don't report). `run_technique` uses it to return `not_available` with no figure, and `guardrails.checks.company_scope_check` withholds answers citing a company the question didn't ask about. Company names, aliases and sectors for all 289 tickers live in `common/companies.py` (`COMPANIES`, plus `AMBIGUOUS_TICKERS` for word-like tickers such as AR, ICE and NOW). The clarifier, the manifest reader and both indexers use it, and manifests without a `sector` get it from the ticker. A company added to the corpus needs an entry there; tests check it against the manifests, the sector plan and the frozen evaluation set.
 
 ### API (`scripts/api/api_app.py`)
-Routes: `/health`, `/domains`, `/chat/financial_report_qa`, `/chat/{domain}`, `/retrieve/...`, and `/multimodal/{domain}/{retrieve,chat,visual/retrieve}`. It has an in-memory per-IP rate limiter (60 req/min, per process), `X-Request-ID` correlation, and access logs that never record bodies or prompts. LangSmith tracing is optional (`LANGSMITH_API_KEY` plus `enable_langsmith` or `LANGSMITH_TRACING=true`), and runs degrade gracefully without the key. See `docs/fastapi_api.md`.
+Routes: `/health`, `/domains`, `/companies`, `/chat/financial_report_qa`, `/conversation/financial_report_qa`, `/chat/{domain}`, `/retrieve/...`, and `/multimodal/{domain}/{retrieve,chat,visual/retrieve}`. It has an in-memory per-IP rate limiter (`RATE_LIMIT_PER_MINUTE`, default 60, per process), `X-Request-ID` correlation, and access logs that never record bodies or prompts. LangSmith tracing is optional (`LANGSMITH_API_KEY` plus `enable_langsmith` or `LANGSMITH_TRACING=true`), and runs degrade gracefully without the key. See `docs/fastapi_api.md`.
+
+Deployment settings are all environment variables (`.env.example`):
+- `API_AUTH_TOKEN` requires `X-API-Key` or a Bearer token on every route except `/health` and `/docs`; it is empty (open) locally.
+- `CORS_ALLOW_ORIGINS`.
+- `DEFAULT_LLM_PROVIDER` / `DEFAULT_EMBEDDING_PROVIDER` set the request defaults (`mock`/`hashing` unless set).
+- `ANSWER_CACHE_SECONDS` reuses answers to identical requests (`AnswerCache`, off by default; failures are never cached).
+- `CONVERSATION_DB` stores clarifier state in SQLite (`ConversationStore(path=...)`) so it survives restarts; otherwise it is in memory.
+- `AGENT_MAX_STEPS` (default 10, `common/agent_limits.py`) caps LangGraph node executions. Both graphs are invoked with `recursion_limit = steps + 1`, and hitting the cap returns `final_status="step_limit"` with no answer.
+
+`GET /companies` lists tickers, names, sectors and covered years from the clarifier's directory. That directory is the corpus manifests (plus `RAG_CORPUS_DIR`) **and** the filings whose `text` stage is complete in the served index's `ingest.sqlite3` / `vlm_ingest.sqlite3`, so a server holding only a restored index still knows its coverage. Streamlit builds its ticker/year pickers from it.
+
+### Deployment (`Dockerfile`, `docker-compose.yml`, `deploy/`)
+- **One CPU-only image for both services:** torch comes from the CPU wheel index; `deploy/requirements_from_pyproject.py` drops torch and JupyterLab from the pyproject list. Compose runs it as `api` (uvicorn, 1 worker, `--proxy-headers`) and `ui` (Streamlit), next to `qdrant`, with an optional `https` profile (Caddy + basic auth, `deploy/Caddyfile`).
+- **`RAG_PROFILE=server`** gives repo-relative index dirs, `QDRANT_URL=http://qdrant:6333`, `API_BASE_URL=http://api:8000` and `CONVERSATION_DB=indexes/state/conversations.sqlite3`.
+- **Restoring the Colab index:** `docker compose run --rm --user root api sh deploy/restore_index.sh`. The `qdrant_snapshots` volume is mounted at `/qdrant/snapshots` in both the api and qdrant containers, because `restore` hands Qdrant a `file://` path.
+- **Docs:** `docs/deployment.md` (and `.html`) covers the options, steps and costs.
 
 ### Financial report generation (`scripts/reports/generate_financial_report.py`)
 This is a deterministic pipeline driven by a JSON profile in `configs/financial_reports/`. The source PDF must match the profile's `source_sha256`. Statement rows are parsed by exact label (an ambiguous or missing row is a hard failure; values are never guessed). The arithmetic uses `Decimal` and reconciliations must pass. Charts and tables share one dataset, and the run writes PDF/MD/charts/manifest/trace to `output/pdf/<TICKER>_<YEAR>/<trace_id>/` with atomic writes. An LLM is optional and never supplies the numbers. See `docs/financial_report_generation.md`.

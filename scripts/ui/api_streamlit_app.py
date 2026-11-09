@@ -5,6 +5,14 @@ Start the backend first:
 
 Then launch this UI:
     streamlit run scripts/ui/api_streamlit_app.py
+
+Deployment settings (environment variables, see .env.example):
+    API_BASE_URL            FastAPI address (default http://127.0.0.1:8000)
+    API_AUTH_TOKEN          sent as X-API-Key when the API requires a key
+    API_TIMEOUT_SECONDS     per-request timeout (default 180)
+    DEFAULT_LLM_PROVIDER    mock | hosted, preselected in the sidebar
+    DEFAULT_EMBEDDING_PROVIDER  hashing | hosted
+    UI_SHOW_ADVANCED        1 = open the retrieval and tracing settings by default
 """
 
 from __future__ import annotations
@@ -13,6 +21,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import time
 import urllib.error
 import urllib.request
 from typing import Any
@@ -27,6 +36,14 @@ from scripts.common.companies import SECTOR_NAMES  # noqa: E402 - after the repo
 
 
 DEFAULT_API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")   # set by the runtime profile
+API_AUTH_TOKEN = os.getenv("API_AUTH_TOKEN", "").strip()
+API_TIMEOUT_SECONDS = float(os.getenv("API_TIMEOUT_SECONDS", "180"))
+LLM_PROVIDERS = ["mock", "hosted"]
+EMBEDDING_PROVIDERS = ["hashing", "hosted"]
+DEFAULT_LLM_PROVIDER = os.getenv("DEFAULT_LLM_PROVIDER", "mock")
+DEFAULT_EMBEDDING_PROVIDER = os.getenv("DEFAULT_EMBEDDING_PROVIDER", "hashing")
+SHOW_ADVANCED = os.getenv("UI_SHOW_ADVANCED", "0").lower() in {"1", "true", "yes"}
+_COMPANIES: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 DOMAINS = {
     "financial_report_qa": "Financial Report QA",
     "procurement_vendor": "Procurement and Vendor Review",
@@ -45,15 +62,19 @@ DEFAULT_QUERIES = {
 }
 
 
+def api_headers() -> dict[str, str]:
+    return {"X-API-Key": API_AUTH_TOKEN} if API_AUTH_TOKEN else {}
+
+
 def post_json(api_base: str, path: str, payload: dict[str, Any]) -> dict[str, Any]:
     request = urllib.request.Request(
         f"{api_base.rstrip('/')}{path}",
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", **api_headers()},
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=180) as response:
+        with urllib.request.urlopen(request, timeout=API_TIMEOUT_SECONDS) as response:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
@@ -63,11 +84,34 @@ def post_json(api_base: str, path: str, payload: dict[str, Any]) -> dict[str, An
 
 
 def get_json(api_base: str, path: str) -> dict[str, Any]:
+    request = urllib.request.Request(f"{api_base.rstrip('/')}{path}", headers=api_headers())
     try:
-        with urllib.request.urlopen(f"{api_base.rstrip('/')}{path}", timeout=10) as response:
+        with urllib.request.urlopen(request, timeout=10) as response:
             return json.loads(response.read().decode("utf-8"))
     except Exception as exc:  # noqa: BLE001 - shown as UI status.
         return {"status": "unavailable", "error": str(exc)}
+
+
+def covered_companies(api_base: str, ttl_seconds: float = 300) -> list[dict[str, Any]]:
+    """Tickers, names, sectors and years from GET /companies, cached for a few minutes ([] if unavailable)."""
+    cached = _COMPANIES.get(api_base)
+    if cached and cached[0] > time.monotonic():
+        return cached[1]
+    rows = get_json(api_base, "/companies").get("companies") or []
+    if rows:
+        _COMPANIES[api_base] = (time.monotonic() + ttl_seconds, rows)
+    return rows
+
+
+def ticker_choices(companies: list[dict[str, Any]], sectors: list[str]) -> list[str]:
+    """'' (any company) plus the covered tickers, limited to the chosen sectors."""
+    return [""] + [row["ticker"] for row in companies if not sectors or row.get("sector") in sectors]
+
+
+def year_choices(companies: list[dict[str, Any]], ticker: str) -> list[int | None]:
+    """None (any year) plus the years with a filing for the ticker (all covered years without a ticker)."""
+    years = {year for row in companies if not ticker or row["ticker"] == ticker for year in row.get("years") or []}
+    return [None] + sorted(years, reverse=True)
 
 
 def build_payload(domain: str, query: str, settings: dict[str, Any]) -> dict[str, Any]:
@@ -196,10 +240,15 @@ def answer_options(turn: dict[str, Any], key: str) -> None:
         st.caption("Or type your own answer. Say 'continue' to answer as asked, or 'start over' for a new question.")
 
 
+def option_index(options: list[str], value: str) -> int:
+    return options.index(value) if value in options else 0
+
+
 def sidebar() -> dict[str, Any]:
-    st.sidebar.title("API Settings")
-    api_base = st.sidebar.text_input("FastAPI base URL", DEFAULT_API_BASE)
+    st.sidebar.title("Copilot settings")
     domain = st.sidebar.selectbox("Domain", list(DOMAINS), format_func=lambda value: DOMAINS[value])
+    advanced = st.sidebar.expander("Advanced: backend, retrieval and tracing", expanded=SHOW_ADVANCED)
+    api_base = advanced.text_input("FastAPI base URL", DEFAULT_API_BASE)
     health = get_json(api_base, "/health")
     if health.get("status") == "ok":
         runtime = health.get("runtime") or {}
@@ -208,43 +257,53 @@ def sidebar() -> dict[str, Any]:
     else:
         st.sidebar.warning("Backend unavailable")
 
-    st.sidebar.divider()
-    settings = {
-        "api_base": api_base,
-        "domain": domain,
-        "technique": st.sidebar.selectbox(
-            "Financial technique",
-            ["agentic_graph", "baseline_rag", "structured_few_shot", "decomposition", "self_consistency"],
-            index=0,
-        ),
-        "llm_provider": st.sidebar.selectbox("LLM provider", ["mock", "hosted"], index=0),
-        "embedding_provider": st.sidebar.selectbox("Embedding provider", ["hashing", "hosted"], index=0),
-        "retrieval_mode": st.sidebar.selectbox("Financial retrieval mode", ["hybrid", "dense"], index=0),
-        "clarify": st.sidebar.toggle("Ask clarifying questions (financial)", True,
-                                     help="Ask for a missing company, year or measure before running the agents."),
-        "ticker": st.sidebar.text_input("Financial ticker (optional)", "").strip().upper(),
-        "sectors": st.sidebar.multiselect(
-            "Financial sectors (optional)", list(SECTOR_NAMES),
-            help="Limit evidence to these sectors of the annual-report corpus (ColPali/Qdrant and VLM indexes)."),
-        "year": None,
-        "source_type": st.sidebar.text_input("Source type filter", "").strip(),
-        "top_k": st.sidebar.slider("Final top k", 1, 20, 5),
-        "dense_top_k": st.sidebar.slider("Dense candidates", 1, 100, 30),
-        "bm25_top_k": st.sidebar.slider("BM25 candidates", 1, 100, 30),
-        "hash_dimensions": st.sidebar.selectbox("Hash dimensions", [384, 768, 1024, 1536], index=0),
-        "max_context_chars": st.sidebar.slider("Max context chars", 1000, 64000, 12000, step=1000),
-        "self_consistency_samples": st.sidebar.slider("Self-consistency samples", 1, 5, 3),
-        "enable_guardrails": st.sidebar.toggle("Guardrails", True),
-        "enable_human_review": st.sidebar.toggle("Human review routing", True),
-        "enable_langsmith": st.sidebar.toggle("LangSmith tracing", False),
-        "langsmith_project": st.sidebar.text_input("LangSmith project", ""),
-    }
-    year_value = st.sidebar.text_input("Financial year", "").strip()
-    if year_value:
-        try:
-            settings["year"] = int(year_value)
-        except ValueError:
-            st.sidebar.warning("Year must be numeric; ignoring filter.")
+    settings: dict[str, Any] = {"api_base": api_base, "domain": domain, "ticker": "", "year": None, "sectors": []}
+    if domain == "financial_report_qa":
+        companies = covered_companies(api_base)
+        names = {row["ticker"]: row.get("company") or row["ticker"] for row in companies}
+        settings["clarify"] = st.sidebar.toggle(
+            "Ask clarifying questions", True, help="Ask for a missing company, year or measure before running the agents.")
+        settings["sectors"] = st.sidebar.multiselect(
+            "Sectors (optional)", list(SECTOR_NAMES),
+            help="Limit evidence to these sectors of the annual-report corpus.")
+        if companies:
+            settings["ticker"] = st.sidebar.selectbox(
+                "Company (optional)", ticker_choices(companies, settings["sectors"]),
+                format_func=lambda t: "Any company" if not t else f"{t} - {names.get(t, t)}")
+            settings["year"] = st.sidebar.selectbox(
+                "Fiscal year (optional)", year_choices(companies, settings["ticker"]),
+                format_func=lambda y: "Any year" if y is None else str(y))
+        else:                                    # older API without /companies: free text
+            settings["ticker"] = st.sidebar.text_input("Ticker (optional)", "").strip().upper()
+            year_value = st.sidebar.text_input("Fiscal year (optional)", "").strip()
+            if year_value:
+                try:
+                    settings["year"] = int(year_value)
+                except ValueError:
+                    st.sidebar.warning("Year must be numeric; ignoring filter.")
+        settings["technique"] = st.sidebar.selectbox(
+            "Technique", ["agentic_graph", "baseline_rag", "structured_few_shot", "decomposition", "self_consistency"])
+    else:
+        settings.update(clarify=False, technique="agentic_graph")
+
+    settings.update({
+        "llm_provider": advanced.selectbox("LLM provider", LLM_PROVIDERS,
+                                           index=option_index(LLM_PROVIDERS, DEFAULT_LLM_PROVIDER)),
+        "embedding_provider": advanced.selectbox("Embedding provider", EMBEDDING_PROVIDERS,
+                                                 index=option_index(EMBEDDING_PROVIDERS, DEFAULT_EMBEDDING_PROVIDER)),
+        "retrieval_mode": advanced.selectbox("Financial retrieval mode", ["hybrid", "dense"], index=0),
+        "source_type": advanced.text_input("Source type filter", "").strip(),
+        "top_k": advanced.slider("Final top k", 1, 20, 5),
+        "dense_top_k": advanced.slider("Dense candidates", 1, 100, 30),
+        "bm25_top_k": advanced.slider("BM25 candidates", 1, 100, 30),
+        "hash_dimensions": advanced.selectbox("Hash dimensions", [384, 768, 1024, 1536], index=0),
+        "max_context_chars": advanced.slider("Max context chars", 1000, 64000, 12000, step=1000),
+        "self_consistency_samples": advanced.slider("Self-consistency samples", 1, 5, 3),
+        "enable_guardrails": advanced.toggle("Guardrails", True),
+        "enable_human_review": advanced.toggle("Human review routing", True),
+        "enable_langsmith": advanced.toggle("LangSmith tracing", False),
+        "langsmith_project": advanced.text_input("LangSmith project", ""),
+    })
 
     if st.sidebar.button("Clear chat", use_container_width=True):
         st.session_state["messages"] = []
@@ -254,9 +313,9 @@ def sidebar() -> dict[str, Any]:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Capstone Agentic RAG API UI", layout="wide")
-    st.title("Track B Agentic RAG Copilot")
-    st.caption("Streamlit frontend -> FastAPI backend -> LangGraph Agentic RAG + LangSmith tracing")
+    st.set_page_config(page_title="Annual Report Copilot", layout="wide")
+    st.title("Annual Report Copilot")
+    st.caption("Cited answers from 1,004 SEC annual reports. Streamlit -> FastAPI -> LangGraph agents -> hybrid RAG")
     st.session_state.setdefault("messages", [])
 
     settings = sidebar()

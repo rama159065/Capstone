@@ -1,0 +1,19 @@
+# HTTPS for the demo server (docker compose --profile https up -d).
+# DOMAIN must point at this server (an A record); Caddy gets the certificate itself.
+# BASIC_AUTH_HASH comes from:  docker run --rm caddy:2.8 caddy hash-password --plaintext 'your-password'
+{$DOMAIN} {
+	encode gzip
+
+	# FastAPI (it also checks API_AUTH_TOKEN): https://$DOMAIN/api/health, /api/docs
+	handle_path /api/* {
+		reverse_proxy api:8000
+	}
+
+	# Streamlit UI behind a login
+	handle {
+		basic_auth {
+			{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+		}
+		reverse_proxy ui:8501
+	}
+}

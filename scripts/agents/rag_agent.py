@@ -19,11 +19,13 @@ from typing import Any, Iterable, Literal, TypedDict
 import chromadb
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langgraph.errors import GraphRecursionError
 from langgraph.graph import END, StateGraph
 from pypdf import PdfReader
 from rank_bm25 import BM25Okapi
 from sklearn.feature_extraction.text import HashingVectorizer
 
+from scripts.common.agent_limits import STEP_LIMIT_ANSWER, graph_config, max_steps
 from scripts.guardrails import checks as guard_checks, patterns as guard_patterns
 from scripts.prompts import domain as prompts
 from scripts.observability.langsmith_utils import (
@@ -883,7 +885,11 @@ def run_domain_agent(
     graph.add_conditional_edges("output_filter_step", continue_or_end, {"continue": "citation_critic_step", "end": "citation_critic_step"})
     graph.add_edge("citation_critic_step", "governance_step")
     graph.add_edge("governance_step", END)
-    final_state = graph.compile().invoke({"query": query})
+    try:
+        final_state = graph.compile().invoke({"query": query}, config=graph_config())
+    except GraphRecursionError:
+        final_state = {"final_status": "step_limit", "answer": STEP_LIMIT_ANSWER,
+                       "citation_check": {"valid": False, "reason": f"step limit of {max_steps()} reached"}}
 
     hits = final_state.get("evidence", [])
     return {

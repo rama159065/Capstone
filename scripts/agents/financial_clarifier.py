@@ -27,9 +27,11 @@ questions about them.
 """
 from __future__ import annotations
 
+from contextlib import closing, contextmanager
 from dataclasses import asdict, dataclass, field
 from functools import lru_cache
 import json
+import os
 from pathlib import Path
 import re
 import threading
@@ -117,15 +119,57 @@ INTENT_CHOICES = {"Key figures": "figure", "Explain performance": "explain",
                   "Trend over the years": "trend", "Full financial report": "report"}
 
 
-def load_directory(paths=MANIFESTS):
-    """ticker -> sorted fiscal years with a filing in the corpus."""
+def corpus_manifests():
+    """Manifests that describe the corpus: the repo's, plus ``RAG_CORPUS_DIR``'s when a server mounts the PDFs elsewhere."""
+    paths = list(MANIFESTS)
+    if os.getenv("RAG_CORPUS_DIR"):
+        paths.append(Path(os.environ["RAG_CORPUS_DIR"]) / "pdf_manifest.jsonl")
+    return paths
+
+
+def index_state_files():
+    """Ingest state of the indexes this process serves. They list the filings that are searchable even
+    when the PDFs and their manifests stay on Drive (a server that only restored the index)."""
+    return [Path(os.environ[env]) / name for env, name in (("RAG_INGEST_DIR", "ingest.sqlite3"),
+                                                          ("RAG_VLM_DIR", "vlm_ingest.sqlite3")) if os.getenv(env)]
+
+
+def indexed_filings(path):
+    """(ticker, year) of every filing whose text is in the index described by an ingest state file."""
+    import sqlite3
+    try:
+        with closing(sqlite3.connect(f"file:{Path(path).as_posix()}?mode=ro", uri=True)) as db:
+            columns = {row[1] for row in db.execute("PRAGMA table_info(filings)")}
+            where = "status='complete'" + (" AND stage='text'" if "stage" in columns else "")
+            doc_ids = [row[0] for row in db.execute(f"SELECT DISTINCT doc_id FROM filings WHERE {where}")]
+    except sqlite3.Error:
+        return []
+    found = []
+    for doc_id in doc_ids:
+        match = re.fullmatch(r"edgar_ars_(.+)_(\d{4})", doc_id or "")
+        if match:
+            found.append((match.group(1).upper(), int(match.group(2))))
+    return found
+
+
+def load_directory(paths=None):
+    """ticker -> sorted fiscal years with a filing in the corpus.
+
+    By default: the corpus manifests plus every filing the served indexes hold. Explicit ``paths`` read only those
+    manifests.
+    """
     years: dict[str, set[int]] = {}
-    for path in paths:
+    for path in (corpus_manifests() if paths is None else paths):
         if Path(path).exists():
-            for line in Path(path).read_text(encoding="utf-8").split("\n"):
+            for line in Path(path).read_text(encoding="utf-8").splitlines():
                 if line.strip():
                     row = json.loads(line)
                     years.setdefault(row["ticker"].upper(), set()).add(int(row["year"]))
+    if paths is None:
+        for state in index_state_files():
+            if state.exists():
+                for ticker, year in indexed_filings(state):
+                    years.setdefault(ticker, set()).add(year)
     return {ticker: sorted(values) for ticker, values in sorted(years.items())}
 
 
@@ -553,14 +597,44 @@ def question_scope(query, ticker=None):
 
 
 class ConversationStore:
-    """In-memory, per-process conversation state with a TTL (like the API rate limiter)."""
+    """Conversation state with a TTL: in memory (default), or in SQLite when ``path`` is given.
 
-    def __init__(self, ttl_seconds=1800, max_conversations=10_000):
+    SQLite (``CONVERSATION_DB`` in the API) keeps a conversation across API restarts and
+    between worker processes, so a deployment can restart or scale without losing a
+    half-answered clarification. Only the slots are stored, never answers or evidence.
+    """
+
+    def __init__(self, ttl_seconds=1800, max_conversations=10_000, path=None):
         self.ttl, self.max = ttl_seconds, max_conversations
         self.items: dict[str, Conversation] = {}
         self.lock = threading.Lock()
+        self.path = Path(path) if path else None
+        if self.path:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with self._connect() as db:
+                db.execute("CREATE TABLE IF NOT EXISTS conversations "
+                           "(conversation_id TEXT PRIMARY KEY, updated REAL NOT NULL, state TEXT NOT NULL)")
+
+    @contextmanager
+    def _connect(self):
+        """One short-lived connection per call: committed on success, always closed."""
+        import sqlite3
+        db = sqlite3.connect(self.path, timeout=10)
+        try:
+            db.execute("PRAGMA journal_mode=WAL")
+            with db:
+                yield db
+        finally:
+            db.close()
+
+    @staticmethod
+    def _load(state: str) -> Conversation:
+        data = json.loads(state)
+        return Conversation(**{**data, "slots": Slots(**data.get("slots") or {})})
 
     def get(self, conversation_id=None):
+        if self.path:
+            return self._get_sqlite(conversation_id)
         with self.lock:
             now = time.time()
             for key in [k for k, c in self.items.items() if now - c.updated > self.ttl]:
@@ -573,6 +647,34 @@ class ConversationStore:
             self.items[conversation.conversation_id] = conversation
             return conversation
 
+    def _get_sqlite(self, conversation_id):
+        with self.lock, self._connect() as db:
+            db.execute("DELETE FROM conversations WHERE updated < ?", (time.time() - self.ttl,))
+            if conversation_id:
+                row = db.execute("SELECT state FROM conversations WHERE conversation_id=?", (conversation_id,)).fetchone()
+                if row:
+                    return self._load(row[0])
+            count = db.execute("SELECT COUNT(*) FROM conversations").fetchone()[0]
+            if count >= self.max:
+                db.execute("DELETE FROM conversations WHERE conversation_id IN "
+                           "(SELECT conversation_id FROM conversations ORDER BY updated LIMIT ?)", (count - self.max + 1,))
+            conversation = Conversation(conversation_id or str(uuid.uuid4()))
+            db.execute("INSERT OR REPLACE INTO conversations VALUES (?, ?, ?)",
+                       (conversation.conversation_id, conversation.updated, json.dumps(asdict(conversation))))
+            return conversation
+
+    def save(self, conversation):
+        """Persist a conversation after a turn changed it (in memory the object is already the stored one)."""
+        if not self.path:
+            return
+        conversation.updated = time.time()
+        with self.lock, self._connect() as db:
+            db.execute("INSERT OR REPLACE INTO conversations VALUES (?, ?, ?)",
+                       (conversation.conversation_id, conversation.updated, json.dumps(asdict(conversation))))
+
     def drop(self, conversation_id):
         with self.lock:
             self.items.pop(conversation_id, None)
+            if self.path:
+                with self._connect() as db:
+                    db.execute("DELETE FROM conversations WHERE conversation_id=?", (conversation_id,))

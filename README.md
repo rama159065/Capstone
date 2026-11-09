@@ -357,6 +357,23 @@ API access logs include request IDs, route, status, and duration without recordi
 
 Chat endpoints return generated answers only when citations validate against retrieved evidence; otherwise the answer is withheld and the response explains the grounding failure. This verifies evidence/citation consistency, not semantic entailment or factual correctness. Financial chat also returns `not_available` when the filings can't answer the question; see [docs/fastapi_api.md](docs/fastapi_api.md#when-the-filings-cant-answer).
 
+## Deployment
+
+The API, UI and Qdrant ship as one Docker Compose stack: CPU only, using the hosted LLM. It runs the same on a laptop or on any cloud VM, and optionally adds HTTPS with a login.
+
+```bash
+cp .env.example .env                                   # LLM endpoint, API_AUTH_TOKEN, ...
+docker compose up -d qdrant
+docker compose run --rm --user root api sh deploy/restore_index.sh   # Colab snapshots in ./snapshots
+docker compose up -d --build                           # UI http://127.0.0.1:8501, API http://127.0.0.1:8000/docs
+docker compose --profile https up -d                   # on a VM with DOMAIN set: https://$DOMAIN
+```
+
+[docs/deployment.md](docs/deployment.md) ([HTML](docs/deployment.html)) covers:
+- the deployment options (laptop, Colab, a VM, Qdrant Cloud);
+- every setting;
+- costs: building the index, closed-model VLM transcription, serving, and the LLM per 1,000 questions.
+
 ## Execute By Domain
 
 Use hashing embeddings and mock LLM mode for local smoke tests. For final capstone runs, replace `--embedding-provider hashing` with `--embedding-provider hosted` after setting the embedding endpoint variables, and use `--llm-provider hosted` after setting the chat endpoint variables.
