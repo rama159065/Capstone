@@ -39,6 +39,17 @@ a { color:var(--accent); }
 </div>
 
 
+<h2>About the source: the SEC, EDGAR and the filings</h2>
+<p><b>SEC</b> is the <b>U.S. Securities and Exchange Commission</b>, the US federal agency that regulates the securities markets, created in 1934 after the 1929 crash. Its job is to protect investors and keep markets fair. A central rule is that public companies must disclose accurate financial information regularly. It is roughly the US counterpart of SEBI in India.</p>
+<p><b>EDGAR</b> stands for <b>Electronic Data Gathering, Analysis, and Retrieval</b>. It is the SEC's online system where companies submit their filings and anyone can read them for free at sec.gov. It holds filings back to the mid-1990s.</p>
+<p><b>Who uploads the reports:</b> the companies themselves, not the SEC. Every company with publicly traded US securities must file. Usually its finance and legal teams prepare the documents, often through a filing agent, a firm that formats and submits filings on companies' behalf. That is why so many URLs in this corpus contain <code>0001193125</code>: that prefix is the filer ID of Donnelley Financial, a large filing agent. The SEC reviews some filings, but it doesn't write them or vouch for the numbers. The company and its auditor are responsible for those.</p>
+<table><thead><tr><th>Form</th><th>What it is</th><th>How this project uses it</th></tr></thead><tbody>
+<tr><td class='id'>10-K</td><td>The official annual report: audited financial statements, risk factors and management's discussion. It follows a strict format, mostly text and tables.</td><td>Source of the XBRL figures that notebooks 01 and 08 look up</td></tr>
+<tr><td class='id'>ARS</td><td>The Annual Report to Shareholders: the designed report sent to shareholders, with charts, photos, a CEO letter and the financial statements. Filed as a PDF on EDGAR, and required electronically since 2023.</td><td>The 1,004 PDFs in this plan, including the 100 already on disk</td></tr>
+<tr><td class='id'>XBRL data</td><td>Machine-readable tags on the 10-K's numbers, such as <code>NetIncomeLoss = 17,661,000,000</code>, published through the SEC's <code>companyfacts</code> service.</td><td>The portal answers and the ground-truth figures</td></tr>
+</tbody></table>
+<p><b>Why the SEC asks for a name and e-mail:</b> EDGAR is free and public, but the SEC asks every automated program to identify itself in the request header, so it can contact whoever runs a script that misbehaves. It also limits traffic to 10 requests a second. That is why the notebooks have a <code>SEC_CONTACT</code> setting, and why the download plan below stays at 8 requests a second.</p>
+
 <h2>1. Availability by sector</h2>
 <p>A company counts as available when EDGAR lists at least one ARS filed as a PDF since July 2022. Sectors come from each company's SEC industry code (SIC); payment networks (Visa, Mastercard, PayPal) are moved from business services to financial services, and Amazon to retail. Up to 4 recent reports are taken per company, largest companies first, until the sector's quota is met.</p>
 <table><thead><tr><th>Sector</th><th>Companies scanned</th><th>With ARS PDFs</th><th>ARS PDFs on EDGAR</th><th>Selected PDFs</th><th>Selected companies</th><th>Already on disk</th><th>Largest selected</th></tr></thead>
