@@ -374,6 +374,8 @@ docker compose --profile https up -d                   # on a VM with DOMAIN set
 - every setting;
 - costs: building the index, closed-model VLM transcription, serving, and the LLM per 1,000 questions.
 
+Capstone build plan: [docs/capstone_implementation_plan.md](docs/capstone_implementation_plan.md). Feature specifications: [docs/features_to_implement.md](docs/features_to_implement.md) ([HTML](docs/features_to_implement.html)).
+
 ## Execute By Domain
 
 Use hashing embeddings and mock LLM mode for local smoke tests. For final capstone runs, replace `--embedding-provider hashing` with `--embedding-provider hosted` after setting the embedding endpoint variables, and use `--llm-provider hosted` after setting the chat endpoint variables.

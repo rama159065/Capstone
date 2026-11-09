@@ -48,6 +48,8 @@ An analyst copilot over **1,004 SEC annual reports (Form ARS)** from **281 compa
 
 ## 2. Feature catalogue
 
+The full build specification for every feature is in [features_to_implement.md](features_to_implement.md) ([HTML](features_to_implement.html)): design, files, Pydantic contracts, tests and metrics.
+
 Priorities:
 - **P0:** required for the submission.
 - **P1:** strong demo value; build if P0 is on track.
