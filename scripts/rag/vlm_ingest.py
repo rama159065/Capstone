@@ -421,6 +421,7 @@ class VlmIngest:
         if self.args.tickers:
             wanted = {normalize_ticker(t) for t in self.args.tickers.split(",")}
             rows = [r for r in rows if normalize_ticker(r["ticker"]) in wanted]
+        rows = fi.in_preset(rows, getattr(self.args, "corpus_preset", "full"))
         rows = rows[:self.args.limit_filings] if self.args.limit_filings else rows
         todo = [r for r in rows if self.args.force or not self.state.done(r["document_id"], "vlm", self.pipeline)]
         print(f"{len(rows)} filings selected, {len(todo)} to ingest with {self.vlm_signature} -> {self.args.store}", flush=True)
@@ -565,6 +566,8 @@ def build_parser():
     ingest.add_argument("--pdf-dir", type=Path, help="where the PDFs are (default: next to the manifest)")
     ingest.add_argument("--sectors", help="comma-separated sector names or slugs")
     ingest.add_argument("--tickers", help="comma-separated subset")
+    ingest.add_argument("--corpus-preset", choices=["full", "min500"], default="full",
+                        help="full = every filing in the manifest; min500 = only the 509-filing variant's filings")
     ingest.add_argument("--limit-filings", type=int)
     ingest.add_argument("--max-pages-per-pdf", type=int, help="smoke runs only")
     ingest.add_argument("--download-missing", action="store_true")

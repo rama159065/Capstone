@@ -66,7 +66,8 @@ Files: [Dockerfile](../Dockerfile), [docker-compose.yml](../docker-compose.yml),
 git clone <repo> && cd Capstone          # or unzip the code bundle
 cp .env.example .env                     # LLM endpoint, API_AUTH_TOKEN, APP_UID/APP_GID (id -u / id -g)
 
-# 1. The index. Copy from Drive (MyDrive/capstone_rag/snapshots/colpali_qdrant/) into ./snapshots:
+# 1. The index. Copy from Drive (MyDrive/capstone_rag/snapshots/colpali_qdrant/) into ./snapshots
+#    (on a VM: rclone or a GCS bucket, see 3.4):
 #    annual_reports_text-*.snapshot (+ .json), annual_reports_visual-*.snapshot, ingest.sqlite3, pages/
 docker compose up -d qdrant
 docker compose run --rm --user root api sh deploy/restore_index.sh
@@ -111,6 +112,103 @@ With only embedded Qdrant (`QDRANT_URL` unset), run just the API. Streamlit talk
 ### 3.3 Colab (option C)
 
 Run `colab_rag_pipelines.ipynb` cells 9–12 (`cp.serve`). It uses the `colab` runtime profile.
+
+### 3.4 Getting the index from Google Drive onto the VM
+
+A VM **can't mount your Drive the way Colab does**: `drive.mount` only works inside Colab. The VM **copies** what it needs onto its own disk once, and Qdrant then restores from that local copy. Don't point Qdrant at a live Drive mount: it is slow and fails if the connection drops.
+
+**What to copy:**
+
+| Copy | From Drive | Size | Needed? |
+|---|---|---|---|
+| Qdrant snapshots + `.json` checksums | `capstone_rag/snapshots/colpali_qdrant/annual_reports_*.snapshot*` | ~2–3 GB text only, ~10 GB with ColPali (estimate) | **Yes**: this is the index |
+| `ingest.sqlite3`, `pages/` | same folder | small | **Yes**: the list of indexed filings and the page analysis |
+| PDFs | `capstone_rag/annual_reports/<sector>/*.pdf` | 11.3 GB | Only to show page images in citations |
+| Code zip | `capstone_rag/capstone_code.zip` | 3.5 MB | No, if the VM runs `git clone` |
+
+**Which method:**
+
+| VM on | Use |
+|---|---|
+| **GCP** | **Option B (bucket):** no Drive login on the server, and the fastest transfer |
+| AWS, Azure or another cloud | **Option A2 (service account)**, or Option A1 (a one-time browser approval) |
+
+#### Option A1: rclone with your Google login (any cloud)
+
+rclone talks to the Drive API. The VM has no browser, so you approve the login once on your PC.
+
+```bash
+# On the VM
+curl https://rclone.org/install.sh | sudo bash          # Ubuntu's apt version is often old
+rclone config
+#   n (new remote) → name: gdrive → storage: drive
+#   client_id / client_secret: blank
+#   scope: drive.readonly                               (read-only is enough)
+#   service_account_file: blank → advanced config: n
+#   "Use auto config?": n   → it prints:  rclone authorize "drive" "eyJ..."
+```
+
+```powershell
+# On your PC (it has a browser)
+winget install Rclone.Rclone
+rclone authorize "drive" "eyJ..."      # sign in with the Drive account, then copy the token it prints
+```
+
+```bash
+# Back on the VM: paste the token, finish the config, then copy
+rclone lsd gdrive:capstone_rag                          # check access
+rclone copy gdrive:capstone_rag/snapshots/colpali_qdrant /opt/copilot/snapshots -P --transfers 4
+# optional, for citation page images:
+# rclone copy gdrive:capstone_rag/annual_reports /opt/copilot/data/raw/financial_report_qa/annual_reports -P
+cd /opt/copilot && docker compose up -d qdrant
+docker compose run --rm --user root api sh deploy/restore_index.sh
+```
+
+rclone checks each copied file against Drive's MD5 checksum. The restore script then checks every snapshot against the SHA-256 in its `.json` file.
+
+#### Option A2: rclone with a service account (no personal login on the VM)
+
+1. In the Google Cloud console, create a service account and download a JSON key to `/opt/copilot/secrets/sa.json` (`chmod 600`).
+2. In Drive, **share the `capstone_rag` folder** with the service account's e-mail address as **Viewer**.
+3. In `rclone config`, set `service_account_file = /opt/copilot/secrets/sa.json` and scope `drive.readonly`.
+4. A shared folder appears under "Shared with me", so add the flag:
+
+```bash
+rclone copy gdrive:capstone_rag/snapshots/colpali_qdrant /opt/copilot/snapshots --drive-shared-with-me -P
+```
+
+The VM then sees only that one folder. Delete the key when the project ends.
+
+#### Option B: Google Cloud Storage bucket (GCP VMs)
+
+Copy from Drive to a bucket inside Colab, where Drive is already mounted. The VM then reads the bucket with its own built-in identity, with no OAuth step.
+
+```python
+# Colab cell, after ingestion
+from google.colab import auth; auth.authenticate_user()
+!gcloud storage buckets create gs://capstone-rag-<yourname> --location=us-central1   # once
+!gcloud storage cp -r /content/drive/MyDrive/capstone_rag/snapshots/colpali_qdrant gs://capstone-rag-<yourname>/snapshots/
+```
+
+```bash
+# On the GCP VM (needs read-only storage access; the default service account has it)
+gcloud storage cp -r "gs://capstone-rag-<yourname>/snapshots/colpali_qdrant/*" /opt/copilot/snapshots/
+cd /opt/copilot && docker compose up -d qdrant
+docker compose run --rm --user root api sh deploy/restore_index.sh
+```
+
+Copying from a bucket to a VM in the same region should be the fastest option. Storing ~20 GB costs well under $1 a month at standard bucket prices (check the current rate). Put the bucket in the VM's region.
+
+#### Option C: manual download and upload (last resort)
+
+Download from the Drive website to your PC, then copy the files to the VM with `scp -r snapshots/ user@<vm-ip>:/opt/copilot/`. This is fine for the code zip. For 10–20 GB it depends on your home upload speed and can take hours.
+
+`gdown` (a shared-link downloader) works for single files but is unreliable for large folders and hits Drive's download limits. Don't use it for the snapshots.
+
+**Security, whichever option:**
+- Use read-only access (`drive.readonly`, bucket viewer).
+- Keep `~/.config/rclone/rclone.conf` and any service-account key out of Git, with `chmod 600`.
+- Revoke the rclone token, or delete the key or bucket, after grading.
 
 ---
 
@@ -244,13 +342,212 @@ With the measured page mix, **100 GB of Drive is enough**. 2 TB is only needed i
 | Scenario | Index build | Storage | Serving | LLM | **Total** |
 |---|---|---|---|---|---|
 | Lean: open models, demo from a laptop | Colab Pro $9.99 | Drive 100 GB $1.99 | $0 | Track B quota | **≈ $12** |
-| Recommended: plus a public VM for 2 weeks | $9.99 | $1.99 | ≈ $50 | Track B quota | **≈ $62** |
+| **Recommended: plus a public VM for 2 weeks** (all components: §6) | $9.99 | $1.99 | ≈ $50 | Track B quota | **≈ $62** |
 | Plus a cheap closed VLM on the no-text pages | $9.99 | $1.99 | ≈ $50 | + $8–44 | **≈ $70–106** |
 | Plus a mid-tier closed VLM, tables included | $9.99 | $1.99 | ≈ $50 | + $95–198 | **≈ $157–260** |
+| **509-filing variant**, public server for 2 weeks (§5.7) | $9.99 | $1.99 | ≈ $25 | Track B quota | **≈ $37** |
+
+### 5.7 Variant: 509 filings (the 500-document minimum)
+
+This variant indexes 509 filings: the largest companies, 41 filings per sector, plus every Adobe and Salesforce filing, so all 42 filings the frozen eval set uses are included. The selection is explained in [capstone_implementation_plan.md](capstone_implementation_plan.md) section 10. Choose it with `CORPUS = "min500"` in the Colab notebook, or `--corpus-preset min500` on the command line.
+
+| Item | 1,004 filings | **509 filings** |
+|---|---|---|
+| PDFs | 11.3 GB | **5.36 GB** |
+| Pages | ~147,600 | **~74,800** |
+| No-text pages (charts, images, unreadable) | ~30,600 | **~15,500** |
+| No-text + tables | ~45,900 | **~23,300** |
+| ColPali pages / full vectors | ~26,600 / ~7 GB | **~13,500 / ~3.6 GB** |
+| Colab, text + OCR (L4) | ~5–8 h | **~2.5–3.5 h** (one session) |
+| Colab, + ColPali | ~8–15 h | **~4–7 h** |
+| Server | 4 vCPU / 16 GB / 100 GB (≈ $50 for 2 weeks) | **2 vCPU / 8 GB / 50 GB** (GCP e2-standard-2: ≈ $23 + disk ≈ $2.5 ≈ **$25**) |
+| Drive | 100 GB plan | 100 GB plan (the free 15 GB is too tight once snapshots and their rotation copies are added) |
+
+**Closed vision model on the ~15,500 no-text pages** (batch prices, typical – high, as in §5.3):
+
+| Model | No-text pages only | With tables (~23,300) |
+|---|---|---|
+| Claude Haiku 5.5 | $4 – $8 | $6 – $12 |
+| GPT-5.6 Luna | $10 – $18 | $15 – $27 |
+| Gemini 3.1 Flash-Lite | $12 – $22 | $18 – $34 |
+| Gemini 3.8 Flash (to 31 Dec 2026) | $32 – $58 | $48 – $87 |
+| Claude Sonnet 5.5 | $85 – $155 | $128 – $233 |
+| Claude Opus 5.5 / Gemini 4 Argon / GPT-5.6 Sol | $171 – $310 | $256 – $466 |
+
+**Total for the capstone with 509 filings:**
+
+| Scenario | Index build | Storage | Serving | LLM | **Total** |
+|---|---|---|---|---|---|
+| Demo from a laptop | Colab Pro $9.99 | Drive 100 GB $1.99 | $0 | Track B quota | **≈ $12** |
+| **Public server for 2 weeks** | $9.99 | $1.99 | ≈ $25 | Track B quota | **≈ $37** |
+| Plus a cheap closed VLM on the no-text pages | $9.99 | $1.99 | ≈ $25 | + $4–22 | **≈ $41–59** |
+
+The page counts scale the measured page mix (§5.1). Times are estimates. Server prices are third-party list prices.
 
 ---
 
-## 6. Not verified here
+## 6. Recommended setup: every component for development and deployment
+
+This is the **"Recommended: plus a public VM for 2 weeks" (≈ $62)** scenario from §5.6:
+- you develop on your PC;
+- you build the index on Colab;
+- the graded demo runs on one cloud VM for the last two weeks.
+
+```mermaid
+flowchart LR
+  subgraph Dev["Development: your PC"]
+    IDE["VS Code + Claude Code<br>Git · uv · Python 3.12"] --> TESTS["pytest (offline)<br>mock LLM · hashing embeddings"]
+    IDE --> DD["Docker Desktop<br>compose test run"]
+  end
+  subgraph Build["Index build: Colab + Drive"]
+    NB["colab_rag_pipelines.ipynb<br>L4 GPU · Qdrant binary"] --> DRV["Google Drive 100 GB<br>PDFs · snapshots · code zip"]
+  end
+  subgraph Prod["Deployment: cloud VM, 2 weeks"]
+    CAD["Caddy :443<br>HTTPS + login"] --> UIC["ui: Streamlit :8501"]
+    CAD --> APIC["api: FastAPI :8000"]
+    UIC --> APIC
+    APIC --> QD["qdrant :6333"]
+  end
+  GH["GitHub repo"] --> IDE
+  GH --> Prod
+  DRV -->|"snapshots → deploy/restore_index.sh"| QD
+  APIC -.-> LLM["Track B LLM endpoint"]
+  APIC -.-> LS["LangSmith"]
+  NB -.-> SEC["SEC EDGAR"]
+```
+
+### 6.1 Accounts and external services
+
+| Component | Used for | Dev | Deploy | Cost (2 weeks) |
+|---|---|---|---|---|
+| GitHub repository (private) | Code, history, the submission link; the VM pulls from it | ✓ | ✓ | free |
+| Google account + **Google One 100 GB** | Drive: PDFs (11.3 GB), Qdrant snapshots, code zip | ✓ | ✓ (snapshots copied to the VM) | $1.99/month |
+| rclone (or a GCS bucket on GCP) | Copying the snapshots from Drive to the VM (§3.4) | — | ✓ | free (bucket well under $1/month) |
+| **Colab Pro** | GPU for ingestion (L4), longer sessions | ✓ | — | $9.99/month |
+| SEC EDGAR | Downloading the 1,004 PDFs and XBRL facts. Needs a contact e-mail in `SEC_USER_AGENT`, ≤ 10 requests/s | ✓ | — | free |
+| **Track B LLM endpoint** (+ embeddings endpoint) | All answers: `LLM_API_BASE/KEY/MODEL` | ✓ | ✓ | team quota |
+| **LangSmith** | Traces, evaluation experiments, the trace dashboard for the submission | ✓ | ✓ | free developer tier |
+| **Cloud account** (GCP, AWS, Azure, …) with billing | The VM | — | ✓ | ≈ $50 (§6.6) |
+| Hostname for HTTPS | Caddy gets a Let's Encrypt certificate for it | — | ✓ | free with `<vm-ip>.sslip.io`, or ~$10–15/year for your own domain |
+| Hugging Face Hub (no account needed) | Model downloads: MiniLM, reranker, ColPali | ✓ | ✓ (first start; then cached) | free |
+
+### 6.2 Development workstation (your PC)
+
+| Component | Version / setting | Purpose |
+|---|---|---|
+| Windows 11 + PowerShell | — | Current environment |
+| Python | 3.12 | Runtime (`requires-python >= 3.12`) |
+| **uv** | latest | `uv sync` builds `.venv` from `uv.lock` |
+| Git | any recent | Version control; `scripts.common.colab_bundle` uses it to build the code zip |
+| VS Code + Claude Code | — | Editing, running and debugging |
+| **Docker Desktop** | with Compose v2 | **To install:** test the compose stack locally before the VM (the image hasn't been built yet) |
+| JupyterLab | from `pyproject.toml` | Running notebooks locally |
+| Local test setup | `pytest tests --basetemp tmp/pt` | 341 offline tests; mock LLM, hashing embeddings, no network |
+| Local index folders | `indexes/` (Chroma for 5 domains, models), `data/processed/` | Development without Colab |
+
+### 6.3 Software stack (same in development and the container)
+
+Versions are the ones locked in `uv.lock`. The container installs the `pyproject.toml` ranges, with torch from the CPU wheel index.
+
+| Layer | Component | Version | Role |
+|---|---|---|---|
+| UI | Streamlit | 1.66.1 | Chat, pickers, citations, tables and charts |
+| API | FastAPI | 0.162.0 | Routes, OpenAPI docs, auth, rate limit, answer cache |
+| API | Uvicorn | 0.54.0 | ASGI server, **1 worker**, `--proxy-headers` |
+| Contracts | Pydantic | 2.14.0 | Request and response models, tool schemas, `FinancialAnswer` |
+| Agents | LangGraph | 1.2.14 | Agent graphs (planner → executor → critic, 10-step cap) |
+| Agents | LangChain / langchain-core | 1.4.4 / 1.6.9 | Messages, prompts, text splitters, tools |
+| Observability | LangSmith SDK | 0.14.7 | Tracing (`LANGSMITH_TRACING=true`) |
+| Vector DB client | qdrant-client | 1.20.0 | Hybrid search (dense + BM25 sparse, RRF) |
+| Vector DB (other domains) | ChromaDB | 1.5.9 | Older Chroma index for the five non-financial domains |
+| Lexical | rank-bm25 | 0.2.2 | BM25 for the Chroma domains |
+| Embeddings / rerank | sentence-transformers | 5.7.0 | MiniLM query embeddings, cross-encoder rerank |
+| Models runtime | transformers / torch (CPU) | 4.57.6 / 2.14.1 | ColPali and VLM at build time; CPU inference when serving |
+| PDF | PyMuPDF | 1.28.2 | Page text, tables, rendering page images for citations |
+| OCR | RapidOCR + onnxruntime | 3.10.0 / 1.31.0 | Unreadable pages (build time) |
+| Reports | ReportLab | 4.5.1 | Report PDF |
+| Data | pandas | 3.0.6 | Evaluation tables |
+| Tests | pytest | 9.1.1 | Offline test suite |
+
+### 6.4 Models
+
+| Model | Where it runs | When | Size / note |
+|---|---|---|---|
+| **Track B hosted LLM (≤ 8B)** | Hosted endpoint | Every question | No GPU on our side |
+| `sentence-transformers/all-MiniLM-L6-v2` | Colab (build) and the API container (queries) | Build + serving | 384-d; ~90 MB; must be the same model at build and query time |
+| `cross-encoder/ms-marco-MiniLM-L-6-v2` | API container | Serving (when `RAG_RERANKER_MODEL` is set) | ~90 MB, CPU |
+| `vidore/colpali-v1.3-hf` | Colab GPU | Build only (optional visual pages) | ~3B parameters; serving uses it only if `RAG_FIN_VISUAL=1` |
+| RapidOCR detection and recognition models | Colab | Build only | Bundled with `rapidocr` |
+| Qwen2.5-VL-3B (or a closed vision model) | Colab / API | Build only, pipeline 2 | Optional; see §5.3 |
+
+### 6.5 Index build environment (Colab)
+
+| Component | Setting |
+|---|---|
+| Notebook | [notebooks/colab_rag_pipelines.ipynb](../notebooks/colab_rag_pipelines.ipynb) (`PIPELINE=colpali_qdrant`, `SMOKE_TEST=False`) |
+| Runtime | **L4 GPU**, High-RAM; background execution needs Pro+ |
+| Code | `MyDrive/capstone_rag/capstone_code.zip` (from `python -m scripts.common.colab_bundle`) |
+| Vector DB | Qdrant server binary on the Colab VM (`127.0.0.1:6333`), started by the notebook |
+| Inputs | `corpus_plan.jsonl` (1,004 rows) → PDFs on Drive `annual_reports/<sector>/` |
+| Outputs to keep | Drive `snapshots/colpali_qdrant/`: `annual_reports_text-*.snapshot`, `annual_reports_visual-*.snapshot` (+ `.json` checksums), `ingest.sqlite3`, `pages/` |
+| Check | `cp.coverage(s)`: 1,004 planned → downloaded → ingested |
+
+### 6.6 Deployment VM: 2 weeks
+
+| Component | Setting |
+|---|---|
+| **VM** | 4 vCPU, 16 GB RAM, e.g. GCP `e2-standard-4` (us-central1, ≈ $0.134/hour). **509-filing variant:** 2 vCPU / 8 GB (`e2-standard-2`) |
+| Disk | 100 GB balanced SSD (509-filing variant: 50 GB): images ~5 GB, Qdrant ~10–15 GB with ColPali (~3 GB text only), model cache ~1 GB, snapshots during restore |
+| OS | Ubuntu 24.04 LTS |
+| Container runtime | Docker Engine + Compose plugin |
+| Firewall | Inbound **22** (SSH, your IP only), **80** and **443** (Caddy). 8000, 8501 and 6333 are **not** opened |
+| Static IP + DNS | A reserved external IP; hostname `<ip>.sslip.io` or your domain's A record |
+| Code | `git clone` of the repo (or the code zip) in `/opt/copilot` |
+| Secrets | `/opt/copilot/.env` (chmod 600): `LLM_API_*`, `API_AUTH_TOKEN`, `LANGSMITH_API_KEY`, `BASIC_AUTH_HASH`. Never in Git |
+| Index | Snapshots copied from Drive to `./snapshots` with rclone (any cloud) or through a GCS bucket (GCP), then `deploy/restore_index.sh`. See §3.4 |
+
+**Containers** (from [docker-compose.yml](../docker-compose.yml)):
+
+| Service | Image | Port | Volumes | Health check |
+|---|---|---|---|---|
+| `qdrant` | `qdrant/qdrant` (pin to the Colab version or newer) | 6333 (internal) | `qdrant_storage`, `qdrant_snapshots` | TCP 6333 |
+| `api` | `annual-report-copilot` (built from `Dockerfile`, CPU) | 8000 (localhost only) | `./indexes`, `./data/processed`, `./snapshots` (read-only), `qdrant_snapshots` | `GET /health` |
+| `ui` | same image | 8501 (localhost only) | same | `GET /_stcore/health` |
+| `caddy` (`https` profile) | `caddy:2.8` | **80, 443** | `deploy/Caddyfile`, `caddy_data` (certificates) | — |
+
+**Operations on the VM:**
+
+| Concern | How |
+|---|---|
+| Start / update | `docker compose --profile https up -d --build` after `git pull` |
+| Logs | `docker compose logs -f api ui` (request IDs, no bodies or prompts) |
+| Health | `https://<host>/api/health` (public), the container health checks |
+| Traces | LangSmith project `annual-report-copilot` |
+| Backups | The index is rebuilt from the Drive snapshots; conversations (`indexes/state`) are disposable |
+| Security | `API_AUTH_TOKEN` on the API, a basic-auth login on the UI, HTTPS only, SSH by key |
+| Shutdown after grading | `docker compose down`, then delete the VM **and its disk and reserved IP**, or billing continues |
+
+**VM cost for 14 days:** 0.134 × 24 × 14 ≈ **$45** compute + ≈ **$5** disk = **≈ $50**. Using it only from 18 to 25 November, plus a few days' buffer for grading, keeps it there.
+
+### 6.7 Complete bill of materials
+
+| # | Item | Phase | Cost |
+|---|---|---|---|
+| 1 | GitHub repository | Dev + deploy | $0 |
+| 2 | PC with Python 3.12, uv, Git, VS Code, Docker Desktop | Dev | $0 |
+| 3 | Google One 100 GB (Drive) | Build + deploy | $1.99 |
+| 4 | Colab Pro (L4 GPU) | Build | $9.99 |
+| 5 | SEC EDGAR access (contact e-mail) | Build | $0 |
+| 6 | Track B LLM + embeddings endpoint | Dev + deploy | quota |
+| 7 | LangSmith developer account | Dev + deploy | $0 |
+| 8 | Cloud VM 4 vCPU / 16 GB / 100 GB, 14 days | Deploy | ≈ $50 |
+| 9 | Hostname (`sslip.io`) + Let's Encrypt certificate via Caddy | Deploy | $0 (own domain ~$10–15/year) |
+| 10 | Open-source stack (§6.3) and models (§6.4) | All | $0 |
+| | **Total** | | **≈ $62** |
+
+---
+
+## 7. Not verified here
 
 - **Docker isn't installed on the development PC**, so `docker compose build` and `up` haven't been run yet. Everything they run is tested without Docker; the tests check the compose and `.env.example` wiring. The first build on the target machine is the real check, and it takes about 10 minutes to pull Python and the CPU torch wheel.
 - **Snapshot restore into a Qdrant container** depends on the shared `/qdrant/snapshots` volume. The restore code is tested; the container path is not.

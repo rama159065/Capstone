@@ -69,6 +69,7 @@ class Settings:
     pipeline: str = "colpali_qdrant"
     drive_root: Path = Path("/content/drive/MyDrive/capstone_rag") if IN_COLAB else ROOT / "indexes/pipelines_drive"
     work: Path = Path("/content/rag") if IN_COLAB else ROOT / "indexes/pipelines"
+    corpus_preset: str = "full"             # "full" = 1,004 filings; "min500" = the 509-filing variant (Track B minimum)
     sectors: str = ""                       # names or slugs, comma-separated; "" = every downloaded sector
     max_per_sector: int | None = 20         # download: largest companies first; None = the whole plan
     years: str | None = None                # download: e.g. "2024,2025"
@@ -100,6 +101,8 @@ class Settings:
     def __post_init__(self):
         if self.pipeline not in PIPELINES:
             raise ValueError(f"pipeline must be one of {PIPELINES}")
+        if self.corpus_preset not in ("full", "min500"):
+            raise ValueError("corpus_preset must be 'full' or 'min500'")
         self.drive_root, self.work = Path(self.drive_root), Path(self.work)
 
     @property
@@ -190,7 +193,7 @@ def start_qdrant(s: Settings):
 def download(s: Settings):
     """Fetch the planned PDFs of the chosen sectors to Drive (resumable; verified SEC User-Agent required)."""
     from scripts.downloads import download_annual_report_corpus as dl
-    argv = ["--output-dir", str(s.corpus)]
+    argv = ["--output-dir", str(s.corpus), "--preset", s.corpus_preset]
     argv += ["--user-agent", s.user_agent] if s.user_agent else []
     argv += ["--sectors", s.sectors] if s.sectors else []
     argv += ["--max-per-sector", str(s.max_per_sector)] if s.max_per_sector else []
@@ -272,7 +275,8 @@ def stage(s: Settings, sector):
 
 def common_argv(s: Settings, sector, corpus=None):
     argv = ["--root", str(s.root), "--manifest", str(corpus or s.corpus), "--sectors", sector,
-            "--embedding-provider", s.embedding_provider, "--embedding-model", s.embedding_model]
+            "--embedding-provider", s.embedding_provider, "--embedding-model", s.embedding_model,
+            "--corpus-preset", s.corpus_preset]
     argv += ["--limit-filings", str(s.limit_filings)] if s.limit_filings else []
     argv += ["--max-pages-per-pdf", str(s.max_pages_per_pdf)] if s.max_pages_per_pdf else []
     return argv
@@ -380,16 +384,17 @@ def state_path(s: Settings):
 
 
 def coverage(s: Settings, show=True):
-    """Every planned filing (corpus_plan.jsonl, 1,004) by sector: downloaded? ingested? failed?
+    """Every planned filing by sector: downloaded? ingested? failed? The plan is ``corpus_plan.jsonl`` narrowed
+    to ``s.corpus_preset`` (full: 1,004 filings; min500: 509).
 
     A filing counts as ingested when every stage of this pipeline is complete (colpali_qdrant: s.stages;
     vlm_chroma: its one stage). The totals answer "is the whole plan in the index?".
     """
     import sqlite3
     from scripts.common.sector_corpus import PLAN_NAME, read_jsonl, sector_slug
-    from scripts.downloads.download_annual_report_corpus import DEFAULT_DIR, document_id
+    from scripts.downloads.download_annual_report_corpus import DEFAULT_DIR, document_id, preset_rows
     plan_file = s.corpus / PLAN_NAME if (s.corpus / PLAN_NAME).exists() else DEFAULT_DIR / PLAN_NAME
-    planned = {document_id(r): sector_slug(r["sector"]) for r in read_jsonl(plan_file)}
+    planned = {document_id(r): sector_slug(r["sector"]) for r in preset_rows(read_jsonl(plan_file), s.corpus_preset)}
     try:
         downloaded = {r["document_id"] for r in read_manifest(s.corpus)}
     except FileNotFoundError:
@@ -417,7 +422,7 @@ def coverage(s: Settings, show=True):
         elif doc_id in downloaded:
             row["pending"] += 1
     total = sum(rows.values(), Counter())
-    report = {"pipeline": s.pipeline, "plan": str(plan_file),
+    report = {"pipeline": s.pipeline, "plan": str(plan_file), "corpus_preset": s.corpus_preset,
               "by_sector": {slug: {k: c[k] for k in ("planned", "downloaded", "ingested", "pending", "failed")}
                             for slug, c in rows.items()},
               "total": {k: total[k] for k in ("planned", "downloaded", "ingested", "pending", "failed")},

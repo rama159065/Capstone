@@ -95,7 +95,8 @@ flowchart TB
   - Run `colab_rag_pipelines.ipynb` with `PIPELINE=colpali_qdrant`, `SMOKE_TEST=False` and ColPali off for the first pass (text + OCR only).
   - It works sector by sector and snapshots to Drive.
   - Restore into the server with `deploy/restore_index.sh`.
-- **Done when:** `cp.coverage(s)["total"]["ingested"] == 1004` (or ≥ 500 with the rest listed as failed), and `GET /companies` lists 281 tickers.
+- **Done when:** `cp.coverage(s)["total"]["ingested"] == 1004`, and `GET /companies` lists 281 tickers.
+- **509-filing variant:** 509 filings ingested (41 per sector + Adobe and Salesforce; all 42 eval-set filings included) and 143 tickers listed. Indexing fits one Colab session, so P1 finishes on 11 Nov and P2 needs only 143 companies' XBRL facts. Run with `CORPUS = "min500"` (notebook) or `--corpus-preset min500` (CLI). See [capstone_implementation_plan.md](capstone_implementation_plan.md) section 10.
 - **Metric:** recall@5 on the 86-question set (E2).
 
 ### P2. XBRL facts store

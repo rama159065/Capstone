@@ -25,6 +25,7 @@ instead of fetched. SEC asks for a User-Agent with a contact e-mail and at most
 10 requests/second; the limit here is shared by all worker threads.
 
     python -m scripts.downloads.download_annual_report_corpus --dry-run
+    python -m scripts.downloads.download_annual_report_corpus --dry-run --preset min500     # the 509-filing variant
     python -m scripts.downloads.download_annual_report_corpus --user-agent "capstone-research you@example.com" \
         --sectors banking,insurance --max-per-sector 20
     # Colab, from a clone of the repo, PDFs on Drive:
@@ -58,6 +59,13 @@ DEFAULT_DIR = ROOT / "data/raw/financial_report_qa/annual_reports"
 DEFAULT_REUSE_DIR = ROOT / "data/raw/financial_report_qa/edgar/pdfs"
 DOMAIN = "financial_report_qa"
 MAX_REQUESTS_PER_SECOND = 8          # SEC allows 10
+EVAL_SET = ROOT / "data/evaluation/financial_report_qa/eval_set_v1.jsonl"
+# Corpus presets (docs/capstone_implementation_plan.md section 10):
+#   full    every planned filing (1,004)
+#   min500  Track B's 500-document minimum: the 41 largest filings per sector, plus every filing of the
+#           companies the frozen eval set asks about, so no eval question loses its source (509 filings)
+PRESETS = ("full", "min500")
+MIN500_PER_SECTOR = 41
 CHUNK = 1 << 20
 
 
@@ -110,7 +118,37 @@ class RateLimiter:
         time.sleep(max(0.0, start - now))
 
 
+def eval_tickers(path: Path = EVAL_SET) -> set[str]:
+    """Tickers of the filings the frozen eval set cites (``edgar_ars_<TICKER>_<YEAR>``)."""
+    if not Path(path).exists():
+        return set()
+    import re
+    return {m.group(1).upper() for m in re.finditer(r"edgar_ars_([A-Za-z.-]+)_\d{4}", Path(path).read_text(encoding="utf-8"))}
+
+
+def preset_rows(plan: list[dict], preset: str = "full") -> list[dict]:
+    """The plan rows a corpus preset covers, in plan order."""
+    if preset not in PRESETS:
+        raise SystemExit(f"unknown corpus preset {preset!r}; choose from {PRESETS}")
+    if preset == "full":
+        return list(plan)
+    per_sector, keep, eval_cos = Counter(), set(), eval_tickers()
+    for row in sorted(plan, key=lambda r: (sector_slug(r["sector"]), r.get("rank", 0), r["ticker"], -int(r["year"]))):
+        slug = sector_slug(row["sector"])
+        if per_sector[slug] < MIN500_PER_SECTOR:
+            per_sector[slug] += 1
+            keep.add(document_id(row))
+    keep |= {document_id(r) for r in plan if r["ticker"].upper() in eval_cos}
+    return [r for r in plan if document_id(r) in keep]
+
+
+def preset_document_ids(preset: str = "full", plan_path: Path | None = None) -> set[str]:
+    plan = read_jsonl(plan_path or DEFAULT_DIR / PLAN_NAME)
+    return {document_id(r) for r in preset_rows(plan, preset)}
+
+
 def select(plan: list[dict], args) -> list[dict]:
+    plan = preset_rows(plan, getattr(args, "preset", "full") or "full")
     sectors = parse_sectors(args.sectors)
     tickers = {t.strip().upper() for t in args.tickers.split(",")} if args.tickers else None
     years = {int(y) for y in args.years.split(",")} if args.years else None
@@ -320,6 +358,9 @@ def parse_args(argv=None) -> argparse.Namespace:
     parser.add_argument("--plan", type=Path, default=DEFAULT_DIR / PLAN_NAME)
     parser.add_argument("--output-dir", type=Path, help="corpus root (default: the plan's folder)")
     parser.add_argument("--user-agent", default=os.getenv("SEC_USER_AGENT"), help="must contain a contact e-mail")
+    parser.add_argument("--preset", choices=PRESETS, default="full",
+                        help="full = all 1,004 planned filings; min500 = the 509-filing variant (41 per sector + "
+                             "every filing of the eval-set companies)")
     parser.add_argument("--sectors", help="comma-separated names or slugs, e.g. banking,oil_and_gas (default: all 13)")
     parser.add_argument("--tickers", help="comma-separated subset")
     parser.add_argument("--years", help="comma-separated fiscal years, e.g. 2024,2025")

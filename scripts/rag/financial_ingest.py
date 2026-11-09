@@ -580,6 +580,15 @@ def restore(args):
 
 # ----------------------------------------------------------------------------- ingest
 
+def in_preset(rows, preset="full"):
+    """Only the filings a corpus preset covers (full = all of them). Downloaded extras are left alone, not deleted."""
+    if not preset or preset == "full":
+        return rows
+    from scripts.downloads.download_annual_report_corpus import preset_document_ids
+    keep = preset_document_ids(preset)
+    return [r for r in rows if r["document_id"] in keep]
+
+
 def read_manifest(path, sectors=None):
     """Rows of a manifest file, or of a sector corpus folder (<dir>/<sector>/pdf_manifest.jsonl), optionally some sectors."""
     return read_corpus_manifest(path, sectors)
@@ -754,6 +763,7 @@ class Ingest:
         if self.args.tickers:
             wanted = {t.strip().upper() for t in self.args.tickers.split(",")}
             rows = [r for r in rows if r["ticker"].upper() in wanted]
+        rows = in_preset(rows, getattr(self.args, "corpus_preset", "full"))
         rows = rows[:self.args.limit_filings] if self.args.limit_filings else rows
         todo = [r for r in rows if self.pending(r)]
         print(f"{len(rows)} filings selected, {len(todo)} with pending stages {self.stages}", flush=True)
@@ -1073,6 +1083,8 @@ def build_parser():
     ingest.add_argument("--download-missing", action="store_true", help="fetch missing PDFs from EDGAR (SHA-256 checked)")
     ingest.add_argument("--user-agent", default=os.getenv("SEC_USER_AGENT"))
     ingest.add_argument("--tickers", help="comma-separated subset")
+    ingest.add_argument("--corpus-preset", choices=["full", "min500"], default="full",
+                        help="full = every filing in the manifest; min500 = only the 509-filing variant's filings")
     ingest.add_argument("--limit-filings", type=int)
     ingest.add_argument("--max-pages-per-pdf", type=int, help="smoke runs only")
     ingest.add_argument("--stages", default="text,visual", help="text (CPU), visual (GPU) or both")

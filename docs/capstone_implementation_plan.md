@@ -19,7 +19,7 @@
 | Report and demo | 25% | Evaluation tables, the failure taxonomy, and the "what we did to compensate for a small model" section |
 
 Status column in this document:
-- **Exists:** in the repo and tested; 325 tests pass.
+- **Exists:** in the repo and tested; 341 tests pass.
 - **Extend:** partly there.
 - **New:** to build.
 
@@ -268,7 +268,7 @@ The report includes the counts by label and 2–3 worked examples of each.
 | Tue 11 – Wed 12 | Ingest the text collection (text + OCR, ColPali off) sector by sector on Colab; snapshot to Drive. In parallel: XBRL companyfacts for 281 companies → `facts.sqlite`; `lookup_fact` tool | `cp.coverage` = 1,004 ingested; facts tool tests pass |
 | Thu 13 | `calculate` tool (`Decimal`, cited inputs) and number grounding in the critic | Unit tests; a calculation answer shows its formula and sources |
 | Fri 14 | `compare_companies` and the comparison planner (F11, F18); trend and growth (F7) | Comparison questions in the eval set answer with a table |
-| Sat 15 | Persistent state (LangGraph `SqliteSaver`), the 10-step cap, the token budget, Pydantic retry | Multi-turn test survives an API restart |
+| Sat 15 | Token budget, Pydantic retry. (Persistent state and the 10-step cap were done on 10 Nov) | Malformed tool output is retried, then falls back |
 | Sun 16 | Streamlit: comparison table, trend chart, citation panel, HITL approve button | UI walk-through |
 | Mon 17 – Tue 18 | **Evaluation runs:** baselines, RAG only, full agent, ablations; recall@k; latency and cost | `eval/` results JSON and tables |
 | Wed 19 | Failure taxonomy labelling; red-team (20+ prompts, 10 injected chunks, PII) | Taxonomy and red-team tables |
@@ -276,6 +276,8 @@ The report includes the counts by label and 2–3 worked examples of each.
 | Fri 21 – Sun 23 | 12-page report, architecture diagram, demo script, backup video | Draft reviewed |
 | Mon 24 | Full dry run of the demo on the deployed URL; fix only blockers | Freeze code; tag `v1.0` |
 | **Tue 25** | **Submit:** repository link, report, evaluation report, trace dashboard, demo | — |
+
+**Smaller corpus:** the 509-filing variant (section 10) finishes indexing a day earlier and costs about $37 instead of $62.
 
 **If the schedule slips, cut in this order:** F19 memo, then F4/F5, then the ColPali visual demo. Never cut: evaluation, the failure taxonomy, deployment.
 
@@ -313,6 +315,9 @@ The report includes the counts by label and 2–3 worked examples of each.
 
 ## 9. Risks and decisions to confirm with the mentor
 
+Choosing between the full corpus and the 509-filing variant is also worth confirming early (section 10).
+
+
 | Risk | Mitigation |
 |---|---|
 | Track B says "no GPU", but ColPali, OCR on GPU and VLM ingestion use a Colab GPU | Keep the **graded path GPU-free** (text + CPU OCR + hosted LLM). Present ColPali and VLM as an optional offline extension. Confirm with the mentor |
@@ -321,3 +326,85 @@ The report includes the counts by label and 2–3 worked examples of each.
 | Ingestion overruns on Colab | Text-only first (ColPali off); sector by sector with snapshots; use 500 filings if needed (the rubric minimum) |
 | Token quota on the endpoint | Answer cache, evaluation runs once per configuration, small `k` |
 | Deployment network or credentials fail during the demo | Laptop compose fallback and a recorded video |
+
+---
+
+## 10. Variant: 509 filings (the 500-document minimum)
+
+Track B requires **500–2,000 documents**. Indexing about half the corpus meets that, fits a single Colab indexing session, and roughly halves storage and server cost. The pipeline stays the same, and the rest of the corpus can be added later by rerunning with `MAX_PER_SECTOR = 0`.
+
+### 10.1 Which filings
+
+| Selection | Filings | Companies | Size | Eval filings covered |
+|---|---|---|---|---|
+| Largest companies, 40 filings per sector | 490 | 138 | 5.1 GB | 38 / 42: misses Adobe 2024–25 and Salesforce 2025–26 (and is below 500) |
+| Only fiscal years 2024 + 2025 | 522 | 272 | 6.4 GB | 35 / 42, and only 2 years per company, which weakens trends |
+| **Chosen: 41 per sector + all Adobe and Salesforce filings** | **509** | **143** | **5.36 GB** | **42 / 42** |
+
+**Coverage of the chosen set:**
+- All 13 sectors, about 10 of the largest companies in each (5 in real estate, about 8 in materials).
+- 106 of the 143 companies have all 4 years; 12 have only one filing (cut at the sector limit).
+- **Eval set v1 is unchanged:** every one of the 42 filings it uses is included.
+
+### 10.2 What changes
+
+| | 1,004 filings | **509 filings** |
+|---|---|---|
+| Pages (147 per filing) | ~147,600 | **~74,800** |
+| Download | 11.3 GB, 30–60 min | **5.4 GB, 15–30 min** |
+| Colab indexing, text + OCR (L4) | ~5–8 h, several sessions | **~2.5–3.5 h, one session** |
+| Plus ColPali image vectors | +2.5–7.5 h | **+1.3–3.8 h** |
+| Image vectors on disk | ~7 GB | **~3.6 GB** |
+| Pages with no usable text (for a vision model) | ~30,600 | **~15,500** |
+| XBRL facts download | 281 companies | **143 companies** |
+| `GET /companies` lists | 281 tickers | **143 tickers** |
+| Server | 4 vCPU / 16 GB / 100 GB | **2 vCPU / 8 GB / 50 GB** |
+| **Total spend** | ≈ $62 | **≈ $37** |
+
+Times and sizes are estimates scaled from earlier measurements; costs are in [deployment.md](deployment.md) §5.7.
+
+### 10.3 Day plan differences
+
+| Date | Change |
+|---|---|
+| Mon 10 | Download about 509 PDFs instead of 1,004. Exit check: 509 on Drive, `download_summary.json` has no failures |
+| **Tue 11** | Indexing (text + OCR) finishes in one session, by the evening. Exit check: 509 ingested; `GET /companies` lists 143 tickers |
+| Wed 12 | **The day freed up:** the XBRL facts store (143 companies) and `lookup_fact`, a day earlier than planned. Spend the later slack on evaluation runs, or on F4/F13/F14 |
+| Thu 20 | Deploy on the smaller server (2 vCPU / 8 GB) |
+
+Every other row of the day plan (section 6) stays the same.
+
+### 10.4 How to run it
+
+The corpus size is one setting, **`CORPUS`**, used by download, ingestion and coverage alike:
+
+| Setting | Filings | Companies | Size |
+|---|---|---|---|
+| `full` | 1,004 | 281 | 11.3 GB |
+| `min500` | 509 | 143 | 5.36 GB |
+
+**On Colab:** in [colab_rag_pipelines.ipynb](../notebooks/colab_rag_pipelines.ipynb) cell 1, set `CORPUS = "min500"`, `MAX_PER_SECTOR = 0` and `SMOKE_TEST = False`. Then run as usual.
+
+**From the command line:**
+
+```bash
+python -m scripts.downloads.download_annual_report_corpus --preset min500 --output-dir <drive>/annual_reports
+python -m scripts.rag.colab_pipeline run --pipeline colpali_qdrant --corpus-preset min500 --max-per-sector 0
+python -m scripts.rag.colab_pipeline coverage --pipeline colpali_qdrant --corpus-preset min500   # planned = 509
+python -m scripts.rag.financial_ingest ingest --manifest <drive>/annual_reports --corpus-preset min500 ...
+```
+
+**What `min500` selects:** the 41 largest filings per sector, plus every filing of the companies the frozen eval set asks about. It is defined in `download_annual_report_corpus.preset_rows`.
+
+**Behaviour:**
+- Ingestion skips downloaded filings outside the preset; nothing is deleted. Switching to `full` later just adds the rest, and filings already ingested are skipped.
+- `cp.coverage` counts against the preset, so "planned" is 509.
+
+### 10.5 What we give up, and how the report should say it
+
+| Limit | Effect | How to present it |
+|---|---|---|
+| About 10 companies per sector | Rankings (F14) and sector benchmarks (F16) cover sector leaders only | The UI and the report say "largest ~10 companies by sector" |
+| 138 companies not indexed | Questions about them get `not_available`, listing what is covered | Correct behaviour: the clarifier reads coverage from the index |
+| 12 companies with one filing | No trend for those companies | Alternative selection: top 10 companies × all years per sector |
+| Half the planned corpus | — | "509 of 1,004 planned filings; the pipeline resumes to the full corpus with `MAX_PER_SECTOR = 0`" |
