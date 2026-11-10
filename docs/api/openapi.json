@@ -1,0 +1,2875 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Track B Multi-Agent Operations Copilot API",
+    "summary": "Cited, domain-aware retrieval and Agentic RAG services.",
+    "description": "FastAPI backend for the Track B Operations Copilot. Provides health and domain discovery, citation-grounded chat, evidence retrieval, guardrails, human-review routing, and optional LangSmith tracing. Request and response schemas below are the API contract.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Check API health",
+        "description": "Returns the service status and the domain identifiers accepted by domain-specific routes.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested domain was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The client exceeded the request rate limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/domains": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "List available domains",
+        "description": "Returns display metadata and default questions for financial and non-financial domains.",
+        "operationId": "domains_domains_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DomainsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested domain was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The client exceeded the request rate limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "List the companies the financial corpus covers",
+        "description": "Tickers with company name, sector and the fiscal years that have a filing in the corpus or the served index. Optional `sector` (names or slugs, comma-separated) narrows the list. The UI builds its ticker and year pickers from this.",
+        "operationId": "companies_companies_get",
+        "parameters": [
+          {
+            "name": "sector",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sector"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested domain was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The client exceeded the request rate limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chat/financial_report_qa": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Answer a financial-report question",
+        "description": "Runs the selected financial QA technique over annual-report evidence. Optional ticker and year fields constrain the source evidence. The response includes a concise explanation of its evidence and citation checks.",
+        "operationId": "chat_financial_chat_financial_report_qa_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinancialChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialChatResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested domain was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The client exceeded the request rate limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversation/financial_report_qa": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Chat turn with clarification",
+        "description": "Checks whether the question names a company, fiscal year and measure that the corpus covers. If something is missing, ambiguous or not available it returns `needs_clarification` with questions and options, plus `coverage` with the reason when the filings can't answer it, and keeps the partial request under `conversation_id` (30-minute TTL; in SQLite when `CONVERSATION_DB` is set, so it survives restarts, otherwise in memory). A complete question runs the financial agents; a report request runs the report pipeline after the user confirms. Advice, prediction and prompt-injection messages go straight to the guarded agent.",
+        "operationId": "converse_financial_conversation_financial_report_qa_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested domain was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The client exceeded the request rate limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chat/{domain}": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Answer a domain question",
+        "description": "Runs the shared guarded Agentic RAG workflow for a non-financial domain. Supported domain identifiers are returned by `GET /domains`. Financial report QA uses the dedicated `/chat/financial_report_qa` operation. The response includes a concise explanation of its evidence and workflow checks.",
+        "operationId": "chat_domain_chat__domain__post",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Domain"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested domain was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The client exceeded the request rate limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/retrieve/financial_report_qa": {
+      "post": {
+        "tags": [
+          "Retrieval"
+        ],
+        "summary": "Retrieve financial-report evidence",
+        "description": "Searches annual-report evidence and returns ranked records without generating an answer.",
+        "operationId": "retrieve_financial_retrieve_financial_report_qa_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetrieveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrieveResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested domain was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The client exceeded the request rate limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/retrieve/{domain}": {
+      "post": {
+        "tags": [
+          "Retrieval"
+        ],
+        "summary": "Retrieve domain evidence",
+        "description": "Searches a non-financial domain's corpus and returns ranked evidence records. Supported domain identifiers are returned by `GET /domains`; financial retrieval uses the dedicated `/retrieve/financial_report_qa` operation.",
+        "operationId": "retrieve_domain_retrieve__domain__post",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Domain"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetrieveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrieveResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested domain was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The client exceeded the request rate limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/multimodal/{domain}/retrieve": {
+      "post": {
+        "tags": [
+          "Multimodal RAG"
+        ],
+        "summary": "Retrieve multimodal evidence",
+        "description": "Hybrid dense + sparse search over the local Qdrant `docs_text` collection (text and OCR'd pages). `final_status` is `evidence_found`, `insufficient_evidence` or `tool_error`.",
+        "operationId": "retrieve_multimodal_multimodal__domain__retrieve_post",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Domain"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MultimodalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Retrieve Multimodal Multimodal  Domain  Retrieve Post"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested domain was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The client exceeded the request rate limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The local vision model or visual index is unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/multimodal/{domain}/chat": {
+      "post": {
+        "tags": [
+          "Multimodal RAG"
+        ],
+        "summary": "Answer with the local multimodal pipeline",
+        "description": "Input guard, retrieval, then a fail-closed answer from the configured provider (`extractive`, `ollama`, `transformers` or `llamacpp`). Unsafe input returns `refused`.",
+        "operationId": "chat_multimodal_multimodal__domain__chat_post",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Domain"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MultimodalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Chat Multimodal Multimodal  Domain  Chat Post"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested domain was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The client exceeded the request rate limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The local vision model or visual index is unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/multimodal/{domain}/visual/retrieve": {
+      "post": {
+        "tags": [
+          "Multimodal RAG"
+        ],
+        "summary": "Retrieve page images with ColPali",
+        "description": "ColPali MaxSim search over the `visual_pages` collection. Needs the ColPali model and a visual index (`colpali_index backfill`).",
+        "operationId": "retrieve_visual_multimodal_multimodal__domain__visual_retrieve_post",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Domain"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MultimodalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Retrieve Visual Multimodal Multimodal  Domain  Visual Retrieve Post"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The requested domain was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "The client exceeded the request rate limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected server error occurred.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The local vision model or visual index is unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiErrorResponse": {
+        "properties": {
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error",
+          "message"
+        ],
+        "title": "ApiErrorResponse"
+      },
+      "ApiResponse": {
+        "properties": {},
+        "additionalProperties": true,
+        "type": "object",
+        "title": "ApiResponse"
+      },
+      "ChatRequest": {
+        "properties": {
+          "qrels": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qrels",
+            "description": "Complete relevance judgments keyed by evidence chunk/page ID; nonnegative grades."
+          },
+          "relevant_chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relevant Chunk Ids",
+            "description": "Binary ground truth when graded qrels are unavailable."
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Query",
+            "description": "Question to answer using the selected domain's indexed evidence."
+          },
+          "llm_provider": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "hosted"
+            ],
+            "title": "Llm Provider",
+            "description": "Chat backend. Hosted mode requires the LLM endpoint environment variables."
+          },
+          "embedding_provider": {
+            "type": "string",
+            "enum": [
+              "hashing",
+              "hosted"
+            ],
+            "title": "Embedding Provider",
+            "description": "Embedding backend used for dense retrieval."
+          },
+          "hash_dimensions": {
+            "type": "integer",
+            "maximum": 4096.0,
+            "minimum": 32.0,
+            "title": "Hash Dimensions",
+            "description": "Vector size when hashing embeddings are selected.",
+            "default": 384
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "description": "Maximum evidence chunks returned to the answer step.",
+            "default": 5
+          },
+          "dense_top_k": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Dense Top K",
+            "description": "Candidate count for dense retrieval.",
+            "default": 30
+          },
+          "bm25_top_k": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Bm25 Top K",
+            "description": "Candidate count for BM25 retrieval.",
+            "default": 30
+          },
+          "source_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Type",
+            "description": "Optional source category used to filter retrieval."
+          },
+          "max_context_chars": {
+            "type": "integer",
+            "maximum": 64000.0,
+            "minimum": 1000.0,
+            "title": "Max Context Chars",
+            "description": "Maximum retrieved context supplied to the LLM.",
+            "default": 12000
+          },
+          "enable_guardrails": {
+            "type": "boolean",
+            "title": "Enable Guardrails",
+            "description": "Enable input, evidence, and output safety checks.",
+            "default": true
+          },
+          "enable_human_review": {
+            "type": "boolean",
+            "title": "Enable Human Review",
+            "description": "Enable routing for cases requiring human review.",
+            "default": true
+          },
+          "enable_langsmith": {
+            "type": "boolean",
+            "title": "Enable Langsmith",
+            "description": "Request LangSmith tracing for this operation.",
+            "default": false
+          },
+          "langsmith_project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Langsmith Project",
+            "description": "Optional LangSmith project name; uses a domain-specific default if omitted."
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "ChatRequest",
+        "description": "Input shared by the non-financial and financial chat endpoints."
+      },
+      "ChatResponse": {
+        "properties": {
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "final_status": {
+            "type": "string",
+            "title": "Final Status"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query"
+          },
+          "safe_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safe Query"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation",
+            "description": "Concise explanation of the workflow outcome based on retrieved evidence, citation checks, safety checks, or human-review triggers."
+          },
+          "grounding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GroundingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "langsmith": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LangSmithResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "security": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Security"
+          },
+          "plain_text": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plain Text"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan"
+          },
+          "evidence_guard": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Guard"
+          },
+          "output_filter": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Filter"
+          },
+          "citation_check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CitationCheckResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "human_review": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Review"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EvidenceResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "orchestration": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orchestration"
+          },
+          "elapsed_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Seconds"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "domain",
+          "final_status"
+        ],
+        "title": "ChatResponse"
+      },
+      "CitationCheckResponse": {
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "title": "Valid"
+          },
+          "cited_chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cited Chunk Ids"
+          },
+          "missing_chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing Chunk Ids"
+          },
+          "allowed_chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Chunk Ids"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "valid"
+        ],
+        "title": "CitationCheckResponse"
+      },
+      "ConversationRequest": {
+        "properties": {
+          "qrels": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qrels",
+            "description": "Complete relevance judgments keyed by evidence chunk/page ID; nonnegative grades."
+          },
+          "relevant_chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relevant Chunk Ids",
+            "description": "Binary ground truth when graded qrels are unavailable."
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Query",
+            "description": "Question to answer using the selected domain's indexed evidence."
+          },
+          "llm_provider": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "hosted"
+            ],
+            "title": "Llm Provider",
+            "description": "Chat backend. Hosted mode requires the LLM endpoint environment variables."
+          },
+          "embedding_provider": {
+            "type": "string",
+            "enum": [
+              "hashing",
+              "hosted"
+            ],
+            "title": "Embedding Provider",
+            "description": "Embedding backend used for dense retrieval."
+          },
+          "hash_dimensions": {
+            "type": "integer",
+            "maximum": 4096.0,
+            "minimum": 32.0,
+            "title": "Hash Dimensions",
+            "description": "Vector size when hashing embeddings are selected.",
+            "default": 384
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "description": "Maximum evidence chunks returned to the answer step.",
+            "default": 5
+          },
+          "dense_top_k": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Dense Top K",
+            "description": "Candidate count for dense retrieval.",
+            "default": 30
+          },
+          "bm25_top_k": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Bm25 Top K",
+            "description": "Candidate count for BM25 retrieval.",
+            "default": 30
+          },
+          "source_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Type",
+            "description": "Optional source category used to filter retrieval."
+          },
+          "max_context_chars": {
+            "type": "integer",
+            "maximum": 64000.0,
+            "minimum": 1000.0,
+            "title": "Max Context Chars",
+            "description": "Maximum retrieved context supplied to the LLM.",
+            "default": 12000
+          },
+          "enable_guardrails": {
+            "type": "boolean",
+            "title": "Enable Guardrails",
+            "description": "Enable input, evidence, and output safety checks.",
+            "default": true
+          },
+          "enable_human_review": {
+            "type": "boolean",
+            "title": "Enable Human Review",
+            "description": "Enable routing for cases requiring human review.",
+            "default": true
+          },
+          "enable_langsmith": {
+            "type": "boolean",
+            "title": "Enable Langsmith",
+            "description": "Request LangSmith tracing for this operation.",
+            "default": false
+          },
+          "langsmith_project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Langsmith Project",
+            "description": "Optional LangSmith project name; uses a domain-specific default if omitted."
+          },
+          "technique": {
+            "type": "string",
+            "enum": [
+              "baseline_rag",
+              "structured_few_shot",
+              "decomposition",
+              "self_consistency",
+              "agentic_graph"
+            ],
+            "title": "Technique",
+            "description": "Financial QA workflow to execute.",
+            "default": "agentic_graph"
+          },
+          "retrieval_mode": {
+            "type": "string",
+            "enum": [
+              "dense",
+              "hybrid"
+            ],
+            "title": "Retrieval Mode",
+            "description": "Use dense-only or hybrid dense-plus-BM25 retrieval.",
+            "default": "hybrid"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker",
+            "description": "Optional company ticker to filter financial evidence."
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year",
+            "description": "Optional fiscal/reporting year filter."
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector",
+            "description": "Optional sector filter for the annual-report corpus, e.g. 'banking' or 'Oil and gas' (comma-separated for several). Applies to the financial_qdrant and financial_vlm backends."
+          },
+          "self_consistency_samples": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Self Consistency Samples",
+            "description": "Number of answer samples for the self-consistency technique.",
+            "default": 3
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id",
+            "description": "Returned by the first turn; send it back with every follow-up message."
+          },
+          "clarify": {
+            "type": "boolean",
+            "title": "Clarify",
+            "description": "Ask for missing company, year or measure before running agents.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "ConversationRequest",
+        "description": "One chat turn; incomplete questions are clarified before any agent runs."
+      },
+      "DomainInfoResponse": {
+        "properties": {
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "default_query": {
+            "type": "string",
+            "title": "Default Query"
+          },
+          "source_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Types"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "domain",
+          "display_name",
+          "description",
+          "default_query"
+        ],
+        "title": "DomainInfoResponse"
+      },
+      "DomainsResponse": {
+        "properties": {
+          "domains": {
+            "items": {
+              "$ref": "#/components/schemas/DomainInfoResponse"
+            },
+            "type": "array",
+            "title": "Domains"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "domains"
+        ],
+        "title": "DomainsResponse"
+      },
+      "EvidenceResponse": {
+        "properties": {
+          "chunk_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "source_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Type"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "image_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Path"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "EvidenceResponse"
+      },
+      "FinancialChatRequest": {
+        "properties": {
+          "qrels": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qrels",
+            "description": "Complete relevance judgments keyed by evidence chunk/page ID; nonnegative grades."
+          },
+          "relevant_chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relevant Chunk Ids",
+            "description": "Binary ground truth when graded qrels are unavailable."
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Query",
+            "description": "Question to answer using the selected domain's indexed evidence."
+          },
+          "llm_provider": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "hosted"
+            ],
+            "title": "Llm Provider",
+            "description": "Chat backend. Hosted mode requires the LLM endpoint environment variables."
+          },
+          "embedding_provider": {
+            "type": "string",
+            "enum": [
+              "hashing",
+              "hosted"
+            ],
+            "title": "Embedding Provider",
+            "description": "Embedding backend used for dense retrieval."
+          },
+          "hash_dimensions": {
+            "type": "integer",
+            "maximum": 4096.0,
+            "minimum": 32.0,
+            "title": "Hash Dimensions",
+            "description": "Vector size when hashing embeddings are selected.",
+            "default": 384
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "description": "Maximum evidence chunks returned to the answer step.",
+            "default": 5
+          },
+          "dense_top_k": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Dense Top K",
+            "description": "Candidate count for dense retrieval.",
+            "default": 30
+          },
+          "bm25_top_k": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Bm25 Top K",
+            "description": "Candidate count for BM25 retrieval.",
+            "default": 30
+          },
+          "source_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Type",
+            "description": "Optional source category used to filter retrieval."
+          },
+          "max_context_chars": {
+            "type": "integer",
+            "maximum": 64000.0,
+            "minimum": 1000.0,
+            "title": "Max Context Chars",
+            "description": "Maximum retrieved context supplied to the LLM.",
+            "default": 12000
+          },
+          "enable_guardrails": {
+            "type": "boolean",
+            "title": "Enable Guardrails",
+            "description": "Enable input, evidence, and output safety checks.",
+            "default": true
+          },
+          "enable_human_review": {
+            "type": "boolean",
+            "title": "Enable Human Review",
+            "description": "Enable routing for cases requiring human review.",
+            "default": true
+          },
+          "enable_langsmith": {
+            "type": "boolean",
+            "title": "Enable Langsmith",
+            "description": "Request LangSmith tracing for this operation.",
+            "default": false
+          },
+          "langsmith_project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Langsmith Project",
+            "description": "Optional LangSmith project name; uses a domain-specific default if omitted."
+          },
+          "technique": {
+            "type": "string",
+            "enum": [
+              "baseline_rag",
+              "structured_few_shot",
+              "decomposition",
+              "self_consistency",
+              "agentic_graph"
+            ],
+            "title": "Technique",
+            "description": "Financial QA workflow to execute.",
+            "default": "agentic_graph"
+          },
+          "retrieval_mode": {
+            "type": "string",
+            "enum": [
+              "dense",
+              "hybrid"
+            ],
+            "title": "Retrieval Mode",
+            "description": "Use dense-only or hybrid dense-plus-BM25 retrieval.",
+            "default": "hybrid"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker",
+            "description": "Optional company ticker to filter financial evidence."
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year",
+            "description": "Optional fiscal/reporting year filter."
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector",
+            "description": "Optional sector filter for the annual-report corpus, e.g. 'banking' or 'Oil and gas' (comma-separated for several). Applies to the financial_qdrant and financial_vlm backends."
+          },
+          "self_consistency_samples": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Self Consistency Samples",
+            "description": "Number of answer samples for the self-consistency technique.",
+            "default": 3
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "FinancialChatRequest",
+        "description": "Input for financial report QA, including technique and filing filters."
+      },
+      "FinancialChatResponse": {
+        "properties": {
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "final_status": {
+            "type": "string",
+            "title": "Final Status"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query"
+          },
+          "safe_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safe Query"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation",
+            "description": "Concise explanation of the workflow outcome based on retrieved evidence, citation checks, safety checks, or human-review triggers."
+          },
+          "grounding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GroundingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "langsmith": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LangSmithResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "security": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Security"
+          },
+          "plain_text": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plain Text"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan"
+          },
+          "evidence_guard": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Guard"
+          },
+          "output_filter": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Filter"
+          },
+          "citation_check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CitationCheckResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "human_review": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Review"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EvidenceResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "orchestration": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orchestration"
+          },
+          "elapsed_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Seconds"
+          },
+          "technique": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Technique"
+          },
+          "parsed": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parsed"
+          },
+          "subquestions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subquestions"
+          },
+          "evidence_chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Chunk Ids"
+          },
+          "evidence_preview": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EvidenceResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Preview"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "domain",
+          "final_status"
+        ],
+        "title": "FinancialChatResponse"
+      },
+      "GroundingResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "grounded",
+              "not_grounded",
+              "not_applicable"
+            ],
+            "title": "Status"
+          },
+          "evidence_count": {
+            "type": "integer",
+            "title": "Evidence Count"
+          },
+          "cited_chunk_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cited Chunk Ids"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "evidence_count",
+          "cited_chunk_ids",
+          "reason"
+        ],
+        "title": "GroundingResponse"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Domains"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "status",
+          "service",
+          "domains"
+        ],
+        "title": "HealthResponse"
+      },
+      "LangSmithResponse": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "endpoint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpoint"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "LangSmithResponse"
+      },
+      "MultimodalRequest": {
+        "properties": {
+          "qrels": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qrels",
+            "description": "Complete relevance judgments keyed by evidence chunk/page ID; nonnegative grades."
+          },
+          "relevant_chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relevant Chunk Ids",
+            "description": "Binary ground truth when graded qrels are unavailable."
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Query"
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 5
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "extractive",
+              "ollama",
+              "transformers",
+              "llamacpp"
+            ],
+            "title": "Provider"
+          },
+          "source_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Type"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "timeout_seconds": {
+            "type": "number",
+            "maximum": 600.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Timeout Seconds",
+            "default": 60
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "MultimodalRequest"
+      },
+      "RetrieveRequest": {
+        "properties": {
+          "qrels": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qrels",
+            "description": "Complete relevance judgments keyed by evidence chunk/page ID; nonnegative grades."
+          },
+          "relevant_chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relevant Chunk Ids",
+            "description": "Binary ground truth when graded qrels are unavailable."
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Query",
+            "description": "Search query."
+          },
+          "embedding_provider": {
+            "type": "string",
+            "enum": [
+              "hashing",
+              "hosted"
+            ],
+            "title": "Embedding Provider",
+            "description": "Embedding backend used for dense retrieval.",
+            "default": "hashing"
+          },
+          "hash_dimensions": {
+            "type": "integer",
+            "maximum": 4096.0,
+            "minimum": 32.0,
+            "title": "Hash Dimensions",
+            "description": "Vector size when hashing embeddings are selected.",
+            "default": 384
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "description": "Maximum number of evidence records to return.",
+            "default": 5
+          },
+          "dense_top_k": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Dense Top K",
+            "description": "Candidate count for dense retrieval.",
+            "default": 30
+          },
+          "bm25_top_k": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Bm25 Top K",
+            "description": "Candidate count for BM25 retrieval.",
+            "default": 30
+          },
+          "source_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Type",
+            "description": "Optional source category filter."
+          },
+          "retrieval_mode": {
+            "type": "string",
+            "enum": [
+              "dense",
+              "hybrid"
+            ],
+            "title": "Retrieval Mode",
+            "description": "Financial retrieval mode; non-financial domains always use hybrid search.",
+            "default": "hybrid"
+          },
+          "ticker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticker",
+            "description": "Optional company ticker filter for financial evidence."
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year",
+            "description": "Optional fiscal/reporting year filter."
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector",
+            "description": "Optional sector filter for financial evidence (annual-report corpus)."
+          },
+          "enable_langsmith": {
+            "type": "boolean",
+            "title": "Enable Langsmith",
+            "description": "Request LangSmith tracing for this operation.",
+            "default": false
+          },
+          "langsmith_project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Langsmith Project",
+            "description": "Optional LangSmith project name; uses a domain-specific default if omitted."
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "RetrieveRequest",
+        "description": "Input shared by the financial and non-financial retrieval endpoints."
+      },
+      "RetrieveResponse": {
+        "properties": {
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "langsmith": {
+            "$ref": "#/components/schemas/LangSmithResponse"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceResponse"
+            },
+            "type": "array",
+            "title": "Evidence"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "domain",
+          "query",
+          "langsmith",
+          "count",
+          "evidence"
+        ],
+        "title": "RetrieveResponse"
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "The value of API_AUTH_TOKEN. Not needed when the server leaves it empty."
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "The same key as `Authorization: Bearer <key>`."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "System",
+      "description": "Service health and available-domain discovery."
+    },
+    {
+      "name": "Chat",
+      "description": "Run a guarded, citation-grounded answer workflow."
+    },
+    {
+      "name": "Retrieval",
+      "description": "Retrieve and return evidence without generating an answer."
+    },
+    {
+      "name": "Multimodal RAG",
+      "description": "Local multimodal profile: Qdrant text + ColPali page search and local vision-model answers (`run_local_multimodal`)."
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyHeader": []
+    },
+    {
+      "BearerAuth": []
+    }
+  ],
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000"
+    }
+  ]
+}

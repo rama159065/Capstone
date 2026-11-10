@@ -14,6 +14,15 @@ uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
 
 Open the interactive Swagger UI at <http://127.0.0.1:8000/docs>, ReDoc at <http://127.0.0.1:8000/redoc>, or the raw OpenAPI schema at <http://127.0.0.1:8000/openapi.json>.
 
+When the server sets `API_AUTH_TOKEN`, click **Authorize** in Swagger and enter the key (as `X-API-Key` or as a Bearer token); "Try it out" then sends it. `/health` and the docs pages need no key.
+
+A copy of the contract that needs no running server lives in [docs/api/](api/): `openapi.json`, `openapi.yaml` and `swagger.html` (Swagger UI with the spec embedded). Regenerate it after changing a route or model:
+
+```powershell
+python -m scripts.api.export_openapi                                   # Try it out -> http://127.0.0.1:8000
+python -m scripts.api.export_openapi --server https://your-host         # add the deployed URL too (repeatable)
+```
+
 ## Routes
 
 | Method | Path | Purpose |

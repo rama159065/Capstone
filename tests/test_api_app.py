@@ -405,3 +405,28 @@ def test_financial_requests_pass_the_sector_filter_to_the_agent(monkeypatch) -> 
     assert client.post("/chat/financial_report_qa", json=body).status_code == 200
     assert client.post("/retrieve/financial_report_qa", json={"query": "net interest income", "sector": "banking"}).status_code == 200
     assert seen == {"chat": "banking", "retrieve": "banking"}
+
+
+def test_openapi_declares_the_api_key_and_public_health():
+    api_app.app.openapi_schema = None
+    spec = api_app.app.openapi()
+    schemes = spec["components"]["securitySchemes"]
+    assert schemes["ApiKeyHeader"] == {**schemes["ApiKeyHeader"], "type": "apiKey", "in": "header", "name": "X-API-Key"}
+    assert schemes["BearerAuth"]["scheme"] == "bearer"
+    assert spec["paths"]["/health"]["get"]["security"] == []
+    assert "401" in spec["paths"]["/chat/{domain}"]["post"]["responses"]
+    assert "401" not in spec["paths"]["/health"]["get"]["responses"]
+    assert spec["paths"]["/multimodal/{domain}/chat"]["post"]["summary"] == "Answer with the local multimodal pipeline"
+
+
+def test_export_openapi_writes_spec_yaml_and_swagger(tmp_path):
+    import json
+    import yaml
+    from scripts.api import export_openapi
+    files = export_openapi.export(tmp_path, ["http://example.test:8000/"])
+    spec = json.loads(files["json"].read_text(encoding="utf-8"))
+    assert spec["servers"] == [{"url": "http://example.test:8000"}]
+    assert "servers" not in api_app.app.openapi()                       # the live schema is not changed
+    assert yaml.safe_load(files["yaml"].read_text(encoding="utf-8"))["paths"].keys() == spec["paths"].keys()
+    page = files["html"].read_text(encoding="utf-8")
+    assert "SwaggerUIBundle" in page and export_openapi.CDN in page and "</script>" not in page.split("const spec")[1].split("window.ui")[0]

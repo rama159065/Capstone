@@ -352,6 +352,14 @@ API_ERROR_RESPONSES = {
     429: {"model": ApiErrorResponse, "description": "The client exceeded the request rate limit."},
     500: {"model": ApiErrorResponse, "description": "An unexpected server error occurred."},
 }
+MULTIMODAL_RESPONSES = {
+    **API_ERROR_RESPONSES,
+    503: {"model": ApiErrorResponse, "description": "The local vision model or visual index is unavailable."},
+}
+UNAUTHORIZED_RESPONSE = {
+    "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+    "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ApiErrorResponse"}}},
+}
 
 
 class InMemoryRateLimiter:
@@ -403,6 +411,8 @@ app = FastAPI(
         {"name": "System", "description": "Service health and available-domain discovery."},
         {"name": "Chat", "description": "Run a guarded, citation-grounded answer workflow."},
         {"name": "Retrieval", "description": "Retrieve and return evidence without generating an answer."},
+        {"name": "Multimodal RAG", "description": "Local multimodal profile: Qdrant text + ColPali page search "
+                                                  "and local vision-model answers (`run_local_multimodal`)."},
     ],
 )
 app.add_middleware(
@@ -413,6 +423,37 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.state.rate_limiter = InMemoryRateLimiter()
+
+
+def custom_openapi() -> dict[str, Any]:
+    """The generated schema plus the API-key security the auth middleware enforces.
+
+    Swagger UI then shows an **Authorize** button: enter the key once and "Try it out" sends it.
+    Public paths (``/health``) are marked as needing no key; every other operation documents the 401.
+    """
+    if app.openapi_schema:
+        return app.openapi_schema
+    from fastapi.openapi.utils import get_openapi
+    schema = get_openapi(title=app.title, version=app.version, summary=app.summary, description=app.description,
+                         routes=app.routes, tags=app.openapi_tags)
+    schema.setdefault("components", {}).setdefault("securitySchemes", {}).update({
+        "ApiKeyHeader": {"type": "apiKey", "in": "header", "name": "X-API-Key",
+                         "description": "The value of API_AUTH_TOKEN. Not needed when the server leaves it empty."},
+        "BearerAuth": {"type": "http", "scheme": "bearer",
+                       "description": "The same key as `Authorization: Bearer <key>`."},
+    })
+    schema["security"] = [{"ApiKeyHeader": []}, {"BearerAuth": []}]
+    for path, operations in schema.get("paths", {}).items():
+        for operation in operations.values():
+            if path in PUBLIC_PATHS:
+                operation["security"] = []
+            else:
+                operation.setdefault("responses", {}).setdefault("401", UNAUTHORIZED_RESPONSE)
+    app.openapi_schema = schema
+    return schema
+
+
+app.openapi = custom_openapi
 
 
 def warm_up_retrieval() -> str:
@@ -1211,7 +1252,14 @@ def retrieve_domain(domain: str, request: RetrieveRequest) -> dict[str, Any]:
     }
 
 
-@app.post("/multimodal/{domain}/retrieve", tags=["Multimodal RAG"])
+@app.post(
+    "/multimodal/{domain}/retrieve",
+    tags=["Multimodal RAG"],
+    summary="Retrieve multimodal evidence",
+    description="Hybrid dense + sparse search over the local Qdrant `docs_text` collection (text and OCR'd "
+                "pages). `final_status` is `evidence_found`, `insufficient_evidence` or `tool_error`.",
+    responses=MULTIMODAL_RESPONSES,
+)
 def retrieve_multimodal(domain: str, request: MultimodalRequest) -> dict[str, Any]:
     if domain not in ALL_DOMAINS:
         raise HTTPException(status_code=404, detail="Unknown domain")
@@ -1229,7 +1277,14 @@ def retrieve_multimodal(domain: str, request: MultimodalRequest) -> dict[str, An
                 "warnings": ["retrieval_unavailable"], "trace_id": calls.trace_id, "trace": calls.events}
 
 
-@app.post("/multimodal/{domain}/chat", tags=["Multimodal RAG"])
+@app.post(
+    "/multimodal/{domain}/chat",
+    tags=["Multimodal RAG"],
+    summary="Answer with the local multimodal pipeline",
+    description="Input guard, retrieval, then a fail-closed answer from the configured provider "
+                "(`extractive`, `ollama`, `transformers` or `llamacpp`). Unsafe input returns `refused`.",
+    responses=MULTIMODAL_RESPONSES,
+)
 def chat_multimodal(domain: str, request: MultimodalRequest) -> dict[str, Any]:
     if domain not in ALL_DOMAINS:
         raise HTTPException(status_code=404, detail="Unknown domain")
@@ -1252,7 +1307,14 @@ def chat_multimodal(domain: str, request: MultimodalRequest) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail="Local vision service unavailable; check the configured model and runtime logs.") from exc
 
 
-@app.post("/multimodal/{domain}/visual/retrieve", tags=["Multimodal RAG"])
+@app.post(
+    "/multimodal/{domain}/visual/retrieve",
+    tags=["Multimodal RAG"],
+    summary="Retrieve page images with ColPali",
+    description="ColPali MaxSim search over the `visual_pages` collection. Needs the ColPali model and a "
+                "visual index (`colpali_index backfill`).",
+    responses=MULTIMODAL_RESPONSES,
+)
 def retrieve_visual_multimodal(domain: str, request: MultimodalRequest) -> dict[str, Any]:
     if domain not in ALL_DOMAINS:
         raise HTTPException(status_code=404, detail="Unknown domain")
