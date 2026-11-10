@@ -16,7 +16,7 @@ import scripts.agents.rag_agent as rag
 from scripts.agents import financial_clarifier as fc
 from scripts.api import api_app
 from scripts.common import agent_limits, runtime_profile
-from scripts.domains.procurement_vendor.domain_config import DOMAIN_CONFIG as PROCUREMENT_CONFIG
+from sample_domain import SAMPLE_DOMAIN as PROCUREMENT_CONFIG  # noqa: E402
 
 sys.modules.setdefault("streamlit", types.ModuleType("streamlit"))
 from scripts.ui import api_streamlit_app as ui  # noqa: E402

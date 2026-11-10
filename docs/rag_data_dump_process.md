@@ -1,5 +1,7 @@
 # Track B RAG Data Dump Process
 
+> **Historical (10 November 2026):** the project now serves financial report QA only. The five other domains described below, their data under `data/raw/<domain>/` and their downloaders were removed (see git history). `download_rag_corpora.py` now fetches the financial SEC company-facts corpus only.
+
 This project follows Track B: API-side multi-agent operations copilot. The
 corpus is for retrieval, citations, evaluation, and tool grounding. It is not a
 training set and should not be used for fine-tuning.

@@ -1,6 +1,6 @@
 # Agent Flows: Calls, Routing and Execution
 
-How a question travels from Streamlit to an answer: which agents and tools run, which steps call the LLM, how LangGraph decides each branch, and what the response records. Code: [financial_prompting_agent.py](../scripts/agents/financial_prompting_agent.py), [financial_tools.py](../scripts/agents/financial_tools.py), [financial_clarifier.py](../scripts/agents/financial_clarifier.py), [rag_agent.py](../scripts/agents/rag_agent.py), [api_app.py](../scripts/api/api_app.py).
+How a question travels from Streamlit to an answer: which agents and tools run, which steps call the LLM, how LangGraph decides each branch, and what the response records. Code: [financial_prompting_agent.py](../scripts/agents/financial_prompting_agent.py), [financial_tools.py](../scripts/agents/financial_tools.py), [financial_clarifier.py](../scripts/agents/financial_clarifier.py), [api_app.py](../scripts/api/api_app.py).
 
 **In short**
 
@@ -18,9 +18,8 @@ How a question travels from Streamlit to an answer: which agents and tools run, 
 |---|---|---|
 | `POST /conversation/financial_report_qa` | Streamlit financial chat | Clarifier, then the financial agent graph (or the report pipeline) |
 | `POST /chat/financial_report_qa` | API clients, evaluation | The financial agent graph (`technique=agentic_graph`) or a single-prompt technique |
-| `POST /chat/{domain}` | Streamlit, other 5 domains | The domain agent graph |
 | `POST /retrieve/...` | Evidence browsing | Retrieval only, no agents, no LLM |
-| `POST /multimodal/{domain}/chat` | Local multimodal profile | Input guard, retrieval, fail-closed `safe_answer` (not LangGraph) |
+| `POST /multimodal/financial_report_qa/chat` | Local multimodal profile | Input guard, retrieval, fail-closed `safe_answer` (not LangGraph) |
 | `generate_financial_report` | Clarifier's "Full financial report" | Deterministic pipeline; numbers come only from the PDF |
 
 ## 2. End-to-end request path (financial conversation)
@@ -245,38 +244,9 @@ The first question after a restart can take longer (31 s here) when it arrives b
 
 The mock LLM's answer text is a placeholder: it cites the first three chunk IDs it sees and computes `CALC[...]` from the first two figures in the evidence. The routing, searches, checks and calculator are real.
 
-## 9. The other five domains (`/chat/{domain}`)
+## 9. Removed domains
 
-```mermaid
-flowchart TD
-    S[security_guard] -->|refused| CC
-    S --> PT[plain_text_classifier - LLM]
-    PT -->|refused| CC
-    PT --> PL[planner - LLM]
-    PL --> HR[hybrid_retriever]
-    HR --> EG[evidence_guard]
-    EG -->|refused| CC
-    EG --> A[answer_agent - LLM]
-    A --> OF[output_filter]
-    OF -->|allow / review| CC[citation_critic]
-    OF -->|block| GV
-    CC --> GV[governance]
-    GV --> E((END))
-```
-
-| Node | Role | LLM? |
-|---|---|---|
-| `security_guard` | `DOMAIN_*` injection and code/tool patterns | No |
-| `plain_text_classifier` | Plain text + domain intent (`DomainConfig.intent_terms`) | **Yes** + term check |
-| `planner` | Plan JSON (intent, `hybrid_search`, source type) | **Yes** |
-| `hybrid_retriever` | Chroma dense + BM25, RRF k=60, lexical rerank (or Qdrant with `RAG_BACKEND=qdrant`) | No |
-| `evidence_guard` | Injection in retrieved text; no evidence → `insufficient_evidence` | No |
-| `answer_agent` | Answer from evidence with citations | **Yes** |
-| `output_filter` | allow / review / **block** | No |
-| `citation_critic` | Citation IDs must be retrieved IDs | No |
-| `governance` | Human review by `DomainConfig.review_terms`, low confidence, citation failure, … | No |
-
-Each node runs inside `bounded(...)`: a per-request deadline and fail-fast thread pool (`common/resilience.py`); after a `tool_error` or `insufficient_evidence`, later nodes pass through. **New:** a blocked answer goes straight to governance (no citation critique of a withheld answer). This graph has no retry or repair loop.
+The five other Track B domains (procurement, travel and expense, competitive research, incident postmortem, HR policy) and their `/chat/{domain}` and `/retrieve/{domain}` routes were removed on 10 November 2026; the copilot serves `financial_report_qa` only. Their shared graph code, `scripts/agents/rag_agent.py`, stays for now because the `/multimodal` routes use its input guard (tested with `tests/sample_domain.py`). The removed code is in git history.
 
 ## 10. Other flows
 

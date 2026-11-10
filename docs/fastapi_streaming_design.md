@@ -30,12 +30,12 @@ Use **Server-Sent Events (SSE)** for interactive progress and a final validated 
 
 Retain the existing JSON endpoints for compatibility:
 
-- `POST /chat/{domain}` — current request/response behavior.
+- `POST /chat/financial_report_qa` — current request/response behavior.
 - `POST /chat/financial_report_qa` — current financial request/response behavior.
 
 Add separate opt-in streaming routes:
 
-- `POST /chat/{domain}/stream`
+- `POST /chat/financial_report_qa/stream`
 - `POST /chat/financial_report_qa/stream`
 
 The request body should reuse the existing Pydantic chat models. A streaming request should not silently change the response shape of the existing routes.

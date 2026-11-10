@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import scripts.agents.rag_agent as rag
-from scripts.domains.procurement_vendor.domain_config import DOMAIN_CONFIG as PROCUREMENT_CONFIG
+from sample_domain import SAMPLE_DOMAIN as PROCUREMENT_CONFIG  # noqa: E402
 
 
 def sample_hit(text: str = "Vendor evaluation criteria evidence.") -> dict[str, object]:

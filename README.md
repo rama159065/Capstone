@@ -1,8 +1,8 @@
-# Track B Multi-Agent Operations Copilot
+# Financial Report Copilot
 
-Agentic RAG system for the Track B capstone: **API-side Multi-Agent Operations Copilot built around hosted <=8B inference APIs**.
+Agentic RAG system for the Track B capstone (API-side, hosted <=8B inference APIs): a **financial report copilot over SEC annual reports**.
 
-The project implements citation-grounded Agentic RAG over public PDF corpora, hybrid retrieval, LangGraph-orchestrated guarded workflows, human-in-the-loop routing, Streamlit chat UIs, and retrieval evaluation.
+It answers questions about company filings with every figure cited to its page, compares companies, checks growth with a calculator, and refuses advice or anything the filings don't cover. It uses hybrid retrieval, LangGraph agents with guardrails and a support-checking critic, human-in-the-loop routing, a FastAPI backend, a Streamlit UI and retrieval evaluation. The agent flow is described in [docs/agent_flows.md](docs/agent_flows.md).
 
 ## Why This Is Agentic RAG
 
@@ -11,30 +11,22 @@ This is **Agentic RAG** because retrieval is only one step inside a stateful age
 The implemented agent loop has these decision-making stages:
 
 ```text
-security_guard -> plain_text_classifier -> planner -> hybrid_retriever -> evidence_guard -> answer_agent -> output_filter -> citation_critic -> governance
+security -> plain_text -> planner (tools) -> retrieve <-> evidence_guard (retry) -> answer -> calculator -> critic (repair) -> governance
 ```
 
 That makes the system agentic in the capstone sense: it uses tools, maintains structured state, applies bounded decisions, checks its own evidence/citations, records observability metadata, and can stop or escalate instead of always answering.
 
-## Domains
+## Scope
 
-Implemented domains:
+The product is **financial report question answering** only (`financial_report_qa`): SEC annual reports (Form ARS) from 281 companies in 13 sectors, served as `full` (1,004 filings) or `min500` (509).
 
-- Financial report question answering
-- Procurement and vendor-review assistant
-- Travel-and-expense policy agent
-- Competitive-research analyst
-- Incident postmortem drafter
-- HR policy navigator
-
-The financial domain has a richer dedicated implementation. The remaining domains share a common LangGraph RAG and guarded-agent runtime in `scripts/agents/rag_agent.py`.
+The five other Track B domains (procurement, travel and expense, competitive research, incident postmortem, HR policy) were removed on 10 November 2026; they remain in git history. `scripts/agents/rag_agent.py` stays for now because the local multimodal routes use its input guard.
 
 ## Implementation Status
 
 | Area | Status |
 |---|---|
 | Financial PDF RAG | Implemented with PDF verification, chunking, Chroma, BM25, RRF, reranking, optional table summaries, optional chart-summary chunks, and top-k query mode. |
-| Non-financial domain RAG | Implemented for procurement, travel/expense, competitive research, incident postmortem, and HR policy using the shared `scripts/agents/rag_agent.py` runtime. |
 | Agent orchestration | Implemented with LangGraph nodes for security, plain-text validation, planning, hybrid retrieval, evidence guard, answer generation, output filtering, citation criticism, and governance/HITL. |
 | Guardrails and HITL | Implemented for input filtering, evidence prompt-injection filtering, output content filtering, citation validation, and human-review routing. |
 | API backend and UI | Implemented with FastAPI backend endpoints plus Streamlit frontends, including an API-backed Streamlit app for the final architecture. |
@@ -46,20 +38,18 @@ The financial domain has a richer dedicated implementation. The remaining domain
 ```text
 docs/                         Design notes and capstone documentation
 scripts/
-  api/            FastAPI backend for all domains (api_app.py)
-  ui/             Streamlit front ends: API-backed chat (api_streamlit_app.py), standalone financial app
-  agents/         Financial agent, shared domain LangGraph agent (HITL, HTML), clarifier, safe answer
+  api/            FastAPI backend (api_app.py): financial chat, conversation, retrieval, companies
+  ui/             Streamlit front ends: API-backed Financial Report Copilot (api_streamlit_app.py), standalone financial app
+  agents/         Financial agent graph and tools, clarifier, safe answer; rag_agent.py (shared guard, used by multimodal)
   guardrails/     Shared input / evidence / output safety checks and their regex pattern sets
   prompts/        Prompt templates for the financial and domain agents
   rag/            Ingestion, indexing and retrieval: Chroma/BM25 indexer, Qdrant ingest (financial_ingest.py),
                   multimodal RAG, ColPali, selective OCR, retrieval metrics
   observability/  JSONL traces, LangSmith helpers, report-trace monitor
-  downloads/      Corpus and model downloaders (EDGAR ARS/10-K, domain PDFs, models)
+  downloads/      Corpus and model downloaders (EDGAR ARS/10-K, SEC company facts, models)
   evaluation/     Eval set builder, prompt baselines, retrieval/OCR/ColPali evaluations, validation-data generators
   reports/        Deterministic financial report generation
-  common/         Repo paths, runtime profile (local/colab), resilience, local models
-  domains/        procurement_vendor, travel_expense, competitive_research, incident_postmortem, hr_policy:
-                  DomainConfig + index/agent/html_app wrappers
+  common/         Repo paths, runtime profile (local/colab/server), resilience, local models, company directory
 notebooks/                    Colab ingestion and serving notebook
 tests/                        Unit tests
 ```
@@ -104,14 +94,6 @@ python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing -
 python scripts\agents\financial_prompting_agent.py --llm-provider mock --technique agentic_graph --query "What does Apple say can affect quarterly net sales?" --ticker AAPL
 ```
 
-For a non-financial domain smoke test:
-
-```powershell
-python scripts\downloads\download_domain_pdfs.py --domains travel_expense
-python scripts\domains\travel_expense\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
-python scripts\domains\travel_expense\agent.py --query "What documentation is required for travel expenses?"
-```
-
 Start the final API-side demo stack:
 
 ```powershell
@@ -127,13 +109,7 @@ Download financial annual report PDFs:
 python scripts\downloads\download_financial_report_pdfs.py --target-pdfs 100
 ```
 
-Download the public PDF corpora for the other Track B domains:
-
-```powershell
-python scripts\downloads\download_domain_pdfs.py
-```
-
-Optional raw JSON/API corpora for the recommended domains can also be downloaded for corpus analysis and future retrieval expansion:
+Optional raw SEC XBRL company-facts records (JSON) for corpus analysis:
 
 ```powershell
 python scripts\downloads\download_rag_corpora.py --domains all --target-docs 500 --overwrite --sec-user-agent "capstone-rag/0.1 your_email@example.com"
@@ -222,30 +198,12 @@ The financial indexer writes:
 - chart images: `data/processed/financial_report_qa/chart_images/`
 - Chroma index: `indexes/chroma/financial_report_qa_pdfs`
 
-## Other Domain RAG Indexes
-
-Each non-financial domain has the same command pattern.
-
-```powershell
-python scripts\domains\procurement_vendor\index.py --embedding-provider hashing --reset
-python scripts\domains\travel_expense\index.py --embedding-provider hashing --reset
-python scripts\domains\competitive_research\index.py --embedding-provider hashing --reset
-python scripts\domains\incident_postmortem\index.py --embedding-provider hashing --reset
-python scripts\domains\hr_policy\index.py --embedding-provider hashing --reset
-```
-
-For quick smoke tests, limit pages:
-
-```powershell
-python scripts\domains\hr_policy\index.py --embedding-provider hashing --max-pages-per-pdf 5 --reset
-```
-
 ## Retrieval Strategy
 
 The RAG pipeline uses:
 
 - PDF text extraction with page-level metadata
-- Recursive character chunking with overlap: financial defaults to `chunk_size=2000`, `chunk_overlap=250`; shared domain defaults are `chunk_size=1800`, `chunk_overlap=220`
+- Recursive character chunking with overlap: financial defaults to `chunk_size=2000`, `chunk_overlap=250` (the Qdrant sector-corpus ingest uses 1,200 / 200)
 - ChromaDB vector index using cosine HNSW
 - BM25 lexical retrieval over `pdf_chunks.jsonl`
 - Reciprocal rank fusion of dense and BM25 results
@@ -253,8 +211,6 @@ The RAG pipeline uses:
 - Citation-grounded answers using chunk IDs
 
 For 500-2,000 PDFs, HNSW in ChromaDB is the recommended default. IVF/PQ or IVF-PQ is mainly useful when the vector count becomes much larger or memory pressure becomes the main bottleneck.
-
-The current shared non-financial runtime indexes PDF chunks from `data/raw/<domain>/pdf_manifest.jsonl`. The JSON/API corpora downloaded by `download_rag_corpora.py` are retained as raw data and can be merged into the same Chroma/BM25 pattern later.
 
 ## Run Agents
 
@@ -273,25 +229,9 @@ $env:LLM_MODEL="your-chat-model"
 python scripts\agents\financial_prompting_agent.py --llm-provider hosted --technique agentic_graph --query "What are revenue risks?" --ticker AAPL
 ```
 
-Other domain agents:
-
-```powershell
-python scripts\domains\procurement_vendor\agent.py --query "What evidence describes vendor evaluation criteria?"
-python scripts\domains\travel_expense\agent.py --query "What documentation is required for travel expenses?"
-python scripts\domains\competitive_research\agent.py --query "Compare competitor risk language about market demand."
-python scripts\domains\incident_postmortem\agent.py --query "What should be included in an incident postmortem?"
-python scripts\domains\hr_policy\agent.py --query "What does the FMLA guide say about requesting leave?"
-```
-
-To write an HTML report:
-
-```powershell
-python scripts\domains\hr_policy\agent.py --query "What does the FMLA guide say about requesting leave?" --html-out output\hr_policy_agent.html
-```
-
 ## Streamlit Chat UIs
 
-API-backed Streamlit UI for the final architecture:
+API-backed Streamlit UI (the Financial Report Copilot) for the final architecture:
 
 ```powershell
 uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
@@ -302,16 +242,6 @@ Financial UI:
 
 ```powershell
 streamlit run scripts\ui\financial_streamlit_app.py
-```
-
-Domain-specific UIs:
-
-```powershell
-streamlit run scripts\domains\procurement_vendor\html_app.py
-streamlit run scripts\domains\travel_expense\html_app.py
-streamlit run scripts\domains\competitive_research\html_app.py
-streamlit run scripts\domains\incident_postmortem\html_app.py
-streamlit run scripts\domains\hr_policy\html_app.py
 ```
 
 ## FastAPI Backend
@@ -329,24 +259,24 @@ Useful endpoints:
 ```text
 GET  /health
 GET  /domains
+GET  /companies
+POST /conversation/financial_report_qa
 POST /chat/financial_report_qa
-POST /chat/{domain}
 POST /retrieve/financial_report_qa
-POST /retrieve/{domain}
 ```
 
 Example request:
 
 ```powershell
 $body = @{
-  query = "What documentation is required for travel expenses?"
+  query = "What was Costco's net income in fiscal 2025?"
   llm_provider = "mock"
   embedding_provider = "hashing"
   enable_guardrails = $true
   enable_human_review = $true
 } | ConvertTo-Json
 
-Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/chat/travel_expense" -ContentType "application/json" -Body $body
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/chat/financial_report_qa" -ContentType "application/json" -Body $body
 ```
 
 The API allows 60 requests per minute per client IP across all routes. Excess requests return `429 Too Many Requests` with a `Retry-After` header. The limiter is in-memory and per application process; use a shared rate-limit store such as Redis when running multiple workers or replicas. Client IPs come from the direct connection, so configure trusted proxy handling at the deployment boundary if the API is behind a reverse proxy.
@@ -355,7 +285,7 @@ Enable LangSmith for API calls by setting `LANGSMITH_API_KEY` and either passing
 
 API access logs include request IDs, route, status, and duration without recording request bodies or prompts. Each response returns `X-Request-ID`; when LangSmith tracing is active, the ID is attached as trace metadata. See [docs/fastapi_api.md](docs/fastapi_api.md#request-logging-and-trace-correlation).
 
-Chat endpoints return generated answers only when citations validate against retrieved evidence; otherwise the answer is withheld and the response explains the grounding failure. This verifies evidence/citation consistency, not semantic entailment or factual correctness. Financial chat also returns `not_available` when the filings can't answer the question; see [docs/fastapi_api.md](docs/fastapi_api.md#when-the-filings-cant-answer).
+Chat endpoints return generated answers only when citations validate against retrieved evidence; otherwise the answer is withheld and the response explains the grounding failure. The agent's critic also checks support: every figure must appear in a cited chunk and an LLM judge must support every claim; with a hosted LLM an unverified answer is replaced by cited excerpts (see [docs/agent_flows.md](docs/agent_flows.md)). Financial chat also returns `not_available` when the filings can't answer the question; see [docs/fastapi_api.md](docs/fastapi_api.md#when-the-filings-cant-answer).
 
 ## Deployment
 
@@ -376,7 +306,7 @@ docker compose --profile https up -d                   # on a VM with DOMAIN set
 
 Capstone build plan: [docs/capstone_implementation_plan.md](docs/capstone_implementation_plan.md). Feature specifications: [docs/features_to_implement.md](docs/features_to_implement.md) ([HTML](docs/features_to_implement.html)).
 
-## Execute By Domain
+## End-to-end commands
 
 Use hashing embeddings and mock LLM mode for local smoke tests. For final capstone runs, replace `--embedding-provider hashing` with `--embedding-provider hosted` after setting the embedding endpoint variables, and use `--llm-provider hosted` after setting the chat endpoint variables.
 
@@ -395,51 +325,6 @@ Optional top-k retrieval check:
 python scripts\rag\index_financial_report_pdfs.py --embedding-provider hashing --query-only --retrieval-mode hybrid --query "What does Apple report about net sales and revenue?" --top-k 5 --filter-ticker AAPL
 ```
 
-### Procurement And Vendor Review
-
-```powershell
-python scripts\downloads\download_domain_pdfs.py --domains procurement_vendor
-python scripts\domains\procurement_vendor\index.py --embedding-provider hashing --reset
-python scripts\domains\procurement_vendor\agent.py --query "What evidence describes vendor evaluation criteria?" --html-out output\procurement_vendor_agent.html
-streamlit run scripts\domains\procurement_vendor\html_app.py
-```
-
-### Travel And Expense Policy
-
-```powershell
-python scripts\downloads\download_domain_pdfs.py --domains travel_expense
-python scripts\domains\travel_expense\index.py --embedding-provider hashing --reset
-python scripts\domains\travel_expense\agent.py --query "What documentation is required for travel expenses?" --html-out output\travel_expense_agent.html
-streamlit run scripts\domains\travel_expense\html_app.py
-```
-
-### Competitive Research
-
-```powershell
-python scripts\downloads\download_domain_pdfs.py --domains competitive_research
-python scripts\domains\competitive_research\index.py --embedding-provider hashing --reset
-python scripts\domains\competitive_research\agent.py --query "Compare competitor risk language about market demand." --html-out output\competitive_research_agent.html
-streamlit run scripts\domains\competitive_research\html_app.py
-```
-
-### Incident Postmortem
-
-```powershell
-python scripts\downloads\download_domain_pdfs.py --domains incident_postmortem
-python scripts\domains\incident_postmortem\index.py --embedding-provider hashing --reset
-python scripts\domains\incident_postmortem\agent.py --query "What should be included in an incident postmortem?" --html-out output\incident_postmortem_agent.html
-streamlit run scripts\domains\incident_postmortem\html_app.py
-```
-
-### HR Policy Navigator
-
-```powershell
-python scripts\downloads\download_domain_pdfs.py --domains hr_policy
-python scripts\domains\hr_policy\index.py --embedding-provider hashing --reset
-python scripts\domains\hr_policy\agent.py --query "What does the FMLA guide say about requesting leave?" --html-out output\hr_policy_agent.html
-streamlit run scripts\domains\hr_policy\html_app.py
-```
-
 ## Guardrails, Governance, and HITL
 
 The agent flow includes:
@@ -454,7 +339,7 @@ The agent flow includes:
 - Human review routing for high-impact decisions, unsafe evidence, low confidence, or citation failure
 - HTML/JSON audit artifacts for review
 
-See `docs/financial_report_agent_design.md` and the domain design files under `docs/` for flow diagrams and governance details.
+See [docs/agent_flows.md](docs/agent_flows.md) and `docs/financial_report_agent_design.md` for flow diagrams and governance details.
 
 Content filtering is layered:
 
@@ -487,12 +372,6 @@ Run retrieval evaluation with LangSmith tracing:
 python scripts\evaluation\evaluate_financial_rag.py --enable-langsmith --langsmith-project capstone-financial-rag-eval --embedding-provider hashing
 ```
 
-Run any generic domain agent with LangSmith tracing:
-
-```powershell
-python scripts\domains\hr_policy\agent.py --enable-langsmith --langsmith-project capstone-hr-policy --query "What does the FMLA employee guide say about requesting leave?"
-```
-
 Each trace includes tags and metadata for domain, retrieval mode, LLM provider, embedding provider, top-k settings, guardrail status, and HITL status. If `--enable-langsmith` is used without `LANGSMITH_API_KEY`, the run still completes locally and reports LangSmith as disabled in the JSON output.
 
 ## Retrieval Evaluation
@@ -515,7 +394,7 @@ The evaluation reports recall@k and related retrieval metrics without calling th
 
 Before a final demo or report run:
 
-- Download enough PDFs to reach the required corpus size for the selected domain.
+- Download the corpus (`min500` or `full`) and ingest it (see [docs/deployment.md](docs/deployment.md)).
 - Rebuild indexes with hosted embeddings instead of hashing embeddings.
 - Use hosted chat mode for the final Agentic RAG answer path through FastAPI.
 - Run `uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000` and `streamlit run scripts\ui\api_streamlit_app.py` for the final API-backed demo.
@@ -534,13 +413,13 @@ python -m pytest tests
 Current coverage includes:
 
 - financial PDF downloader helpers
-- generic domain PDF downloader helpers
 - financial indexing helpers
 - hybrid retrieval and evaluation helpers
 - financial prompting agent guardrails, content filters, LangGraph workflows, and HITL routing
-- shared domain LangGraph RAG orchestration, guardrails, citation checks, output filters, and HITL routing
+- agent routing, tools, retrieval retry, calculator, support-checking critic and step budget
+- the shared guard code in `rag_agent.py` (tested with `tests/sample_domain.py`)
 - LangSmith optional tracing helpers
-- all domain configs and entrypoint wiring
+- the Streamlit feature guide and the financial-only API surface
 
 ## Notes
 

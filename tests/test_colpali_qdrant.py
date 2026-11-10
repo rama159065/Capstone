@@ -117,10 +117,11 @@ def test_colpali_api_and_model_signature(tmp_path, monkeypatch):
     root = tmp_path / "index"
     rag = mm.LocalRAG(root, colpali_encoder=TestEncoder())
     try:
-        rag.ingest("hr_policy", sample())
+        rag.ingest("financial_report_qa", sample())
         monkeypatch.setattr(mm, "_instance", rag)
         client = TestClient(api_app.app)
-        response = client.post("/multimodal/hr_policy/visual/retrieve", json={"query": "training table", "top_k": 1})
+        response = client.post("/multimodal/financial_report_qa/visual/retrieve",
+                               json={"query": "training table", "top_k": 1})
         assert response.status_code == 200
         assert response.json()["retriever"] == "colpali_maxsim"
         assert response.json()["evidence"][0]["page"] == 2

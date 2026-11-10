@@ -28,14 +28,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
-from scripts.domains.competitive_research.domain_config import DOMAIN_CONFIG as COMPETITIVE_CONFIG
 from scripts.observability.langsmith_utils import configure_langsmith, env_flag, run_traced
-from scripts.agents.rag_agent import (
-    DomainConfig,
-    retrieve_hybrid,
-    run_domain_agent,
-    summarize_evidence,
-)
 from scripts.common.runtime_profile import apply_profile, describe as describe_runtime
 from scripts.agents.financial_clarifier import Clarifier, ConversationStore, name as company_name
 from scripts.common.agent_limits import max_steps
@@ -47,24 +40,10 @@ from scripts.agents.financial_prompting_agent import (
     run_technique,
     summarize_result,
 )
-from scripts.domains.hr_policy.domain_config import DOMAIN_CONFIG as HR_POLICY_CONFIG
-from scripts.domains.incident_postmortem.domain_config import DOMAIN_CONFIG as INCIDENT_CONFIG
-from scripts.domains.procurement_vendor.domain_config import DOMAIN_CONFIG as PROCUREMENT_CONFIG
-from scripts.domains.travel_expense.domain_config import DOMAIN_CONFIG as TRAVEL_CONFIG
 
 
-NON_FINANCIAL_DOMAINS: dict[str, DomainConfig] = {
-    config.domain: config
-    for config in [
-        PROCUREMENT_CONFIG,
-        TRAVEL_CONFIG,
-        COMPETITIVE_CONFIG,
-        INCIDENT_CONFIG,
-        HR_POLICY_CONFIG,
-    ]
-}
 FINANCIAL_DOMAIN = "financial_report_qa"
-ALL_DOMAINS = (FINANCIAL_DOMAIN, *NON_FINANCIAL_DOMAINS.keys())
+ALL_DOMAINS = (FINANCIAL_DOMAIN,)      # this service is the financial report copilot only
 logger = logging.getLogger(__name__)
 RUNTIME = apply_profile()   # local or colab defaults, before any retrieval runs
 request_id_context: contextvars.ContextVar[str | None] = contextvars.ContextVar(
@@ -893,13 +872,6 @@ def financial_config_from_request(request: FinancialChatRequest | RetrieveReques
     )
 
 
-def get_domain_config(domain: str) -> DomainConfig:
-    try:
-        return NON_FINANCIAL_DOMAINS[domain]
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=f"Unknown domain: {domain}") from exc
-
-
 @app.get(
     "/health",
     summary="Check API health",
@@ -926,32 +898,19 @@ def health() -> HealthResponse:
 @app.get(
     "/domains",
     summary="List available domains",
-    description="Returns display metadata and default questions for financial and non-financial domains.",
+    description="Returns the domain this service answers (financial report QA) with its display metadata.",
     tags=["System"],
     response_model=DomainsResponse,
     response_model_exclude_unset=True,
     responses=API_ERROR_RESPONSES,
 )
 def domains() -> DomainsResponse:
-    rows = [
-        {
-            "domain": FINANCIAL_DOMAIN,
-            "display_name": "Financial Report QA",
-            "description": "Cited financial-report Agentic RAG over annual-report PDFs.",
-            "default_query": "What does Apple say can affect quarterly net sales?",
-        }
-    ]
-    rows.extend(
-        {
-            "domain": config.domain,
-            "display_name": config.display_name,
-            "description": config.description,
-            "default_query": config.default_query,
-            "source_types": list(config.source_types),
-        }
-        for config in NON_FINANCIAL_DOMAINS.values()
-    )
-    return {"domains": rows}
+    return {"domains": [{
+        "domain": FINANCIAL_DOMAIN,
+        "display_name": "Financial Report Copilot",
+        "description": "Cited answers, comparisons and checked calculations from SEC annual reports.",
+        "default_query": "What drove revenue growth in the latest annual report?",
+    }]}
 
 
 @app.get(
@@ -1104,72 +1063,6 @@ def converse_financial(request: ConversationRequest) -> dict[str, Any]:
 
 
 @app.post(
-    "/chat/{domain}",
-    summary="Answer a domain question",
-    description=(
-        "Runs the shared guarded Agentic RAG workflow for a non-financial domain. "
-        "Supported domain identifiers are returned by `GET /domains`. "
-        "Financial report QA uses the dedicated `/chat/financial_report_qa` operation. "
-        "The response includes a concise explanation of its evidence and workflow checks."
-    ),
-    tags=["Chat"],
-    response_model=ChatResponse,
-    response_model_exclude_unset=True,
-    responses=API_ERROR_RESPONSES,
-)
-def chat_domain(domain: str, request: ChatRequest) -> dict[str, Any]:
-    if domain == FINANCIAL_DOMAIN:
-        return chat_financial(FinancialChatRequest(**request.model_dump()))
-    domain_config = get_domain_config(domain)
-    return ANSWER_CACHE.get_or_run(f"chat_{domain}", request, lambda: _chat_domain(domain, domain_config, request))
-
-
-def _chat_domain(domain: str, domain_config: DomainConfig, request: ChatRequest) -> dict[str, Any]:
-    langsmith = configure_request_tracing(
-        enabled=request.enable_langsmith,
-        project_name=request.langsmith_project or f"capstone-{domain}-api",
-    )
-    result = run_traced(
-        f"api.{domain}.agent",
-        run_domain_agent,
-        domain_config,
-        run_type="chain",
-        tags=[
-            "capstone",
-            "fastapi",
-            domain,
-            request.llm_provider,
-            request.embedding_provider,
-        ],
-        metadata={
-            "domain": domain,
-            "top_k": request.top_k,
-            "dense_top_k": request.dense_top_k,
-            "bm25_top_k": request.bm25_top_k,
-            "source_type": request.source_type,
-            "guardrails_enabled": request.enable_guardrails,
-            "human_review_enabled": request.enable_human_review,
-            **trace_request_metadata(),
-        },
-        query=request.query,
-        llm_provider=request.llm_provider,
-        embedding_provider=request.embedding_provider,
-        hash_dimensions=request.hash_dimensions,
-        top_k=request.top_k,
-        dense_top_k=request.dense_top_k,
-        bm25_top_k=request.bm25_top_k,
-        source_type=request.source_type,
-        max_context_chars=request.max_context_chars,
-        enable_guardrails=request.enable_guardrails,
-        enable_human_review=request.enable_human_review,
-    )
-    result["langsmith"] = langsmith
-    apply_grounding_policy(result)
-    result["explanation"] = explain_chat_result(result)
-    return result
-
-
-@app.post(
     "/retrieve/financial_report_qa",
     summary="Retrieve financial-report evidence",
     description="Searches annual-report evidence and returns ranked records without generating an answer.",
@@ -1224,59 +1117,6 @@ def retrieve_financial(request: RetrieveRequest) -> dict[str, Any]:
             }
             for hit in hits
         ],
-    }
-
-
-@app.post(
-    "/retrieve/{domain}",
-    summary="Retrieve domain evidence",
-    description=(
-        "Searches a non-financial domain's corpus and returns ranked evidence records. "
-        "Supported domain identifiers are returned by `GET /domains`; financial retrieval uses "
-        "the dedicated `/retrieve/financial_report_qa` operation."
-    ),
-    tags=["Retrieval"],
-    response_model=RetrieveResponse,
-    response_model_exclude_unset=True,
-    responses=API_ERROR_RESPONSES,
-)
-def retrieve_domain(domain: str, request: RetrieveRequest) -> dict[str, Any]:
-    if domain == FINANCIAL_DOMAIN:
-        return retrieve_financial(request)
-    domain_config = get_domain_config(domain)
-    langsmith = configure_request_tracing(
-        enabled=request.enable_langsmith,
-        project_name=request.langsmith_project or f"capstone-{domain}-retrieval-api",
-    )
-    hits = run_traced(
-        f"api.{domain}.retrieve",
-        retrieve_hybrid,
-        domain_config,
-        run_type="retriever",
-        tags=["capstone", "fastapi", domain, request.embedding_provider],
-        metadata={
-            "domain": domain,
-            "top_k": request.top_k,
-            "dense_top_k": request.dense_top_k,
-            "bm25_top_k": request.bm25_top_k,
-            "source_type": request.source_type,
-            **trace_request_metadata(),
-        },
-        query=request.query,
-        top_k=request.top_k,
-        dense_top_k=request.dense_top_k,
-        bm25_top_k=request.bm25_top_k,
-        embedding_provider=request.embedding_provider,
-        hash_dimensions=request.hash_dimensions,
-        source_type=request.source_type,
-    )
-    return {
-        "domain": domain,
-        "display_name": domain_config.display_name,
-        "query": request.query,
-        "langsmith": langsmith,
-        "count": len(hits),
-        "evidence": summarize_evidence(hits),
     }
 
 

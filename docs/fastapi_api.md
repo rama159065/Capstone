@@ -27,15 +27,14 @@ python -m scripts.api.export_openapi --server https://your-host         # add th
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/health` | Return service status and domain identifiers. |
-| `GET` | `/domains` | List domain identifiers, display names, descriptions, and default queries. |
-| `POST` | `/chat/{domain}` | Answer a question using a non-financial domain. |
+| `GET` | `/health` | Return service status, the served domain and runtime settings. |
+| `GET` | `/domains` | The served domain (`financial_report_qa`) with its display name, description and default query. |
+| `GET` | `/companies` | Companies, sectors and fiscal years the served index covers. |
 | `POST` | `/chat/financial_report_qa` | Answer a financial-report question using the selected financial technique. |
 | `POST` | `/conversation/financial_report_qa` | One chat turn: clarify a missing company, year or measure first, then run the agents or the report pipeline. Used by the Streamlit chat. |
-| `POST` | `/retrieve/{domain}` | Return ranked evidence from a non-financial domain without generating an answer. |
 | `POST` | `/retrieve/financial_report_qa` | Return ranked financial-report evidence without generating an answer. |
 
-The financial routes have dedicated request schemas and should be used for the `financial_report_qa` domain. The supported non-financial domain IDs are listed by `GET /domains`.
+The service answers financial report questions only (`financial_report_qa`). The routes for the five other Track B domains (`/chat/{domain}`, `/retrieve/{domain}`) were removed on 10 November 2026; the local multimodal routes accept `financial_report_qa` only.
 
 ## Chat requests
 
@@ -51,7 +50,7 @@ Chat requests are JSON objects. `query` is required; all other fields are option
 | `dense_top_k` | integer | `30` | 1–100 dense retrieval candidates. |
 | `bm25_top_k` | integer | `30` | 1–100 lexical retrieval candidates. |
 | `source_type` | string or null | `null` | Optional source category filter. |
-| `max_context_chars` | integer | `12000` | 1000–64000; non-financial and financial chat context limit. |
+| `max_context_chars` | integer | `12000` | 1000–64000; chat context limit. |
 | `enable_guardrails` | boolean | `true` | Enable input, evidence, and output safety checks. |
 | `enable_human_review` | boolean | `true` | Enable governance routing for human review. |
 | `enable_langsmith` | boolean | `false` | Request LangSmith tracing (credentials must be configured). |
@@ -67,17 +66,17 @@ Financial chat additionally accepts:
 | `year` | integer or null | `null` | Optional fiscal/reporting year filter. |
 | `self_consistency_samples` | integer | `3` | 1–5 answer samples for the self-consistency technique. |
 
-Example non-financial chat request:
+Example chat request (PowerShell):
 
 ```powershell
 $body = @{
-  query = "What documentation is required for travel expenses?"
+  query = "What was Costco's net income in fiscal 2025?"
   llm_provider = "mock"
   embedding_provider = "hashing"
 } | ConvertTo-Json
 
 Invoke-RestMethod -Method Post `
-  -Uri "http://127.0.0.1:8000/chat/travel_expense" `
+  -Uri "http://127.0.0.1:8000/chat/financial_report_qa" `
   -ContentType "application/json" `
   -Body $body
 ```
@@ -196,7 +195,7 @@ Financial chat can also return `final_status` `not_available` with `coverage`, a
 
 The `grounding` object reports `status` (`grounded`, `not_grounded`, or `not_applicable`), evidence count, cited chunk IDs, and a reason. This is a citation/evidence consistency check, not a guarantee that every factual claim is entailed by its cited passage or is factually correct. The explanation does not expose hidden chain-of-thought.
 
-`GET /health` returns `status`, `service`, and `domains`. `GET /domains` returns a `domains` array with each domain's identifier, display name, description, and default query; non-financial domains also include their supported `source_types`.
+`GET /health` returns `status`, `service`, and `domains`. `GET /domains` returns a one-item `domains` array for `financial_report_qa` with its display name, description and default query.
 
 ## Errors and rate limits
 

@@ -26,7 +26,6 @@ def test_duplicates_missing_and_empty_judgments():
 def test_metrics_across_rag_routes(monkeypatch):
     from scripts.api import api_app
     monkeypatch.setattr(api_app, 'retrieve_evidence', lambda config: [{'chunk_id': 'a'}])
-    monkeypatch.setattr(api_app, 'retrieve_hybrid', lambda *args, **kwargs: [{'chunk_id': 'a'}])
     from scripts.rag import multimodal_rag as mm
     monkeypatch.setattr(mm, 'retrieve_local', lambda *args, **kwargs: [{'chunk_id': 'a'}])
     class FakeRag:
@@ -36,27 +35,23 @@ def test_metrics_across_rag_routes(monkeypatch):
             return {'evidence': [{'chunk_id': 'a'}], 'answer': 'test'}
     monkeypatch.setattr(mm, 'get_rag', lambda: FakeRag())
     with TestClient(api_app.app) as client:
-        for path in ['/retrieve/financial_report_qa', '/retrieve/hr_policy',
-                     '/multimodal/hr_policy/retrieve', '/multimodal/hr_policy/visual/retrieve',
-                     '/multimodal/hr_policy/chat']:
+        for path in ['/retrieve/financial_report_qa', '/multimodal/financial_report_qa/retrieve',
+                     '/multimodal/financial_report_qa/visual/retrieve', '/multimodal/financial_report_qa/chat']:
             result = client.post(path, json={'query': 'What is the leave policy?', 'top_k': 10,
                                             'qrels': {'a': 1, 'b': 1}})
             assert result.status_code == 200, result.text
             assert result.json()['retrieval_metrics']['recall@1'] == .5
             assert result.json()['retrieval_metrics']['ndcg@5'] > 0
-        invalid = client.post('/retrieve/hr_policy', json={'query': 'leave policy', 'qrels': {'a': -1}})
+        invalid = client.post('/retrieve/financial_report_qa', json={'query': 'revenue', 'qrels': {'a': -1}})
         assert invalid.status_code == 422
 
-def test_chat_metrics_use_financial_ids_and_domain_evidence(monkeypatch):
+def test_chat_metrics_use_financial_evidence_ids(monkeypatch):
     from scripts.api import api_app
     monkeypatch.setattr(api_app, 'run_technique', lambda *a, **kw: {})
     monkeypatch.setattr(api_app, 'summarize_result', lambda result: {
         'final_status': 'insufficient_evidence', 'evidence_chunk_ids': ['a']})
-    monkeypatch.setattr(api_app, 'run_domain_agent', lambda *a, **kw: {
-        'domain': 'hr_policy', 'final_status': 'insufficient_evidence',
-        'evidence': [{'chunk_id': 'a'}]})
     with TestClient(api_app.app) as client:
-        for path in ['/chat/financial_report_qa', '/chat/hr_policy']:
+        for path in ['/chat/financial_report_qa']:
             response = client.post(path, json={'query': 'leave policy', 'top_k': 10,
                                                'relevant_chunk_ids': ['a', 'b']})
             assert response.status_code == 200, response.text
