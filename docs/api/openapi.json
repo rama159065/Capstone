@@ -2367,6 +2367,19 @@
             ],
             "title": "Evidence Preview"
           },
+          "support_check": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support Check",
+            "description": "agentic_graph only: the critic's support check. `verdict` is supported, partially_supported, unsupported or unverified; `claims` are the judge's per-claim decisions; `numeric` lists figures missing from the cited chunks. A hosted-LLM answer is shown only when the verdict is supported."
+          },
           "agent_run": {
             "anyOf": [
               {

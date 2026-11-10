@@ -192,3 +192,56 @@ def run_calculations(answer: str, evidence: list[dict[str, Any]]) -> tuple[str, 
 
 def strip_calculations(answer: str) -> str:
     return CALC_TOKEN.sub("[not calculated]", answer)
+
+
+# ----------------------------------------------------------------------------- support check (critic)
+
+CHUNK_ID_TOKEN = re.compile(r"\S*_p\d{3,}\S*")              # citation IDs are not figures
+SCALES = (1.0, 1e3, 1e-3, 1e6, 1e-6, 1e9, 1e-9)             # "$254.5 billion" vs "254,453" (millions)
+VERDICTS = ("supported", "partially_supported", "unsupported", "unverified")
+
+
+def _matches(value: float, decimals: int, known: set[float]) -> bool:
+    """True when some known figure equals ``value`` at the precision the answer printed, in any unit scale."""
+    tolerance = 0.5 * 10 ** -decimals
+    return any(abs(value * scale - k) <= tolerance * scale + 1e-9 for k in known for scale in SCALES)
+
+
+def numeric_grounding(answer: str, cited: list[dict[str, Any]], calculations: list[dict[str, Any]]) -> dict[str, Any]:
+    """Every figure in the answer must appear in a cited chunk or come from the calculator.
+
+    Years (1990-2049) and small counts (<= 10) are not checked. Rounding is allowed only to the precision the
+    answer shows, in any unit scale (thousands, millions, billions), so "$254.5 billion" matches 254,453 million.
+    """
+    known = evidence_numbers(cited) | {abs(float(c["value"])) for c in calculations if c.get("value") is not None}
+    text = CHUNK_ID_TOKEN.sub(" ", CALC_TOKEN.sub(" ", answer))
+    checked, ungrounded = 0, []
+    for raw in NUMBER.findall(text):
+        value = float(raw.replace(",", ""))
+        if ("," not in raw and "." not in raw and 1990 <= value <= 2049) or (value <= 10 and value == int(value)):
+            continue
+        checked += 1
+        decimals = len(raw.split(".")[1]) if "." in raw else 0
+        if not _matches(value, decimals, known):
+            ungrounded.append(raw)
+    return {"grounded": not ungrounded, "checked": checked, "ungrounded": ungrounded}
+
+
+def parse_support(text: str) -> dict[str, Any]:
+    """The judge's JSON -> claims + verdict. Anything unparseable or claim-less is 'unverified' (fail closed)."""
+    import json
+    match = re.search(r"\{.*\}", text or "", flags=re.DOTALL)
+    try:
+        data = json.loads(match.group(0)) if match else {}
+    except json.JSONDecodeError:
+        data = {}
+    claims = [c for c in data.get("claims") or [] if isinstance(c, dict)]
+    if not claims:
+        return {"verdict": "unverified", "claims": [], "reason": "the support judge returned no claims"}
+    unsupported = [c for c in claims if c.get("supported") is not True]
+    stated = str(data.get("verdict") or "").strip().lower()
+    if unsupported:
+        verdict = "unsupported" if len(unsupported) == len(claims) else "partially_supported"
+    else:
+        verdict = "supported" if stated in ("", "supported") else "partially_supported"   # claims and verdict disagree
+    return {"verdict": verdict, "claims": claims, "unsupported_claims": [str(c.get("claim", ""))[:300] for c in unsupported]}

@@ -161,6 +161,18 @@ def render_result(result: dict[str, Any]) -> None:
         reason = coverage.get("message") or coverage.get("reason") or result.get("explanation")
         st.markdown(f"No answer was returned. {reason}" if reason else "No answer was returned.")
 
+    support = result.get("support_check") or {}
+    if support:
+        numeric = support.get("numeric") or {}
+        claims = support.get("claims") or []
+        summary = (f"Critic support check: **{support.get('verdict')}** · "
+                   f"{sum(1 for c in claims if c.get('supported') is True)}/{len(claims)} claims supported · "
+                   f"{numeric.get('checked', 0) - len(numeric.get('ungrounded') or [])}/{numeric.get('checked', 0)} "
+                   "figures found in cited evidence")
+        if (result.get("grounding") or {}).get("method") == "mock":
+            summary += " (mock judge)"
+        st.caption(summary)
+
     agent_run = result.get("agent_run")
     if agent_run:
         with st.expander(f"Agent run: {agent_run.get('steps')}/{agent_run.get('max_steps')} steps", expanded=False):
@@ -180,6 +192,8 @@ def render_result(result: dict[str, Any]) -> None:
         st.json(
             {
                 "citation_check": result.get("citation_check"),
+                "support_check": result.get("support_check"),
+                "grounding": result.get("grounding"),
                 "human_review": result.get("human_review"),
                 "langsmith": result.get("langsmith"),
             },

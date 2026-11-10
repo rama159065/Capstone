@@ -328,6 +328,12 @@ class FinancialChatResponse(ChatResponse):
     subquestions: list[str] | None = None
     evidence_chunk_ids: list[str | None] | None = None
     evidence_preview: list[EvidenceResponse] | None = None
+    support_check: dict[str, Any] | None = Field(
+        default=None,
+        description="agentic_graph only: the critic's support check. `verdict` is supported, partially_supported, "
+                    "unsupported or unverified; `claims` are the judge's per-claim decisions; `numeric` lists figures "
+                    "missing from the cited chunks. A hosted-LLM answer is shown only when the verdict is supported.",
+    )
     agent_run: dict[str, Any] | None = Field(
         default=None,
         description="agentic_graph only: the node path, step budget, every tool call (coverage_lookup, text_search, "
@@ -774,6 +780,23 @@ def explain_chat_result(result: dict[str, Any]) -> str:
 
 
 def apply_grounding_policy(result: dict[str, Any]) -> dict[str, Any]:
+    """Withhold answers unless citations validate against retrieved evidence IDs.
+
+    Keeps how the agent grounded the answer (``method``, ``semantic_answer_verified``: the critic's support
+    check) next to the citation-ID status this policy adds.
+    """
+    prior = {key: value for key, value in (result.get("grounding") or {}).items()
+             if key in ("method", "semantic_answer_verified")}
+    result = _citation_grounding(result)
+    verified = bool(prior.get("semantic_answer_verified")) and result["grounding"]["status"] == "grounded"
+    result["grounding"] = {**result["grounding"], **prior, "semantic_answer_verified": verified}
+    if verified:
+        result["grounding"]["reason"] = ("Citations matched retrieved evidence, and the critic's support check found "
+                                         "every claim and figure stated in the cited chunks.")
+    return result
+
+
+def _citation_grounding(result: dict[str, Any]) -> dict[str, Any]:
     """Withhold answers unless citations validate against retrieved evidence IDs."""
     if result.get("final_status") == "refused":
         result["grounding"] = {

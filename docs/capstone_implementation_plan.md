@@ -19,7 +19,7 @@
 | Report and demo | 25% | Evaluation tables, the failure taxonomy, and the "what we did to compensate for a small model" section |
 
 Status column in this document:
-- **Exists:** in the repo and tested; 341 tests pass.
+- **Exists:** in the repo and tested; 382 tests pass (10 Nov).
 - **Extend:** partly there.
 - **New:** to build.
 
@@ -95,8 +95,8 @@ Priorities:
 
 | # | Feature | What the agent does | Priority | Status |
 |---|---|---|---|---|
-| F17 | Planner → executor → critic with repair | Plan, call tools, check citations, repair once | P0 | Exists (financial graph); add the step cap |
-| F18 | Comparison agent | Splits multi-company or multi-year questions; joins results; never fills gaps | **P0** | New |
+| F17 | Planner → executor → critic with repair | Plan, call tools, check citations and claim support, retry retrieval or repair once | P0 | **Done** (10 Nov): planner-chosen tools, retrieval retry, support-checking critic, budget-aware loops ([agent_flows.md](agent_flows.md)) |
+| F18 | Comparison agent | Splits multi-company or multi-year questions; joins results; never fills gaps | **P0** | **Extend**: one filtered search per company × year is done; the joined comparison table is not |
 | F19 | Research memo with human approval | Plan → tools → draft → critic → **human approves** → PDF | P1 | New: reuse the HITL queue |
 | F20 | Change alerts | A new filing is compared with last year and big changes flagged | P2 | New |
 
@@ -133,16 +133,18 @@ flowchart LR
 
 ### 3.1 Agent graph (LangGraph)
 
+As built (10 Nov). The clarifier runs before the graph in `/conversation`; every branch is a code decision on the state, and a loop runs only if the rest of the run fits `AGENT_MAX_STEPS`. Full description: [agent_flows.md](agent_flows.md).
+
 ```
-security_guard → clarifier → planner ─┬─► executor (tool calls, ≤10 steps)
-                                      │        │
-                                      │   evidence_guard
-                                      │        │
-                                      │   answer_agent (Pydantic FinancialAnswer)
-                                      │        │
-                                      │   output_filter → citation_critic ──repair (max 1)──► answer_agent
-                                      │                         │
-                                      └──── fail fast ────────► governance / human_review → response
+security → plain_text (LLM) → planner (LLM + rules) → executor ⇄ evidence_guard   (retry once: missing company/year)
+                                                       │ coverage_lookup, text_search per company × year,
+                                                       │ visual_search (ColPali, optional)
+                                                       ▼
+                         answer (LLM, CALC[...]) → calculator? → critic ──repair once──► answer
+                                                                  │ citation IDs + figures in cited chunks
+                                                                  │ + LLM judge per claim
+                                                                  ▼
+            refusals / not available / nothing found ───────► governance / human review → response
 ```
 
 | Element | Implementation | Status |
@@ -153,17 +155,22 @@ security_guard → clarifier → planner ─┬─► executor (tool calls, ≤1
 | **Token budget** | Count prompt and evidence tokens; trim evidence to fit; stop when the budget is used up | **New** |
 | Malformed JSON | Pydantic validation → one retry with the validation error in the prompt → fallback to extractive | Extend (`answer_schema.py`) |
 | Tool failures | `Calls` timeouts and `CallFailure` reasons; the tool error goes back into the state, never crashes the run | Exists |
-| Infinite loops | At most 1 repair loop, plus the step cap | Exists / New |
+| Infinite loops | At most 1 retrieval retry and 1 repair; each runs only if the rest of the run fits the step cap, so runs shorten instead of hitting `step_limit` | **Done** (10 Nov) |
+| Routing | Planner-chosen tools validated by rules (`financial_tools.normalize_plan`); per-request branches for retry, calculator and repair; the path and every tool call are returned as `agent_run` and shown in Streamlit | **Done** (10 Nov) |
 
 ### 3.2 Tools (Pydantic input and output schemas)
 
 | Tool | Input model | Output | Status |
 |---|---|---|---|
-| `retrieve_filing_text` | `query, ticker?, year?, sector?, k` | chunks with `chunk_id`, page, score | Exists (hybrid RRF and rerank) |
+| `retrieve_filing_text` | `query, ticker?, year?, sector?, k` | chunks with `chunk_id`, page, score | Exists (hybrid RRF and rerank); runs as the graph's `text_search` tool, one call per company × year |
+| `coverage_lookup` | targets (ticker, year) | searchable vs skipped targets, with the reason | **Done** (10 Nov): reads the served index's filing list |
+| `visual_search` | as `text_search` | ColPali page hits merged into the ranking | **Done** (10 Nov): planner-chosen with `RAG_FIN_VISUAL=auto`; not run live (no local ColPali index) |
 | `lookup_fact` | `ticker, concept, fiscal_year` | value, unit, period, accession (XBRL) | **New** |
-| `calculate` | `operation, inputs[{value, source_id}]` | result (`Decimal`), formula, input sources | **New** |
+| `calculate` | `operation, inputs[{value, source_id}]` | result (`Decimal`), formula, input sources | **Extend**: the graph's `calculator` evaluates `CALC[...]` (numbers and `+ - * /` only) and checks each operand is in the evidence; `Decimal` and named operations are not done |
 | `compare_companies` | `tickers[], metric, years[]` | table; missing cells marked, not guessed | **New** (calls the two tools above) |
 | `company_directory` | `name or ticker` | ticker, sector, years covered | Exists (`companies.py`, clarifier) |
+
+The tools are called by the executor node from the validated plan; the Pydantic input and output models below are still to do.
 
 **Track B note:** small models fumble tool calls. Every tool call is parsed into its Pydantic model and validated. If that fails, the model gets one retry with the error message, and then the run uses a deterministic fallback (the slot parser in the clarifier). This is the "constrained decoding, schema validation, retry" content the template asks for.
 
@@ -177,7 +184,9 @@ A guarantee of zero hallucination isn't possible with any LLM. What the system g
 | Evidence guard | Injection or code in retrieved text → the chunk is dropped | Exists |
 | Citation validity | Every cited ID must be in the retrieved set; otherwise the answer is withheld | Exists (`apply_grounding_policy`) |
 | Company scope | An answer citing a company the question didn't ask about is withheld | Exists |
-| **Number grounding** | Every number in the answer must appear in cited evidence or be a `calculate` output with cited inputs | **New** (extends the critic) |
+| **Number grounding** | Every number in the answer must appear in a cited chunk or be a calculator result, at the precision the answer prints, in any unit scale (`financial_tools.numeric_grounding`) | **Done** (10 Nov; in the critic) |
+| **Claim support (entailment)** | An LLM judge checks each claim against the cited chunks; a failed figure check overrides it. Not supported → one repair with the judge's feedback → still not supported → human review (`unsupported_claims`) | **Done** (10 Nov; `RAG_SUPPORT_CHECK`) |
+| **Hosted answers only when verified** | With a hosted LLM the generated answer is shown only when the support verdict is `supported` (`grounding.semantic_answer_verified`); otherwise cited excerpts (`evidence_only`) | **Done** (10 Nov) |
 | Coverage check | Company, year or metric not covered → `not_available` | Exists |
 | Human review | `review` decisions go to the HITL queue | Exists |
 
@@ -218,8 +227,9 @@ A guarantee of zero hallucination isn't possible with any LLM. What the system g
 | Task completion rate | Answered correctly, or correctly refused or marked not available | New |
 | Citation correctness and coverage | The cited page contains the figure; share of claims with a citation | New |
 | Schema validity rate | Pydantic parse success, first try vs after retry | New |
-| Unsupported-claim (hallucination) rate | Numbers in answers not in evidence and not computed | New (from number grounding) |
-| Average tool calls per task | From the trace | New |
+| Unsupported-claim (hallucination) rate | Figures not in cited evidence and not computed, plus claims the judge rejects; first answer vs after repair | Data ready (`support_check` in every response); aggregation in `evaluate_agent.py` is New |
+| Verified-answer rate (hosted) | Share of answers with `semantic_answer_verified = true` vs excerpt fallback | Data ready; aggregation New |
+| Average tool calls per task | From `agent_run.tool_calls` | Data ready; aggregation New |
 | Cost and tokens per query; p50/p95 latency | From the trace and endpoint usage | New |
 
 ### 4.2 Comparisons for the report
@@ -229,7 +239,7 @@ A guarantee of zero hallucination isn't possible with any LLM. What the system g
 | 3 single-prompt baselines: structured few-shot, chain of thought or self-consistency, decomposition | Week 1 requirement; `prompt_baselines.py`, `--technique` |
 | RAG without tools | Shows what retrieval alone achieves |
 | Full agent (tools + critic) | Final system |
-| Ablations: no reranker; no critic; no facts tool | "What did we do to compensate for a small model?" |
+| Ablations: no reranker; no critic; no support check (`RAG_SUPPORT_CHECK=0`); no facts tool | "What did we do to compensate for a small model?" |
 
 ### 4.3 Failure taxonomy
 
@@ -266,7 +276,7 @@ The report includes the counts by label and 2–3 worked examples of each.
 |---|---|---|
 | Mon 10 | Freeze scope (this doc). Start the corpus download on Colab (about 1 hour). Write the Dockerfile and compose skeleton | 1,004 PDFs on Drive; `download_summary.json` has no failures |
 | Tue 11 – Wed 12 | Ingest the text collection (text + OCR, ColPali off) sector by sector on Colab; snapshot to Drive. In parallel: XBRL companyfacts for 281 companies → `facts.sqlite`; `lookup_fact` tool | `cp.coverage` = 1,004 ingested; facts tool tests pass |
-| Thu 13 | `calculate` tool (`Decimal`, cited inputs) and number grounding in the critic | Unit tests; a calculation answer shows its formula and sources |
+| Thu 13 | `calculate` tool: `Decimal` and named operations on top of the graph calculator. (Number grounding, the claim judge, tool routing and the retrieval retry were done on 10 Nov) | Unit tests; a calculation answer shows its formula and sources |
 | Fri 14 | `compare_companies` and the comparison planner (F11, F18); trend and growth (F7) | Comparison questions in the eval set answer with a table |
 | Sat 15 | Token budget, Pydantic retry. (Persistent state and the 10-step cap were done on 10 Nov) | Malformed tool output is retried, then falls back |
 | Sun 16 | Streamlit: comparison table, trend chart, citation panel, HITL approve button | UI walk-through |

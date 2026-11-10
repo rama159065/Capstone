@@ -83,6 +83,17 @@ CALCULATOR_INSTRUCTION = (
     "for example CALC[(254,453 - 237,710) / 237,710 * 100]. The calculator replaces it with the result."
 )
 REPAIR_INSTRUCTION = (
-    "Critic feedback: the previous answer cited chunk IDs that are not in the evidence ({invalid}). "
-    "Rewrite the answer citing only these chunk IDs: {allowed}."
+    "Critic feedback on the previous answer: {feedback}\n"
+    "Rewrite the answer using only statements and figures the evidence states, citing only these chunk IDs: {allowed}."
+)
+SUPPORT_SYSTEM = (
+    "You are a strict fact checker for answers about company annual reports. "
+    "A claim is supported only if the cited evidence states it: the company, period, figure and unit must match. "
+    "Reasonable rounding is fine; inference, outside knowledge and advice are not. Support check JSON only."
+)
+SUPPORT_HUMAN = (
+    "Question: {query}\n\nAnswer to check:\n{answer}\n\nCited evidence:\n{context}\n\n"
+    "Split the answer into its factual claims and judge each against the cited evidence. Return Support check JSON: "
+    '{{"claims": [{{"claim": "...", "chunk_ids": ["..."], "supported": true, "reason": "..."}}], '
+    '"verdict": "supported" | "partially_supported" | "unsupported"}}'
 )

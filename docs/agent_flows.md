@@ -5,7 +5,8 @@ How a question travels from Streamlit to an answer: which agents and tools run, 
 **In short**
 
 - Every flow is a **LangGraph state machine compiled in code**. The LLM never picks the next node. It works *inside* three nodes (plain-text check, planner, answer) and its output is validated before anything uses it.
-- The financial graph routes **per request**: the planner's tools decide whether the coverage check, ColPali search and calculator run; a comparison becomes one filtered search per company and year; a company with no evidence gets **one broadened retrieval retry**; invalid citations get **one repair** carrying the critic's feedback.
+- The financial graph routes **per request**: the planner's tools decide whether the coverage check, ColPali search and calculator run; a comparison becomes one filtered search per company and year; a company with no evidence gets **one broadened retrieval retry**; an answer whose citations fail, or whose claims or figures the cited evidence doesn't state, gets **one repair** carrying the critic's feedback.
+- The critic is two checks: citation IDs must be retrieved IDs, and a **support check** (every figure must appear in a cited chunk; an LLM judge decides claim by claim). With a hosted LLM, the generated answer is shown only when both pass; otherwise the response falls back to cited excerpts.
 - Loops are **budget-aware**: a loop runs only if the rest of the run still fits `AGENT_MAX_STEPS` (default 10), so the cap shortens a run instead of failing it.
 - Each response carries `agent_run`: the node path, every tool call, retrieval attempts, repairs and calculations. Streamlit shows it under **Agent run**.
 
@@ -81,7 +82,7 @@ flowchart TD
     A -->|CALC in answer, calculator planned, budget allows| CA[calculator_step]
     A -->|otherwise| CR[critic_step]
     CA --> CR
-    CR -->|invalid citations, first time, budget allows| A
+    CR -->|citations invalid or claims unsupported, first time, budget allows| A
     CR -->|valid, or already repaired, or no budget| GV[governance_step]
     GV --> E((END))
 ```
@@ -97,7 +98,7 @@ flowchart TD
 | `evidence_guard_step` | Injection check on retrieved text; which targets found nothing | No | evidence | `evidence_guard`, `evidence_check` |
 | `answer_step` | Answer only from evidence, citing chunk IDs; `CALC[...]` for arithmetic; on repair, gets the critic's feedback | **Yes** | evidence, plan, citation check | `answer` |
 | `calculator_step` | Evaluates `CALC[...]` safely and checks each operand appears in the evidence | No | answer, evidence | `answer`, `calculations` |
-| `critic_step` | Every cited chunk ID must be in the retrieved evidence | No | answer, evidence | `citation_check`, `repair_count` |
+| `critic_step` | (1) Every cited chunk ID must be in the retrieved evidence. (2) If so, the **support check**: every figure in the answer must appear in a cited chunk (code), and an LLM judge decides whether the cited text states each claim | **Yes** (judge) + code | answer, evidence, calculations | `citation_check`, `support_check`, `repair_count` |
 | `governance_step` | Output filter (allow/review/block), human-review triggers, unverified calculations | No | everything | `output_filter`, `human_review`, final status |
 
 ### Routing decisions
@@ -112,7 +113,7 @@ Every branch is a Python function of the state. None asks the LLM.
 | | | otherwise | `answer_step` |
 | `answer_step` | `after_answer` | `calculator` planned, answer contains `CALC[...]`, and `steps + 3 <= AGENT_MAX_STEPS` | `calculator_step` |
 | | | otherwise (any leftover `CALC[...]` becomes "[not calculated]") | `critic_step` |
-| `critic_step` | `should_repair` | citations invalid, no repair yet, and `steps + tail <= AGENT_MAX_STEPS` | `answer_step` (**repair**) |
+| `critic_step` | `should_repair` | citations invalid **or** support verdict not `supported`, no repair yet, and `steps + tail <= AGENT_MAX_STEPS` | `answer_step` (**repair**, with the invalid IDs, unsupported claims and missing figures) |
 | | | otherwise | `governance_step` |
 
 `tail` is what every run still needs after the decision: answer, critic, governance (3), plus the calculator when it is planned (4).
@@ -153,24 +154,46 @@ Each change is listed in `plan.adjustments` and `plan.planner` says whether the 
 
 The repair loop existed before but never ran: the old check stopped after the first failed critique. It now repairs once, with the invalid and allowed chunk IDs in the prompt.
 
-## 6. After the graph: final checks
+## 6. The critic's support check
+
+The critic answers two questions. The first is cheap and exact; the second is what lets a hosted model's own words reach the user.
+
+| Check | How | Fails when |
+|---|---|---|
+| Citation IDs | `validate_citations`: cited IDs ⊆ retrieved IDs, at least one citation | An ID wasn't retrieved, or nothing is cited |
+| Figures | `financial_tools.numeric_grounding` (code): every number in the answer must appear in a **cited** chunk or be a calculator result. Rounding is allowed only to the precision the answer prints, in any unit scale ("$254.5 billion" matches 254,453 million; "$255 billion" does not). Years and counts up to 10 are skipped | A figure is in no cited chunk |
+| Claims | LLM judge (`SUPPORT_SYSTEM`/`SUPPORT_HUMAN`): splits the answer into claims and decides, for each, whether the cited text states it (company, period, figure and unit must match; no outside knowledge) | Any claim unsupported; unparseable output counts as `unverified` |
+
+**Verdict.** `supported` only when the judge supports every claim **and** every figure is found. A failed figure check downgrades the judge's verdict (the judge can't overrule the code). Verdicts: `supported`, `partially_supported`, `unsupported`, `unverified`.
+
+**What happens next.**
+
+| Situation | Result |
+|---|---|
+| Verdict `supported` | Governance as usual; with a hosted LLM the generated answer is shown (`grounding.method = llm_support_check`, `semantic_answer_verified = true`) |
+| Not supported, budget allows, no repair yet | **Repair**: the answer step gets the unsupported claims and missing figures, and is told to copy figures exactly, cite the chunk that states them and use `CALC[...]` for arithmetic |
+| Still not supported after the repair (or no budget) | Governance adds `unsupported_claims` → `pending_human_review`; with a hosted LLM the response shows cited **excerpts** (`evidence_only`) instead of the prose |
+
+The judge runs inside `critic_step`, so it adds one LLM call per critique but no graph step. `RAG_SUPPORT_CHECK=0` turns it off (citation IDs only, and hosted answers fall back to excerpts again). With the mock LLM the judge is a stand-in (it passes any answer that cites retrieved chunks), so `semantic_answer_verified` stays `false` in local mock runs.
+
+## 7. After the graph: final checks
 
 | Check | Where | Effect |
 |---|---|---|
 | Coverage | `run_technique` → `question_scope` | Company or year not in the filings → `not_available`, the clarifier's message, no figure, no evidence |
 | No evidence | `run_technique` | `insufficient_evidence`, "No answer found in the available evidence." |
 | Company scope | `guard_checks.company_scope_check` | An answer citing a company the question didn't ask about → `not_grounded`, answer withheld |
-| **Hosted LLM excerpt rule** | `run_technique` | With `llm_provider != mock`, generated prose is **replaced by the cited evidence excerpts** (`evidence_only`); the grounding method is `source_excerpts`. The repo treats generated prose as unverified |
+| **Hosted LLM answer rule** | `run_technique` → `answer_verified` | With `llm_provider != mock`, the generated answer is kept only for `agentic_graph` when the critic's verdict is `supported` and its citations are still in the (company-filtered) evidence. Otherwise it is **replaced by cited evidence excerpts** (`evidence_only`, method `source_excerpts`). Single-prompt techniques always get excerpts |
 | Relevance floor | `answer_evidence` | With a reranker (`RAG_RERANKER_MODEL`), hits below `RAG_MIN_RERANK_SCORE` are dropped before answering |
-| Grounding policy | `api_app.apply_grounding_policy` | Citations must match retrieved chunk IDs, or the answer is withheld (`not_grounded`) |
+| Grounding policy | `api_app.apply_grounding_policy` | Citations must match retrieved chunk IDs, or the answer is withheld (`not_grounded`). The response's `grounding` keeps `method` and `semantic_answer_verified` from the critic (true only if the citations also validate here) |
 
 ### Final statuses
 
 | `final_status` | Meaning |
 |---|---|
 | `answered` | Answer with valid citations |
-| `evidence_only` | Hosted LLM: cited excerpts instead of generated prose |
-| `pending_human_review` | Governance triggers (advice language, low confidence, citation failure, unverified calculation, …) |
+| `evidence_only` | Hosted LLM: the answer wasn't verified (or a single-prompt technique ran), so cited excerpts are shown instead |
+| `pending_human_review` | Governance triggers (advice language, low confidence, citation failure, unverified calculation, unsupported claims, …) |
 | `not_available` | The filings can't answer (company, year or measure not covered) |
 | `insufficient_evidence` | Searches found nothing usable |
 | `not_grounded` | Citations failed validation or named the wrong company |
@@ -178,7 +201,7 @@ The repair loop existed before but never ran: the old check stopped after the fi
 | `step_limit` | Hard cap reached (not expected with budget-aware routing) |
 | `tool_error` | A model or search call failed or timed out (`RAG_REQUEST_TIMEOUT_SECONDS`) |
 
-## 7. Worked runs (local Retail index, mock LLM)
+## 8. Worked runs (local Retail index, mock LLM)
 
 Measured on 10 Nov 2026 against the live API with the 5-filing Retail index (Costco 2024/2025, Walmart, Home Depot and Amazon 2025). Searches took 0.6–0.7 s each once the model was loaded.
 
@@ -197,6 +220,10 @@ Proven in tests ([test_agent_routing.py](../tests/test_agent_routing.py)) with c
 | Walmart finds nothing on the first search | Retry for WMT only, broadened query, twice the depth; path has two `retrieve_step`s |
 | Same, with `AGENT_MAX_STEPS=8` | No retry (budget), answer from Costco alone, ≤ 8 steps, no `step_limit` |
 | Answer cites a chunk that wasn't retrieved | One repair with the critic's feedback; second critique valid |
+| Judge finds a claim unsupported ("net sales doubled") | One repair with the claim in the feedback; the second answer is supported |
+| Answer invents "300,000 million" and the judge agrees | Figure check fails anyway (`partially_supported`), one repair, still wrong → `pending_human_review` with `unsupported_claims` |
+| Hosted LLM, verified answer | The model's answer is returned; `grounding.semantic_answer_verified = true` |
+| Hosted LLM, unverified answer | Cited excerpts (`evidence_only`); `semantic_answer_verified = false` |
 | `CALC[...]` with a number not in the evidence | Calculated, marked ungrounded; governance adds `unverified_calculation` and routes to human review |
 | `CALC[__import__('os')...]` | Rejected: only numbers and `+ - * /` parse |
 
@@ -218,7 +245,7 @@ The first question after a restart can take longer (31 s here) when it arrives b
 
 The mock LLM's answer text is a placeholder: it cites the first three chunk IDs it sees and computes `CALC[...]` from the first two figures in the evidence. The routing, searches, checks and calculator are real.
 
-## 8. The other five domains (`/chat/{domain}`)
+## 9. The other five domains (`/chat/{domain}`)
 
 ```mermaid
 flowchart TD
@@ -251,7 +278,7 @@ flowchart TD
 
 Each node runs inside `bounded(...)`: a per-request deadline and fail-fast thread pool (`common/resilience.py`); after a `tool_error` or `insufficient_evidence`, later nodes pass through. **New:** a blocked answer goes straight to governance (no citation critique of a withheld answer). This graph has no retry or repair loop.
 
-## 9. Other flows
+## 10. Other flows
 
 | Flow | Steps |
 |---|---|
@@ -260,18 +287,20 @@ Each node runs inside `bounded(...)`: a per-request deadline and fail-fast threa
 | `/multimodal/{domain}/chat` | Input guard → retrieval → `safe_answer` (`extractive`, `ollama`, `transformers` or `llamacpp`), fail-closed, at most 8 sub-questions |
 | Financial report | Clarifier "Full financial report" → confirmation → `generate_financial_report` (exact-label parsing, `Decimal`, reconciliations; an LLM never supplies numbers) |
 
-## 10. Observability
+## 11. Observability
 
 | Where | What you see |
 |---|---|
 | Response `agent_run` | Path, steps/max, every tool call (target, hits, ms), retrieval attempts, repairs, calculations |
 | Response `plan` | Planner source (`llm`/`fallback`), proposed tools, final tools, targets, rule adjustments |
+| Response `support_check` | Verdict, each claim with the judge's reason, figures checked and any missing |
+| Response `grounding` | Citation status, `method` (`llm_support_check`, `source_excerpts` or `mock`), `semantic_answer_verified` |
 | Streamlit **Agent run** expander | The path, tools, attempts and a tool-call table |
 | `trace` / `trace_id` | Timed spans from `common/resilience.Calls` |
 | LangSmith (optional) | `LANGSMITH_API_KEY` + `enable_langsmith`; each graph node is a run |
 | Access log | Request ID, route, status, latency; never bodies or prompts |
 
-## 11. Configuration
+## 12. Configuration
 
 | Variable | Default | Effect on the flow |
 |---|---|---|
@@ -281,12 +310,14 @@ Each node runs inside `bounded(...)`: a per-request deadline and fail-fast threa
 | `RAG_FIN_VISUAL` | off | `1`: ColPali for every question; `auto`: planner decides |
 | `RAG_RERANKER_MODEL`, `RAG_MIN_RERANK_SCORE` | off, -4 | Cross-encoder rerank and relevance floor |
 | `RAG_REQUEST_TIMEOUT_SECONDS` | 60 | Whole-workflow deadline (`tool_error` when exceeded) |
+| `RAG_SUPPORT_CHECK` | on | `0` turns off the critic's support check (and hosted answers then fall back to excerpts) |
 | `ANSWER_CACHE_SECONDS` | 0 | Reuse identical answers |
 | `CONVERSATION_DB` | in memory | Clarifier state in SQLite |
 
-## 12. Limits
+## 13. Limits
 
-- The answer text in local tests comes from the mock LLM; answer quality needs a hosted model. With a hosted model, `run_technique` currently returns cited **excerpts** (`evidence_only`) instead of the model's prose, by design; change that rule only together with an answer-verification step.
+- The answer text in local tests comes from the mock LLM, and the mock judge is a stand-in; answer quality and judge accuracy need a hosted model. A small (≤8B) judge can be lenient or strict; the figure check doesn't depend on it, and an unverified answer falls back to excerpts.
+- The support check is one extra LLM call per critique (two if repaired). It judges the cited chunks only, so an answer that is true but cites the wrong page fails and is repaired.
 - The retry broadens the query, not the filters; a filing that isn't indexed still ends as `not_available` or `insufficient_evidence`.
-- The calculator verifies that operands appear in the evidence, not that they are the right line items; ungrounded calculations go to human review.
+- The calculator and the figure check verify that numbers appear in the evidence, not that they are the right line items; that is the judge's job.
 - Visual search was not exercised live (no ColPali index locally); its routing is covered by tests.

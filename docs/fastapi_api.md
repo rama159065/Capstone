@@ -161,7 +161,15 @@ Example financial chat request:
 |---|---|---|
 | The filings can't answer | `not_available` | `answer` is the reply above, with `coverage`. Evidence is empty and `grounding.status` is `not_applicable` |
 | The answer cites a company the question didn't ask about, or a chunk it can't verify | `not_grounded` | The answer is withheld. `company_check` lists `expected_tickers` and `foreign_chunk_ids` |
-| Hosted LLM, evidence excerpts | `evidence_only` | Excerpts from other companies are removed first |
+| Hosted LLM, answer verified by the critic (`agentic_graph` only) | `answered` (or `pending_human_review`) | The model's own answer. `support_check.verdict` is `supported` and `grounding` has `method: llm_support_check`, `semantic_answer_verified: true` |
+| Hosted LLM, answer not verified, or a single-prompt technique | `evidence_only` | Cited excerpts instead of the model's prose (`grounding.method: source_excerpts`). Excerpts from other companies are removed first |
+
+**Agent fields in financial responses** (`technique=agentic_graph`):
+- `support_check`: the critic's verdict (`supported`, `partially_supported`, `unsupported`, `unverified`), each claim with the judge's reason, and `numeric` (figures checked, figures missing from the cited chunks). `RAG_SUPPORT_CHECK=0` turns it off.
+- `agent_run`: the node path, steps and step budget, every tool call (`coverage_lookup`, `text_search`, `visual_search`, `calculator`), retrieval attempts, repairs and calculations.
+- `plan`: the planner's proposed tools, the tools that ran, the company × year targets, and any rule adjustments.
+
+See [agent_flows.md](agent_flows.md) for how these are produced.
 
 Guard refusals still win: a refused request stays `refused`.
 

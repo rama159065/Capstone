@@ -83,6 +83,17 @@ class MockLLM:
 
     def invoke(self, messages: list[Any]) -> MockResponse:
         joined = "\n".join(getattr(message, "content", str(message)) for message in messages)
+        if "Support check JSON" in joined:
+            # Mock judge: supported when the answer cites a chunk that is in the cited evidence. Not a real check.
+            answer_part = joined.split("Answer to check:", 1)[-1].split("Cited evidence:", 1)[0]
+            evidence_part = joined.split("Cited evidence:", 1)[-1]
+            evidence_ids = set(re.findall(r"chunk_id:\s*([A-Za-z0-9_.=-]+)", evidence_part))
+            ids = sorted(chunk_id for chunk_id in evidence_ids if chunk_id in answer_part)
+            ok = bool(ids)
+            return MockResponse(json.dumps({
+                "claims": [{"claim": "Mock claim.", "chunk_ids": ids, "supported": ok,
+                            "reason": "Mock judge: citation present in the evidence." if ok else "Mock judge: no cited evidence."}],
+                "verdict": "supported" if ok else "unsupported"}))
         chunk_ids = [
             chunk_id
             for chunk_id in re.findall(r"chunk_id:\s*([A-Za-z0-9_.=-]+)", joined)
@@ -701,6 +712,7 @@ class AgentState(TypedDict, total=False):
     output_filter: dict[str, Any]
     answer: str
     citation_check: dict[str, Any]
+    support_check: dict[str, Any]
     human_review: dict[str, Any]
     repair_count: int
     retrieval_attempts: int
@@ -728,6 +740,7 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
 
     clarifier = default_clarifier()
     budget = max_steps()
+    support_enabled = os.getenv("RAG_SUPPORT_CHECK", "1").strip().lower() not in {"0", "false", "off", "no"}
 
     def step(name, fn):
         def node(state: AgentState) -> AgentState:
@@ -854,12 +867,44 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
             plan=json.dumps({key: plan.get(key) for key in ("intent", "tools", "targets")}, ensure_ascii=False))
         if "calculator" in plan.get("tools", []):
             human += "\n\n" + prompts.CALCULATOR_INSTRUCTION
-        check = state.get("citation_check") or {}
-        if state.get("repair_count", 0) and not check.get("valid", True):
+        feedback = critic_feedback(state) if state.get("repair_count", 0) else ""
+        if feedback:
             human += "\n\n" + prompts.REPAIR_INSTRUCTION.format(
-                invalid=", ".join(check.get("missing_chunk_ids") or []) or "none",
-                allowed=", ".join(str(hit.get("chunk_id")) for hit in evidence))
+                feedback=feedback, allowed=", ".join(str(hit.get("chunk_id")) for hit in evidence))
         return {"answer": invoke_prompt(llm, prompts.GRAPH_ANSWER_SYSTEM, human)}
+
+    def critic_feedback(state: AgentState) -> str:
+        check, support = state.get("citation_check") or {}, state.get("support_check") or {}
+        notes = []
+        if check and not check.get("valid", True):
+            notes.append("it cited chunk IDs that are not in the evidence ("
+                         + (", ".join(check.get("missing_chunk_ids") or []) or "no citations") + ")")
+        if support.get("verdict") not in (None, "supported"):
+            claims = support.get("unsupported_claims") or []
+            if claims:
+                notes.append("these claims are not stated by the cited evidence: " + "; ".join(claims[:5]))
+            numbers = (support.get("numeric") or {}).get("ungrounded") or []
+            if numbers:
+                notes.append("these figures appear in no cited chunk: " + ", ".join(numbers[:10])
+                             + " (copy figures exactly, cite the chunk that states them, use CALC[...] for arithmetic)")
+            if not claims and not numbers:
+                notes.append("its support could not be verified")
+        return "; ".join(notes)
+
+    def support_check(state: AgentState, answer: str, cited: list[str]) -> dict[str, Any]:
+        """Critic, part 2: does the cited evidence state what the answer says? A code check on every figure,
+        then an LLM judge on every claim. Both must pass for 'supported'."""
+        evidence = state.get("evidence", [])
+        cited_hits = [hit for hit in evidence if str(hit.get("chunk_id")) in set(cited)]
+        numeric = tools.numeric_grounding(answer, cited_hits, state.get("calculations", []))
+        raw = invoke_prompt(llm, prompts.SUPPORT_SYSTEM, prompts.SUPPORT_HUMAN.format(
+            query=state["query"], answer=answer, context=evidence_to_context(cited_hits, config.max_context_chars)))
+        judged = tools.parse_support(raw)
+        verdict = judged["verdict"]
+        if not numeric["grounded"] and verdict in ("supported", "partially_supported"):
+            verdict = "unsupported" if not judged.get("claims") else "partially_supported"
+        return {**judged, "verdict": verdict, "numeric": numeric, "method": "llm_judge+numeric",
+                "attempt": state.get("repair_count", 0) + 1}
 
     def calculator_node(state: AgentState) -> AgentState:
         answer, records = tools.run_calculations(str(state.get("answer") or ""), state.get("evidence", []))
@@ -879,10 +924,15 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
             }
         answer = tools.strip_calculations(str(state.get("answer") or ""))     # CALC[...] the calculator didn't run
         check = validate_citations(answer, state.get("evidence", []))
+        support = None
+        if check["valid"] and support_enabled:
+            support = support_check(state, answer, check["cited_chunk_ids"])
+        accepted = check["valid"] and (support is None or support["verdict"] == "supported")
         return {
             "answer": answer,
             "citation_check": check,
-            "repair_count": state.get("repair_count", 0) + (0 if check["valid"] else 1),
+            "support_check": support,
+            "repair_count": state.get("repair_count", 0) + (0 if accepted else 1),
         }
 
     def governance_node(state: AgentState) -> AgentState:
@@ -914,10 +964,14 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
             evidence_guard=state.get("evidence_guard"),
             output_filter=output_filter,
         )
-        unverified = [c for c in state.get("calculations", []) if not c.get("grounded")]
-        if unverified and config.enable_human_review:
+        extra = []
+        if any(not c.get("grounded") for c in state.get("calculations", [])):
+            extra.append("unverified_calculation")
+        if (state.get("support_check") or {}).get("verdict") not in (None, "supported"):
+            extra.append("unsupported_claims")
+        if extra and config.enable_human_review:
             review = {**review, "required": True, "status": "pending_human_review",
-                      "triggers": [*review.get("triggers", []), "unverified_calculation"]}
+                      "triggers": [*review.get("triggers", []), *extra]}
         return {
             "output_filter": output_filter,
             "human_review": review,
@@ -939,8 +993,9 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
         return "calculate" if wants and used(state) + 3 <= budget else "critic"     # calculator, critic, governance
 
     def should_repair(state: AgentState) -> Literal["repair", "finish"]:
-        check = state.get("citation_check", {})
-        if state.get("final_status") in STOPPED or check.get("valid") or state.get("repair_count", 0) > 1:
+        check, support = state.get("citation_check", {}), state.get("support_check") or {}
+        accepted = check.get("valid") and support.get("verdict", "supported") == "supported"
+        if state.get("final_status") in STOPPED or accepted or state.get("repair_count", 0) > 1:
             return "finish"
         return "repair" if used(state) + tail(state) <= budget else "finish"      # answer (+calc), critic, governance
 
@@ -980,6 +1035,7 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
         "plan": final_state.get("plan"),
         "answer": final_state.get("answer"),
         "citation_check": final_state.get("citation_check"),
+        "support_check": final_state.get("support_check"),
         "evidence_guard": final_state.get("evidence_guard"),
         "output_filter": final_state.get("output_filter"),
         "human_review": final_state.get("human_review"),
@@ -1046,6 +1102,7 @@ def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dic
                   "answer": "No answer found because a required service failed or timed out.", "evidence": [],
                   "citation_check": {"valid": False, "cited_chunk_ids": []}}
     scope = {"expected": [], "coverage": None}
+    verified = False
     if result.get("final_status") not in {"refused", "tool_error"}:
         scope = question_scope(config.query, config.ticker)
     if scope["coverage"]:
@@ -1062,9 +1119,11 @@ def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dic
         if not evidence:
             result.update(answer="No answer found in the available evidence.", final_status="insufficient_evidence",
                           citation_check={"valid": False, "cited_chunk_ids": []})
+        elif llm_provider != "mock" and answer_verified(result, evidence):
+            verified = True        # the critic's support check passed: the generated answer stands
         elif llm_provider != "mock":
-            # Legacy prompting experiments are not a factual verifier. Return only
-            # source excerpts, rather than promoting their free-form prose to facts.
+            # Unverified prose (legacy prompting experiments, or an answer the critic couldn't verify) is not
+            # promoted to fact: return only the source excerpts.
             rows = [h for h in evidence if str(h.get("text", "")).strip()]
             result.update(answer="Unverified generation withheld. Available evidence excerpts:\n" + "\n".join(
                 str(h["text"])[:1000] + " [" + str(h["chunk_id"]) + "]" for h in rows),
@@ -1081,10 +1140,19 @@ def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dic
     if llm_provider != "mock":
         result.pop("parsed", None)
         result.pop("samples", None)
+    verified = verified and result.get("final_status") not in {"not_grounded", "not_available", "refused", "tool_error"}
+    method = "mock" if llm_provider == "mock" else "llm_support_check" if verified else "source_excerpts"
     result.update(trace_id=calls.trace_id, trace=calls.events,
-                  grounding={"method": "source_excerpts" if llm_provider != "mock" else "mock",
-                             "semantic_answer_verified": False})
+                  grounding={"method": method, "semantic_answer_verified": verified})
     return result
+
+
+def answer_verified(result: dict[str, Any], evidence: list[dict[str, Any]]) -> bool:
+    """The agent graph's critic found every claim and figure supported by evidence it still cites."""
+    support, check = result.get("support_check") or {}, result.get("citation_check") or {}
+    allowed = {str(hit.get("chunk_id")) for hit in evidence}
+    return (result.get("technique") == "agentic_graph" and support.get("verdict") == "supported"
+            and bool(check.get("valid")) and set(check.get("cited_chunk_ids") or []) <= allowed)
 
 
 def summarize_result(result: dict[str, Any]) -> dict[str, Any]:
@@ -1102,6 +1170,7 @@ def summarize_result(result: dict[str, Any]) -> dict[str, Any]:
         "subquestions": result.get("subquestions"),
         "plan": result.get("plan"),
         "agent_run": result.get("agent_run"),
+        "support_check": result.get("support_check"),
         "security": result.get("security"),
         "plain_text": result.get("plain_text"),
         "evidence_guard": result.get("evidence_guard"),

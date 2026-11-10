@@ -9,7 +9,7 @@ This is the build specification. Each feature lists:
 - the tests and the evaluation metric that prove it.
 
 **Status:**
-- **Done:** in the repo and tested; 341 tests pass.
+- **Done:** in the repo and tested; 382 tests pass (10 Nov).
 - **Extend:** partly there.
 - **New:** to build.
 
@@ -28,9 +28,9 @@ This is the build specification. Each feature lists:
 |---|---|---|---|---|---|---|
 | P1 | Full 1,004-filing index (text + OCR) | Platform | P0 | Code done, run pending | 1 | — |
 | P2 | XBRL facts store (`facts.sqlite`) | Platform | P0 | New | 1.5 | — |
-| P3 | Typed tool layer (LangChain tools + Pydantic + retry) | Platform | P0 | New | 1.5 | P2 |
-| P4 | Plan templates by intent (deterministic planner) | Platform | P0 | New | 1 | P3 |
-| P5 | Number grounding in the critic | Platform | P0 | New | 1 | P3 |
+| P3 | Typed tool layer (LangChain tools + Pydantic + retry) | Platform | P0 | Extend (4 graph tools done; Pydantic schemas new) | 1 | P2 |
+| P4 | Plan templates by intent (deterministic planner) | Platform | P0 | Extend (LLM plan + rule validation done) | 0.5 | P3 |
+| P5 | Number grounding in the critic, plus claim support | Platform | P0 | **Done** | — | — |
 | P6 | Persistent conversations, step cap, auth, answer cache, Docker | Platform | P0 | **Done** | — | — |
 | F1 | Cited Q&A on one filing | Single filing | P0 | Done | — | P1 |
 | F2 | Clarifier for missing company, year or metric | Single filing | P0 | Done | — | — |
@@ -48,8 +48,8 @@ This is the build specification. Each feature lists:
 | F14 | Ranking within a sector | Sector | P1 | New | 0.5 | P2 |
 | F15 | Theme tracking (tariffs, AI, rates) by sector and year | Cross-sector | P2 | New | 1 | P1 |
 | F16 | Cross-sector benchmarks | Cross-sector | P2 | New | 0.5 | P2 |
-| F17 | Planner → executor → critic with bounded repair | Agentic | P0 | Done (graph); Extend (tools) | 0.5 | P3, P4 |
-| F18 | Comparison agent (decompose, run in parallel, join) | Agentic | **P0** | New | 1 | P3, P4 |
+| F17 | Planner → executor → critic with bounded repair | Agentic | P0 | **Done** | — | — |
+| F18 | Comparison agent (decompose, run in parallel, join) | Agentic | **P0** | Extend (decompose done; join table new) | 0.5 | P3 |
 | F19 | Research memo with human approval | Agentic | P1 | New | 1.5 | F7, F8, F11 |
 | F20 | Change alerts on a new filing | Agentic | P2 | New | 1 | F9 |
 | F21 | Analyst signals (strengths, risks, watch items; never advice) | Agentic | P2 | New | 1 | F7, F8 |
@@ -75,9 +75,10 @@ flowchart TB
   EX --> T4["compare_companies<br>fan-out → table"]
   EX --> T5["company_directory"]
   EX --> EG["Evidence guard"]
+  EG -->|"retry ≤1: company/year missing"| EX
   EG --> AN["Answer agent<br>hosted ≤8B → Pydantic FinancialAnswer"]
-  AN --> CR["Critic<br>citations · numbers (P5) · scope"]
-  CR -->|"repair ≤1"| AN
+  AN --> CR["Critic<br>citation IDs · figures (P5) · LLM claim judge · scope"]
+  CR -->|"repair ≤1, with the critic's feedback"| AN
   CR --> GV["Governance / HITL"]
   GV --> API
 ```
@@ -124,6 +125,7 @@ flowchart TB
 
 ### P3. Typed tool layer
 
+- **Status (10 Nov):** four tools run inside the financial graph today: `coverage_lookup`, `text_search`, `visual_search` and `calculator` ([financial_tools.py](../scripts/agents/financial_tools.py)). They are chosen by the planner, validated by rules, and every call is logged in `agent_run.tool_calls`. Still to do: the Pydantic `args_schema` / result models and the retry-on-validation-error path below, plus `lookup_fact` (P2).
 - **Why:** the rubric requires ≥ 3 tools, schema validation and retry logic, and small models fumble tool calls.
 - **New module `scripts/agents/tools.py`.** Each tool is a LangChain `StructuredTool` with a Pydantic `args_schema` and a Pydantic result:
 
@@ -145,6 +147,7 @@ flowchart TB
 
 ### P4. Plan templates by intent
 
+- **Status (10 Nov):** the LLM's plan is already checked by rules (`normalize_plan`): unknown tools dropped, needed tools added, targets built from the question, and a fallback plan when the LLM's JSON is unusable (`plan.planner = "fallback"`). Still to do: the per-intent templates below, so the deterministic layer chooses the plan outright.
 - **Why:** an 8B model plans poorly. The clarifier already resolves intent, companies, years and metric deterministically, so the plan can be a template.
 - **How:** in the financial graph, `planner_node` builds a `Plan(steps: list[ToolStep])` from the clarifier slots:
 
@@ -161,18 +164,21 @@ flowchart TB
 - **Step budget:** a plan is rejected if it would exceed `AGENT_MAX_STEPS`. Comparisons are capped at 6 companies × 5 years.
 - **Tests:** one plan per intent; an oversize plan is rejected; an invalid LLM plan falls back to the template.
 
-### P5. Number grounding in the critic
+### P5. Number grounding and claim support in the critic: done 10 November
 
-- **Why:** this is the measurable form of "no hallucination".
-- **How:** `guardrails/checks.number_grounding(answer, evidence, calculations)`:
-  - extracts every number from the answer (money, %, plain numbers, years excluded);
-  - normalises scale ("$61.2 billion" = 61,160 million within rounding) and unit;
-  - each number must match a cited evidence chunk, a `Fact` or a `Calculation` result.
+- **Why:** this is the measurable form of "no hallucination", and it is what lets a hosted model's own answer be shown.
+- **As built** (`critic_step`, [agent_flows.md §6](agent_flows.md)):
+  - **Figures (code):** `financial_tools.numeric_grounding(answer, cited_chunks, calculations)` extracts every number (years and counts up to 10 skipped). Each must match a **cited** chunk or a calculator result, at the precision the answer prints, in any unit scale ("$254.5 billion" = 254,453 million; "$255 billion" fails).
+  - **Claims (LLM judge):** the judge splits the answer into claims and decides for each whether the cited text states it; unparseable output counts as `unverified`. A failed figure check overrides the judge.
+  - **Verdict:** `supported`, `partially_supported`, `unsupported` or `unverified`, returned as `support_check`.
 - **Result:**
-  - `{"grounded": [...], "unsupported": [...], "valid": bool}`.
-  - An unsupported number triggers the repair loop once; after that the answer is withheld (`not_grounded`).
-- **Tests:** rounding and scale cases, a fabricated number caught, and dates/years ignored.
-- **Metric:** the unsupported-claim rate (E3).
+  - Not supported → one repair; the answer step gets the unsupported claims and missing figures.
+  - Still not supported → governance adds `unsupported_claims` → `pending_human_review`.
+  - With a hosted LLM, the generated answer is shown only when the verdict is `supported` (`grounding.semantic_answer_verified = true`); otherwise cited excerpts (`evidence_only`).
+  - `RAG_SUPPORT_CHECK=0` turns the support check off (for the ablation).
+- **Differs from the original plan:** the check lives in `financial_tools`, not `guardrails/checks`; XBRL `Fact` values become valid sources once P2 exists; an unsupported answer goes to review (and excerpts) instead of `not_grounded`.
+- **Tests:** [tests/test_agent_support.py](../tests/test_agent_support.py): rounding and scale, a fabricated figure caught even when the judge agrees, judge feedback in the repair, fail-closed parsing, hosted answer shown only when verified, verification flag kept by the API.
+- **Metric:** the unsupported-claim rate and verified-answer rate (E3), from `support_check` in each response.
 
 ### P6. Deployment foundations: done 10 November
 
@@ -322,17 +328,23 @@ The clarifier suggests the right metric when the asked one doesn't apply. Its `m
 - Median and interquartile range of a ratio (F8) by sector and year, from `facts.sqlite`.
 - Each company's percentile within its sector.
 
-### F17. Planner → executor → critic (P0)
+### F17. Planner → executor → critic (P0): done 10 November
 
-- **What exists:** the graph (security → plain text → plan → retrieve → evidence guard → answer → critic ⟲ ×1 → governance) and the step cap.
-- **Changes:**
-  - `plan_step` uses P4.
-  - `retrieve_step` becomes `execute_step`, running the plan's tools.
-  - `critic_step` adds P5.
-  - The state gains `tool_results`, `calculations` and `tool_calls` (a count, for E3).
+- **Graph:** security → plain text → plan → retrieve ⇄ evidence guard → answer → calculator? → critic ⟲ ×1 → governance ([agent_flows.md](agent_flows.md)).
+- **As built:**
+  - `plan_step`: the LLM proposes tools; `financial_tools.normalize_plan` keeps known tools, always keeps `text_search`, adds `calculator` / `coverage_lookup` when the question needs them, drops `visual_search` when no ColPali index is served, and builds company × year targets. Every rule change is listed in `plan.adjustments`.
+  - `retrieve_step` is the executor: it runs the planned tools (coverage check, one filtered search per target, optional ColPali).
+  - `evidence_guard_step` → **retry once** for targets that found nothing (broadened query, twice the depth, same filters).
+  - `answer_step` writes `CALC[...]` for arithmetic → `calculator_step` (only numbers and `+ - * /`; operands must be in the evidence).
+  - `critic_step` checks citation IDs and P5; **repairs once** with its feedback. (The old repair loop never ran; fixed.)
+  - Loops run only if the rest of the run fits `AGENT_MAX_STEPS`; the response carries `agent_run` (path, tool calls, retries, repairs, calculations) for E3.
+- **Still to do:** P4 intent templates and P3 Pydantic tool schemas around the same nodes.
+- **Tests:** [tests/test_agent_routing.py](../tests/test_agent_routing.py).
 
 ### F18. Comparison agent (P0)
 
+- **Done:** the planner splits comparisons and trends into one filtered search per company × year (at most 6); companies or years outside the index are skipped by `coverage_lookup` and named in the answer.
+- **To do:** the joined table below. Searches currently run one after another.
 - Same graph. The plan fans out across companies and years in the executor: parallel, at most 24 lookups.
 - A join node builds `ComparisonTable`, and the answer agent sees the table, not the raw chunks.
 - **Failure handling:** if one company's tool call fails, its row is marked `tool_error` and the rest is still answered (partial answer, clearly labelled).
