@@ -58,6 +58,8 @@ flowchart LR
 
 ## 3. How to deploy
 
+**Order:** download the PDFs to Drive (§3.5, full or min500) → index on Colab → copy the index to the server (§3.4) → start the stack (§3.1).
+
 ### 3.1 With Docker Compose (options A and D)
 
 Files: [Dockerfile](../Dockerfile), [docker-compose.yml](../docker-compose.yml), [.env.example](../.env.example), [deploy/Caddyfile](../deploy/Caddyfile) and [deploy/restore_index.sh](../deploy/restore_index.sh).
@@ -209,6 +211,86 @@ Download from the Drive website to your PC, then copy the files to the VM with `
 - Use read-only access (`drive.readonly`, bucket viewer).
 - Keep `~/.config/rclone/rclone.conf` and any service-account key out of Git, with `chmod 600`.
 - Revoke the rclone token, or delete the key or bucket, after grading.
+
+### 3.5 Downloading the corpus to Google Drive on Colab: full or min500
+
+This is the first step of everything else: the PDFs go from SEC EDGAR to your Drive. Use [notebooks/colab_rag_pipelines.ipynb](../notebooks/colab_rag_pipelines.ipynb) and run **only cells 1–4** (cell 5 starts indexing), then cell 6b to check.
+
+| | **full load** | **min500 load** |
+|---|---|---|
+| `CORPUS` in cell 1 | `"full"` | `"min500"` |
+| Filings | 1,004 | 509 |
+| Companies / sectors | 281 / 13 | 143 / 13 |
+| Download size (Drive space needed) | 11.3 GB (keep ~12 GB free) | 5.36 GB (keep ~6 GB free) |
+| Time (estimate) | ~30–60 min | ~15–30 min |
+| Cell 4 first line | `1004 selected, 0 already downloaded, 1004 to fetch (11.30 GB)` | `509 selected, 0 already downloaded, 509 to fetch (5.36 GB)` |
+| Cell 6b coverage, before indexing | planned 1004 / downloaded 1004 / ingested 0 | planned 509 / downloaded 509 / ingested 0 |
+| List of filings | `--preset full` report | [corpus_min500.html](corpus_min500.html) |
+
+**min500** is the 41 largest filings per sector plus every filing of the companies the frozen eval set asks about: Track B's 500-document minimum, with no eval question losing its source. You can start with min500 and switch to full later. The download skips files already on Drive, so it fetches only the other 495.
+
+#### Before opening Colab (on your PC)
+
+1. **Rebuild the code zip and upload it:** run `python -m scripts.common.colab_bundle` in the repo, then upload `output/colab/capstone_code.zip` to Drive as **`MyDrive/capstone_rag/capstone_code.zip`**, replacing any older copy. The corpus presets are only in the latest code.
+2. **Open the notebook:** in Colab, **File → Upload notebook →** `notebooks/colab_rag_pipelines.ipynb`.
+3. **Runtime:** **Runtime → Change runtime type → CPU** is enough to download. Use an L4 GPU only for indexing (cell 5), later.
+
+#### Cells to run
+
+| Cell | What to do | What happens |
+|---|---|---|
+| **1. Settings** | `CORPUS = "full"` or `"min500"`; **`MAX_PER_SECTOR = 0`**; **`SMOKE_TEST = False`**; `SECTORS = ""` (all 13); **`SEC_USER_AGENT`** = your name and e-mail, e.g. `"capstone-research yourname@gmail.com"` | Stores the settings |
+| **2. Drive, code, dependencies** | Run it and allow Drive access | Mounts Drive, unpacks the code zip to `/content/Capstone`, installs packages (2–4 min). Check that the printed `BUNDLE_INFO` `built_at` is your new zip |
+| **3. Settings object, Qdrant server, restore** | Run it | Builds the settings with `corpus_preset`, creates the Drive folders. Starting Qdrant and "nothing to restore" are harmless here |
+| **4. Download** | Run it | Downloads from SEC EDGAR to `MyDrive/capstone_rag/annual_reports/<sector>/`, then prints each sector folder's size |
+| **6b. Coverage** | Run it | Planned → downloaded → ingested by sector (ingested stays 0 until cell 5) |
+
+**`SMOKE_TEST = False` is essential.** With `True`, cell 3 limits the download to 2 filings per sector: 26 PDFs.
+
+#### Result on Drive
+
+```
+MyDrive/capstone_rag/annual_reports/
+    corpus_plan.jsonl            the full 1,004-row plan (copied)
+    pdf_manifest.jsonl           every downloaded filing
+    download_summary.json        counts, seconds, failures
+    banking/pdf_manifest.jsonl   banking/EDGAR_ARS_JPM_2025.pdf ...
+    ... 13 sector folders
+```
+
+Each manifest row records the SHA-256, page count, size, accession number and EDGAR URL. Indexing and the API read these manifests.
+
+#### Optional checks (add a cell)
+
+```python
+# Preview the selection without downloading
+!cd /content/Capstone && python -m scripts.downloads.download_annual_report_corpus --preset {CORPUS} --dry-run --output-dir {DRIVE_ROOT}/annual_reports
+
+# Count the PDFs on Drive (expect 509 or 1004)
+!find {DRIVE_ROOT}/annual_reports -name "*.pdf" | wc -l
+```
+
+#### Without the notebook (any machine with the repo)
+
+```bash
+python -m scripts.downloads.download_annual_report_corpus --preset min500 --output-dir <folder> --user-agent "name email@domain"
+python -m scripts.downloads.download_annual_report_corpus --preset full   --output-dir <folder> --user-agent "name email@domain"
+```
+
+#### If something goes wrong
+
+| Problem | Fix |
+|---|---|
+| Disconnected, or `N failed; rerun to retry them` | Run cells 2 → 3 → 4 again. Files already there with the right size are skipped; only missing or failed ones are fetched (`download_summary.json` lists failures) |
+| `SEC requires a contact e-mail` | `SEC_USER_AGENT` in cell 1 must contain an `@` |
+| HTTP 429 / 503 from SEC | Handled: the script backs off and retries, at most 8 requests per second |
+| `unexpected keyword argument 'corpus_preset'` | Drive has an old code zip. Rebuild it, upload it again, rerun cell 2 |
+| Only 26 PDFs | `SMOKE_TEST` was `True`. Set it to `False` and rerun cells 1, 3 and 4 |
+| Drive full | Free the space in the table above, or upgrade (Google One 100 GB ≈ $1.99/month) |
+
+**After cell 4:** wait a few minutes before ending the runtime, so Drive finishes saving the files. Anything not saved is downloaded again the next time cell 4 runs.
+
+**Next:** to index, switch the runtime to an **L4 GPU**, run cells 1–3 with the same `CORPUS`, then **cell 5**. Snapshots go to Drive after each sector, and section 3.4 brings them to the VM.
 
 ---
 

@@ -33,6 +33,7 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 <p><strong>Any cloud works for option D:</strong> GCP, AWS, Azure, DigitalOcean and Hetzner all run the same <code>docker compose</code> files. Only the price differs.</p>
 <hr>
 <h2>3. How to deploy</h2>
+<p><strong>Order:</strong> download the PDFs to Drive (§3.5, full or min500) → index on Colab → copy the index to the server (§3.4) → start the stack (§3.1).</p>
 <h3>3.1 With Docker Compose (options A and D)</h3>
 <p>Files: <a href="../Dockerfile">Dockerfile</a>, <a href="../docker-compose.yml">docker-compose.yml</a>, <a href="../.env.example">.env.example</a>, <a href="../deploy/Caddyfile">deploy/Caddyfile</a> and <a href="../deploy/restore_index.sh">deploy/restore_index.sh</a>.</p>
 <pre><code>git clone &lt;repo&gt; &amp;&amp; cd Capstone          # or unzip the code bundle
@@ -114,6 +115,36 @@ docker compose run --rm --user root api sh deploy/restore_index.sh</code></pre>
 <p><code>gdown</code> (a shared-link downloader) works for single files but is unreliable for large folders and hits Drive's download limits. Don't use it for the snapshots.</p>
 <p><strong>Security, whichever option:</strong></p>
 <ul><li>Use read-only access (<code>drive.readonly</code>, bucket viewer).</li><li>Keep <code>~/.config/rclone/rclone.conf</code> and any service-account key out of Git, with <code>chmod 600</code>.</li><li>Revoke the rclone token, or delete the key or bucket, after grading.</li></ul>
+<h3>3.5 Downloading the corpus to Google Drive on Colab: full or min500</h3>
+<p>This is the first step of everything else: the PDFs go from SEC EDGAR to your Drive. Use <a href="../notebooks/colab_rag_pipelines.ipynb">notebooks/colab_rag_pipelines.ipynb</a> and run <strong>only cells 1–4</strong> (cell 5 starts indexing), then cell 6b to check.</p>
+<table><thead><tr><th></th><th><strong>full load</strong></th><th><strong>min500 load</strong></th></tr></thead><tbody><tr><td><code>CORPUS</code> in cell 1</td><td><code>&quot;full&quot;</code></td><td><code>&quot;min500&quot;</code></td></tr><tr><td>Filings</td><td>1,004</td><td>509</td></tr><tr><td>Companies / sectors</td><td>281 / 13</td><td>143 / 13</td></tr><tr><td>Download size (Drive space needed)</td><td>11.3 GB (keep ~12 GB free)</td><td>5.36 GB (keep ~6 GB free)</td></tr><tr><td>Time (estimate)</td><td>~30–60 min</td><td>~15–30 min</td></tr><tr><td>Cell 4 first line</td><td><code>1004 selected, 0 already downloaded, 1004 to fetch (11.30 GB)</code></td><td><code>509 selected, 0 already downloaded, 509 to fetch (5.36 GB)</code></td></tr><tr><td>Cell 6b coverage, before indexing</td><td>planned 1004 / downloaded 1004 / ingested 0</td><td>planned 509 / downloaded 509 / ingested 0</td></tr><tr><td>List of filings</td><td><code>--preset full</code> report</td><td><a href="corpus_min500.html">corpus_min500.html</a></td></tr></tbody></table>
+<p><strong>min500</strong> is the 41 largest filings per sector plus every filing of the companies the frozen eval set asks about: Track B's 500-document minimum, with no eval question losing its source. You can start with min500 and switch to full later. The download skips files already on Drive, so it fetches only the other 495.</p>
+<h4>Before opening Colab (on your PC)</h4>
+<ol><li><strong>Rebuild the code zip and upload it:</strong> run <code>python -m scripts.common.colab_bundle</code> in the repo, then upload <code>output/colab/capstone_code.zip</code> to Drive as **<code>MyDrive/capstone_rag/capstone_code.zip</code>**, replacing any older copy. The corpus presets are only in the latest code.</li><li><strong>Open the notebook:</strong> in Colab, <strong>File → Upload notebook →</strong> <code>notebooks/colab_rag_pipelines.ipynb</code>.</li><li><strong>Runtime:</strong> <strong>Runtime → Change runtime type → CPU</strong> is enough to download. Use an L4 GPU only for indexing (cell 5), later.</li></ol>
+<h4>Cells to run</h4>
+<table><thead><tr><th>Cell</th><th>What to do</th><th>What happens</th></tr></thead><tbody><tr><td><strong>1. Settings</strong></td><td><code>CORPUS = &quot;full&quot;</code> or <code>&quot;min500&quot;</code>; **<code>MAX_PER_SECTOR = 0</code><strong>; </strong><code>SMOKE_TEST = False</code>**; <code>SECTORS = &quot;&quot;</code> (all 13); **<code>SEC_USER_AGENT</code>** = your name and e-mail, e.g. <code>&quot;capstone-research yourname@gmail.com&quot;</code></td><td>Stores the settings</td></tr><tr><td><strong>2. Drive, code, dependencies</strong></td><td>Run it and allow Drive access</td><td>Mounts Drive, unpacks the code zip to <code>/content/Capstone</code>, installs packages (2–4 min). Check that the printed <code>BUNDLE_INFO</code> <code>built_at</code> is your new zip</td></tr><tr><td><strong>3. Settings object, Qdrant server, restore</strong></td><td>Run it</td><td>Builds the settings with <code>corpus_preset</code>, creates the Drive folders. Starting Qdrant and "nothing to restore" are harmless here</td></tr><tr><td><strong>4. Download</strong></td><td>Run it</td><td>Downloads from SEC EDGAR to <code>MyDrive/capstone_rag/annual_reports/&lt;sector&gt;/</code>, then prints each sector folder's size</td></tr><tr><td><strong>6b. Coverage</strong></td><td>Run it</td><td>Planned → downloaded → ingested by sector (ingested stays 0 until cell 5)</td></tr></tbody></table>
+<p>**<code>SMOKE_TEST = False</code> is essential.** With <code>True</code>, cell 3 limits the download to 2 filings per sector: 26 PDFs.</p>
+<h4>Result on Drive</h4>
+<pre><code>MyDrive/capstone_rag/annual_reports/
+    corpus_plan.jsonl            the full 1,004-row plan (copied)
+    pdf_manifest.jsonl           every downloaded filing
+    download_summary.json        counts, seconds, failures
+    banking/pdf_manifest.jsonl   banking/EDGAR_ARS_JPM_2025.pdf ...
+    ... 13 sector folders</code></pre>
+<p>Each manifest row records the SHA-256, page count, size, accession number and EDGAR URL. Indexing and the API read these manifests.</p>
+<h4>Optional checks (add a cell)</h4>
+<pre><code># Preview the selection without downloading
+!cd /content/Capstone &amp;&amp; python -m scripts.downloads.download_annual_report_corpus --preset {CORPUS} --dry-run --output-dir {DRIVE_ROOT}/annual_reports
+
+# Count the PDFs on Drive (expect 509 or 1004)
+!find {DRIVE_ROOT}/annual_reports -name &quot;*.pdf&quot; | wc -l</code></pre>
+<h4>Without the notebook (any machine with the repo)</h4>
+<pre><code>python -m scripts.downloads.download_annual_report_corpus --preset min500 --output-dir &lt;folder&gt; --user-agent &quot;name email@domain&quot;
+python -m scripts.downloads.download_annual_report_corpus --preset full   --output-dir &lt;folder&gt; --user-agent &quot;name email@domain&quot;</code></pre>
+<h4>If something goes wrong</h4>
+<table><thead><tr><th>Problem</th><th>Fix</th></tr></thead><tbody><tr><td>Disconnected, or <code>N failed; rerun to retry them</code></td><td>Run cells 2 → 3 → 4 again. Files already there with the right size are skipped; only missing or failed ones are fetched (<code>download_summary.json</code> lists failures)</td></tr><tr><td><code>SEC requires a contact e-mail</code></td><td><code>SEC_USER_AGENT</code> in cell 1 must contain an <code>@</code></td></tr><tr><td>HTTP 429 / 503 from SEC</td><td>Handled: the script backs off and retries, at most 8 requests per second</td></tr><tr><td><code>unexpected keyword argument &#x27;corpus_preset&#x27;</code></td><td>Drive has an old code zip. Rebuild it, upload it again, rerun cell 2</td></tr><tr><td>Only 26 PDFs</td><td><code>SMOKE_TEST</code> was <code>True</code>. Set it to <code>False</code> and rerun cells 1, 3 and 4</td></tr><tr><td>Drive full</td><td>Free the space in the table above, or upgrade (Google One 100 GB ≈ $1.99/month)</td></tr></tbody></table>
+<p><strong>After cell 4:</strong> wait a few minutes before ending the runtime, so Drive finishes saving the files. Anything not saved is downloaded again the next time cell 4 runs.</p>
+<p><strong>Next:</strong> to index, switch the runtime to an <strong>L4 GPU</strong>, run cells 1–3 with the same <code>CORPUS</code>, then <strong>cell 5</strong>. Snapshots go to Drive after each sector, and section 3.4 brings them to the VM.</p>
 <hr>
 <h2>4. Settings</h2>
 <p>Every setting is an environment variable. <a href="../.env.example">.env.example</a> lists all of them with comments.</p>

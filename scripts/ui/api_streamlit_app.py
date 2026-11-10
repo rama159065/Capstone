@@ -153,7 +153,13 @@ def render_result(result: dict[str, Any]) -> None:
     else:
         st.success(status)
 
-    st.markdown(result.get("answer") or "No answer was returned.")
+    answer = result.get("answer")
+    if answer:
+        st.markdown(answer)
+    else:
+        coverage = result.get("coverage") or {}
+        reason = coverage.get("message") or coverage.get("reason") or result.get("explanation")
+        st.markdown(f"No answer was returned. {reason}" if reason else "No answer was returned.")
 
     with st.expander("Citations and Human Review", expanded=True):
         st.json(

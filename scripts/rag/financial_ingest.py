@@ -239,8 +239,31 @@ def visual_targets(pages, mode):
     raise ValueError(f"unknown page selection {mode!r}; choose from {VISUAL_PAGE_MODES}")
 
 
+OCR_RULE = "v2"            # v2: chart and image pages with almost no text layer are OCR'd too (needs_ocr)
+MIN_TEXT_WORDS = 15
+
+
+def needs_ocr(page):
+    """True when the page's text layer can't be indexed as it is, so OCR must supply the text.
+
+    Garbled text and outlined text (glyphs drawn as shapes), and also chart and image pages with fewer than
+    MIN_TEXT_WORDS words in the layer: text drawn as vectors or baked into an image. Costco's FY2025 report is
+    like that on 75 of 76 pages; without this its text never reached the index.
+    """
+    if page["garbled"] or page["page_type"] == "outlined_text":
+        return True
+    return (page["page_type"] in {"chart", "image"}
+            and len(re.findall(r"[a-z]+", (page.get("text") or "").lower())) < MIN_TEXT_WORDS)
+
+
 def readable_text(page):
-    """Text that may be indexed: native if the layer is clean, otherwise OCR (may be empty)."""
+    """Text that may be indexed: native if the layer is usable, otherwise OCR (may be empty).
+
+    A garbled or outlined layer is never indexed. A chart or image page with only a few real words keeps
+    them until OCR supplies the page's text (so --ocr none loses nothing that was readable).
+    """
+    if needs_ocr(page) and page.get("ocr_text"):
+        return page["ocr_text"], "ocr"
     if page["garbled"] or page["page_type"] == "outlined_text":
         return page.get("ocr_text") or "", "ocr"
     return page["text"], "native_pdf"
@@ -706,8 +729,8 @@ def save_pages(root, row, max_pages, pages):
 
 
 def apply_ocr(ocr, pdf, pages, limit):
-    """OCR unreadable pages (garbled or outlined text), front section first, up to `limit` per filing (0 = all)."""
-    unreadable = [p for p in pages if p["garbled"] or p["page_type"] == "outlined_text"]
+    """OCR pages whose text layer is unusable (needs_ocr), front section first, up to `limit` per filing (0 = all)."""
+    unreadable = [p for p in pages if needs_ocr(p)]
     done = sum(p.get("ocr_signature") == ocr.signature for p in unreadable)
     todo = sorted((p for p in unreadable if p.get("ocr_signature") != ocr.signature),
                   key=lambda p: (p["section"] != "front", p["page"]))
@@ -739,7 +762,8 @@ class Ingest:
         common = {"analysis": ANALYSIS_VERSION, "max_pages": args.max_pages_per_pdf, "embedding": self.embedder.signature}
         self.pipeline = {
             "text": json.dumps({**common, "chunk": [CHUNK_CHARS, OVERLAP_CHARS, TABLE_CHARS], "terms": "num-v1", "ids": "v2",
-                                "ocr": self.ocr_sig, "ocr_limit": args.ocr_max_pages_per_filing}, sort_keys=True),
+                                "ocr": self.ocr_sig, "ocr_limit": args.ocr_max_pages_per_filing,
+                                "ocr_rule": OCR_RULE}, sort_keys=True),
             "visual": json.dumps({**common, "colpali": self.colpali_sig, "pages": args.visual_pages, "ids": "v2",
                                   "ocr": self.ocr_sig, "ocr_limit": args.ocr_max_pages_per_filing}, sort_keys=True)}
 
@@ -829,7 +853,7 @@ class Ingest:
         doc_id, started = row["document_id"], time.time()
         self.state.mark(doc_id, stage, "processing", self.pipeline[stage])
         try:
-            if self.ocr_sig and any(p["garbled"] or p["page_type"] == "outlined_text" for p in pages):
+            if self.ocr_sig and any(needs_ocr(p) for p in pages):
                 ocred = apply_ocr(self.ocr, pdf, pages, self.args.ocr_max_pages_per_filing)
                 if ocred:
                     save_pages(self.root, row, self.args.max_pages_per_pdf, pages)

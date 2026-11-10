@@ -243,3 +243,35 @@ def test_compose_wires_the_services():
     keys = {line.split("=")[0] for line in (ROOT / ".env.example").read_text(encoding="utf-8").splitlines()
             if line and not line.startswith("#")}
     assert {"LLM_API_BASE", "API_AUTH_TOKEN", "AGENT_MAX_STEPS", "ANSWER_CACHE_SECONDS", "DOMAIN"} <= keys
+
+
+def test_directory_prefers_the_served_index_over_manifests(tmp_path, monkeypatch):
+    manifest = tmp_path / "pdf_manifest.jsonl"
+    manifest.write_text('{"ticker": "AAPL", "year": 2024}\n{"ticker": "COST", "year": 2024}\n', encoding="utf-8")
+    make_state(tmp_path / "fq" / "ingest.sqlite3", [("edgar_ars_COST_2025", "text", "complete")])
+    monkeypatch.setattr(fc, "MANIFESTS", (manifest,))
+    monkeypatch.setenv("RAG_INGEST_DIR", str(tmp_path / "fq"))
+    monkeypatch.delenv("RAG_VLM_DIR", raising=False)
+    monkeypatch.delenv("RAG_CORPUS_DIR", raising=False)
+    monkeypatch.delenv("COVERAGE_SOURCE", raising=False)
+    assert fc.load_directory() == {"COST": [2025]}         # downloaded-only AAPL is not answerable
+    monkeypatch.setenv("COVERAGE_SOURCE", "corpus")
+    assert fc.load_directory() == {"AAPL": [2024], "COST": [2024, 2025]}
+    monkeypatch.delenv("COVERAGE_SOURCE")
+    monkeypatch.setenv("RAG_INGEST_DIR", str(tmp_path / "empty"))       # no index: manifests decide
+    assert fc.load_directory() == {"AAPL": [2024], "COST": [2024]}
+
+
+def test_company_outside_the_index_is_not_available_without_retrieval():
+    scope = fc.Clarifier(directory={"COST": [2024, 2025]}).scope("What was Apple's net income for FY2024?")
+    assert scope["coverage"]["status"] == "not_available"
+    assert "Apple" in scope["coverage"]["message"]
+
+
+def test_warm_up_is_skipped_off_the_ingest_backends(monkeypatch):
+    from scripts.api import api_app
+    monkeypatch.setenv("RAG_BACKEND", "chroma")
+    assert api_app.warm_up_retrieval() == "skipped"
+    monkeypatch.setenv("RAG_BACKEND", "financial_qdrant")
+    monkeypatch.setenv("API_WARMUP", "false")
+    assert api_app.warm_up_retrieval() == "skipped"

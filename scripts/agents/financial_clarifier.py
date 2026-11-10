@@ -155,21 +155,25 @@ def indexed_filings(path):
 def load_directory(paths=None):
     """ticker -> sorted fiscal years with a filing in the corpus.
 
-    By default: the corpus manifests plus every filing the served indexes hold. Explicit ``paths`` read only those
+    By default the filings the served indexes hold, because only those can be answered: a manifest also lists
+    filings that are downloaded but not (yet) ingested. Without an index state file (Chroma default) the corpus
+    manifests decide. ``COVERAGE_SOURCE=corpus`` always adds the manifests. Explicit ``paths`` read only those
     manifests.
     """
     years: dict[str, set[int]] = {}
+    if paths is None:
+        for state in index_state_files():
+            if state.exists():
+                for ticker, year in indexed_filings(state):
+                    years.setdefault(ticker, set()).add(year)
+        if years and os.getenv("COVERAGE_SOURCE", "index").lower() != "corpus":
+            return {ticker: sorted(values) for ticker, values in sorted(years.items())}
     for path in (corpus_manifests() if paths is None else paths):
         if Path(path).exists():
             for line in Path(path).read_text(encoding="utf-8").splitlines():
                 if line.strip():
                     row = json.loads(line)
                     years.setdefault(row["ticker"].upper(), set()).add(int(row["year"]))
-    if paths is None:
-        for state in index_state_files():
-            if state.exists():
-                for ticker, year in indexed_filings(state):
-                    years.setdefault(ticker, set()).add(year)
     return {ticker: sorted(values) for ticker, values in sorted(years.items())}
 
 

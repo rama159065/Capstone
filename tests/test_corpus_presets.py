@@ -84,3 +84,14 @@ def test_notebook_exposes_the_corpus_setting():
     source = "\n".join("".join(c["source"]) for c in nb["cells"])
     assert 'CORPUS = "full"  # @param ["full", "min500"]' in source
     assert "corpus_preset=CORPUS" in source
+
+
+def test_preset_report_lists_every_filing_by_sector(tmp_path):
+    from scripts.downloads import corpus_preset_report as report
+    out = tmp_path / "min500.html"
+    assert report.main(["--preset", "min500", "--out", str(out)]) == 0
+    page = out.read_text(encoding="utf-8")
+    assert page.count("<tbody class='filings'>") == 13
+    assert page.count("<tr><td class='num'>") == 509
+    assert page.count("<td>✓</td>") == len(EVAL_FILINGS)
+    assert page.count(">eval-set company<") == 8                    # Adobe and Salesforce, 4 years each

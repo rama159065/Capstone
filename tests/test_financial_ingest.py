@@ -327,3 +327,18 @@ def test_font_encoding_garbage_counts_as_garbled_but_normal_text_does_not():
     assert not fi.non_ascii_garbage(clean)                   # a few dashes, quotes and accents are normal
     assert not fi.non_ascii_garbage("±²³ ¤ µ")              # too short to judge
     assert fi.ANALYSIS_VERSION == 2                          # cached page analyses are redone with the new rule
+
+
+def test_needs_ocr_covers_pages_without_a_text_layer():
+    page = lambda kind, text="", garbled=False: {"page_type": kind, "text": text, "garbled": garbled}
+    many = "net sales increased in fiscal 2025 driven by membership fee income and comparable sales growth " * 2
+    assert fi.needs_ocr(page("text", many, garbled=True))               # garbled text layer
+    assert fi.needs_ocr(page("outlined_text"))                          # glyphs drawn as shapes
+    assert fi.needs_ocr(page("chart", "Revenue 2025"))                  # vector page with almost no text (Costco FY2025)
+    assert fi.needs_ocr(page("image", ""))                              # text baked into an image
+    assert not fi.needs_ocr(page("chart", many))                        # a chart whose labels are real text
+    assert not fi.needs_ocr(page("text", many)) and not fi.needs_ocr(page("table", "a b"))
+    assert not fi.needs_ocr(page("blank"))
+    assert fi.readable_text({**page("chart", "x"), "ocr_text": "COSTCO 914 warehouses"}) == ("COSTCO 914 warehouses", "ocr")
+    assert fi.readable_text(page("chart", "Revenue 2025")) == ("Revenue 2025", "native_pdf")   # OCR off: keep the few words
+    assert fi.readable_text(page("text", many, garbled=True)) == ("", "ocr")                   # garbage is never indexed

@@ -415,6 +415,35 @@ app.add_middleware(
 app.state.rate_limiter = InMemoryRateLimiter()
 
 
+def warm_up_retrieval() -> str:
+    """Open the served index and load its embedding model once, so the first question isn't the slow one.
+
+    Only the financial ingest backends are warmed (they load a local model and open Qdrant on first use).
+    ``API_WARMUP=false`` turns it off. Failures are logged, never raised: a request still retries the load.
+    """
+    backend = os.getenv("RAG_BACKEND", "")
+    if os.getenv("API_WARMUP", "true").strip().lower() in {"0", "false", "no", "off"} or backend not in {"financial_qdrant", "financial_vlm"}:
+        return "skipped"
+    started = time.perf_counter()
+    try:
+        if backend == "financial_qdrant":
+            from scripts.rag.financial_ingest import retrieve_for_agent
+        else:
+            from scripts.rag.vlm_ingest import retrieve_for_agent
+        retrieve_for_agent("total revenue", top_k=1)
+    except Exception as exc:  # noqa: BLE001 - warm-up is best effort
+        logger.warning("retrieval warm-up failed: %s", exc)
+        return "failed"
+    logger.info("retrieval warm-up done in %.1fs (backend=%s)", time.perf_counter() - started, backend)
+    return "done"
+
+
+@app.on_event("startup")
+def start_warm_up() -> None:
+    import threading
+    threading.Thread(target=warm_up_retrieval, name="retrieval-warmup", daemon=True).start()
+
+
 app.router.route_class = MetricsRoute
 
 
