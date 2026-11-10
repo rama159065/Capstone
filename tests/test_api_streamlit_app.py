@@ -16,9 +16,8 @@ def settings(**overrides):
 
 
 def test_financial_payload_sends_the_chosen_sectors():
-    payload = ui.build_payload("financial_report_qa", "net interest income",
-                               settings(sectors=["Banking", "Oil and gas"]))
+    payload = ui.build_payload("net interest income", settings(sectors=["Banking", "Oil and gas"]))
     assert payload["sector"] == "Banking,Oil and gas"
-    assert ui.build_payload("financial_report_qa", "q", settings())["sector"] is None
-    assert "sector" not in ui.build_payload("hr_policy", "q", settings(sectors=["Banking"]))   # financial only
+    assert ui.build_payload("q", settings())["sector"] is None
+    assert ui.DOMAIN == "financial_report_qa" and not hasattr(ui, "DOMAINS")   # financial-only UI
     assert len(SECTOR_NAMES) == 13

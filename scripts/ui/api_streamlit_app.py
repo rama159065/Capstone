@@ -1,4 +1,6 @@
-"""Streamlit frontend for the FastAPI Agentic RAG backend.
+"""Streamlit frontend of the Financial Report Copilot (financial_report_qa only).
+
+The API still serves the other domains (`/chat/{domain}`); this UI is the financial-report product only.
 
 Start the backend first:
     uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
@@ -13,6 +15,7 @@ Deployment settings (environment variables, see .env.example):
     DEFAULT_LLM_PROVIDER    mock | hosted, preselected in the sidebar
     DEFAULT_EMBEDDING_PROVIDER  hashing | hosted
     UI_SHOW_ADVANCED        1 = open the retrieval and tracing settings by default
+    UI_APP_TITLE            page heading (default "Financial Report Copilot")
 """
 
 from __future__ import annotations
@@ -44,22 +47,11 @@ DEFAULT_LLM_PROVIDER = os.getenv("DEFAULT_LLM_PROVIDER", "mock")
 DEFAULT_EMBEDDING_PROVIDER = os.getenv("DEFAULT_EMBEDDING_PROVIDER", "hashing")
 SHOW_ADVANCED = os.getenv("UI_SHOW_ADVANCED", "0").lower() in {"1", "true", "yes"}
 _COMPANIES: dict[str, tuple[float, list[dict[str, Any]]]] = {}
-DOMAINS = {
-    "financial_report_qa": "Financial Report QA",
-    "procurement_vendor": "Procurement and Vendor Review",
-    "travel_expense": "Travel and Expense Policy",
-    "competitive_research": "Competitive Research",
-    "incident_postmortem": "Incident Postmortem",
-    "hr_policy": "HR Policy Navigator",
-}
-DEFAULT_QUERIES = {
-    "financial_report_qa": "What does Apple say can affect quarterly net sales?",
-    "procurement_vendor": "What evidence describes vendor evaluation criteria?",
-    "travel_expense": "What documentation is required for travel expenses?",
-    "competitive_research": "Compare competitor risk language about market demand.",
-    "incident_postmortem": "What should be included in an incident postmortem?",
-    "hr_policy": "What does the FMLA guide say about requesting leave?",
-}
+DOMAIN = "financial_report_qa"        # the only domain this UI serves
+APP_TITLE = os.getenv("UI_APP_TITLE", "").strip() or "Financial Report Copilot"
+APP_TAGLINE = ("Ask about company performance, compare peers and check growth. "
+               "Every figure is cited to its page in the SEC annual report.")
+DEFAULT_QUERY = "What drove revenue growth in the latest annual report?"
 
 
 def api_headers() -> dict[str, str]:
@@ -162,7 +154,7 @@ def coverage_summary(companies: list[dict[str, Any]]) -> str | None:
 def example_questions(companies: list[dict[str, Any]]) -> list[dict[str, str]]:
     """One working example per capability, built from the companies the served index actually holds."""
     if not companies:
-        return [{"capability": "Cited answer", "question": DEFAULT_QUERIES["financial_report_qa"],
+        return [{"capability": "Cited answer", "question": DEFAULT_QUERY,
                  "look_for": "Citations to the filing pages"}]
     by_years = sorted(companies, key=lambda r: (-len(r.get("years") or []), r["ticker"]))
     first = by_years[0]
@@ -199,31 +191,25 @@ def example_questions(companies: list[dict[str, Any]]) -> list[dict[str, str]]:
     return examples
 
 
-def render_guide(domain: str, companies: list[dict[str, Any]], expanded: bool) -> None:
+def render_guide(companies: list[dict[str, Any]], expanded: bool) -> None:
     """'What can I ask?' with clickable examples, plus how to read an answer."""
     with st.expander("What can I ask?", expanded=expanded):
-        if domain != "financial_report_qa":
-            st.markdown(f"Ask about the **{DOMAINS[domain]}** documents. Answers cite the pages they use, and "
-                        "unsafe or off-topic requests are refused.")
-            if st.button(DEFAULT_QUERIES[domain], key=f"example-{domain}"):
-                st.session_state["queued_prompt"] = DEFAULT_QUERIES[domain]
+        st.caption("Click an example to send it, or type your own question below.")
+        for index, example in enumerate(example_questions(companies)):
+            left, right = st.columns([2, 3])
+            left.markdown(f"**{example['capability']}**  \n<small>{example['look_for']}</small>",
+                          unsafe_allow_html=True)
+            if right.button(example["question"], key=f"example-{index}", width="stretch"):
+                st.session_state["queued_prompt"] = example["question"]
                 st.rerun()
-        else:
-            st.caption("Click an example to send it, or type your own question below.")
-            for index, example in enumerate(example_questions(companies)):
-                left, right = st.columns([2, 3])
-                left.markdown(f"**{example['capability']}**  \n<small>{example['look_for']}</small>",
-                              unsafe_allow_html=True)
-                if right.button(example["question"], key=f"example-{index}", width="stretch"):
-                    st.session_state["queued_prompt"] = example["question"]
-                    st.rerun()
     with st.expander("How to read an answer", expanded=False):
         st.markdown("\n".join(f"- `{status}`: {text}" for status, text in STATUS_HELP.items()))
         st.markdown("\n".join(f"- {tip}" for tip in READING_TIPS))
 
 
-def build_payload(domain: str, query: str, settings: dict[str, Any]) -> dict[str, Any]:
-    payload: dict[str, Any] = {
+def build_payload(query: str, settings: dict[str, Any]) -> dict[str, Any]:
+    """Request body for /conversation and /chat/financial_report_qa."""
+    return {
         "query": query,
         "llm_provider": settings["llm_provider"],
         "embedding_provider": settings["embedding_provider"],
@@ -237,19 +223,13 @@ def build_payload(domain: str, query: str, settings: dict[str, Any]) -> dict[str
         "enable_human_review": settings["enable_human_review"],
         "enable_langsmith": settings["enable_langsmith"],
         "langsmith_project": settings["langsmith_project"] or None,
+        "technique": settings["technique"],
+        "retrieval_mode": settings["retrieval_mode"],
+        "ticker": settings["ticker"] or None,
+        "year": settings["year"],
+        "sector": ",".join(settings.get("sectors") or []) or None,
+        "self_consistency_samples": settings["self_consistency_samples"],
     }
-    if domain == "financial_report_qa":
-        payload.update(
-            {
-                "technique": settings["technique"],
-                "retrieval_mode": settings["retrieval_mode"],
-                "ticker": settings["ticker"] or None,
-                "year": settings["year"],
-                "sector": ",".join(settings.get("sectors") or []) or None,
-                "self_consistency_samples": settings["self_consistency_samples"],
-            }
-        )
-    return payload
 
 
 def render_result(result: dict[str, Any]) -> None:
@@ -388,46 +368,38 @@ def option_index(options: list[str], value: str) -> int:
 
 
 def sidebar() -> dict[str, Any]:
-    st.sidebar.title("Copilot settings")
-    domain = st.sidebar.selectbox("Domain", list(DOMAINS), format_func=lambda value: DOMAINS[value])
+    st.sidebar.title("Filters and settings")
     advanced = st.sidebar.expander("Advanced: backend, retrieval and tracing", expanded=SHOW_ADVANCED)
     api_base = advanced.text_input("FastAPI base URL", DEFAULT_API_BASE)
-    health = get_json(api_base, "/health")
-    if health.get("status") == "ok":
-        runtime = health.get("runtime") or {}
-        st.sidebar.success(f"Backend connected ({runtime.get('profile', '?')}, "
-                           f"financial retrieval: {runtime.get('financial_backend', '?')})")
-    else:
-        st.sidebar.warning("Backend unavailable")
+    if get_json(api_base, "/health").get("status") != "ok":      # say nothing while it works
+        st.sidebar.warning("The copilot service is not reachable right now. Please try again shortly.")
 
-    settings: dict[str, Any] = {"api_base": api_base, "domain": domain, "ticker": "", "year": None, "sectors": []}
-    if domain == "financial_report_qa":
-        companies = covered_companies(api_base)
-        names = {row["ticker"]: row.get("company") or row["ticker"] for row in companies}
-        settings["clarify"] = st.sidebar.toggle(
-            "Ask clarifying questions", True, help="Ask for a missing company, year or measure before running the agents.")
-        settings["sectors"] = st.sidebar.multiselect(
-            "Sectors (optional)", list(SECTOR_NAMES),
-            help="Limit evidence to these sectors of the annual-report corpus.")
-        if companies:
-            settings["ticker"] = st.sidebar.selectbox(
-                "Company (optional)", ticker_choices(companies, settings["sectors"]),
-                format_func=lambda t: "Any company" if not t else f"{t} - {names.get(t, t)}")
-            settings["year"] = st.sidebar.selectbox(
-                "Fiscal year (optional)", year_choices(companies, settings["ticker"]),
-                format_func=lambda y: "Any year" if y is None else str(y))
-        else:                                    # older API without /companies: free text
-            settings["ticker"] = st.sidebar.text_input("Ticker (optional)", "").strip().upper()
-            year_value = st.sidebar.text_input("Fiscal year (optional)", "").strip()
-            if year_value:
-                try:
-                    settings["year"] = int(year_value)
-                except ValueError:
-                    st.sidebar.warning("Year must be numeric; ignoring filter.")
-        settings["technique"] = st.sidebar.selectbox(
-            "Technique", ["agentic_graph", "baseline_rag", "structured_few_shot", "decomposition", "self_consistency"])
-    else:
-        settings.update(clarify=False, technique="agentic_graph")
+    settings: dict[str, Any] = {"api_base": api_base, "ticker": "", "year": None, "sectors": []}
+    companies = covered_companies(api_base)
+    names = {row["ticker"]: row.get("company") or row["ticker"] for row in companies}
+    settings["clarify"] = st.sidebar.toggle(
+        "Ask clarifying questions", True, help="Ask for a missing company, year or measure before running the agents.")
+    settings["sectors"] = st.sidebar.multiselect(
+        "Sectors (optional)", list(SECTOR_NAMES),
+        help="Limit evidence to these sectors of the annual-report corpus.")
+    if companies:
+        settings["ticker"] = st.sidebar.selectbox(
+            "Company (optional)", ticker_choices(companies, settings["sectors"]),
+            format_func=lambda t: "Any company" if not t else f"{t} - {names.get(t, t)}")
+        settings["year"] = st.sidebar.selectbox(
+            "Fiscal year (optional)", year_choices(companies, settings["ticker"]),
+            format_func=lambda y: "Any year" if y is None else str(y))
+    else:                                    # older API without /companies: free text
+        settings["ticker"] = st.sidebar.text_input("Ticker (optional)", "").strip().upper()
+        year_value = st.sidebar.text_input("Fiscal year (optional)", "").strip()
+        if year_value:
+            try:
+                settings["year"] = int(year_value)
+            except ValueError:
+                st.sidebar.warning("Year must be numeric; ignoring filter.")
+    settings["technique"] = advanced.selectbox(
+        "Technique", ["agentic_graph", "baseline_rag", "structured_few_shot", "decomposition", "self_consistency"],
+        help="agentic_graph is the full agent; the others are single-prompt baselines for comparison.")
 
     settings.update({
         "llm_provider": advanced.selectbox("LLM provider", LLM_PROVIDERS,
@@ -456,24 +428,23 @@ def sidebar() -> dict[str, Any]:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Annual Report Copilot", layout="wide")
-    st.title("Annual Report Copilot")
+    st.set_page_config(page_title=APP_TITLE, page_icon="📊", layout="wide")
+    st.title(APP_TITLE)
+    st.markdown(APP_TAGLINE)
     st.session_state.setdefault("messages", [])
 
     settings = sidebar()
-    domain = settings["domain"]
-    companies = covered_companies(settings["api_base"]) if domain == "financial_report_qa" else []
+    companies = covered_companies(settings["api_base"])
     coverage = coverage_summary(companies)
-    header = (f"Cited answers from SEC annual reports: **{coverage}**." if coverage
-              else "Cited answers from SEC annual reports.") if domain == "financial_report_qa" \
-        else f"Cited answers from the {DOMAINS[domain]} documents."
-    st.caption(header + " Streamlit → FastAPI → LangGraph agents → hybrid RAG.")
+    st.caption((f"Coverage: **{coverage}** of SEC annual reports." if coverage
+                else "Coverage: unknown (the API is not reachable).")
+               + " Streamlit → FastAPI → LangGraph agents → hybrid RAG.")
     if settings.get("llm_provider") == "mock":
         st.caption(":orange[Test mode: answers come from the mock LLM, so their wording is placeholder text. "
                    "Retrieval, citations, guardrails and the agent steps are real.]")
 
     messages = st.session_state["messages"]
-    render_guide(domain, companies, expanded=not messages)
+    render_guide(companies, expanded=not messages)
     for position, message in enumerate(messages):
         with st.chat_message(message["role"]):
             if message.get("turn"):
@@ -485,10 +456,10 @@ def main() -> None:
                 if message.get("result"):
                     render_result(message["result"])
 
-    prompt = st.chat_input(DEFAULT_QUERIES[domain]) or st.session_state.pop("queued_prompt", None)
+    prompt = st.chat_input("Ask about a company's annual report...") or st.session_state.pop("queued_prompt", None)
     if not prompt:
         return
-    conversational = domain == "financial_report_qa" and settings["clarify"]
+    conversational = settings["clarify"]
 
     st.session_state["messages"].append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -498,7 +469,7 @@ def main() -> None:
         with st.chat_message("assistant"):
             with st.spinner("Checking the question..."):
                 try:
-                    payload = {**build_payload(domain, prompt, settings), "clarify": True,
+                    payload = {**build_payload(prompt, settings), "clarify": True,
                                "conversation_id": st.session_state.get("conversation_id")}
                     turn = post_json(settings["api_base"], "/conversation/financial_report_qa", payload)
                     st.session_state["conversation_id"] = turn.get("conversation_id")
@@ -511,10 +482,10 @@ def main() -> None:
         return
 
     with st.chat_message("assistant"):
-        with st.spinner("Calling FastAPI backend..."):
+        with st.spinner("Reading the filings..."):
             try:
-                payload = build_payload(domain, prompt, settings)
-                result = post_json(settings["api_base"], f"/chat/{domain}", payload)
+                payload = build_payload(prompt, settings)
+                result = post_json(settings["api_base"], f"/chat/{DOMAIN}", payload)
                 answer = result.get("answer") or "No answer returned."
             except Exception as exc:  # noqa: BLE001 - display safe UI error.
                 result = {"final_status": "error", "answer": str(exc), "error": str(exc)}

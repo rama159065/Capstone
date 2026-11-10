@@ -37,7 +37,7 @@ def test_examples_drop_what_the_coverage_cannot_show():
     assert "Comparison across companies" not in capabilities                # one company only
     assert next(e for e in one if "not available" in e["capability"])["question"].startswith("What was Microsoft")
     fallback = ui.example_questions([])
-    assert fallback == [{"capability": "Cited answer", "question": ui.DEFAULT_QUERIES["financial_report_qa"],
+    assert fallback == [{"capability": "Cited answer", "question": ui.DEFAULT_QUERY,
                          "look_for": "Citations to the filing pages"}]
 
 
@@ -55,10 +55,12 @@ def test_guide_renders_and_an_example_click_sends_it(monkeypatch):
     monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "mock")
     app = AppTest.from_file(str(Path(ui.__file__).resolve()), default_timeout=60).run()
     assert not app.exception
+    assert app.title[0].value == "Financial Report Copilot"
+    assert not [s for s in app.selectbox if s.label == "Domain"]            # financial only: no domain picker
     assert [e.label for e in app.expander][:2] == ["What can I ask?", "How to read an answer"]
     assert any("Test mode" in c.value for c in app.caption)
-    button = next(b for b in app.button if b.label == ui.DEFAULT_QUERIES["financial_report_qa"])
+    button = next(b for b in app.button if b.label == ui.DEFAULT_QUERY)
     button.click().run()
     assert not app.exception
-    assert any(ui.DEFAULT_QUERIES["financial_report_qa"] in m.markdown[0].value for m in app.chat_message
+    assert any(ui.DEFAULT_QUERY in m.markdown[0].value for m in app.chat_message
                if m.markdown)
