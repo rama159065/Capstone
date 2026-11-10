@@ -296,6 +296,7 @@ Each node runs inside `bounded(...)`: a per-request deadline and fail-fast threa
 | Response `support_check` | Verdict, each claim with the judge's reason, figures checked and any missing |
 | Response `grounding` | Citation status, `method` (`llm_support_check`, `source_excerpts` or `mock`), `semantic_answer_verified` |
 | Streamlit **Agent run** expander | The path, tools, attempts and a tool-call table |
+| Streamlit **What can I ask?** and **How to read an answer** | Clickable examples built from the indexed companies (cited answer, growth, comparison, follow-up, risks, not available, guardrails), the coverage line, and what each status means |
 | `trace` / `trace_id` | Timed spans from `common/resilience.Calls` |
 | LangSmith (optional) | `LANGSMITH_API_KEY` + `enable_langsmith`; each graph node is a run |
 | Access log | Request ID, route, status, latency; never bodies or prompts |

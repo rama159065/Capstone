@@ -32,7 +32,7 @@ ROOT = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.common.companies import SECTOR_NAMES  # noqa: E402 - after the repo is on sys.path
+from scripts.common.companies import NAMES as COMPANY_NAMES, SECTOR_NAMES  # noqa: E402 - after the repo is on sys.path
 
 
 DEFAULT_API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")   # set by the runtime profile
@@ -112,6 +112,114 @@ def year_choices(companies: list[dict[str, Any]], ticker: str) -> list[int | Non
     """None (any year) plus the years with a filing for the ticker (all covered years without a ticker)."""
     years = {year for row in companies if not ticker or row["ticker"] == ticker for year in row.get("years") or []}
     return [None] + sorted(years, reverse=True)
+
+
+# ----------------------------------------------------------------------------- feature guide
+
+# Well-known companies used to show a "not available" answer when they are not in the served index.
+NOT_COVERED_CANDIDATES = ("AAPL", "MSFT", "NVDA", "JPM", "XOM", "TSLA", "GOOGL", "META")
+
+STATUS_HELP = {
+    "answered": "Answered from the filings; every citation points to a retrieved page.",
+    "evidence_only": "A hosted model's answer couldn't be verified, so the cited excerpts are shown instead.",
+    "pending_human_review": "Drafted, but flagged for a person to check (advice wording, weak evidence, "
+                            "an unsupported claim or an unverified calculation).",
+    "not_available": "The indexed filings don't cover that company, year or measure. No figure is given.",
+    "insufficient_evidence": "The searches found nothing usable for this question.",
+    "not_grounded": "Withheld: the citations didn't check out or named a company you didn't ask about.",
+    "refused": "Blocked by a guardrail: advice, prompt injection or an unsafe request.",
+}
+READING_TIPS = (
+    "**Critic support check**: *supported* means the cited pages state every claim and every figure.",
+    "**Agent run**: the steps the agent took, the tools it used, and any retry or repair.",
+    "**Evidence** and **Citations**: the exact chunks and pages the answer relies on.",
+)
+
+
+def short_name(ticker: str, companies: list[dict[str, Any]]) -> str:
+    """'Costco' rather than 'Costco Wholesale Corporation': the clarifier's short name when it has one."""
+    row = next((r for r in companies if r["ticker"] == ticker), {})
+    name = COMPANY_NAMES.get(ticker) or row.get("company") or ticker
+    for suffix in (" Corporation", " Corp.", " Corp", " Inc.", " Inc", " Company", " Co.", " plc", " Ltd."):
+        name = name.removesuffix(suffix)
+    return name.strip(" ,")
+
+
+def coverage_summary(companies: list[dict[str, Any]]) -> str | None:
+    """'5 filings · 4 companies · Retail · FY2024–2025' from GET /companies (None when unknown)."""
+    if not companies:
+        return None
+    filings = sum(len(row.get("years") or []) for row in companies)
+    sectors = sorted({row.get("sector") for row in companies if row.get("sector")})
+    years = sorted({year for row in companies for year in row.get("years") or []})
+    sector_text = (", ".join(sectors) if len(sectors) <= 3 else f"{len(sectors)} sectors") if sectors else ""
+    year_text = (f"FY{years[0]}–{years[-1]}" if len(years) > 1 else f"FY{years[0]}") if years else ""
+    parts = [f"{filings:,} filing{'s' * (filings != 1)}", f"{len(companies):,} compan{'ies' if len(companies) != 1 else 'y'}",
+             sector_text, year_text]
+    return " · ".join(part for part in parts if part)
+
+
+def example_questions(companies: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """One working example per capability, built from the companies the served index actually holds."""
+    if not companies:
+        return [{"capability": "Cited answer", "question": DEFAULT_QUERIES["financial_report_qa"],
+                 "look_for": "Citations to the filing pages"}]
+    by_years = sorted(companies, key=lambda r: (-len(r.get("years") or []), r["ticker"]))
+    first = by_years[0]
+    first_name, latest = short_name(first["ticker"], companies), max(first.get("years") or [0])
+    examples = [{"capability": "Cited answer from one filing",
+                 "question": f"What was {first_name}'s net income in fiscal {latest}?",
+                 "look_for": "Citations to the filing pages; critic support check"}]
+    if len(first.get("years") or []) > 1:
+        years = sorted(first["years"])
+        examples.append({"capability": "Growth with a checked calculation",
+                         "question": f"How much did {first_name}'s revenue grow from {years[-2]} to {years[-1]}?",
+                         "look_for": "Agent run: one search per year, then the calculator"})
+    peers = [r for r in companies if r["ticker"] != first["ticker"] and latest in (r.get("years") or [])]
+    if peers:
+        peer = short_name(peers[0]["ticker"], companies)
+        examples.append({"capability": "Comparison across companies",
+                         "question": f"Compare {first_name} and {peer} revenue in {latest}",
+                         "look_for": "Agent run: one filtered search per company"})
+        examples.append({"capability": "Follow-up questions",
+                         "question": f"Compare {first_name} and {peer} revenue",
+                         "look_for": "It asks which year, with options to click"})
+    examples.append({"capability": "Risks and explanations",
+                     "question": f"What are the main risk factors {first_name} describes?",
+                     "look_for": "Answer from the risk-factor pages, with citations"})
+    covered = {row["ticker"] for row in companies}
+    missing = next((t for t in NOT_COVERED_CANDIDATES if t not in covered), None)
+    if missing:
+        examples.append({"capability": "Honest \"not available\"",
+                         "question": f"What was {short_name(missing, [])}'s net income in fiscal {latest}?",
+                         "look_for": "Says the filings aren't indexed; gives no figure"})
+    examples.append({"capability": "Guardrails",
+                     "question": f"Should I buy {first_name} stock?",
+                     "look_for": "Refuses investment advice"})
+    return examples
+
+
+def render_guide(domain: str, companies: list[dict[str, Any]], expanded: bool) -> None:
+    """'What can I ask?' with clickable examples, plus how to read an answer."""
+    with st.expander("What can I ask?", expanded=expanded):
+        if domain != "financial_report_qa":
+            st.markdown(f"Ask about the **{DOMAINS[domain]}** documents. Answers cite the pages they use, and "
+                        "unsafe or off-topic requests are refused.")
+            if st.button(DEFAULT_QUERIES[domain], key=f"example-{domain}"):
+                st.session_state["queued_prompt"] = DEFAULT_QUERIES[domain]
+                st.rerun()
+        else:
+            st.caption("Click an example to send it, or type your own question below.")
+            for index, example in enumerate(example_questions(companies)):
+                left, right = st.columns([2, 3])
+                left.markdown(f"**{example['capability']}**  \n<small>{example['look_for']}</small>",
+                              unsafe_allow_html=True)
+                if right.button(example["question"], key=f"example-{index}", width="stretch"):
+                    st.session_state["queued_prompt"] = example["question"]
+                    st.rerun()
+    with st.expander("How to read an answer", expanded=False):
+        st.markdown("\n".join(f"- `{status}`: {text}" for status, text in STATUS_HELP.items()))
+        st.markdown("\n".join(f"- {tip}" for tip in READING_TIPS))
 
 
 def build_payload(domain: str, query: str, settings: dict[str, Any]) -> dict[str, Any]:
@@ -350,13 +458,22 @@ def sidebar() -> dict[str, Any]:
 def main() -> None:
     st.set_page_config(page_title="Annual Report Copilot", layout="wide")
     st.title("Annual Report Copilot")
-    st.caption("Cited answers from 1,004 SEC annual reports. Streamlit -> FastAPI -> LangGraph agents -> hybrid RAG")
     st.session_state.setdefault("messages", [])
 
     settings = sidebar()
     domain = settings["domain"]
+    companies = covered_companies(settings["api_base"]) if domain == "financial_report_qa" else []
+    coverage = coverage_summary(companies)
+    header = (f"Cited answers from SEC annual reports: **{coverage}**." if coverage
+              else "Cited answers from SEC annual reports.") if domain == "financial_report_qa" \
+        else f"Cited answers from the {DOMAINS[domain]} documents."
+    st.caption(header + " Streamlit → FastAPI → LangGraph agents → hybrid RAG.")
+    if settings.get("llm_provider") == "mock":
+        st.caption(":orange[Test mode: answers come from the mock LLM, so their wording is placeholder text. "
+                   "Retrieval, citations, guardrails and the agent steps are real.]")
 
     messages = st.session_state["messages"]
+    render_guide(domain, companies, expanded=not messages)
     for position, message in enumerate(messages):
         with st.chat_message(message["role"]):
             if message.get("turn"):

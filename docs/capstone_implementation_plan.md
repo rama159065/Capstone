@@ -19,7 +19,7 @@
 | Report and demo | 25% | Evaluation tables, the failure taxonomy, and the "what we did to compensate for a small model" section |
 
 Status column in this document:
-- **Exists:** in the repo and tested; 382 tests pass (10 Nov).
+- **Exists:** in the repo and tested; 387 tests pass (10 Nov).
 - **Extend:** partly there.
 - **New:** to build.
 

@@ -9,7 +9,7 @@ This is the build specification. Each feature lists:
 - the tests and the evaluation metric that prove it.
 
 **Status:**
-- **Done:** in the repo and tested; 382 tests pass (10 Nov).
+- **Done:** in the repo and tested; 387 tests pass (10 Nov).
 - **Extend:** partly there.
 - **New:** to build.
 
@@ -53,7 +53,7 @@ This is the build specification. Each feature lists:
 | F19 | Research memo with human approval | Agentic | P1 | New | 1.5 | F7, F8, F11 |
 | F20 | Change alerts on a new filing | Agentic | P2 | New | 1 | F9 |
 | F21 | Analyst signals (strengths, risks, watch items; never advice) | Agentic | P2 | New | 1 | F7, F8 |
-| G1–G6 | Guardrail and grounding suite | Safety | P0 | Mostly done; G4, G6 new | 1 | P5 |
+| G1–G6 | Guardrail and grounding suite | Safety | P0 | Mostly done; G6 new | 0.5 | — |
 | E1–E6 | Evaluation harness and reports | Evaluation | P0 | Extend / New | 2.5 | P0 features |
 | U1–U6 | UI features | Front end | P0/P1 | Extend / New | 2 | features above |
 
@@ -385,7 +385,7 @@ The clarifier suggests the right metric when the asked one doesn't apply. Its `m
 | G1 | Input guard: injection, code, encoded payloads | Done | `test_guardrails.py` |
 | G2 | Evidence guard: injected instructions inside retrieved chunks | Done | Add **10 planted injected chunks** to a fixture index |
 | G3 | Advice / prediction / personal-data refusal | Done | 8 refusal questions in the eval set |
-| G4 | **Number grounding (P5)** | **New** | Fabricated-number cases |
+| G4 | **Number grounding and claim support (P5)** | **Done** (10 Nov) | `test_agent_support.py`: fabricated figure, unsupported claim, judge fail-closed |
 | G5 | Citation validity, company scope, relevance floor | Done | existing tests |
 | G6 | **Red-team suite:** 25 adversarial prompts (injection, jailbreak, PII, advice, tool abuse, oversize input) with expected outcomes | **New** | `tests/test_red_team.py` + a report appendix |
 
@@ -412,6 +412,7 @@ The clarifier suggests the right metric when the asked one doesn't apply. Its `m
 
 | ID | Feature | Status | Details |
 |---|---|---|---|
+| U0 | Feature guide | **Done** (10 Nov) | "What can I ask?": one clickable example per working capability, built from `/companies` so every example is answerable; a live coverage line (filings, companies, sectors, years); a test-mode notice with the mock LLM; "How to read an answer" (statuses, support check, Agent run). `tests/test_ui_guide.py` |
 | U1 | Citation panel | Extend | Each citation shows company, year, page and section, and opens the PDF page image (rendered on demand) |
 | U2 | Comparison and trend views | New | `st.dataframe` table + `st.bar_chart` / `st.line_chart` from `ComparisonTable` / `TrendAnswer`; a download-CSV button |
 | U3 | Answer card | New | Status badge, the answer, calculations shown with formulas, an "approximate" tag for chart values, the disclaimer |
