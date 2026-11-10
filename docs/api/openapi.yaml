@@ -1472,6 +1472,15 @@ components:
             type: array
           - type: 'null'
           title: Evidence Preview
+        agent_run:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Agent Run
+          description: 'agentic_graph only: the node path, step budget, every tool
+            call (coverage_lookup, text_search, visual_search, calculator), retrieval
+            attempts, repairs and calculations.'
       additionalProperties: true
       type: object
       required:

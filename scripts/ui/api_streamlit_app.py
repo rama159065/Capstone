@@ -161,6 +161,21 @@ def render_result(result: dict[str, Any]) -> None:
         reason = coverage.get("message") or coverage.get("reason") or result.get("explanation")
         st.markdown(f"No answer was returned. {reason}" if reason else "No answer was returned.")
 
+    agent_run = result.get("agent_run")
+    if agent_run:
+        with st.expander(f"Agent run: {agent_run.get('steps')}/{agent_run.get('max_steps')} steps", expanded=False):
+            st.markdown(" → ".join(f"`{name.removesuffix('_step')}`" for name in agent_run.get("path", [])))
+            plan = result.get("plan") or {}
+            st.caption(f"Planner ({plan.get('planner', '?')}) tools: {', '.join(plan.get('tools') or [])} · "
+                       f"retrieval attempts: {agent_run.get('retrieval_attempts')} · repairs: {agent_run.get('repairs')}")
+            if plan.get("adjustments"):
+                st.caption("Rule adjustments: " + "; ".join(plan["adjustments"]))
+            st.dataframe([{key: json.dumps(value) if isinstance(value, (list, dict)) else value
+                           for key, value in call.items()} for call in agent_run.get("tool_calls") or []],
+                         width="stretch")
+            if agent_run.get("calculations"):
+                st.json(agent_run["calculations"], expanded=False)
+
     with st.expander("Citations and Human Review", expanded=True):
         st.json(
             {
@@ -311,7 +326,7 @@ def sidebar() -> dict[str, Any]:
         "langsmith_project": advanced.text_input("LangSmith project", ""),
     })
 
-    if st.sidebar.button("Clear chat", use_container_width=True):
+    if st.sidebar.button("Clear chat", width="stretch"):
         st.session_state["messages"] = []
         st.session_state.pop("conversation_id", None)
         st.rerun()

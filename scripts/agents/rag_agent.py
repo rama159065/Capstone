@@ -812,10 +812,12 @@ def run_domain_agent(
             "redacted_preview": answer[:800],
         }
         if output_check["decision"] == "block":
-            return {
+            return {    # routed straight to governance: a withheld answer has no citations to critique
                 "output_filter": output_check,
                 "final_status": "refused",
                 "answer": "Generated answer was blocked by the output content filter.",
+                "citation_check": {"valid": False, "cited_chunk_ids": [], "missing_chunk_ids": [],
+                                   "reason": "answer blocked by the output filter"},
             }
         return {"output_filter": output_check}
 
@@ -882,7 +884,7 @@ def run_domain_agent(
     graph.add_edge("hybrid_retriever_step", "evidence_guard_step")
     graph.add_conditional_edges("evidence_guard_step", continue_or_end, {"continue": "answer_agent_step", "end": "citation_critic_step"})
     graph.add_edge("answer_agent_step", "output_filter_step")
-    graph.add_conditional_edges("output_filter_step", continue_or_end, {"continue": "citation_critic_step", "end": "citation_critic_step"})
+    graph.add_conditional_edges("output_filter_step", continue_or_end, {"continue": "citation_critic_step", "end": "governance_step"})
     graph.add_edge("citation_critic_step", "governance_step")
     graph.add_edge("governance_step", END)
     try:

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import os
+
+import pytest
 import sqlite3
 import sys
 import time
@@ -275,3 +277,14 @@ def test_warm_up_is_skipped_off_the_ingest_backends(monkeypatch):
     monkeypatch.setenv("RAG_BACKEND", "financial_qdrant")
     monkeypatch.setenv("API_WARMUP", "false")
     assert api_app.warm_up_retrieval() == "skipped"
+
+
+def test_domain_output_filter_block_goes_straight_to_governance(monkeypatch):
+    monkeypatch.setattr(rag, "retrieve_hybrid", lambda *args, **kwargs: [sample_hit()])
+    monkeypatch.setattr(rag, "output_content_filter", lambda answer, config: {
+        "decision": "block", "risk_labels": ["test"], "redacted_preview": ""})
+    monkeypatch.setattr(rag, "validate_citations", lambda *a, **k: pytest.fail("a blocked answer is not critiqued"))
+    result = run_procurement()
+    assert result["final_status"] == "refused"
+    assert result["citation_check"]["reason"] == "answer blocked by the output filter"
+    assert result["human_review"]["status"] == "not_required"

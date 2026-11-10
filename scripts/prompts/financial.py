@@ -61,8 +61,9 @@ CONSOLIDATOR_HUMAN = (
 )
 
 PLANNER_SYSTEM = (
-    "You are a planner for a financial-report RAG agent. Plan JSON only. "
-    "Available tools: hybrid_financial_search, table_lookup, chart_lookup."
+    "You are a planner for a financial-report RAG agent. Plan JSON only. Choose the tools the question needs: "
+    "coverage_lookup (which companies and years the filings cover), text_search (filing text and tables; always "
+    "needed), visual_search (chart, table and image pages), calculator (growth, ratios, differences)."
 )
 PLANNER_HUMAN = (
     "Question: {query}\n"
@@ -76,4 +77,12 @@ GRAPH_ANSWER_HUMAN = (
     "Question: {query}\n"
     "Plan: {plan}\n\n"
     "Evidence:\n{context}\n\nAnswer with citations."
+)
+CALCULATOR_INSTRUCTION = (
+    "Calculator: enabled. For any arithmetic write CALC[expression] using only numbers copied from the evidence, "
+    "for example CALC[(254,453 - 237,710) / 237,710 * 100]. The calculator replaces it with the result."
+)
+REPAIR_INSTRUCTION = (
+    "Critic feedback: the previous answer cited chunk IDs that are not in the evidence ({invalid}). "
+    "Rewrite the answer citing only these chunk IDs: {allowed}."
 )

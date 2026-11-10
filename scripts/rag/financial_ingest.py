@@ -955,12 +955,13 @@ def overlap(query, text):
     return len(wanted & set(terms(text))) / len(wanted) if wanted else 0.0
 
 
-def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30, sector=None):
+def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30, sector=None, visual=None):
     """Evidence for the financial agents from the text collection (+ the visual one when RAG_FIN_VISUAL=1).
 
     Hybrid dense + sparse with Qdrant RRF, then a rerank by RRF + term overlap (numbers kept whole),
     or by the cross-encoder when RAG_RERANKER_MODEL is set.
     Hits use the agent's evidence format, so citation checks work unchanged.
+    ``visual``: True/False when the agent's planner chose (or skipped) visual_search; None keeps RAG_FIN_VISUAL=1.
     """
     with _serving_lock:
         if "client" not in _serving:
@@ -974,7 +975,8 @@ def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30, se
         fused = {}
         for rank, hit in enumerate(search_text(client, embedder, query, max(candidates, top_k), flt), 1):
             fused[hit.payload["chunk_id"]] = {"payload": hit.payload, "rrf": 1 / (60 + rank), "paths": ["text"]}
-        if os.getenv("RAG_FIN_VISUAL") == "1" and client.collection_exists(VISUAL):
+        use_visual = os.getenv("RAG_FIN_VISUAL") == "1" if visual is None else visual
+        if use_visual and client.collection_exists(VISUAL):
             if "colpali" not in _serving:
                 _serving["colpali"] = ColPali(os.getenv("RAG_FIN_COLPALI_MODEL", "vidore/colpali-v1.3-hf"))
             for rank, hit in enumerate(search_visual(client, _serving["colpali"], embedder, query, 20, flt), 1):

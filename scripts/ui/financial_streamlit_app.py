@@ -102,7 +102,7 @@ def sidebar_settings() -> dict[str, Any]:
     enable_guardrails = st.sidebar.toggle("Security guardrails", value=True)
     enable_human_review = st.sidebar.toggle("Human review routing", value=True)
 
-    if st.sidebar.button("Clear chat", use_container_width=True):
+    if st.sidebar.button("Clear chat", width="stretch"):
         st.session_state["messages"] = []
         st.session_state["last_result"] = None
         st.rerun()

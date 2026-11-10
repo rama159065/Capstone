@@ -19,6 +19,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -69,6 +70,7 @@ class AgentConfig:
     enable_human_review: bool = True
     max_query_chars: int = 4000
     sector: str | None = None        # e.g. "banking" or "Oil and gas"; only the sector-corpus backends filter on it
+    visual: bool | None = None       # ColPali page search: None = RAG_FIN_VISUAL decides (financial_qdrant only)
 
 
 class MockResponse:
@@ -116,7 +118,8 @@ class MockLLM:
             financial_terms = {
                 "annual report", "revenue", "sales", "cash", "income", "risk",
                 "ticker", "xbrl", "financial", "apple", "microsoft", "amazon",
-                "aapl", "msft", "amzn", "nvda",
+                "aapl", "msft", "amzn", "nvda", "earnings", "profit", "margin", "eps", "dividend",
+                "growth", "debt", "assets", "operating", "expenses",
             }
             blocked_terms = {"<script", "```", "select *", "ignore previous"}
             return MockResponse(
@@ -142,9 +145,15 @@ class MockLLM:
                     indent=2,
                 )
             )
+        calc = ""
+        if "Calculator: enabled" in joined:
+            evidence_part = joined.split("Evidence:", 1)[-1].split("Calculator: enabled", 1)[0]
+            figures = re.findall(r"(?<![\d.])\d{1,3}(?:,\d{3})+(?:\.\d+)?", evidence_part)[:2]
+            if len(figures) == 2:
+                calc = f" Change: CALC[({figures[1]} - {figures[0]}) / {figures[0]} * 100]%."
         return MockResponse(
             "Mock answer: the retrieved evidence discusses the question. "
-            f"Citations: {', '.join(citations) if citations else 'none'}."
+            f"Citations: {', '.join(citations) if citations else 'none'}.{calc}"
         )
 
 
@@ -523,7 +532,7 @@ def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
     if os.getenv("RAG_BACKEND") == "financial_qdrant":   # collections built by scripts/rag/financial_ingest.py
         from scripts.rag.financial_ingest import retrieve_for_agent
         return retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
-                                  sector=config.sector)
+                                  sector=config.sector, visual=config.visual)
     if os.getenv("RAG_BACKEND") == "financial_vlm":      # Chroma index built by scripts/rag/vlm_ingest.py
         from scripts.rag import vlm_ingest
         return vlm_ingest.retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
@@ -688,14 +697,56 @@ class AgentState(TypedDict, total=False):
     plan: dict[str, Any]
     evidence: list[dict[str, Any]]
     evidence_guard: dict[str, Any]
+    evidence_check: dict[str, Any]
     output_filter: dict[str, Any]
     answer: str
     citation_check: dict[str, Any]
     human_review: dict[str, Any]
     repair_count: int
+    retrieval_attempts: int
+    tool_calls: list[dict[str, Any]]
+    calculations: list[dict[str, Any]]
+    path: list[str]
+
+
+STOPPED = {"refused", "insufficient_evidence", "not_available"}
+# Nodes every run still needs after the evidence guard: answer, critic, governance (+ calculator when planned).
+MIN_TAIL = 3
 
 
 def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
+    """Planner -> executor -> critic graph with planner-chosen tools and budget-aware loops.
+
+    Routing is decided per request from the state: the plan's tools (coverage check, ColPali, calculator),
+    missing evidence for a company/year (one broadened retrieval retry), CALC[...] in the answer (calculator
+    step), invalid citations (one repair with the critic's feedback). A loop is taken only if the rest of the
+    run still fits AGENT_MAX_STEPS, so the cap shortens a run instead of failing it. ``agent_run`` records the
+    path, every tool call and every calculation.
+    """
+    from scripts.agents import financial_tools as tools
+    from scripts.agents.financial_clarifier import METRICS, default_clarifier
+
+    clarifier = default_clarifier()
+    budget = max_steps()
+
+    def step(name, fn):
+        def node(state: AgentState) -> AgentState:
+            update = fn(state) or {}
+            return {**update, "path": [*state.get("path", []), name]}
+        return node
+
+    def used(state: AgentState) -> int:
+        return len(state.get("path", []))
+
+    def tail(state: AgentState) -> int:
+        return MIN_TAIL + (1 if "calculator" in state.get("plan", {}).get("tools", []) else 0)
+
+    def can_retry(state: AgentState) -> bool:
+        """Another retrieval round fits: retrieve + guard, then the tail (path already includes this guard)."""
+        missing = state.get("evidence_check", {}).get("missing", [])
+        return (bool(missing) and state.get("retrieval_attempts", 1) < tools.MAX_RETRIEVAL_ATTEMPTS
+                and used(state) + 2 + tail(state) <= budget)
+
     def security_node(state: AgentState) -> AgentState:
         if not config.enable_guardrails:
             return {"query": state["query"], "final_status": "guardrails_disabled"}
@@ -724,45 +775,100 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
 
     def planner_node(state: AgentState) -> AgentState:
         plan_text = invoke_prompt(llm, prompts.PLANNER_SYSTEM, prompts.PLANNER_HUMAN.format(query=state["query"]))
-        plan = safe_json_loads(
-            plan_text,
-            fallback={
-                "intent": "annual_report_qa",
-                "tools": ["hybrid_financial_search"],
-                "source_type": config.source_type,
-                "needs_calculation": False,
-            },
-        )
+        raw = safe_json_loads(plan_text, fallback={})
+        plan = tools.normalize_plan(raw, state["query"], ticker=config.ticker, year=config.year,
+                                    source_type=config.source_type, clarifier=clarifier)
         return {"plan": plan}
 
     def executor_node(state: AgentState) -> AgentState:
-        planned_source_type = state.get("plan", {}).get("source_type") or config.source_type
-        run_config = AgentConfig(
-            **{**config.__dict__, "query": state["query"], "source_type": planned_source_type}
-        )
-        return {"evidence": answer_evidence(run_config)}
+        """Run the planned tools: coverage check, then one filtered search per target. A retry searches only
+        the targets that found nothing, with a broadened query and twice the depth."""
+        plan = dict(state.get("plan", {}))
+        attempt = state.get("retrieval_attempts", 0) + 1
+        calls_log = list(state.get("tool_calls", []))
+        targets = plan.get("targets") or [{"ticker": config.ticker, "year": config.year}]
+        if attempt == 1 and "coverage_lookup" in plan.get("tools", []):
+            started = time.perf_counter()
+            covered = tools.coverage(targets, clarifier.directory)
+            calls_log.append({"tool": "coverage_lookup", "attempt": attempt, "known": covered["known"],
+                              "searchable": [tools.target_label(t) for t in covered["searchable"]],
+                              "skipped": covered["skipped"], "ms": round((time.perf_counter() - started) * 1000)})
+            targets = covered["searchable"]
+            plan.update(targets=targets, skipped_targets=covered["skipped"])
+        per_target = max(3, -(-config.top_k // max(1, len(targets)))) * (2 if attempt > 1 else 1)   # retry: 2x deeper
+        if attempt > 1:
+            missing = set(state.get("evidence_check", {}).get("missing", []))
+            targets = [t for t in targets if tools.target_label(t) in missing]
+        metric = clarifier.metric_in(state["query"])
+        query = state["query"] if attempt == 1 else tools.broaden_query(state["query"], metric, METRICS.get(metric, []))
+        visual = "visual_search" in plan.get("tools", [])
+        evidence = list(state.get("evidence", [])) if attempt > 1 else []
+        seen = {hit.get("chunk_id") for hit in evidence}
+        for target in targets:
+            started = time.perf_counter()
+            run_config = AgentConfig(**{**config.__dict__, "query": query, "ticker": target.get("ticker"),
+                                        "year": target.get("year"), "top_k": per_target, "visual": visual,
+                                        "source_type": plan.get("source_type") or config.source_type})
+            hits = answer_evidence(run_config)
+            fresh = []
+            for hit in hits:
+                if hit.get("chunk_id") not in seen:
+                    seen.add(hit.get("chunk_id"))
+                    fresh.append({**hit, "target": tools.target_label(target)})
+            evidence.extend(fresh)
+            calls_log.append({"tool": "text_search+visual_search" if visual else "text_search", "attempt": attempt,
+                              "target": tools.target_label(target), "query": query, "top_k": per_target,
+                              "hits": len(hits), "new": len(fresh),
+                              "ms": round((time.perf_counter() - started) * 1000)})
+        return {"plan": plan, "evidence": evidence, "retrieval_attempts": attempt, "tool_calls": calls_log}
 
     def evidence_guard_node(state: AgentState) -> AgentState:
-        guard = evidence_prompt_injection_guard(state.get("evidence", []))
+        evidence = state.get("evidence", [])
+        guard = evidence_prompt_injection_guard(evidence)
         if not guard["safe"]:
             return {
                 "evidence_guard": guard,
                 "final_status": "refused",
                 "answer": "Retrieved evidence contained unsafe instructions, so the answer was not generated.",
             }
-        return {"evidence_guard": guard}
+        plan = state.get("plan", {})
+        targets = plan.get("targets") or []
+        found = {hit.get("target") for hit in evidence}
+        missing = [tools.target_label(t) for t in targets if tools.target_label(t) not in found]
+        check = {"attempt": state.get("retrieval_attempts", 1), "evidence": len(evidence), "missing": missing,
+                 "skipped": [tools.target_label(t) for t in plan.get("skipped_targets") or []]}
+        update: AgentState = {"evidence_guard": guard, "evidence_check": check}
+        if not evidence and not can_retry({**state, "evidence_check": check, "path": [*state.get("path", []), "x"]}):
+            update.update(final_status="not_available" if check["skipped"] and not targets else "insufficient_evidence",
+                          answer="No answer found in the available evidence.")
+        return update
 
     def answer_node(state: AgentState) -> AgentState:
-        if state.get("final_status") == "refused":
+        if state.get("final_status") in STOPPED:
             return {}
         evidence = state.get("evidence", [])
         context = evidence_to_context(evidence, config.max_context_chars)
+        plan = state.get("plan", {})
         human = prompts.GRAPH_ANSWER_HUMAN.format(
-            query=state["query"], plan=json.dumps(state.get("plan", {}), ensure_ascii=False), context=context)
+            query=state["query"], context=context,
+            plan=json.dumps({key: plan.get(key) for key in ("intent", "tools", "targets")}, ensure_ascii=False))
+        if "calculator" in plan.get("tools", []):
+            human += "\n\n" + prompts.CALCULATOR_INSTRUCTION
+        check = state.get("citation_check") or {}
+        if state.get("repair_count", 0) and not check.get("valid", True):
+            human += "\n\n" + prompts.REPAIR_INSTRUCTION.format(
+                invalid=", ".join(check.get("missing_chunk_ids") or []) or "none",
+                allowed=", ".join(str(hit.get("chunk_id")) for hit in evidence))
         return {"answer": invoke_prompt(llm, prompts.GRAPH_ANSWER_SYSTEM, human)}
 
+    def calculator_node(state: AgentState) -> AgentState:
+        answer, records = tools.run_calculations(str(state.get("answer") or ""), state.get("evidence", []))
+        calls_log = [*state.get("tool_calls", []), {"tool": "calculator", "expressions": len(records),
+                                                    "grounded": all(r["grounded"] for r in records)}]
+        return {"answer": answer, "calculations": [*state.get("calculations", []), *records], "tool_calls": calls_log}
+
     def critic_node(state: AgentState) -> AgentState:
-        if state.get("final_status") == "refused":
+        if state.get("final_status") in STOPPED:
             return {
                 "citation_check": {
                     "valid": False,
@@ -771,17 +877,19 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
                     "allowed_chunk_ids": [str(hit.get("chunk_id")) for hit in state.get("evidence", [])],
                 }
             }
-        check = validate_citations(state.get("answer", ""), state.get("evidence", []))
+        answer = tools.strip_calculations(str(state.get("answer") or ""))     # CALC[...] the calculator didn't run
+        check = validate_citations(answer, state.get("evidence", []))
         return {
+            "answer": answer,
             "citation_check": check,
             "repair_count": state.get("repair_count", 0) + (0 if check["valid"] else 1),
         }
 
     def governance_node(state: AgentState) -> AgentState:
-        if state.get("final_status") == "refused":
+        if state.get("final_status") in STOPPED:
             return {
                 "human_review": {"required": False, "status": "not_required", "triggers": []},
-                "final_status": "refused",
+                "final_status": state["final_status"],
             }
         run_config = AgentConfig(**{**config.__dict__, "query": state.get("query", config.query)})
         output_filter = output_content_filter(str(state.get("answer") or "")) if config.enable_guardrails else {
@@ -806,45 +914,64 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
             evidence_guard=state.get("evidence_guard"),
             output_filter=output_filter,
         )
+        unverified = [c for c in state.get("calculations", []) if not c.get("grounded")]
+        if unverified and config.enable_human_review:
+            review = {**review, "required": True, "status": "pending_human_review",
+                      "triggers": [*review.get("triggers", []), "unverified_calculation"]}
         return {
             "output_filter": output_filter,
             "human_review": review,
             "final_status": review["status"] if review.get("required") else state.get("final_status", "answered"),
         }
 
+    # ------------------------------------------------------------------ routing, decided per request
     def should_continue_after_security(state: AgentState) -> Literal["stop", "continue"]:
         return "stop" if state.get("final_status") == "refused" else "continue"
 
+    def after_evidence(state: AgentState) -> Literal["stop", "retry", "answer"]:
+        if state.get("final_status") in STOPPED:
+            return "stop"
+        return "retry" if can_retry(state) else "answer"
+
+    def after_answer(state: AgentState) -> Literal["calculate", "critic"]:
+        wants = ("calculator" in state.get("plan", {}).get("tools", [])
+                 and tools.CALC_TOKEN.search(str(state.get("answer") or "")))
+        return "calculate" if wants and used(state) + 3 <= budget else "critic"     # calculator, critic, governance
+
     def should_repair(state: AgentState) -> Literal["repair", "finish"]:
         check = state.get("citation_check", {})
-        if state.get("final_status") == "refused" or check.get("valid") or state.get("repair_count", 0) >= 1:
+        if state.get("final_status") in STOPPED or check.get("valid") or state.get("repair_count", 0) > 1:
             return "finish"
-        return "repair"
+        return "repair" if used(state) + tail(state) <= budget else "finish"      # answer (+calc), critic, governance
 
     graph = StateGraph(AgentState)
-    graph.add_node("security_step", security_node)
-    graph.add_node("plain_text_step", plain_text_node)
-    graph.add_node("plan_step", planner_node)
-    graph.add_node("retrieve_step", executor_node)
-    graph.add_node("evidence_guard_step", evidence_guard_node)
-    graph.add_node("answer_step", answer_node)
-    graph.add_node("critic_step", critic_node)
-    graph.add_node("governance_step", governance_node)
+    graph.add_node("security_step", step("security_step", security_node))
+    graph.add_node("plain_text_step", step("plain_text_step", plain_text_node))
+    graph.add_node("plan_step", step("plan_step", planner_node))
+    graph.add_node("retrieve_step", step("retrieve_step", executor_node))
+    graph.add_node("evidence_guard_step", step("evidence_guard_step", evidence_guard_node))
+    graph.add_node("answer_step", step("answer_step", answer_node))
+    graph.add_node("calculator_step", step("calculator_step", calculator_node))
+    graph.add_node("critic_step", step("critic_step", critic_node))
+    graph.add_node("governance_step", step("governance_step", governance_node))
     graph.set_entry_point("security_step")
     graph.add_conditional_edges("security_step", should_continue_after_security, {"stop": "critic_step", "continue": "plain_text_step"})
     graph.add_conditional_edges("plain_text_step", should_continue_after_security, {"stop": "critic_step", "continue": "plan_step"})
     graph.add_edge("plan_step", "retrieve_step")
     graph.add_edge("retrieve_step", "evidence_guard_step")
-    graph.add_conditional_edges("evidence_guard_step", should_continue_after_security, {"stop": "critic_step", "continue": "answer_step"})
-    graph.add_edge("answer_step", "critic_step")
+    graph.add_conditional_edges("evidence_guard_step", after_evidence,
+                                {"stop": "critic_step", "retry": "retrieve_step", "answer": "answer_step"})
+    graph.add_conditional_edges("answer_step", after_answer, {"calculate": "calculator_step", "critic": "critic_step"})
+    graph.add_edge("calculator_step", "critic_step")
     graph.add_conditional_edges("critic_step", should_repair, {"repair": "answer_step", "finish": "governance_step"})
     graph.add_edge("governance_step", END)
     app = graph.compile()
     try:
-        final_state = app.invoke({"query": config.query, "repair_count": 0}, config=graph_config())
+        final_state = app.invoke({"query": config.query, "repair_count": 0, "path": []}, config=graph_config())
     except GraphRecursionError:
         final_state = {"final_status": "step_limit", "answer": STEP_LIMIT_ANSWER,
                        "citation_check": {"valid": False, "reason": f"step limit of {max_steps()} reached"}}
+    path = final_state.get("path", [])
     return {
         "technique": "agentic_graph",
         "final_status": final_state.get("final_status"),
@@ -857,6 +984,16 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
         "output_filter": final_state.get("output_filter"),
         "human_review": final_state.get("human_review"),
         "evidence": final_state.get("evidence", []),
+        "agent_run": {
+            "path": path,
+            "steps": len(path),
+            "max_steps": budget,
+            "retrieval_attempts": final_state.get("retrieval_attempts", 0),
+            "repairs": max(0, path.count("answer_step") - 1),
+            "evidence_check": final_state.get("evidence_check"),
+            "tool_calls": final_state.get("tool_calls", []),
+            "calculations": final_state.get("calculations", []),
+        },
     }
 
 
@@ -964,6 +1101,7 @@ def summarize_result(result: dict[str, Any]) -> dict[str, Any]:
         "parsed": result.get("parsed"),
         "subquestions": result.get("subquestions"),
         "plan": result.get("plan"),
+        "agent_run": result.get("agent_run"),
         "security": result.get("security"),
         "plain_text": result.get("plain_text"),
         "evidence_guard": result.get("evidence_guard"),

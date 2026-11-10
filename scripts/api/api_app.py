@@ -328,6 +328,11 @@ class FinancialChatResponse(ChatResponse):
     subquestions: list[str] | None = None
     evidence_chunk_ids: list[str | None] | None = None
     evidence_preview: list[EvidenceResponse] | None = None
+    agent_run: dict[str, Any] | None = Field(
+        default=None,
+        description="agentic_graph only: the node path, step budget, every tool call (coverage_lookup, text_search, "
+                    "visual_search, calculator), retrieval attempts, repairs and calculations.",
+    )
 
 
 class RetrieveResponse(ApiResponse):
