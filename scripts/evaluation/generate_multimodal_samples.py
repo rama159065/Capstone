@@ -1,4 +1,4 @@
-"""Generate synthetic, clearly labelled PDF fixtures for every application domain."""
+"""Generate the synthetic, clearly labelled multimodal PDF fixture (financial_report_qa)."""
 from io import BytesIO
 from pathlib import Path
 
@@ -11,11 +11,6 @@ from scripts.rag.multimodal_rag import DOMAINS, ROOT
 
 SAMPLES = {
     "financial_report_qa": ("Quarterly revenue", "Revenue (million USD)", [120, 150, 180, 210], "Revenue increased from 120 to 210 million USD."),
-    "procurement_vendor": ("Vendor delivery", "On-time delivery (percent)", [80, 85, 90, 95], "Vendor on-time delivery improved from 80 to 95 percent."),
-    "travel_expense": ("Travel expense", "Travel spending (thousand USD)", [40, 35, 30, 25], "Travel spending fell from 40 to 25 thousand USD."),
-    "competitive_research": ("Market adoption", "Product customers (thousands)", [20, 30, 45, 60], "Product customers grew from 20 to 60 thousand."),
-    "incident_postmortem": ("Incident recovery", "Recovery time (minutes)", [60, 45, 30, 15], "Incident recovery time fell from 60 to 15 minutes."),
-    "hr_policy": ("Employee training", "Training completion (percent)", [50, 65, 80, 95], "Employee training completion rose from 50 to 95 percent."),
 }
 
 

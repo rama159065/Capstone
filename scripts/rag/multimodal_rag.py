@@ -25,8 +25,7 @@ import pymupdf as fitz
 from qdrant_client import QdrantClient, models
 
 from scripts.common.paths import ROOT  # noqa: E402 - repo root
-DOMAINS = ("financial_report_qa", "procurement_vendor", "travel_expense",
-           "competitive_research", "incident_postmortem", "hr_policy")
+DOMAINS = ("financial_report_qa",)   # financial report copilot only; other names raise "Unknown domain"
 LOCK = RLock()
 
 

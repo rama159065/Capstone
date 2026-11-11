@@ -20,7 +20,7 @@ That makes the system agentic in the capstone sense: it uses tools, maintains st
 
 The product is **financial report question answering** only (`financial_report_qa`): SEC annual reports (Form ARS) from 281 companies in 13 sectors, served as `full` (1,004 filings) or `min500` (509).
 
-The five other Track B domains (procurement, travel and expense, competitive research, incident postmortem, HR policy) were removed on 10 November 2026; they remain in git history. `scripts/agents/rag_agent.py` stays for now because the local multimodal routes use its input guard.
+The five other Track B domains (procurement, travel and expense, competitive research, incident postmortem, HR policy) were removed on 10 November 2026; they remain in git history, as does the shared domain agent (`rag_agent.py`) removed on 11 November 2026.
 
 ## Implementation Status
 
@@ -40,7 +40,7 @@ docs/                         Design notes and capstone documentation
 scripts/
   api/            FastAPI backend (api_app.py): financial chat, conversation, retrieval, companies
   ui/             Streamlit front ends: API-backed Financial Report Copilot (api_streamlit_app.py), standalone financial app
-  agents/         Financial agent graph and tools, clarifier, safe answer; rag_agent.py (shared guard, used by multimodal)
+  agents/         Financial agent graph and tools, clarifier, safe answer (multimodal)
   guardrails/     Shared input / evidence / output safety checks and their regex pattern sets
   prompts/        Prompt templates for the financial and domain agents
   rag/            Ingestion, indexing and retrieval: Chroma/BM25 indexer, Qdrant ingest (financial_ingest.py),
@@ -417,7 +417,6 @@ Current coverage includes:
 - hybrid retrieval and evaluation helpers
 - financial prompting agent guardrails, content filters, LangGraph workflows, and HITL routing
 - agent routing, tools, retrieval retry, calculator, support-checking critic and step budget
-- the shared guard code in `rag_agent.py` (tested with `tests/sample_domain.py`)
 - LangSmith optional tracing helpers
 - the Streamlit feature guide and the financial-only API surface
 

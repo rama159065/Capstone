@@ -12,11 +12,9 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-import scripts.agents.rag_agent as rag
 from scripts.agents import financial_clarifier as fc
 from scripts.api import api_app
 from scripts.common import agent_limits, runtime_profile
-from sample_domain import SAMPLE_DOMAIN as PROCUREMENT_CONFIG  # noqa: E402
 
 sys.modules.setdefault("streamlit", types.ModuleType("streamlit"))
 from scripts.ui import api_streamlit_app as ui  # noqa: E402
@@ -104,29 +102,6 @@ def test_step_cap_config(monkeypatch):
     assert agent_limits.graph_config() == {"recursion_limit": 11}
     monkeypatch.setenv("AGENT_MAX_STEPS", "nonsense")
     assert agent_limits.max_steps() == agent_limits.DEFAULT_MAX_STEPS
-
-
-def run_procurement(**overrides):
-    params = {"query": "What procurement criteria apply to vendor bids?", "llm_provider": "mock",
-              "embedding_provider": "hashing", "hash_dimensions": 128, "top_k": 3, "dense_top_k": 3, "bm25_top_k": 3,
-              "source_type": None, "max_context_chars": 1000, "enable_guardrails": True, "enable_human_review": True}
-    return rag.run_domain_agent(PROCUREMENT_CONFIG, **{**params, **overrides})
-
-
-def sample_hit():
-    return {"rank": 1, "chunk_id": "chunk_1", "text": "Vendor evaluation criteria evidence.",
-            "metadata": {"title": "Procurement Guide", "source_type": "procurement_policy_pdf", "page": 1,
-                         "source_url": "https://example.test/procurement.pdf"}, "rerank_score": 0.9}
-
-
-def test_domain_graph_fits_the_default_cap_and_fails_closed_below_it(monkeypatch):
-    monkeypatch.setattr(rag, "retrieve_hybrid", lambda *args, **kwargs: [sample_hit()])
-    monkeypatch.setenv("AGENT_MAX_STEPS", "10")
-    assert run_procurement()["final_status"] != "step_limit"
-    monkeypatch.setenv("AGENT_MAX_STEPS", "3")
-    result = run_procurement()
-    assert result["final_status"] == "step_limit"
-    assert result["answer"] == agent_limits.STEP_LIMIT_ANSWER
 
 
 # ------------------------------------------------------------------ API
@@ -278,13 +253,3 @@ def test_warm_up_is_skipped_off_the_ingest_backends(monkeypatch):
     monkeypatch.setenv("API_WARMUP", "false")
     assert api_app.warm_up_retrieval() == "skipped"
 
-
-def test_domain_output_filter_block_goes_straight_to_governance(monkeypatch):
-    monkeypatch.setattr(rag, "retrieve_hybrid", lambda *args, **kwargs: [sample_hit()])
-    monkeypatch.setattr(rag, "output_content_filter", lambda answer, config: {
-        "decision": "block", "risk_labels": ["test"], "redacted_preview": ""})
-    monkeypatch.setattr(rag, "validate_citations", lambda *a, **k: pytest.fail("a blocked answer is not critiqued"))
-    result = run_procurement()
-    assert result["final_status"] == "refused"
-    assert result["citation_check"]["reason"] == "answer blocked by the output filter"
-    assert result["human_review"]["status"] == "not_required"

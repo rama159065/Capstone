@@ -33,8 +33,8 @@ def test_ingestion_routing_citations_and_deduplication(rag, domain):
     assert rag.retrieve(domain, "bar chart trend graph", 1)[0]["page"] == 3
     assert rag.retrieve(domain, "review process diagram", 1)[0]["page"] == 4
     assert rag.answer(domain, "quarterly results")["citation_check"]["valid"]
-    other = next(d for d in mm.DOMAINS if d != domain)
-    assert rag.retrieve(other, "quarterly results") == []
+    with pytest.raises(ValueError, match="Unknown domain"):
+        rag.retrieve("hr_policy", "quarterly results")   # removed domains are rejected
     assert rag.retrieve(domain, "quarterly", ticker="UNKNOWN") == []
     assert rag.ingest(domain, sample(domain), force=True)["chunks"] == 4
     assert rag.client.count("docs_text", exact=True).count == 4
@@ -42,28 +42,28 @@ def test_ingestion_routing_citations_and_deduplication(rag, domain):
 
 def test_changed_file_replaces_previous_version(rag, tmp_path):
     path = tmp_path / "mutable.pdf"
-    shutil.copyfile(sample("hr_policy"), path)
-    rag.ingest("hr_policy", path)
+    shutil.copyfile(sample("financial_report_qa"), path)
+    rag.ingest("financial_report_qa", path)
     with pymupdf.open() as pdf:
         page = pdf.new_page()
-        page.insert_text((50, 50), "Updated policy: training completion is 99 percent.")
+        page.insert_text((50, 50), "Restated: quarterly revenue is 990 million USD.")
         pdf.save(path)
-    rag.ingest("hr_policy", path)
-    hits = rag.retrieve("hr_policy", "training")
+    rag.ingest("financial_report_qa", path)
+    hits = rag.retrieve("financial_report_qa", "restated revenue")
     assert len(hits) == 1
-    assert "99" in hits[0]["text"]
+    assert "990" in hits[0]["text"]
 
 
 def test_vision_answer_receives_page_images(rag, monkeypatch):
-    rag.ingest("hr_policy", sample("hr_policy"))
+    rag.ingest("financial_report_qa", sample("financial_report_qa"))
     calls = []
     def fake_vision(prompt, images):
         calls.append((prompt, images))
         import re
         citation = re.search(r"\[([0-9a-f-]{36})\]", prompt)[0]
-        return "Completion reached 95 percent. " + citation
+        return "Revenue reached 210 million USD. " + citation
     monkeypatch.setattr(mm, "ollama", fake_vision)
-    answer = rag.answer("hr_policy", "training chart", provider="ollama")
+    answer = rag.answer("financial_report_qa", "revenue chart", provider="ollama")
     assert calls[0][1]
     assert answer["citation_check"]["valid"]
 
@@ -72,23 +72,17 @@ def test_failed_ingestion_records_retryable_status(rag, tmp_path):
     path = tmp_path / "broken.pdf"
     path.write_bytes(b"not a PDF")
     with pytest.raises(Exception):
-        rag.ingest("hr_policy", path)
+        rag.ingest("financial_report_qa", path)
     assert rag.db.execute("SELECT status FROM documents").fetchone()[0] == "failed"
     assert rag.client.count("docs_text", exact=True).count == 0
 
 
 def test_api_and_shared_retrieval_use_local_store(rag, monkeypatch):
-    from dataclasses import replace
     from fastapi.testclient import TestClient
     from scripts.api import api_app
-    from scripts.agents.rag_agent import retrieve_hybrid
-    from sample_domain import SAMPLE_DOMAIN
     rag.ingest("financial_report_qa", sample("financial_report_qa"))
     monkeypatch.setattr(mm, "_instance", rag)
-    monkeypatch.setenv("RAG_BACKEND", "qdrant")
-    hits = retrieve_hybrid(replace(SAMPLE_DOMAIN, domain="financial_report_qa"), query="quarterly results", top_k=3,
-                           dense_top_k=10, bm25_top_k=10, embedding_provider="hashing", hash_dimensions=384,
-                           source_type=None)
+    hits = mm.retrieve_local("financial_report_qa", "quarterly results", 3)
     assert hits and all(h["domain"] == "financial_report_qa" for h in hits)
     client = TestClient(api_app.app)
     response = client.post("/multimodal/financial_report_qa/chat",
@@ -122,11 +116,11 @@ def test_embedding_model_change_is_rejected_before_loading(tmp_path, monkeypatch
 
 
 def test_pipeline_change_recaptions_unchanged_documents(rag, monkeypatch):
-    path = sample("hr_policy")
-    rag.ingest("hr_policy", path)
+    path = sample("financial_report_qa")
+    rag.ingest("financial_report_qa", path)
     rag.pipeline = "new-pipeline"
-    assert rag.ingest("hr_policy", path)["status"] == "complete"
-    assert rag.ingest("hr_policy", path)["status"] == "skipped"
+    assert rag.ingest("financial_report_qa", path)["status"] == "complete"
+    assert rag.ingest("financial_report_qa", path)["status"] == "skipped"
 
 
 def test_image_only_chart_fixture_has_no_text_layer():
@@ -138,4 +132,4 @@ def test_image_only_chart_fixture_has_no_text_layer():
 
 def test_empty_query_is_rejected(rag):
     with pytest.raises(ValueError, match="Query must contain"):
-        rag.retrieve("hr_policy", "   ")
+        rag.retrieve("financial_report_qa", "   ")

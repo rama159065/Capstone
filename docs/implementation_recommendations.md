@@ -215,7 +215,7 @@ Recommendations:
 | `pyproject.toml` | Add `langgraph-checkpoint-sqlite`; run `uv sync` (`pandas` is declared but missing from `.venv`) | 6 |
 | New: snapshot and restore helper | Create, copy and restore snapshots + SQLite files + PNG tar on Colab | 5 |
 
-Guardrail regexes exist in two copies, `rag_agent.py` and `financial_prompting_agent.py`. Change both if you touch them.
+Guardrail regexes live in one place, `scripts/guardrails/patterns.py` (the domain-agent copy was removed on 11 November 2026).
 
 ---
 

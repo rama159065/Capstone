@@ -36,6 +36,7 @@ from scripts.common.companies import NAMES as COMPANY_NAMES, SECTOR_NAMES, SECTO
 from scripts.common.sector_corpus import parse_sectors, sector_slug
 from scripts.agents.financial_prompting_agent import (
     AgentConfig,
+    deterministic_input_guard,
     retrieve_evidence,
     run_technique,
     summarize_result,
@@ -1156,9 +1157,8 @@ def retrieve_multimodal(domain: str, request: MultimodalRequest) -> dict[str, An
 def chat_multimodal(domain: str, request: MultimodalRequest) -> dict[str, Any]:
     if domain not in ALL_DOMAINS:
         raise HTTPException(status_code=404, detail="Unknown domain")
-    from scripts.agents.rag_agent import input_guard
     from scripts.rag.multimodal_rag import LOCK, get_rag
-    guard = input_guard(request.query)
+    guard = deterministic_input_guard(request.query)
     if guard["decision"] != "allow":
         return {"domain": domain, "final_status": "refused", "security": guard,
                 "answer": "The query requires review.", "evidence": []}

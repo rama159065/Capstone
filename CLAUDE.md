@@ -57,19 +57,18 @@ No linter or formatter is configured.
 ### Agents
 - **Financial** (`scripts/agents/financial_prompting_agent.py` + `scripts/rag/index_financial_report_pdfs.py`) is a richer, standalone implementation. It has several prompting `--technique`s (baseline, structured few-shot, decomposition, self-consistency, `agentic_graph`, `all`), and its graph includes a critic→answer **repair loop**. It loads the indexer module dynamically (`load_indexer_module`).
   - `agentic_graph` routes per request: the planner LLM proposes tools and `agents/financial_tools.normalize_plan` validates them (`coverage_lookup`, `text_search` always, `visual_search` only with `RAG_FIN_VISUAL=1|auto`, `calculator` for growth/ratios) and splits comparisons into one filtered search per company × year. Missing targets get one broadened retrieval retry, `CALC[...]` in the answer goes to the calculator (operands must appear in the evidence), invalid citations get one repair. Loops run only if the rest of the run fits `AGENT_MAX_STEPS`. Results carry `agent_run` (path, tool calls, calculations). Full flow: `docs/agent_flows.md`.
-- **`scripts/agents/rag_agent.py`** (the former shared domain agent) is still in the tree: the `/multimodal` routes use its `input_guard`, and `retrieve_hybrid` delegates to the local multimodal store. It has no domain packages any more; its tests use `tests/sample_domain.py`. Removing it (with `prompts/domain.py`, the `DOMAIN_*` guard patterns and the extra names in `multimodal_rag.DOMAINS`) is the deferred "level 3" clean-up.
+- The former shared domain agent (`rag_agent.py`), `prompts/domain.py` and the `DOMAIN_*` guard patterns were removed on 11 Nov 2026 (git history). The `/multimodal/financial_report_qa/chat` route guards input with the financial agent's `deterministic_input_guard`.
 - **Guardrails** live in `scripts/guardrails/`: `patterns.py` holds the regex sets and `checks.py` the input, evidence and output checks.
-  - Both agents keep their public guard function names as thin wrappers over these checks.
-  - They still bind *different* prompt-injection and code/tool pattern sets (`FINANCIAL_*` vs `DOMAIN_*`). Unifying them changes what one agent blocks; `tests/test_guardrails.py` pins the current difference.
-- **Prompt templates** live in `scripts/prompts/` (`financial.py`, `domain.py`).
-  - The mock LLMs route on phrases in these prompts, so prompt text changes can change test behaviour.
+  - The financial agent keeps its public guard function names (`deterministic_input_guard`, ...) as thin wrappers over these checks, bound to the `FINANCIAL_*` pattern sets.
+- **Prompt templates** live in `scripts/prompts/financial.py`.
+  - The mock LLM routes on phrases in these prompts, so prompt text changes can change test behaviour.
   - The Week 1 baseline prompts stay in `evaluation/prompt_baselines.py`.
-- **LLM and embedding clients** are still separate copies in each agent and indexer. They differ in timeouts, error wrapping and User-Agent, so merging them is a behaviour change.
+- **LLM and embedding clients** are still separate copies in the agent, the indexers and `prompt_baselines`. They differ in timeouts, error wrapping and User-Agent, so merging them is a behaviour change. The hosted chat clients share `common/hosted_llm.py` (`LLM_CA_CERT`, one request at a time, 429/503 back-off 2/4/8 s, Qwen3 `enable_thinking=false` and `<think>` stripping).
 
 Financial graph: `security → plain_text → plan → retrieve ⇄ evidence_guard → answer → calculator? → critic ⟲ → governance`. A guard that fails short-circuits to the critic (not END), so the governance/HITL output is always produced. Results are auditable JSON with `security`, `evidence_guard`, `output_filter`, `support_check`, `human_review` and `agent_run`. Output-filter decisions are `allow`/`review`/`block`.
 
 ### Single domain
-The API (`ALL_DOMAINS = ("financial_report_qa",)`), the Streamlit UI (`DOMAIN`) and `downloads/download_rag_corpora.py` serve `financial_report_qa` only; other domain names get 404 (`/multimodal/{domain}`) or no route (`/chat/{domain}` and `/retrieve/{domain}` were removed). `rag/multimodal_rag.DOMAINS` still lists the old names (level 3).
+The API (`ALL_DOMAINS = ("financial_report_qa",)`), the Streamlit UI (`DOMAIN`) and `downloads/download_rag_corpora.py` serve `financial_report_qa` only; other domain names get 404 (`/multimodal/{domain}`) or no route (`/chat/{domain}` and `/retrieve/{domain}` were removed). `rag/multimodal_rag.DOMAINS` is `("financial_report_qa",)` too; other names raise `Unknown domain`.
 
 ### Retrieval backends
 - **Default:** Chroma (cosine HNSW) at `indexes/chroma/financial_report_qa_pdfs`, plus BM25 over `data/processed/financial_report_qa/pdf_chunks.jsonl`, fused with RRF (k=60) and then a lexical-overlap rerank. Corpora are listed in `data/raw/<domain>/pdf_manifest.jsonl`.

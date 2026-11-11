@@ -206,7 +206,6 @@ For Qwen and Transformers, the application appends retrieved source UUIDs after 
 | [`scripts/rag/run_local_multimodal.py`](../scripts/rag/run_local_multimodal.py) | Complete-profile configuration, downloads, managed model service, ingestion/evaluation/API commands |
 | [`scripts/downloads/download_model_files.py`](../scripts/downloads/download_model_files.py) | Ranged GGUF downloads and SHA-256 verification against repository metadata |
 | [`scripts/api/api_app.py`](../scripts/api/api_app.py) | Multimodal retrieval/chat endpoints and request validation |
-| [`scripts/agents/rag_agent.py`](../scripts/agents/rag_agent.py) | Existing non-financial retrieval adapter for `RAG_BACKEND=qdrant` |
 | [`scripts/agents/financial_prompting_agent.py`](../scripts/agents/financial_prompting_agent.py) | Existing financial retrieval adapter for Qdrant |
 | [`scripts/evaluation/generate_multimodal_samples.py`](../scripts/evaluation/generate_multimodal_samples.py) | Six domain PDFs with text, tables, vector charts, and raster diagrams |
 | [`scripts/evaluation/generate_multimodal_validation_pdfs.py`](../scripts/evaluation/generate_multimodal_validation_pdfs.py) | Three independent validation PDFs, including the raster-only chart |

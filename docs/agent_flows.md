@@ -246,7 +246,7 @@ The mock LLM's answer text is a placeholder: it cites the first three chunk IDs 
 
 ## 9. Removed domains
 
-The five other Track B domains (procurement, travel and expense, competitive research, incident postmortem, HR policy) and their `/chat/{domain}` and `/retrieve/{domain}` routes were removed on 10 November 2026; the copilot serves `financial_report_qa` only. Their shared graph code, `scripts/agents/rag_agent.py`, stays for now because the `/multimodal` routes use its input guard (tested with `tests/sample_domain.py`). The removed code is in git history.
+The five other Track B domains (procurement, travel and expense, competitive research, incident postmortem, HR policy) and their `/chat/{domain}` and `/retrieve/{domain}` routes were removed on 10 November 2026; the copilot serves `financial_report_qa` only. Their shared graph code (`scripts/agents/rag_agent.py`), domain prompts and `DOMAIN_*` guard patterns followed on 11 November 2026; the `/multimodal` chat route now uses the financial input guard. The removed code is in git history.
 
 ## 10. Other flows
 

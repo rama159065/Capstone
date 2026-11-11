@@ -49,7 +49,7 @@ def test_four_visual_pages_report_omitted_images(rag, monkeypatch):
         calls.append((prompt, images))
         return "Insufficient evidence"
     monkeypatch.setattr(mm, "ollama", model)
-    result = rag.answer("hr_policy", "Compare all four charts", provider="ollama")
+    result = rag.answer("financial_report_qa", "Compare all four charts", provider="ollama")
     assert len(result["evidence"]) == 4
     assert result["images_used"] == 0
     assert "visual_evidence_omitted" in result["warnings"]
@@ -65,7 +65,7 @@ def test_local_prompt_preserves_later_page_and_rejects_unstructured_answer(rag, 
         prompts.append(prompt)
         return "A partial answer."
     monkeypatch.setattr(local_models, "llamacpp", model)
-    result = rag.answer("hr_policy", "Compare both pages", provider="llamacpp")
+    result = rag.answer("financial_report_qa", "Compare both pages", provider="llamacpp")
     assert "PAGE_2_FACT" in prompts[0]
     assert hits[1]["chunk_id"] in result["citation_check"]["cited_chunk_ids"]
     assert result["final_status"] == "partial_evidence"
@@ -75,7 +75,7 @@ def test_invented_claim_with_valid_source_id_is_not_returned(rag, monkeypatch):
     hits = evidence(1)
     monkeypatch.setattr(rag, "retrieve", lambda *a, **kw: hits)
     monkeypatch.setattr(mm, "ollama", lambda *a: "Invented value: 999999. [" + hits[0]["chunk_id"] + "]")
-    result = rag.answer("hr_policy", "What is the value?", provider="ollama")
+    result = rag.answer("financial_report_qa", "What is the value?", provider="ollama")
     assert "999999" not in result["answer"]
     assert result["final_status"] == "partial_evidence"
 

@@ -210,7 +210,7 @@ def test_real_ocr_codes_are_retrievable_from_text_vectors(tmp_path):
             hit = next(h for h in hits if code in h["text"])
             assert (hit["page"], hit["ocr_mode"]) == (page, mode)
             assert "ocr" in hit["extraction_methods"]
-        assert not rag.retrieve("hr_policy", "SCAN7429", 3)
+        assert not rag.retrieve("financial_report_qa", "SCAN7429", 3, ticker="UNKNOWN")
     finally:
         rag.close()
 

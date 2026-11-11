@@ -41,7 +41,7 @@ def main():
             row["merged_retrieval_passed"] = bool(merged) and merged[0]["title"] == expected and "visual" in merged[0]["retrieval_paths"]
             report["checks"].append(row)
             print(json.dumps(row), flush=True)
-        report["domain_isolation"] = rag.retrieve_visual("hr_policy", "revenue chart") == []
+        report["ticker_isolation"] = rag.retrieve_visual("financial_report_qa", "revenue chart", ticker="UNKNOWN") == []
         report["idempotent_backfill"] = rag.backfill_visual("financial_report_qa")["visual_pages_written"] == 0
         from fastapi.testclient import TestClient
         from scripts.api import api_app
