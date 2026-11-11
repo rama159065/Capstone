@@ -176,6 +176,9 @@ python -m scripts.rag.vlm_ingest ingest --manifest data\raw\financial_report_qa\
 # paid API (bills per page; keep the page selection narrow)
 $env:RAG_VISION_API_BASE="https://api.openai.com/v1"; $env:RAG_VISION_MODEL="gpt-4o-mini"; $env:RAG_VISION_API_KEY="sk-..."
 python -m scripts.rag.vlm_ingest ingest --root indexes\financial_vlm_paid --sectors banking --vlm openai --vlm-pages tables_charts
+# a reader per page (page audit rules); paidVL pages: Qwen3-VL checked against OCR, paid model only when >10% of its figures are unconfirmed
+$env:RAG_PAID_VISION_API_BASE="https://api.openai.com/v1"; $env:RAG_PAID_VISION_MODEL="gpt-4o"; $env:RAG_PAID_VISION_API_KEY="sk-..."
+python -m scripts.rag.vlm_ingest ingest --sectors banking --vlm routed --paid-threshold 0.1
 python -m scripts.rag.vlm_ingest query "net interest income" --sector banking
 ```
 

@@ -89,7 +89,11 @@ class Settings:
     snapshot_every: int = 0                 # batches between Drive snapshots; 0 = once, at the end of each sector
     stage_pdfs: bool = IN_COLAB             # copy each sector's PDFs from Drive to local disk before ingesting
     # vlm_chroma
-    vlm: str = "transformers"               # page reader: "ocr" / "transformers" (Qwen-VL) / "openai" (paid or self-hosted) / "mock"
+    vlm: str = "transformers"               # page reader: "routed" (per page, paidVL fallback) / "ocr" / "transformers"
+                                            # (Qwen3-VL) / "openai" (paid or self-hosted) / "mock"
+    qwen_reader: str = "transformers"       # routed: Qwen3-VL in-process, or "openai" (endpoint at RAG_VISION_API_BASE)
+    paid_threshold: float = 0.10            # routed: paidVL page -> paid model when > 10% of Qwen3-VL's figures fail OCR
+    paid_max_pages_per_pdf: int = 0         # routed: cap paid calls per filing (0 = no cap)
     vlm_model: str | None = None            # default Qwen/Qwen3-VL-4B-Instruct (or -2B / -8B)
     vlm_pages: str = "visual"               # tables, charts, images + unreadable pages
                                             # or "tables_charts_images" / "tables_charts" / "all"
@@ -309,7 +313,9 @@ def ingest_colpali(s: Settings, sector, corpus=None):
 def ingest_vlm(s: Settings, sector, corpus=None):
     pages = {"rule": "visual"}.get(s.vlm_pages, s.vlm_pages)
     argv = ["ingest", *common_argv(s, sector, corpus), "--store", "chroma", "--cache-dir", str(s.vlm_cache),
-            "--vlm", s.vlm, "--vlm-pages", pages, "--vlm-max-pages-per-pdf", str(s.vlm_max_pages_per_pdf)]
+            "--vlm", s.vlm, "--vlm-pages", pages, "--vlm-max-pages-per-pdf", str(s.vlm_max_pages_per_pdf),
+            "--qwen-reader", s.qwen_reader, "--paid-threshold", str(s.paid_threshold),
+            "--paid-max-pages-per-pdf", str(s.paid_max_pages_per_pdf)]
     argv += ["--vlm-model", s.vlm_model] if s.vlm_model else []
     run = vi.VlmIngest(vi.build_parser().parse_args(argv), vlm=_loaded.get("vlm"), embedder=_loaded.get("embedder"))
     _loaded["embedder"] = run.embedder
@@ -552,8 +558,9 @@ def build_parser():
     defaults = Settings()
     for field in fields(Settings):
         value = getattr(defaults, field.name)
-        kind = int if field.name in {"max_per_sector", "workers", "batch_size", "snapshot_every", "ocr_max_pages_per_filing",
-                                     "vlm_max_pages_per_pdf",
+        kind = float if isinstance(value, float) \
+            else int if field.name in {"max_per_sector", "workers", "batch_size", "snapshot_every", "ocr_max_pages_per_filing",
+                                     "vlm_max_pages_per_pdf", "paid_max_pages_per_pdf",
                                      "limit_filings", "max_pages_per_pdf"} \
             else (lambda v: v.strip().lower() in {"1", "true", "yes"}) if isinstance(value, bool) \
             else Path if isinstance(value, Path) else str

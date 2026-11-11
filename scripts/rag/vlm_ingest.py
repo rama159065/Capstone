@@ -39,7 +39,17 @@ Page readers (``--vlm``):
                 RAG_VISION_RETRY_DELAYS seconds (default 2,4,8). Paid APIs bill per page: cap the spend with
                 --vlm-max-pages-per-pdf and --vlm-pages tables_charts.
   mock          copies the text layer; offline smoke runs and tests.
-Every reader's output is cached per page, so switching readers re-reads pages but a rerun never does.
+  routed        a reader per page, chosen by the page audit rules (scripts/rag/page_audit.route):
+                  none -> skipped; pdfParser -> text layer; pdfParser+colpali -> text layer + native tables;
+                  ocr -> RapidOCR; qwen3VL -> Qwen3-VL (--qwen-reader), figures checked against the text layer;
+                  paidVL -> the fallback chain: OCR the page, Qwen3-VL transcribes it, every figure is checked
+                  against the OCR text (the text layer is unusable on these pages); only when more than
+                  --paid-threshold of the figures are unconfirmed (or OCR found too little text to check) does the
+                  page go to the paid model (RAG_PAID_VISION_API_BASE / _MODEL / _API_KEY). The reading with fewer
+                  unconfirmed figures is kept; its unconfirmed figures stay in unverified_numbers. Without a paid
+                  model configured the Qwen3-VL reading is kept, flagged.
+Every reader's output is cached per page (routed: per reader), so switching readers re-reads pages but a rerun
+never does, and changing the paid model or the threshold reuses the OCR and Qwen3-VL readings.
 
     python -m scripts.rag.vlm_ingest ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking --vlm ocr
     python -m scripts.rag.vlm_ingest ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking --vlm transformers
@@ -47,6 +57,9 @@ Every reader's output is cached per page, so switching readers re-reads pages bu
     # paid API, e.g. OpenAI:
     #   RAG_VISION_API_BASE=https://api.openai.com/v1 RAG_VISION_MODEL=gpt-4o-mini RAG_VISION_API_KEY=sk-...
     python -m scripts.rag.vlm_ingest ingest --vlm openai --root indexes/financial_vlm_gpt4o --vlm-pages tables_charts
+    # one reader per page, paid model only where Qwen3-VL disagrees with OCR:
+    #   RAG_PAID_VISION_API_BASE=https://api.openai.com/v1 RAG_PAID_VISION_MODEL=gpt-4o RAG_PAID_VISION_API_KEY=sk-...
+    python -m scripts.rag.vlm_ingest ingest --vlm routed --qwen-reader transformers --paid-threshold 0.1
     python -m scripts.rag.vlm_ingest query "net interest income" --sector banking
     python -m scripts.rag.vlm_ingest status
 """
@@ -175,9 +188,10 @@ class TransformersVLM:
 class OpenAIVLM:
     """Any OpenAI-compatible /chat/completions endpoint that accepts image_url parts."""
 
-    def __init__(self, base=None, model=None, max_tokens=1200, timeout=300):
+    def __init__(self, base=None, model=None, max_tokens=1200, timeout=300, api_key=None):
         self.base = (base or os.getenv("RAG_VISION_API_BASE", "http://127.0.0.1:8081/v1")).rstrip("/")
         self.model = model or os.getenv("RAG_VISION_MODEL", "local-qwen3-vl")
+        self.api_key = api_key if api_key is not None else os.getenv("RAG_VISION_API_KEY", "")
         self.max_tokens, self.timeout = max_tokens, timeout
         self.signature = f"openai:{self.model}:{max_tokens}"
         self.delays = [float(x) for x in os.getenv("RAG_VISION_RETRY_DELAYS", "2,4,8").split(",") if x.strip()]
@@ -190,8 +204,8 @@ class OpenAIVLM:
         body = json.dumps({"model": self.model, "messages": [{"role": "user", "content": content}],
                            "temperature": 0, "max_tokens": self.max_tokens, "stream": False}).encode()
         headers = {"Content-Type": "application/json"}
-        if os.getenv("RAG_VISION_API_KEY"):
-            headers["Authorization"] = f"Bearer {os.environ['RAG_VISION_API_KEY']}"
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
         request = urllib.request.Request(self.base + "/chat/completions", data=body, headers=headers)
         for attempt in range(len(self.delays) + 1):
             try:
@@ -211,9 +225,40 @@ class OpenAIVLM:
 DEFAULT_TRANSFORMERS_MODEL = "Qwen/Qwen3-VL-4B-Instruct"   # 2B (fast, T4) / 4B (T4 in 4-bit) / 8B (L4, A100)
 
 
+def make_qwen(args):
+    """The Qwen3-VL reader of --vlm routed (--qwen-reader): in-process, an OpenAI-compatible endpoint, or mock."""
+    kind = getattr(args, "qwen_reader", "transformers")
+    if kind == "mock":
+        return MockVLM()
+    if kind == "openai":
+        return OpenAIVLM(model=args.vlm_model, max_tokens=args.max_new_tokens)
+    return TransformersVLM(args.vlm_model or DEFAULT_TRANSFORMERS_MODEL, args.max_new_tokens)
+
+
+def qwen_signature(args):
+    kind = getattr(args, "qwen_reader", "transformers")
+    if kind == "mock":
+        return MockVLM.signature
+    if kind == "openai":
+        return OpenAIVLM(model=args.vlm_model, max_tokens=args.max_new_tokens).signature
+    return f"transformers:{args.vlm_model or DEFAULT_TRANSFORMERS_MODEL}:{args.max_new_tokens}"
+
+
+def paid_reader(max_tokens=1200):
+    """The paid fallback reader from RAG_PAID_VISION_API_BASE / _MODEL / _API_KEY, or None when not configured."""
+    base, model = os.getenv("RAG_PAID_VISION_API_BASE"), os.getenv("RAG_PAID_VISION_MODEL")
+    if not (base and model):
+        return None
+    return OpenAIVLM(base=base, model=model, max_tokens=max_tokens, api_key=os.getenv("RAG_PAID_VISION_API_KEY", ""))
+
+
 def make_vlm(args):
     if args.vlm == "mock":
         return MockVLM()
+    if args.vlm == "routed":
+        return RoutedReader(qwen_factory=lambda: make_qwen(args), qwen_signature=qwen_signature(args),
+                            paid=paid_reader(args.max_new_tokens), threshold=args.paid_threshold,
+                            paid_limit=args.paid_max_pages_per_pdf)
     if args.vlm == "ocr":
         return OcrReader()
     if args.vlm == "openai":
@@ -225,6 +270,10 @@ def vlm_signature(args):
     """Known before the model loads, so finished filings are skipped without loading it."""
     if args.vlm == "mock":
         return MockVLM.signature
+    if args.vlm == "routed":
+        paid = paid_reader(args.max_new_tokens)
+        return (f"routed-v{ROUTE_VERSION}:qwen={qwen_signature(args)}:ocr={ocr_reader_signature()}:"
+                f"paid={paid.signature if paid else None}:threshold={args.paid_threshold}:limit={args.paid_max_pages_per_pdf}")
     if args.vlm == "ocr":
         return ocr_reader_signature()
     if args.vlm == "openai":
@@ -279,8 +328,122 @@ def vlm_targets(pages, mode, limit=0):
     return targets[:limit] if limit else targets
 
 
+ROUTE_VERSION = 1
+
+
+class RoutedReader:
+    """One reader per page (page_audit.route), with the paidVL fallback: OCR -> Qwen3-VL -> paid model.
+
+    The Qwen3-VL model loads only when the first page needs it. ``paid`` is None when no paid model is configured.
+    """
+
+    def __init__(self, qwen_factory, qwen_signature, ocr=None, paid=None, threshold=.10, paid_limit=0):
+        self._qwen_factory, self._qwen, self.qwen_signature = qwen_factory, None, qwen_signature
+        self.ocr = ocr or OcrReader()
+        self.paid, self.threshold, self.paid_limit = paid, threshold, paid_limit
+        self.signature = (f"routed-v{ROUTE_VERSION}:qwen={qwen_signature}:ocr={self.ocr.signature}:"
+                          f"paid={paid.signature if paid else None}:threshold={threshold}:limit={paid_limit}")
+
+    @property
+    def qwen(self):
+        if self._qwen is None:
+            self._qwen = self._qwen_factory()
+        return self._qwen
+
+    def readers(self):
+        """name -> (reader signature, reader getter): each reading is cached under its own signature."""
+        out = {"ocr": (self.ocr.signature, lambda: self.ocr), "qwen3VL": (self.qwen_signature, lambda: self.qwen)}
+        if self.paid:
+            out["paidVL"] = (self.paid.signature, lambda: self.paid)
+        return out
+
+
+def cross_check(markdown, reference):
+    """Figures in ``markdown`` that ``reference`` doesn't print, and their share of all figures.
+
+    share None: the reference has too little text to check against.
+    """
+    unverified = unverified_numbers(markdown, reference)
+    figures = {n.replace(",", "") for n in NUMBER.findall(markdown)}
+    if unverified is None:
+        return {"unverified": [], "figures": len(figures), "share": None}
+    return {"unverified": unverified, "figures": len(figures), "share": len(unverified) / len(figures) if figures else 0.0}
+
+
+def routed_filing(reader, cache, row, pdf, pages, limit=0):
+    """Page number -> reading for --vlm routed. Raw readings are cached per reader; the routing is recomputed."""
+    from scripts.rag import page_audit
+    doc_id = row["document_id"]
+    caches = {name: TranscriptCache(cache.dir, sig) for name, (sig, _) in reader.readers().items()}
+    loaded = {name: c.load(doc_id) for name, c in caches.items()}
+    getters = {name: get for name, (_, get) in reader.readers().items()}
+    entries, model_pages, paid_pages = {}, 0, 0
+
+    with pymupdf.open(pdf) as document:
+        def read(name, page):
+            if page["page"] not in loaded[name]:
+                started, pdf_page = time.time(), document[page["page"] - 1]
+                image = None if name == "ocr" else render(pdf_page)
+                text = strip_fences(getters[name]().transcribe(image, pdf_page))
+                row_ = {"page": page["page"], "markdown": text, "reader": name, "seconds": round(time.time() - started, 1)}
+                caches[name].add(doc_id, row_)
+                loaded[name][page["page"]] = row_
+                print(json.dumps({"doc_id": doc_id, "page": page["page"], "reader": name, "chars": len(text),
+                                  "seconds": row_["seconds"]}), flush=True)
+            return loaded[name][page["page"]]["markdown"]
+
+        for page in pages:
+            route = page_audit.route(page)
+            number = page["page"]
+            base = {"page": number, "route": route}
+            if route == "none":
+                entries[number] = {**base, "skip": True}
+            elif route == "pdfParser":
+                continue                                            # native text, chunked by vlm_records
+            elif route == "pdfParser+colpali":
+                tables = ["\n".join(lines) for lines in page.get("tables") or []]
+                body = "\n\n".join([*tables, fi.readable_text(page)[0]])
+                entries[number] = {**base, "markdown": body, "source": "native_pdf", "reader": "pdfParser",
+                                   "unverified_numbers": [], "number_check": "text_layer"}
+            elif route == "ocr" or (limit and model_pages >= limit):
+                entries[number] = {**base, "markdown": read("ocr", page), "source": "ocr", "reader": "ocr",
+                                   "unverified_numbers": [], "number_check": "ocr_only"}
+            elif route == "qwen3VL":
+                model_pages += 1
+                markdown = read("qwen3VL", page)
+                check = cross_check(markdown, "" if page["garbled"] else page["text"])
+                entries[number] = {**base, "markdown": markdown, "source": "vlm", "reader": "qwen3VL",
+                                   "unverified_numbers": check["unverified"],
+                                   "number_check": "text_layer" if check["share"] is not None else "no_text_layer"}
+            else:                                                   # paidVL: the fallback chain
+                model_pages += 1
+                reference = read("ocr", page)
+                qwen_text = read("qwen3VL", page)
+                qwen_check = cross_check(qwen_text, reference)
+                needs_more = qwen_check["share"] is None or qwen_check["share"] > reader.threshold
+                can_pay = reader.paid is not None and (not reader.paid_limit or paid_pages < reader.paid_limit)
+                chosen, check, used = qwen_text, qwen_check, "qwen3VL"
+                if needs_more and can_pay:
+                    paid_pages += 1
+                    paid_text = read("paidVL", page)
+                    paid_check = cross_check(paid_text, reference)
+                    if (paid_check["share"] or 0) <= (qwen_check["share"] if qwen_check["share"] is not None else 1):
+                        chosen, check, used = paid_text, paid_check, "paidVL"
+                entries[number] = {**base, "markdown": chosen, "source": "vlm", "reader": used,
+                                   "unverified_numbers": check["unverified"],
+                                   "number_check": "ocr" if check["share"] is not None else "no_reference",
+                                   "qwen_unverified_share": qwen_check["share"],
+                                   "escalated": used == "paidVL",
+                                   "escalation": ("not_needed" if not needs_more else "paid" if used == "paidVL"
+                                                  else "paid_not_better" if needs_more and can_pay
+                                                  else "no_paid_model" if reader.paid is None else "paid_limit")}
+    return entries
+
+
 def transcribe_filing(vlm, cache, row, pdf, pages, mode, limit=0):
     """Page number -> cached transcription row, transcribing what is missing."""
+    if isinstance(vlm, RoutedReader):
+        return routed_filing(vlm, cache, row, pdf, pages, limit)
     done = cache.load(row["document_id"])
     todo = [p for p in vlm_targets(pages, mode, limit) if p["page"] not in done]
     if todo:
@@ -328,8 +491,11 @@ def vlm_records(row, pages, transcripts, vlm_signature):
     base, records = fi.filing_payload(row), []
     for page in pages:
         entry = transcripts.get(page["page"])
+        if entry and entry.get("skip"):
+            continue                                                # routed: nothing to read on this page
         if entry:
-            body, source = entry["markdown"], "ocr" if vlm_signature.startswith("ocr:") else "vlm"
+            body = entry["markdown"]
+            source = entry.get("source") or ("ocr" if vlm_signature.startswith("ocr:") else "vlm")
         else:
             body, source = fi.readable_text(page)
         if not body.strip():
@@ -338,7 +504,10 @@ def vlm_records(row, pages, transcripts, vlm_signature):
                   "scale": page["scale"], "text_source": source, "pipeline": "vlm",
                   "vlm_model": vlm_signature if entry else None,
                   "unverified_numbers": entry["unverified_numbers"] if entry else [],
-                  "number_check": entry.get("number_check", "text_layer") if entry else None}
+                  "number_check": entry.get("number_check", "text_layer") if entry else None,
+                  "page_route": entry.get("route") if entry else None,
+                  "reader": entry.get("reader") if entry else "pdfParser",
+                  "escalation": entry.get("escalation") if entry else None}
         for index, (kind, chunk) in enumerate(markdown_parts(body) if entry else [("text", c) for c in fi.windows(body)]):
             if entry is None and len(chunk) < 40:
                 continue
@@ -511,7 +680,7 @@ class VlmIngest:
             return "failed"
         seconds = time.time() - started
         self.state.mark(doc_id, "vlm", "complete", self.pipeline, len(records), seconds)
-        flagged = sum(1 for e in transcripts.values() if e["unverified_numbers"])
+        flagged = sum(1 for e in transcripts.values() if e.get("unverified_numbers"))
         print(json.dumps({"doc_id": doc_id, "sector": row.get("sector"), "status": "complete", "pages": len(pages),
                           "vlm_pages": len(transcripts), "pages_with_unverified_numbers": flagged,
                           "chunks": len(records), "seconds": round(seconds, 1)}), flush=True)
@@ -597,6 +766,7 @@ def status(args):
     pages = [json.loads(line) for f in cache.glob("*.jsonl") for line in f.read_text(encoding="utf-8").splitlines() if line.strip()]
     report["transcribed_pages"] = len(pages)
     report["pages_with_unverified_numbers"] = sum(1 for p in pages if p.get("unverified_numbers"))
+    report["readings_by_reader"] = dict(Counter(p.get("reader", "single") for p in pages))
     report["pages_without_text_layer_to_check"] = sum(1 for p in pages if p.get("number_check") == "no_text_layer")
     report["vlm_seconds_per_page"] = round(sum(p.get("seconds", 0) for p in pages) / len(pages), 1) if pages else None
     print(json.dumps(report, indent=2))
@@ -634,9 +804,17 @@ def build_parser():
     ingest.add_argument("--max-pages-per-pdf", type=int, help="smoke runs only")
     ingest.add_argument("--download-missing", action="store_true")
     ingest.add_argument("--user-agent", default=os.getenv("SEC_USER_AGENT"))
-    ingest.add_argument("--vlm", choices=["ocr", "transformers", "openai", "mock"], default="transformers",
-                        help="page reader: ocr = RapidOCR + native tables (CPU); transformers = local Qwen3-VL; "
-                             "openai = OpenAI-compatible endpoint (self-hosted Qwen-VL or a paid API); mock = text layer")
+    ingest.add_argument("--vlm", choices=["routed", "ocr", "transformers", "openai", "mock"], default="transformers",
+                        help="page reader: routed = one reader per page from the page audit rules, with the paidVL "
+                             "fallback (OCR -> Qwen3-VL -> paid model); ocr = RapidOCR + native tables (CPU); "
+                             "transformers = local Qwen3-VL; openai = OpenAI-compatible endpoint (self-hosted Qwen-VL "
+                             "or a paid API); mock = text layer")
+    ingest.add_argument("--qwen-reader", choices=["transformers", "openai", "mock"], default="transformers",
+                        help="routed: how Qwen3-VL runs (in-process, or an endpoint at RAG_VISION_API_BASE)")
+    ingest.add_argument("--paid-threshold", type=float, default=0.10,
+                        help="routed: send a paidVL page to the paid model when more than this share of Qwen3-VL's "
+                             "figures is not in the page's OCR text")
+    ingest.add_argument("--paid-max-pages-per-pdf", type=int, default=0, help="routed: cap paid calls per filing (0 = no cap)")
     ingest.add_argument("--vlm-model", help=f"HF model for transformers (default {DEFAULT_TRANSFORMERS_MODEL}); "
                                             "served model name for openai (default RAG_VISION_MODEL)")
     ingest.add_argument("--vlm-pages", choices=["visual", "tables_charts_images", "tables_charts", "all"], default="visual",
