@@ -94,3 +94,32 @@ def test_cross_check_and_signature():
     assert vi.cross_check(table("120,500"), "too short")["share"] is None                         # nothing to check
     args = vi.build_parser().parse_args(["ingest", "--vlm", "routed", "--qwen-reader", "mock", "--paid-threshold", "0.2"])
     assert vi.vlm_signature(args).startswith("routed-v1:qwen=mock-v1:ocr=ocr:") and "threshold=0.2" in vi.vlm_signature(args)
+
+
+class Broken:
+    signature = "broken-qwen-v1"
+
+    def __init__(self):
+        self.calls = 0
+
+    def transcribe(self, image, page):
+        self.calls += 1
+        raise RuntimeError("CUDA out of memory")
+
+
+def test_qwen_failure_or_empty_reading_falls_back_to_ocr(tmp_path, corpus, monkeypatch):
+    real = page_audit.route
+    monkeypatch.setattr(page_audit, "route", lambda page: {2: "qwen3VL", 3: "paidVL"}.get(page["page"], real(page)))
+    ocr, broken = Reader("ocr", OCR_TEXT), Broken()
+    reader = vi.RoutedReader(lambda: broken, broken.signature, ocr=ocr)
+    _, by_page = run(tmp_path, corpus, reader)
+    assert by_page[2]["reader"] == "ocr" and by_page[2]["escalation"] == "qwen_failed_ocr_fallback"
+    assert by_page[3]["reader"] == "ocr" and by_page[3]["escalation"] == "models_failed_ocr_fallback"
+    assert broken.calls == 2                                     # the filing completed; failures are not cached
+
+    empty = Reader("qwen-empty", "   ")
+    reader = vi.RoutedReader(lambda: empty, empty.signature, ocr=ocr)
+    again = vi.VlmIngest(args_for(tmp_path, corpus, "chroma", "--vlm", "routed", "--force"), vlm=reader)
+    assert again.run() == {"complete": 1}
+    pages = {m["page"]: m for m in again.store.collection.get(include=["metadatas"])["metadatas"]}
+    assert pages[2]["reader"] == "ocr" and pages[2]["escalation"] == "qwen_failed_ocr_fallback"

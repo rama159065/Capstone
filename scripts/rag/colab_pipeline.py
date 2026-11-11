@@ -89,7 +89,7 @@ class Settings:
     snapshot_every: int = 0                 # batches between Drive snapshots; 0 = once, at the end of each sector
     stage_pdfs: bool = IN_COLAB             # copy each sector's PDFs from Drive to local disk before ingesting
     # vlm_chroma
-    vlm: str = "transformers"               # page reader: "routed" (per page, paidVL fallback) / "ocr" / "transformers"
+    vlm: str = "routed"                     # page reader: "routed" (per page, paidVL fallback) / "ocr" / "transformers"
                                             # (Qwen3-VL) / "openai" (paid or self-hosted) / "mock"
     qwen_reader: str = "transformers"       # routed: Qwen3-VL in-process, or "openai" (endpoint at RAG_VISION_API_BASE)
     paid_threshold: float = 0.10            # routed: paidVL page -> paid model when > 10% of Qwen3-VL's figures fail OCR

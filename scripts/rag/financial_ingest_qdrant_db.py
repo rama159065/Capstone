@@ -69,7 +69,7 @@ from qdrant_client import QdrantClient, models
 
 from scripts.common.companies import sector_of
 from scripts.common.sector_corpus import parse_sectors, read_manifest as read_corpus_manifest, sector_slug
-from scripts.rag import hybrid
+from scripts.rag import chunk_schema, hybrid
 from scripts.rag.multimodal_rag import dense, term_id
 
 from scripts.common.paths import ROOT  # noqa: E402 - repo root
@@ -685,14 +685,17 @@ def context_line(payload):
 
 
 def text_records(row, pages):
-    """(id, payload, text to embed) for every prose window and table part of the filing."""
+    """(id, payload, text to embed) for every prose window and table part of the filing (chunk_schema fields)."""
+    from scripts.rag import page_audit                      # imports this module, so not at the top
     base, records = filing_payload(row), []
     for page in pages:
         body, source = readable_text(page)
         if not body.strip():
             continue
-        common = {**base, "page": page["page"], "section": page["section"], "page_type": page["page_type"],
-                  "visual_rich": page["visual"], "garbled": page["garbled"], "scale": page["scale"], "text_source": source}
+        provenance = {"pipeline": "qdrant_db", "text_source": source, "reader": "ocr" if source == "ocr" else "pdfParser",
+                      "reader_model": page.get("ocr_signature") if source == "ocr" else None,
+                      "page_route": page_audit.route(page),
+                      "number_check": "ocr_only" if source == "ocr" else "text_layer"}
         parts = [("text", i, chunk, None) for i, chunk in enumerate(windows(body))]
         if source == "native_pdf":
             for t, lines in enumerate(page["tables"]):
@@ -701,10 +704,10 @@ def text_records(row, pages):
                     parts.append((f"table{t}", j, f"Table, page {page['page']}{units}\n" + "\n".join(part), part))
         for index, (kind, i, chunk, table) in enumerate(parts):
             identifier = point_id(row["document_id"], page["page"], kind, i)
-            payload = {**common, "chunk_id": chunk_name(row["document_id"], page["page"], f"{kind}{i}"),
-                       "point_id": identifier, "chunk_index": index,
-                       "content_type": "table" if table else "text", "text": chunk,
-                       "table_markdown": ["\n".join(table)] if table else []}
+            payload = chunk_schema.chunk_payload(
+                base, page, chunk_id=chunk_name(row["document_id"], page["page"], f"{kind}{i}"), point_id=identifier,
+                chunk_index=index, content_type="table" if table else "text", text=chunk,
+                table_markdown=["\n".join(table)] if table else [], **provenance)
             records.append((identifier, payload, context_line(payload) + "\n" + chunk))
     return records
 
@@ -895,16 +898,19 @@ class Ingest:
                     images.append(Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples))
                 encoded = self.colpali.embed_images(images)
                 payloads = []
+                from scripts.rag import page_audit
                 for page in part:
                     text, source = readable_text(page)
                     identifier = point_id(row["document_id"], page["page"], "visual")
-                    payloads.append({**base, "page": page["page"], "section": page["section"], "page_type": page["page_type"],
-                                     "content_type": page["page_type"], "garbled": page["garbled"], "scale": page["scale"],
-                                     "text_source": source, "text": clean(text)[:4000],
-                                     "table_markdown": ["\n".join(t) for t in page["tables"]] if source == "native_pdf" else [],
-                                     "chunk_id": chunk_name(row["document_id"], page["page"], "visual"),
-                                     "visual_point_id": identifier, "visual_rich": True,
-                                     "colpali_model": self.colpali_sig, "colpali_dtype": getattr(self.colpali, "dtype_name", None)})
+                    payload = chunk_schema.chunk_payload(
+                        base, {**page, "visual": True}, chunk_id=chunk_name(row["document_id"], page["page"], "visual"),
+                        point_id=identifier, chunk_index=0, content_type=page["page_type"], text=clean(text)[:4000],
+                        table_markdown=["\n".join(t) for t in page["tables"]] if source == "native_pdf" else [],
+                        pipeline="qdrant_db", text_source=source, reader="ocr" if source == "ocr" else "pdfParser",
+                        reader_model=page.get("ocr_signature") if source == "ocr" else None,
+                        page_route=page_audit.route(page), number_check="ocr_only" if source == "ocr" else "text_layer")
+                    payloads.append({**payload, "visual_point_id": identifier, "colpali_model": self.colpali_sig,
+                                     "colpali_dtype": getattr(self.colpali, "dtype_name", None)})
                 summaries = self.embedder([context_line(p) + "\n" + p["text"][:2000] for p in payloads])
                 points = []
                 for payload, summary, (full, is_image) in zip(payloads, summaries, encoded):
@@ -1005,17 +1011,9 @@ def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30, se
                 entry["rrf"] += 1 / (60 + rank)
                 entry["paths"].append("visual")
                 entry["ranks"] = {**entry["ranks"], "colpali": rank}
-    hits = []
-    for entry in fused.values():
-        p = entry["payload"]
-        hits.append({"chunk_id": p["chunk_id"], "text": p.get("text", ""), "title": p.get("title"),
-                     "source_type": p.get("source_type"), "ticker": p.get("ticker"), "year": p.get("fiscal_year"),
-                     "sector": p.get("sector"),
-                     "page": p.get("page"), "source_url": p.get("source_url"), "local_path": p.get("pdf_name"),
-                     "image_path": None, "section": p.get("section"), "scale": p.get("scale"),
-                     "preview": re.sub(r"\s+", " ", p.get("text", ""))[:500],
-                     "rrf_score": entry["rrf"], "rerank_score": entry["rrf"] + 0.02 * overlap(query, p.get("text", "")),
-                     "retrieval_paths": entry["paths"], "retrieval_ranks": entry["ranks"], "metadata": dict(p)})
+    hits = [chunk_schema.evidence_hit(entry["payload"], rrf_score=entry["rrf"],
+                                      rerank_score=entry["rrf"] + 0.02 * overlap(query, entry["payload"].get("text", "")),
+                                      paths=entry["paths"], ranks=entry["ranks"]) for entry in fused.values()]
     hits.sort(key=lambda h: h["rerank_score"], reverse=True)
     return cross_encoder_rerank(query, hits, top_k) if os.getenv("RAG_RERANKER_MODEL") else hits[:top_k]
 

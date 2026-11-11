@@ -85,7 +85,7 @@ from scripts.common.companies import normalize_ticker
 from scripts.common.paths import ROOT
 from scripts.common.sector_corpus import parse_sectors
 from scripts.rag import financial_ingest_qdrant_db as fi
-from scripts.rag import hybrid
+from scripts.rag import chunk_schema, hybrid
 
 DEFAULT_ROOT = Path(os.getenv("RAG_VLM_DIR", ROOT / "indexes/financial_vlm"))
 CHROMA_COLLECTION = "annual_reports_vlm"
@@ -392,6 +392,21 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                                   "seconds": row_["seconds"]}), flush=True)
             return loaded[name][page["page"]]["markdown"]
 
+        def try_read(name, page):
+            """A model reading, or "" when the model fails (error not cached, so a rerun tries again)."""
+            try:
+                return read(name, page)
+            except Exception as exc:
+                print(json.dumps({"doc_id": doc_id, "page": page["page"], "reader": name, "error": repr(exc)[:300]}),
+                      flush=True)
+                return ""
+
+        def ocr_entry(page, base, why):
+            return {**base, "markdown": read("ocr", page), "source": "ocr", "reader": "ocr",
+                    "reader_model": signatures["ocr"], "unverified_numbers": [], "number_check": "ocr_only",
+                    "escalation": why}
+
+        signatures = {name: sig for name, (sig, _) in reader.readers().items()}
         for page in pages:
             route = page_audit.route(page)
             number = page["page"]
@@ -407,30 +422,38 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                                    "unverified_numbers": [], "number_check": "text_layer"}
             elif route == "ocr" or (limit and model_pages >= limit):
                 entries[number] = {**base, "markdown": read("ocr", page), "source": "ocr", "reader": "ocr",
-                                   "unverified_numbers": [], "number_check": "ocr_only"}
+                                   "reader_model": signatures["ocr"], "unverified_numbers": [], "number_check": "ocr_only"}
             elif route == "qwen3VL":
                 model_pages += 1
-                markdown = read("qwen3VL", page)
+                markdown = try_read("qwen3VL", page)
+                if not markdown.strip():                            # Qwen3-VL failed or read nothing: OCR the page
+                    entries[number] = ocr_entry(page, base, "qwen_failed_ocr_fallback")
+                    continue
                 check = cross_check(markdown, "" if page["garbled"] else page["text"])
                 entries[number] = {**base, "markdown": markdown, "source": "vlm", "reader": "qwen3VL",
-                                   "unverified_numbers": check["unverified"],
+                                   "reader_model": signatures["qwen3VL"], "unverified_numbers": check["unverified"],
                                    "number_check": "text_layer" if check["share"] is not None else "no_text_layer"}
             else:                                                   # paidVL: the fallback chain
                 model_pages += 1
                 reference = read("ocr", page)
-                qwen_text = read("qwen3VL", page)
+                qwen_text = try_read("qwen3VL", page)
                 qwen_check = cross_check(qwen_text, reference)
-                needs_more = qwen_check["share"] is None or qwen_check["share"] > reader.threshold
+                needs_more = (not qwen_text.strip() or qwen_check["share"] is None
+                              or qwen_check["share"] > reader.threshold)
                 can_pay = reader.paid is not None and (not reader.paid_limit or paid_pages < reader.paid_limit)
                 chosen, check, used = qwen_text, qwen_check, "qwen3VL"
                 if needs_more and can_pay:
                     paid_pages += 1
-                    paid_text = read("paidVL", page)
+                    paid_text = try_read("paidVL", page)
                     paid_check = cross_check(paid_text, reference)
-                    if (paid_check["share"] or 0) <= (qwen_check["share"] if qwen_check["share"] is not None else 1):
+                    qwen_share = qwen_check["share"] if qwen_text.strip() and qwen_check["share"] is not None else 1
+                    if paid_text.strip() and (paid_check["share"] or 0) <= qwen_share:
                         chosen, check, used = paid_text, paid_check, "paidVL"
+                if not chosen.strip():                              # no model produced text: keep the OCR reading
+                    entries[number] = ocr_entry(page, base, "models_failed_ocr_fallback")
+                    continue
                 entries[number] = {**base, "markdown": chosen, "source": "vlm", "reader": used,
-                                   "unverified_numbers": check["unverified"],
+                                   "reader_model": signatures[used], "unverified_numbers": check["unverified"],
                                    "number_check": "ocr" if check["share"] is not None else "no_reference",
                                    "qwen_unverified_share": qwen_check["share"],
                                    "escalated": used == "paidVL",
@@ -486,8 +509,18 @@ def markdown_parts(markdown):
     return parts
 
 
+SINGLE_READERS = {"ocr:": "ocr", "transformers:": "qwen3VL", "openai:": "openaiVL", "mock": "mock"}
+
+
+def single_reader(vlm_signature):
+    """Reader name for a one-reader run (--vlm ocr / transformers / openai / mock)."""
+    return next((name for prefix, name in SINGLE_READERS.items() if vlm_signature.startswith(prefix)), "vlm")
+
+
 def vlm_records(row, pages, transcripts, vlm_signature):
-    """(id, payload, text to embed) for every chunk of the filing: VLM Markdown where transcribed, else the text layer."""
+    """(id, payload, text to embed) for every chunk of the filing (chunk_schema fields): the reading where a reader
+    ran, else the text layer."""
+    from scripts.rag import page_audit
     base, records = fi.filing_payload(row), []
     for page in pages:
         entry = transcripts.get(page["page"])
@@ -500,21 +533,24 @@ def vlm_records(row, pages, transcripts, vlm_signature):
             body, source = fi.readable_text(page)
         if not body.strip():
             continue
-        common = {**base, "page": page["page"], "section": page["section"], "page_type": page["page_type"],
-                  "scale": page["scale"], "text_source": source, "pipeline": "vlm",
-                  "vlm_model": vlm_signature if entry else None,
-                  "unverified_numbers": entry["unverified_numbers"] if entry else [],
-                  "number_check": entry.get("number_check", "text_layer") if entry else None,
-                  "page_route": entry.get("route") if entry else None,
-                  "reader": entry.get("reader") if entry else "pdfParser",
-                  "escalation": entry.get("escalation") if entry else None}
+        if entry:
+            reader = entry.get("reader") or single_reader(vlm_signature)
+            model = entry.get("reader_model") or (None if reader == "pdfParser" else vlm_signature)
+        else:
+            reader, model = ("ocr", page.get("ocr_signature")) if source == "ocr" else ("pdfParser", None)
+        provenance = {"pipeline": "chroma_db", "text_source": source, "reader": reader, "reader_model": model,
+                      "page_route": entry.get("route") if entry and entry.get("route") else page_audit.route(page),
+                      "escalation": entry.get("escalation") if entry else None,
+                      "number_check": entry.get("number_check", "text_layer") if entry else "text_layer",
+                      "unverified_numbers": entry.get("unverified_numbers") or [] if entry else []}
         for index, (kind, chunk) in enumerate(markdown_parts(body) if entry else [("text", c) for c in fi.windows(body)]):
             if entry is None and len(chunk) < 40:
                 continue
-            payload = {**common, "chunk_id": fi.chunk_name(row["document_id"], page["page"], f"vlm{index}"),
-                       "chunk_index": index, "content_type": kind, "text": chunk,
-                       "unverified_in_chunk": [n for n in common["unverified_numbers"] if n in chunk]}
             identifier = fi.point_id(row["document_id"], page["page"], "vlm", index)
+            payload = chunk_schema.chunk_payload(
+                base, page, chunk_id=fi.chunk_name(row["document_id"], page["page"], f"vlm{index}"), point_id=identifier,
+                chunk_index=index, content_type=kind, text=chunk,
+                table_markdown=[chunk] if kind == "table" else [], **provenance)
             records.append((identifier, payload, fi.context_line(payload) + "\n" + chunk))
     return records
 
@@ -713,19 +749,9 @@ def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAUL
     if store != "chroma":
         raise ValueError("pipeline 2 serves from Chroma only; Qdrant is pipeline 1 (RAG_BACKEND=financial_qdrant)")
     backend = ChromaStore(root)
-    hits = []
     vector = embedder([query])[0] if hybrid.uses(mode, "dense") else None
-    for score, p, ranks in backend.search(vector, query, top_k, ticker, year, sector, mode=mode):
-        unverified = p.get("unverified_in_chunk") or []
-        hits.append({"chunk_id": p["chunk_id"], "text": p.get("text", ""), "title": p.get("title"),
-                     "source_type": p.get("source_type"), "ticker": p.get("ticker"), "year": p.get("fiscal_year"),
-                     "sector": p.get("sector"), "page": p.get("page"), "source_url": p.get("source_url"),
-                     "local_path": p.get("pdf_name"), "section": p.get("section"), "scale": p.get("scale"),
-                     "text_source": p.get("text_source"), "content_type": p.get("content_type"),
-                     "unverified_numbers": json.loads(unverified) if isinstance(unverified, str) else unverified,
-                     "preview": re.sub(r"\s+", " ", p.get("text", ""))[:500], "score": float(score),
-                     "retrieval_paths": ["vlm_text"], "retrieval_ranks": ranks, "metadata": dict(p)})
-    return hits
+    return [chunk_schema.evidence_hit(p, rrf_score=score, paths=["vlm_text"], ranks=ranks)
+            for score, p, ranks in backend.search(vector, query, top_k, ticker, year, sector, mode=mode)]
 
 
 _serving: dict = {}
@@ -804,7 +830,7 @@ def build_parser():
     ingest.add_argument("--max-pages-per-pdf", type=int, help="smoke runs only")
     ingest.add_argument("--download-missing", action="store_true")
     ingest.add_argument("--user-agent", default=os.getenv("SEC_USER_AGENT"))
-    ingest.add_argument("--vlm", choices=["routed", "ocr", "transformers", "openai", "mock"], default="transformers",
+    ingest.add_argument("--vlm", choices=["routed", "ocr", "transformers", "openai", "mock"], default="routed",
                         help="page reader: routed = one reader per page from the page audit rules, with the paidVL "
                              "fallback (OCR -> Qwen3-VL -> paid model); ocr = RapidOCR + native tables (CPU); "
                              "transformers = local Qwen3-VL; openai = OpenAI-compatible endpoint (self-hosted Qwen-VL "
