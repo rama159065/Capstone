@@ -88,8 +88,8 @@ def test_page_choice_and_signature_without_loading_a_model(tmp_path, corpus):
     assert [p["page"] for p in vi.vlm_targets(pages, "tables_charts")] == [2]
     assert [p["page"] for p in vi.vlm_targets(pages, "visual")] == [2, 3]
     assert [p["page"] for p in vi.vlm_targets(pages, "all")] == [1, 2, 3]
-    args = args_for(tmp_path, corpus, "chroma", "--vlm", "transformers", "--vlm-model", "Qwen/Qwen2.5-VL-7B-Instruct")
-    assert vi.vlm_signature(args) == "transformers:Qwen/Qwen2.5-VL-7B-Instruct:1200"
+    args = args_for(tmp_path, corpus, "chroma", "--vlm", "transformers", "--vlm-model", "Qwen/Qwen3-VL-8B-Instruct")
+    assert vi.vlm_signature(args) == "transformers:Qwen/Qwen3-VL-8B-Instruct:1200"
 
 
 class FakeOCR:

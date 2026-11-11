@@ -31,8 +31,8 @@ loses at most the page in progress. Put ``--cache-dir`` on Drive.
 Page readers (``--vlm``):
   ocr           RapidOCR (CPU, free) plus PyMuPDF's native table extraction as Markdown. Reads printed text,
                 labels and data labels in charts and images; no understanding of chart layout.
-  transformers  Qwen2.5-VL in-process (default Qwen/Qwen2.5-VL-3B-Instruct; 4-bit on a CUDA GPU when
-                bitsandbytes is installed). Colab T4/L4.
+  transformers  Qwen3-VL in-process (default Qwen/Qwen3-VL-4B-Instruct; Qwen3-VL-2B / -8B with --vlm-model;
+                4-bit on a CUDA GPU when bitsandbytes is installed; needs transformers >= 4.57). Colab T4/L4.
   openai        any OpenAI-compatible vision endpoint (RAG_VISION_API_BASE, RAG_VISION_MODEL,
                 RAG_VISION_API_KEY): self-hosted Qwen-VL on vLLM / llama.cpp / Ollama, or a paid API
                 (OpenAI, Google Gemini's OpenAI endpoint, OpenRouter, ...). HTTP 429/503 are retried after
@@ -82,7 +82,7 @@ VLM_PROMPT = """Transcribe this annual report page into Markdown. Copy every num
 - Charts: state the chart title, then one line per labelled value saying which series, bar or year it belongs to, using the legend. Never estimate an unlabelled point.
 - Text: copy headings and paragraphs. Ignore photographs, logos and QR codes.
 Output only the transcription."""
-MAX_PIXELS = 1280 * 28 * 28            # ~1,280 visual tokens per page for Qwen2.5-VL
+MAX_PIXELS = 1280 * 28 * 28            # ~1.0 MP per page: ~980 visual tokens for Qwen3-VL (32 x 32 px each)
 RENDER_DPI = 150
 NUMBER = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+\.\d+|\d{3,}")   # 1,234 / 6.08 / 2025; not "31,"
 
@@ -141,7 +141,7 @@ def ocr_reader_signature(scale=2.0, min_confidence=.6):
 
 
 class TransformersVLM:
-    def __init__(self, model="Qwen/Qwen2.5-VL-3B-Instruct", max_new_tokens=1200):
+    def __init__(self, model="Qwen/Qwen3-VL-4B-Instruct", max_new_tokens=1200):
         import torch
         from transformers import AutoModelForImageTextToText, AutoProcessor
         self.torch, self.max_new_tokens = torch, max_new_tokens
@@ -208,7 +208,7 @@ class OpenAIVLM:
                 time.sleep(wait)
 
 
-DEFAULT_TRANSFORMERS_MODEL = "Qwen/Qwen2.5-VL-3B-Instruct"
+DEFAULT_TRANSFORMERS_MODEL = "Qwen/Qwen3-VL-4B-Instruct"   # 2B (fast, T4) / 4B (T4 in 4-bit) / 8B (L4, A100)
 
 
 def make_vlm(args):
@@ -635,7 +635,7 @@ def build_parser():
     ingest.add_argument("--download-missing", action="store_true")
     ingest.add_argument("--user-agent", default=os.getenv("SEC_USER_AGENT"))
     ingest.add_argument("--vlm", choices=["ocr", "transformers", "openai", "mock"], default="transformers",
-                        help="page reader: ocr = RapidOCR + native tables (CPU); transformers = local Qwen2.5-VL; "
+                        help="page reader: ocr = RapidOCR + native tables (CPU); transformers = local Qwen3-VL; "
                              "openai = OpenAI-compatible endpoint (self-hosted Qwen-VL or a paid API); mock = text layer")
     ingest.add_argument("--vlm-model", help=f"HF model for transformers (default {DEFAULT_TRANSFORMERS_MODEL}); "
                                             "served model name for openai (default RAG_VISION_MODEL)")

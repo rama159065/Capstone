@@ -90,7 +90,7 @@ class Settings:
     stage_pdfs: bool = IN_COLAB             # copy each sector's PDFs from Drive to local disk before ingesting
     # vlm_chroma
     vlm: str = "transformers"               # page reader: "ocr" / "transformers" (Qwen-VL) / "openai" (paid or self-hosted) / "mock"
-    vlm_model: str | None = None            # default Qwen/Qwen2.5-VL-3B-Instruct
+    vlm_model: str | None = None            # default Qwen/Qwen3-VL-4B-Instruct (or -2B / -8B)
     vlm_pages: str = "visual"               # tables, charts, images + unreadable pages
                                             # or "tables_charts_images" / "tables_charts" / "all"
     vlm_max_pages_per_pdf: int = 0
@@ -516,6 +516,15 @@ def query(s: Settings, text, sector=None, ticker=None, year=None, top_k=5, visua
     return rows
 
 
+def page_audit(s: Settings, workers=None, force=False, limit=None, out=None):
+    """Which parser each downloaded page needs: <drive_root>/page_audit/<sector>/<pdf name>.csv (pageNumber,parserUsage)
+    plus _summary.csv / _summary.json. Reads the PDFs on Drive (CPU only: no GPU needed); finished filings are
+    skipped on a rerun, so after a disconnect just run it again. ``limit``: first N filings (a timing run)."""
+    from scripts.rag import page_audit as pa
+    return pa.run(s.corpus, out or s.drive_root / "page_audit", preset=s.corpus_preset, sectors=s.sectors or None,
+                  workers=workers or os.cpu_count(), force=force, limit=limit)
+
+
 def run(s: Settings, download_first=True):
     prepare(s)
     restore(s)
@@ -531,7 +540,8 @@ def run(s: Settings, download_first=True):
 
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["run", "prepare", "download", "restore", "ingest", "status", "coverage", "query"])
+    parser.add_argument("command", choices=["run", "prepare", "download", "restore", "ingest", "status", "coverage", "query",
+                                            "audit"])
     parser.add_argument("text", nargs="?", help="query text")
     parser.add_argument("--sector", help="query filter")
     parser.add_argument("--ticker", help="query filter")
@@ -563,7 +573,7 @@ def main(argv=None):
     if args.command == "run":
         return run(s, download_first=not args.no_download)
     return {"prepare": prepare, "download": download, "restore": restore, "ingest": ingest, "status": status,
-            "coverage": coverage}[args.command](s)
+            "coverage": coverage, "audit": page_audit}[args.command](s)
 
 
 if __name__ == "__main__":

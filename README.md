@@ -147,6 +147,16 @@ python scripts\rag\index_financial_report_pdfs.py --manifest data\raw\financial_
 - **Older indexes:** `financial_ingest tag-sectors --manifest <corpus>` adds the field to points ingested before it existed.
 - **On Colab:** see the "sector corpus" cells in `notebooks/colab_financial_ingest.ipynb`. Use `--output-dir` to put the corpus on Drive.
 
+### Page audit: which parser each page needs
+
+After downloading the corpus (`full` or `min500`), `scripts.rag.page_audit` analyses every page and writes one CSV per PDF, in folders that mirror the sector folders: `page_audit/<sector_slug>/<pdf name>.csv` with `pageNumber,parserUsage`. `parserUsage` is `pdfParser`, `pdfParser+colpali`, `ocr`, `qwen3VL` or `paidVL` (rules in the module docstring); `_summary.csv` / `_summary.json` give the counts per filing and sector. Reruns skip finished filings.
+
+```powershell
+python -m scripts.rag.page_audit --manifest data\raw\financial_report_qa\annual_reports --corpus-preset min500 --out output\page_audit
+awinancial_report_qannual_reports --corpus-preset min500 --out output\page_audit
+python -m scripts.rag.colab_pipeline audit --corpus-preset min500      # Colab: writes <drive_root>/page_audit
+```
+
 ### Two ingestion pipelines for visual pages
 
 Both pipelines read the same manifests (a file or the sector corpus folder, with `--sectors`), and both put `sector`, `ticker`, `fiscal_year` and a citable `chunk_id` on every point.
@@ -156,7 +166,7 @@ Both pipelines read the same manifests (a file or the sector corpus folder, with
 | Visual pages become | ColPali multivectors: mean-pooled rows/columns in RAM (first stage), full 1030×128 on disk (MaxSim rerank) | Text written by the page reader (tables as Markdown tables, charts as labelled values), then chunked and embedded |
 | Pages | `--visual-pages rule` (tables, charts, pictures, unreadable pages), `tables_charts` or `all` | `--vlm-pages visual`, `tables_charts` or `all`; other pages keep their text layer |
 | Store | Qdrant `annual_reports_visual` (+ `annual_reports_text` for text, dense + sparse BM25) | Chroma `annual_reports_vlm` (dense) + a BM25 sidecar (`chroma/bm25.sqlite3`, SQLite FTS5 on number-aware terms), fused by RRF |
-| Page reader | `vidore/colpali-v1.3-hf` (retrieval only; OCR for unreadable text pages) | `--vlm ocr` (RapidOCR + native tables, CPU), `--vlm transformers` (local Qwen2.5-VL-3B, 4-bit on GPU), `--vlm openai` (OpenAI-compatible: self-hosted Qwen-VL on vLLM / llama.cpp / Ollama, or a paid API such as OpenAI or Gemini via `RAG_VISION_API_BASE/MODEL/KEY`) or `mock` |
+| Page reader | `vidore/colpali-v1.3-hf` (retrieval only; OCR for unreadable text pages) | `--vlm ocr` (RapidOCR + native tables, CPU), `--vlm transformers` (local Qwen3-VL-4B (2B / 8B), 4-bit on GPU), `--vlm openai` (OpenAI-compatible: self-hosted Qwen-VL on vLLM / llama.cpp / Ollama, or a paid API such as OpenAI or Gemini via `RAG_VISION_API_BASE/MODEL/KEY`) or `mock` |
 | Numbers | stay as exact strings in the payload, never in vectors | figures the text layer doesn't print are flagged as `unverified_numbers` |
 
 ```powershell
