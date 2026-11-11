@@ -25,16 +25,9 @@ import pymupdf as fitz
 from qdrant_client import QdrantClient, models
 
 from scripts.common.paths import ROOT  # noqa: E402 - repo root
+from scripts.rag.hashing import dense, term_id, tokens  # noqa: F401 - moved to hashing.py; re-exported here
 DOMAINS = ("financial_report_qa",)   # financial report copilot only; other names raise "Unknown domain"
 LOCK = RLock()
-
-
-def tokens(text):
-    return re.findall(r"\b\w+\b", text.lower())
-
-
-def term_id(term):
-    return int.from_bytes(hashlib.sha256(term.encode()).digest()[:4], "big")
 
 
 def sparse(text, query=False):
@@ -44,14 +37,6 @@ def sparse(text, query=False):
     return models.SparseVector(indices=sorted(counts), values=[
         1.0 if query else count * 2.2 / (count + 1.2 * (.25 + .75 * length / 400))
         for _, count in sorted(counts.items())])
-
-
-def dense(text, size=384):
-    vector = [0.0] * size
-    for term, count in Counter(tokens(text)).items():
-        vector[term_id(term) % size] += 1 + math.log(count)
-    norm = math.sqrt(sum(x*x for x in vector)) or 1
-    return [x / norm for x in vector]
 
 
 def ollama(prompt, images=()):
