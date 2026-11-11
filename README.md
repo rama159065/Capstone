@@ -151,17 +151,21 @@ python scripts\rag\index_financial_report_pdfs.py --manifest data\raw\financial_
 
 Both pipelines read the same manifests (a file or the sector corpus folder, with `--sectors`), and both put `sector`, `ticker`, `fiscal_year` and a citable `chunk_id` on every point.
 
-| | Pipeline 1: ColPali, `scripts.rag.financial_ingest` | Pipeline 2: VLM, `scripts.rag.vlm_ingest` |
+| | Pipeline 1: ColPali, `scripts.rag.financial_ingest` (**Qdrant only**) | Pipeline 2: OCR / VLM, `scripts.rag.vlm_ingest` (**Chroma only**) |
 |---|---|---|
-| Visual pages become | ColPali multivectors: mean-pooled rows/columns in RAM (first stage), full 1030×128 on disk (MaxSim rerank) | Markdown written by a VLM (tables as Markdown tables, charts as labelled values), then chunked and embedded |
+| Visual pages become | ColPali multivectors: mean-pooled rows/columns in RAM (first stage), full 1030×128 on disk (MaxSim rerank) | Text written by the page reader (tables as Markdown tables, charts as labelled values), then chunked and embedded |
 | Pages | `--visual-pages rule` (tables, charts, pictures, unreadable pages), `tables_charts` or `all` | `--vlm-pages visual`, `tables_charts` or `all`; other pages keep their text layer |
-| Store | Qdrant `annual_reports_visual` (+ `annual_reports_text` for text) | Chroma (default) or Qdrant `vlm_text` (`--store qdrant`) |
-| Model | `vidore/colpali-v1.3-hf` | `--vlm transformers` (Qwen2.5-VL-3B, 4-bit on GPU), `--vlm openai` (llama.cpp / vLLM / Ollama endpoint) or `mock` |
+| Store | Qdrant `annual_reports_visual` (+ `annual_reports_text` for text, dense + sparse BM25) | Chroma `annual_reports_vlm` (dense) + a BM25 sidecar (`chroma/bm25.sqlite3`, SQLite FTS5 on number-aware terms), fused by RRF |
+| Page reader | `vidore/colpali-v1.3-hf` (retrieval only; OCR for unreadable text pages) | `--vlm ocr` (RapidOCR + native tables, CPU), `--vlm transformers` (local Qwen2.5-VL-3B, 4-bit on GPU), `--vlm openai` (OpenAI-compatible: self-hosted Qwen-VL on vLLM / llama.cpp / Ollama, or a paid API such as OpenAI or Gemini via `RAG_VISION_API_BASE/MODEL/KEY`) or `mock` |
 | Numbers | stay as exact strings in the payload, never in vectors | figures the text layer doesn't print are flagged as `unverified_numbers` |
 
 ```powershell
 python -m scripts.rag.financial_ingest ingest --manifest data\raw\financial_report_qa\annual_reports --sectors banking --stages visual --visual-pages tables_charts
+python -m scripts.rag.vlm_ingest ingest --manifest data\raw\financial_report_qa\annual_reports --sectors banking --vlm ocr
 python -m scripts.rag.vlm_ingest ingest --manifest data\raw\financial_report_qa\annual_reports --sectors banking --vlm transformers
+# paid API (bills per page; keep the page selection narrow)
+$env:RAG_VISION_API_BASE="https://api.openai.com/v1"; $env:RAG_VISION_MODEL="gpt-4o-mini"; $env:RAG_VISION_API_KEY="sk-..."
+python -m scripts.rag.vlm_ingest ingest --root indexes\financial_vlm_paid --sectors banking --vlm openai --vlm-pages tables_charts
 python -m scripts.rag.vlm_ingest query "net interest income" --sector banking
 ```
 

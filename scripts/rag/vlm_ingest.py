@@ -1,4 +1,4 @@
-"""Pipeline 2: a VLM transcribes table, chart and picture pages to Markdown, then chunks go to a vector DB.
+"""Pipeline 2 (Chroma only): table, chart and picture pages are read by OCR or a VLM, then chunks go to Chroma.
 
 The two financial ingestion pipelines over the same manifests (one PDF file, or the
 sector corpus folder of scripts/downloads/download_annual_report_corpus.py):
@@ -7,13 +7,15 @@ sector corpus folder of scripts/downloads/download_annual_report_corpus.py):
   ``visual_pages``. Mean-pooled rows and columns are kept in RAM for the first stage,
   and the full 1030 x 128 multivectors are kept on disk for the MaxSim rerank.
   Pages are found from their pixels.
-* Pipeline 2 (this module): pages are turned into text first. Pages with a table,
-  chart or picture (or every page, with ``--vlm-pages all``) are rendered and
-  transcribed by a vision-language model: tables become Markdown tables, and charts
-  become one line per labelled value. Plain narrative pages keep their accurate,
-  free text layer. The Markdown is chunked (table headers are repeated on every
-  piece), embedded and written to Chroma (default) or to the Qdrant collection
-  ``vlm_text`` (dense + number-aware BM25, like ``docs_text``).
+* Pipeline 2 (this module), **Chroma only**: pages are turned into text first. Pages with a
+  table, chart or picture (or every page, with ``--vlm-pages all``) are rendered and read by
+  the page reader chosen with ``--vlm`` (OCR, a local Qwen VLM, or an OpenAI-compatible API,
+  self-hosted or paid): tables become Markdown tables, and charts become one line per
+  labelled value. Plain narrative pages keep their accurate, free text layer. The text is
+  chunked (table headers are repeated on every piece), embedded and written to the Chroma
+  collection ``annual_reports_vlm``. A BM25 index of the same chunks (SQLite FTS5 over
+  number-aware terms, ``<root>/chroma/bm25.sqlite3``) is fused with the dense results by RRF,
+  so exact figures such as ``391,035`` or ``$6.08`` are matched as whole terms.
 
 Every chunk carries the filing payload of pipeline 1 (ticker, fiscal year, sector,
 page, citable ``chunk_id``), ``text_source`` = vlm / native_pdf / ocr, and
@@ -26,22 +28,31 @@ Transcriptions are cached per page in ``<cache-dir>/<document_id>.jsonl``, and
 finished filings are recorded in ``<root>/vlm_ingest.sqlite3``. A Colab disconnect
 loses at most the page in progress. Put ``--cache-dir`` on Drive.
 
-VLM backends (``--vlm``):
+Page readers (``--vlm``):
+  ocr           RapidOCR (CPU, free) plus PyMuPDF's native table extraction as Markdown. Reads printed text,
+                labels and data labels in charts and images; no understanding of chart layout.
   transformers  Qwen2.5-VL in-process (default Qwen/Qwen2.5-VL-3B-Instruct; 4-bit on a CUDA GPU when
                 bitsandbytes is installed). Colab T4/L4.
-  openai        any OpenAI-compatible vision endpoint: llama.cpp server, vLLM, Ollama /v1
-                (RAG_VISION_API_BASE, RAG_VISION_MODEL, optional RAG_VISION_API_KEY).
+  openai        any OpenAI-compatible vision endpoint (RAG_VISION_API_BASE, RAG_VISION_MODEL,
+                RAG_VISION_API_KEY): self-hosted Qwen-VL on vLLM / llama.cpp / Ollama, or a paid API
+                (OpenAI, Google Gemini's OpenAI endpoint, OpenRouter, ...). HTTP 429/503 are retried after
+                RAG_VISION_RETRY_DELAYS seconds (default 2,4,8). Paid APIs bill per page: cap the spend with
+                --vlm-max-pages-per-pdf and --vlm-pages tables_charts.
   mock          copies the text layer; offline smoke runs and tests.
+Every reader's output is cached per page, so switching readers re-reads pages but a rerun never does.
 
+    python -m scripts.rag.vlm_ingest ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking --vlm ocr
     python -m scripts.rag.vlm_ingest ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking --vlm transformers
     python -m scripts.rag.vlm_ingest ingest --vlm openai --tickers CVX --max-pages-per-pdf 20      # local llama.cpp
+    # paid API, e.g. OpenAI:
+    #   RAG_VISION_API_BASE=https://api.openai.com/v1 RAG_VISION_MODEL=gpt-4o-mini RAG_VISION_API_KEY=sk-...
+    python -m scripts.rag.vlm_ingest ingest --vlm openai --root indexes/financial_vlm_gpt4o --vlm-pages tables_charts
     python -m scripts.rag.vlm_ingest query "net interest income" --sector banking
     python -m scripts.rag.vlm_ingest status
 """
 from __future__ import annotations
 
 import argparse
-import atexit
 import base64
 from collections import Counter
 import hashlib
@@ -50,7 +61,9 @@ import json
 import os
 from pathlib import Path
 import re
+import sqlite3
 import time
+import urllib.error
 import urllib.request
 
 import pymupdf
@@ -62,7 +75,6 @@ from scripts.rag import financial_ingest as fi
 
 DEFAULT_ROOT = Path(os.getenv("RAG_VLM_DIR", ROOT / "indexes/financial_vlm"))
 CHROMA_COLLECTION = "annual_reports_vlm"
-QDRANT_COLLECTION = "vlm_text"
 PROMPT_VERSION = 1
 VLM_PROMPT = """Transcribe this annual report page into Markdown. Copy every number exactly as printed.
 - Tables: a Markdown table with the printed column headers. Keep the unit line (e.g. "in millions"). Keep every row.
@@ -93,6 +105,38 @@ class MockVLM:
 
     def transcribe(self, image, page):
         return fi.clean(page.get_text(sort=True))
+
+
+class OcrReader:
+    """RapidOCR on the page image plus the page's native tables as Markdown (CPU, no model download).
+
+    OCR copies printed characters: table cells, chart titles, axis and data labels. It does not know which
+    label belongs to which bar, so a chart with no printed values gives labels only.
+    """
+
+    def __init__(self, scale=2.0, min_confidence=.6, ocr=None):
+        self.scale, self.min_confidence = scale, min_confidence
+        self._ocr = ocr
+        self.signature = ocr_reader_signature(scale, min_confidence)
+
+    @property
+    def ocr(self):
+        if self._ocr is None:
+            self._ocr = fi.PageOCR(scale=self.scale, min_confidence=self.min_confidence)
+        return self._ocr
+
+    def transcribe(self, image, page):
+        try:
+            tables = [t for t in map(fi.table_markdown, page.find_tables().tables) if t]
+        except Exception:
+            tables = []
+        parts = ["\n".join(lines) for lines in tables]
+        text = self.ocr.read(page).strip()
+        return "\n\n".join([*parts, text] if text else parts)
+
+
+def ocr_reader_signature(scale=2.0, min_confidence=.6):
+    return f"ocr:{fi.ocr_signature(scale, min_confidence)}+native_tables"
 
 
 class TransformersVLM:
@@ -135,6 +179,7 @@ class OpenAIVLM:
         self.model = model or os.getenv("RAG_VISION_MODEL", "local-qwen3-vl")
         self.max_tokens, self.timeout = max_tokens, timeout
         self.signature = f"openai:{self.model}:{max_tokens}"
+        self.delays = [float(x) for x in os.getenv("RAG_VISION_RETRY_DELAYS", "2,4,8").split(",") if x.strip()]
 
     def transcribe(self, image, page):
         buffer = io.BytesIO()
@@ -147,8 +192,19 @@ class OpenAIVLM:
         if os.getenv("RAG_VISION_API_KEY"):
             headers["Authorization"] = f"Bearer {os.environ['RAG_VISION_API_KEY']}"
         request = urllib.request.Request(self.base + "/chat/completions", data=body, headers=headers)
-        with urllib.request.urlopen(request, timeout=self.timeout) as response:
-            return json.load(response)["choices"][0]["message"]["content"].strip()
+        for attempt in range(len(self.delays) + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                    return (json.load(response)["choices"][0]["message"]["content"] or "").strip()
+            except urllib.error.HTTPError as exc:
+                # Rate limits and overload are explicit rejections, so a retry can't double-bill a page.
+                if exc.code not in {429, 503} or attempt >= len(self.delays):
+                    raise
+                try:
+                    wait = max(self.delays[attempt], float(exc.headers.get("Retry-After") or 0))
+                except (TypeError, ValueError):
+                    wait = self.delays[attempt]
+                time.sleep(wait)
 
 
 DEFAULT_TRANSFORMERS_MODEL = "Qwen/Qwen2.5-VL-3B-Instruct"
@@ -157,6 +213,8 @@ DEFAULT_TRANSFORMERS_MODEL = "Qwen/Qwen2.5-VL-3B-Instruct"
 def make_vlm(args):
     if args.vlm == "mock":
         return MockVLM()
+    if args.vlm == "ocr":
+        return OcrReader()
     if args.vlm == "openai":
         return OpenAIVLM(model=args.vlm_model, max_tokens=args.max_new_tokens)
     return TransformersVLM(args.vlm_model or DEFAULT_TRANSFORMERS_MODEL, args.max_new_tokens)
@@ -166,6 +224,8 @@ def vlm_signature(args):
     """Known before the model loads, so finished filings are skipped without loading it."""
     if args.vlm == "mock":
         return MockVLM.signature
+    if args.vlm == "ocr":
+        return ocr_reader_signature()
     if args.vlm == "openai":
         return OpenAIVLM(model=args.vlm_model, max_tokens=args.max_new_tokens).signature
     return f"transformers:{args.vlm_model or DEFAULT_TRANSFORMERS_MODEL}:{args.max_new_tokens}"
@@ -268,7 +328,7 @@ def vlm_records(row, pages, transcripts, vlm_signature):
     for page in pages:
         entry = transcripts.get(page["page"])
         if entry:
-            body, source = entry["markdown"], "vlm"
+            body, source = entry["markdown"], "ocr" if vlm_signature.startswith("ocr:") else "vlm"
         else:
             body, source = fi.readable_text(page)
         if not body.strip():
@@ -291,11 +351,53 @@ def vlm_records(row, pages, transcripts, vlm_signature):
 
 # ----------------------------------------------------------------------------- vector stores
 
+class Bm25Index:
+    """BM25 over the same chunks as the Chroma collection: SQLite FTS5 on number-aware terms.
+
+    Chroma's local store has dense search only. Terms come from ``financial_ingest.terms`` (pipeline 1's
+    sparse vectors), so ``$93,736`` is indexed as ``$93,736``, ``93,736`` and ``93736``. The file sits in the
+    Chroma folder, so backups and restores of that folder carry it.
+    """
+
+    def __init__(self, path):
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        self.db = sqlite3.connect(str(path), check_same_thread=False)
+        self.db.execute("CREATE VIRTUAL TABLE IF NOT EXISTS chunks USING fts5(terms, chunk_id UNINDEXED, "
+                        "doc_id UNINDEXED, ticker UNINDEXED, fiscal_year UNINDEXED, sector_slug UNINDEXED, "
+                        "tokenize = \"unicode61 tokenchars '$,.%'\")")
+
+    def replace(self, doc_id, records):
+        with self.db:
+            self.db.execute("DELETE FROM chunks WHERE doc_id = ?", (doc_id,))
+            self.db.executemany("INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?)", [
+                (" ".join(fi.terms(text)), payload["chunk_id"], doc_id, payload.get("ticker"),
+                 payload.get("fiscal_year"), payload.get("sector_slug")) for identifier, payload, text in records])
+
+    def search(self, query, top_k, ticker=None, year=None, sectors=()):
+        words = sorted(set(fi.terms(query)))
+        if not words:
+            return []
+        sql = "SELECT chunk_id FROM chunks WHERE chunks MATCH ?"
+        params = [" OR ".join('"' + w.replace('"', '""') + '"' for w in words)]
+        if ticker:
+            sql, params = sql + " AND ticker = ?", params + [ticker.upper()]
+        if year:
+            sql, params = sql + " AND fiscal_year = ?", params + [int(year)]
+        if sectors:
+            sql += f" AND sector_slug IN ({','.join('?' * len(sectors))})"
+            params += list(sectors)
+        return [row[0] for row in self.db.execute(sql + " ORDER BY bm25(chunks) LIMIT ?", params + [top_k])]
+
+    def count(self):
+        return self.db.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+
+
 class ChromaStore:
     def __init__(self, root, collection=CHROMA_COLLECTION):
         import chromadb
         self.client = chromadb.PersistentClient(path=str(Path(root) / "chroma"))
         self.collection = self.client.get_or_create_collection(collection, metadata={"hnsw:space": "cosine"})
+        self.bm25 = Bm25Index(Path(root) / "chroma" / "bm25.sqlite3")
 
     @staticmethod
     def metadata(payload):
@@ -313,81 +415,40 @@ class ChromaStore:
             part, vecs = records[start:start + 256], vectors[start:start + 256]
             self.collection.upsert(ids=[r[0] for r in part], embeddings=vecs, documents=[r[1]["text"] for r in part],
                                    metadatas=[self.metadata(r[1]) for r in part])
+        self.bm25.replace(doc_id, records)
 
-    def search(self, vector, query, top_k, ticker=None, year=None, sector=None):
+    def search(self, vector, query, top_k, ticker=None, year=None, sector=None, candidates=50):
+        """Dense (Chroma) + BM25 (FTS5) candidates fused by RRF; scores are RRF scores."""
         conditions = [{"ticker": ticker.upper()}] if ticker else []
         conditions += [{"fiscal_year": year}] if year else []
         sectors = sorted(parse_sectors(sector) or [])
         conditions += [{"sector_slug": sectors[0]} if len(sectors) == 1 else {"sector_slug": {"$in": sectors}}] if sectors else []
         where = conditions[0] if len(conditions) == 1 else {"$and": conditions} if conditions else None
-        result = self.collection.query(query_embeddings=[vector], n_results=top_k, where=where,
+        result = self.collection.query(query_embeddings=[vector], n_results=max(top_k, candidates), where=where,
                                        include=["documents", "metadatas", "distances"])
-        return [(1 - distance, {**meta, "text": text}) for text, meta, distance in
-                zip(result["documents"][0], result["metadatas"][0], result["distances"][0])]
+        found = {meta["chunk_id"]: {**meta, "text": text} for text, meta in
+                 zip(result["documents"][0], result["metadatas"][0])}
+        dense = list(found)
+        keyword = self.bm25.search(query, max(top_k, candidates), ticker, year, sectors)
+        missing = [c for c in keyword if c not in found]
+        if missing:
+            extra = self.collection.get(where={"chunk_id": {"$in": missing}}, include=["documents", "metadatas"])
+            found.update({meta["chunk_id"]: {**meta, "text": text} for text, meta in zip(extra["documents"], extra["metadatas"])})
+        fused = {}
+        for ranking in (dense, keyword):                     # reciprocal rank fusion, k = 60
+            for rank, chunk_id in enumerate(ranking, 1):
+                if chunk_id in found:
+                    fused[chunk_id] = fused.get(chunk_id, 0.0) + 1 / (60 + rank)
+        best = sorted(fused, key=fused.get, reverse=True)[:top_k]
+        return [(fused[c], found[c]) for c in best]
 
     def count(self):
         return self.collection.count()
 
 
-_QDRANT_CLIENTS = {}
-
-
-@atexit.register
-def _close_clients():
-    """Close cached clients before interpreter shutdown (embedded Qdrant can't close itself that late)."""
-    for client in _QDRANT_CLIENTS.values():
-        client.close()
-    _QDRANT_CLIENTS.clear()
-
-
-def qdrant_client(url, root):
-    """One client per server or folder for the whole process: embedded Qdrant allows a single client per folder."""
-    key = (url or os.getenv("QDRANT_URL") or "", str(Path(root).resolve()))
-    if key not in _QDRANT_CLIENTS:
-        _QDRANT_CLIENTS[key] = fi.connect(url, root)
-    return _QDRANT_CLIENTS[key]
-
-
-class QdrantStore:
-    def __init__(self, root, dim, url=None, collection=QDRANT_COLLECTION):
-        from qdrant_client import models
-        self.models, self.name = models, collection
-        self.client = qdrant_client(url, root)
-        if not self.client.collection_exists(collection):
-            self.client.create_collection(collection, on_disk_payload=True, vectors_config={
-                "dense": models.VectorParams(size=dim, distance=models.Distance.COSINE)},
-                sparse_vectors_config={"bm25": models.SparseVectorParams(modifier=models.Modifier.IDF)})
-            if fi.is_server(self.client):
-                for field in ("doc_id", "ticker", "sector_slug", "content_type", "text_source"):
-                    self.client.create_payload_index(collection, field, field_schema=models.PayloadSchemaType.KEYWORD)
-                self.client.create_payload_index(collection, "fiscal_year", field_schema=models.PayloadSchemaType.INTEGER)
-        size = self.client.get_collection(collection).config.params.vectors["dense"].size
-        if size != dim:
-            raise ValueError(f"{collection} has dimension {size}, the embedder gives {dim}. Use a new --root or --reset.")
-
-    def replace(self, doc_id, records, vectors):
-        models = self.models
-        self.client.delete(self.name, models.FilterSelector(filter=fi.doc_filter(doc_id)), wait=True)
-        for start in range(0, len(records), 128):
-            self.client.upsert(self.name, wait=True, points=[
-                models.PointStruct(id=i, payload=p, vector={"dense": v, "bm25": fi.sparse_vector(t)})
-                for (i, p, t), v in zip(records[start:start + 128], vectors[start:start + 128])])
-
-    def search(self, vector, query, top_k, ticker=None, year=None, sector=None):
-        models = self.models
-        flt = fi.query_filter(ticker, year, sector)
-        hits = self.client.query_points(self.name, prefetch=[
-            models.Prefetch(query=vector, using="dense", limit=50, filter=flt),
-            models.Prefetch(query=fi.sparse_vector(query, query=True), using="bm25", limit=50, filter=flt)],
-            query=models.FusionQuery(fusion=models.Fusion.RRF), limit=top_k, with_payload=True).points
-        return [(hit.score, hit.payload) for hit in hits]
-
-    def count(self):
-        return self.client.count(self.name, exact=True).count
-
-
 def open_store(args, dim):
-    return ChromaStore(args.root) if args.store == "chroma" else QdrantStore(args.root, dim, args.qdrant_url)
+    """Pipeline 2 writes to Chroma only; Qdrant is pipeline 1's database (scripts/rag/financial_ingest.py)."""
+    return ChromaStore(args.root)
 
 
 # ----------------------------------------------------------------------------- ingest
@@ -458,29 +519,29 @@ class VlmIngest:
 
 def reset(args):
     root = Path(args.root)
-    if args.store == "chroma":
-        import chromadb
-        client = chromadb.PersistentClient(path=str(root / "chroma"))
-        if CHROMA_COLLECTION in [c.name for c in client.list_collections()]:
-            client.delete_collection(CHROMA_COLLECTION)
-    else:
-        client = qdrant_client(args.qdrant_url, root)
-        if client.collection_exists(QDRANT_COLLECTION):
-            client.delete_collection(QDRANT_COLLECTION)
+    import chromadb
+    client = chromadb.PersistentClient(path=str(root / "chroma"))
+    if CHROMA_COLLECTION in [c.name for c in client.list_collections()]:
+        client.delete_collection(CHROMA_COLLECTION)
+    bm25 = Bm25Index(root / "chroma" / "bm25.sqlite3")
+    with bm25.db:
+        bm25.db.execute("DELETE FROM chunks")
+    bm25.db.close()
     (root / "vlm_ingest.sqlite3").unlink(missing_ok=True)
     print("vlm collection and state reset (page analysis and transcription caches kept)", flush=True)
 
 
 # ----------------------------------------------------------------------------- retrieval
 
-def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAULT_ROOT, store="chroma",
-             qdrant_url=None, embedder=None):
+def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAULT_ROOT, store="chroma", embedder=None):
     """Hits in the agents' evidence format (chunk_id, text, ticker, year, sector, page, ...)."""
     root = Path(root)
     if embedder is None:
         embedder = fi.recorded_embedder(argparse.Namespace(root=root, embedding_provider="hashing", embedding_model=None),
                                         state_name="vlm_ingest.sqlite3")
-    backend = ChromaStore(root) if store == "chroma" else QdrantStore(root, embedder.dim, qdrant_url)
+    if store != "chroma":
+        raise ValueError("pipeline 2 serves from Chroma only; Qdrant is pipeline 1 (RAG_BACKEND=financial_qdrant)")
+    backend = ChromaStore(root)
     hits = []
     for score, p in backend.search(embedder([query])[0], query, top_k, ticker, year, sector):
         unverified = p.get("unverified_in_chunk") or []
@@ -501,19 +562,18 @@ _serving: dict = {}
 def retrieve_for_agent(query, top_k=5, ticker=None, year=None, sector=None):
     """Evidence for the financial agents (RAG_BACKEND=financial_vlm) from the index under RAG_VLM_DIR.
 
-    Uses the store and embedder recorded when the index was built (Chroma unless RAG_VLM_STORE=qdrant),
-    loaded once per process. Hits carry rerank_score/rrf_score like the other backends.
+    Uses the Chroma index and the embedder recorded when it was built, loaded once per process.
+    Hits carry rerank_score/rrf_score like the other backends.
     """
     root = Path(os.getenv("RAG_VLM_DIR", DEFAULT_ROOT))
-    store = os.getenv("RAG_VLM_STORE", "chroma")
+    store = "chroma"
     key = (str(root), store)
     if _serving.get("key") != key:
         embedder = fi.recorded_embedder(argparse.Namespace(root=root, embedding_provider="hashing", embedding_model=None),
                                         state_name="vlm_ingest.sqlite3")
         _serving.clear()
         _serving.update(key=key, embedder=embedder)
-    hits = retrieve(query, top_k, ticker, year, sector, root=root, store=store, qdrant_url=os.getenv("QDRANT_URL"),
-                    embedder=_serving["embedder"])
+    hits = retrieve(query, top_k, ticker, year, sector, root=root, store=store, embedder=_serving["embedder"])
     for rank, hit in enumerate(hits, 1):
         hit.update(rrf_score=1 / (60 + rank), rerank_score=hit["score"], image_path=None)
     return hits
@@ -542,8 +602,7 @@ def status(args):
 
 def query(args):
     started = time.time()
-    hits = retrieve(args.text, args.top_k, args.ticker, args.year, args.sector, root=args.root, store=args.store,
-                    qdrant_url=args.qdrant_url)
+    hits = retrieve(args.text, args.top_k, args.ticker, args.year, args.sector, root=args.root, store=args.store)
     for hit in hits:
         print(json.dumps({"score": round(hit["score"], 4), "chunk_id": hit["chunk_id"], "sector": hit["sector"],
                           "page": hit["page"], "source": hit["text_source"], "type": hit["content_type"],
@@ -554,9 +613,9 @@ def query(args):
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="state, page analysis cache, Chroma / embedded Qdrant")
-    common.add_argument("--store", choices=["chroma", "qdrant"], default="chroma")
-    common.add_argument("--qdrant-url", default=os.getenv("QDRANT_URL"), help="for --store qdrant; default: embedded")
+    common.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="state, page analysis cache and the Chroma index")
+    common.add_argument("--store", choices=["chroma"], default="chroma",
+                        help="Chroma only; Qdrant is pipeline 1 (scripts.rag.financial_ingest)")
     common.add_argument("--cache-dir", type=Path, help="VLM transcriptions (default <root>/vlm_pages); put it on Drive")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -572,12 +631,14 @@ def build_parser():
     ingest.add_argument("--max-pages-per-pdf", type=int, help="smoke runs only")
     ingest.add_argument("--download-missing", action="store_true")
     ingest.add_argument("--user-agent", default=os.getenv("SEC_USER_AGENT"))
-    ingest.add_argument("--vlm", choices=["transformers", "openai", "mock"], default="transformers")
+    ingest.add_argument("--vlm", choices=["ocr", "transformers", "openai", "mock"], default="transformers",
+                        help="page reader: ocr = RapidOCR + native tables (CPU); transformers = local Qwen2.5-VL; "
+                             "openai = OpenAI-compatible endpoint (self-hosted Qwen-VL or a paid API); mock = text layer")
     ingest.add_argument("--vlm-model", help=f"HF model for transformers (default {DEFAULT_TRANSFORMERS_MODEL}); "
                                             "served model name for openai (default RAG_VISION_MODEL)")
     ingest.add_argument("--vlm-pages", choices=["visual", "tables_charts_images", "tables_charts", "all"], default="visual",
-                        help="visual: tables, charts, pictures and unreadable pages (default; this pipeline has no OCR, "
-                             "so unreadable pages it skips are not indexed); tables_charts_images: no unreadable pages")
+                        help="visual: tables, charts, pictures and unreadable pages (default); "
+                             "tables_charts_images: no unreadable pages; tables_charts: the cheapest with a paid API")
     ingest.add_argument("--vlm-max-pages-per-pdf", type=int, default=0, help="0 = every target page")
     ingest.add_argument("--max-new-tokens", type=int, default=1200)
     ingest.add_argument("--embedding-provider", choices=["local", "hosted", "hashing"], default="local")

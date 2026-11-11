@@ -8,8 +8,9 @@ Two pipelines over the sector corpus (scripts/downloads/download_annual_report_c
     annual_reports_visual  ColPali on table, chart and image pages only: mean-pooled rows + cols (38 x 128 each,
                    RAM, HNSW) for the first stage; full 1030 x 128 multivector on disk (float16, mmap,
                    no HNSW) for the MaxSim rerank; payloads on disk
-``vlm_chroma`` (scripts/rag/vlm_ingest.py), Chroma, text embeddings only:
-    a VLM reads each table, chart, image and unreadable page image and writes it as Markdown text;
+``vlm_chroma`` (scripts/rag/vlm_ingest.py), Chroma only, text embeddings + a BM25 sidecar:
+    OCR or a VLM (local Qwen-VL, or an OpenAI-compatible API, self-hosted or paid) reads each table,
+    chart, image and unreadable page image and writes it as Markdown text;
     clean narrative pages keep their text layer; all chunks are embedded as text into Chroma
     (persisted on disk, HNSW loaded into RAM when queried)
 
@@ -88,9 +89,9 @@ class Settings:
     snapshot_every: int = 0                 # batches between Drive snapshots; 0 = once, at the end of each sector
     stage_pdfs: bool = IN_COLAB             # copy each sector's PDFs from Drive to local disk before ingesting
     # vlm_chroma
-    vlm: str = "transformers"               # or "openai" / "mock"
+    vlm: str = "transformers"               # page reader: "ocr" / "transformers" (Qwen-VL) / "openai" (paid or self-hosted) / "mock"
     vlm_model: str | None = None            # default Qwen/Qwen2.5-VL-3B-Instruct
-    vlm_pages: str = "visual"               # tables, charts, images + unreadable pages (no OCR here: skipped ones are lost)
+    vlm_pages: str = "visual"               # tables, charts, images + unreadable pages
                                             # or "tables_charts_images" / "tables_charts" / "all"
     vlm_max_pages_per_pdf: int = 0
     # smoke runs
@@ -448,7 +449,7 @@ def serving_env(s: Settings):
         if s.qdrant_url:
             env["QDRANT_URL"] = s.qdrant_url
     else:
-        env.update(RAG_BACKEND="financial_vlm", RAG_VLM_DIR=str(s.root), RAG_VLM_STORE="chroma")
+        env.update(RAG_BACKEND="financial_vlm", RAG_VLM_DIR=str(s.root))
     return env
 
 
