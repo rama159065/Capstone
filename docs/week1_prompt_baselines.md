@@ -189,7 +189,7 @@ These questions need the visual/OCR path and the chart-value facts (design secti
 
 | Observed break | Mitigation |
 |---|---|
-| Retrieval misses (largest effect) | Company/year filters from a planner; number-aware hybrid retrieval and the XBRL facts tool ([financial_ingest.py](../scripts/rag/financial_ingest.py), design sections 3–4). Measure retrieval separately (oracle vs real) |
+| Retrieval misses (largest effect) | Company/year filters from a planner; number-aware hybrid retrieval and the XBRL facts tool ([financial_ingest_qdrant_db.py](../scripts/rag/financial_ingest_qdrant_db.py), design sections 3–4). Measure retrieval separately (oracle vs real) |
 | Wrong row, period or unit; arithmetic | Numbers come from the **facts tool**, not from the model reading tables. Code computes ratios with `Decimal` and states the formula. The model writes words around facts it doesn't produce |
 | Invented numbers, "however…" contradictions | **Number grounding check** before release: every number must match a fact or a cited chunk, otherwise withhold or send to review (extends `apply_grounding_policy`) |
 | Advice, injection, out-of-scope | A **router/guard node before the LLM** (rules + classifier) returns the refusal. The model is never asked to decide whether to refuse; decomposition shows why |

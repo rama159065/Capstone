@@ -24,11 +24,11 @@ The collection names are this corpus's own, so ``LocalRAG`` (scripts/rag/multimo
 those names too: ``restore`` maps their snapshots to the new names, and an old live index stops with a
 message instead of being shadowed by empty collections.
 
-    python -m scripts.rag.financial_ingest ingest --qdrant-url http://127.0.0.1:6333 \
+    python -m scripts.rag.financial_ingest_qdrant_db ingest --qdrant-url http://127.0.0.1:6333 \
         --pdf-dir /content/drive/MyDrive/capstone_rag/pdfs --snapshot-dir /content/drive/MyDrive/capstone_rag/snapshots
-    python -m scripts.rag.financial_ingest status --qdrant-url http://127.0.0.1:6333
-    python -m scripts.rag.financial_ingest query "Chevron net oil-equivalent production" --ticker CVX --visual
-    python -m scripts.rag.financial_ingest restore --qdrant-url http://127.0.0.1:6333 --snapshot-dir ...
+    python -m scripts.rag.financial_ingest_qdrant_db status --qdrant-url http://127.0.0.1:6333
+    python -m scripts.rag.financial_ingest_qdrant_db query "Chevron net oil-equivalent production" --ticker CVX --visual
+    python -m scripts.rag.financial_ingest_qdrant_db restore --qdrant-url http://127.0.0.1:6333 --snapshot-dir ...
 
 ``--manifest`` also takes the sector corpus folder written by
 scripts/downloads/download_annual_report_corpus.py (one sub-folder and manifest per
@@ -37,8 +37,8 @@ sector); ``--sectors banking,insurance`` ingests some of them. Every point carri
 ``query --sector banking`` / ``retrieve_for_agent(..., sector=...)`` narrow to one.
 ``tag-sectors`` adds the fields to filings ingested before they existed.
 
-    python -m scripts.rag.financial_ingest ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking
-    python -m scripts.rag.financial_ingest query "net interest income" --sector banking
+    python -m scripts.rag.financial_ingest_qdrant_db ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking
+    python -m scripts.rag.financial_ingest_qdrant_db query "net interest income" --sector banking
 
 Without ``--qdrant-url`` (or ``QDRANT_URL``) it uses embedded Qdrant under
 ``--root``: fine for smoke runs, too slow for the corpus. The Colab session is

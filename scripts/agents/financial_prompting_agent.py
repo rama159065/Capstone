@@ -543,13 +543,13 @@ def answer_evidence(config: AgentConfig) -> list[dict[str, Any]]:
 
 
 def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
-    if os.getenv("RAG_BACKEND") == "financial_qdrant":   # collections built by scripts/rag/financial_ingest.py
-        from scripts.rag.financial_ingest import retrieve_for_agent
+    if os.getenv("RAG_BACKEND") == "financial_qdrant":   # collections built by scripts/rag/financial_ingest_qdrant_db.py
+        from scripts.rag.financial_ingest_qdrant_db import retrieve_for_agent
         return retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
                                   sector=config.sector, visual=config.visual, mode=config.retrieval_mode)
-    if os.getenv("RAG_BACKEND") == "financial_vlm":      # Chroma index built by scripts/rag/vlm_ingest.py
-        from scripts.rag import vlm_ingest
-        return vlm_ingest.retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
+    if os.getenv("RAG_BACKEND") == "financial_vlm":      # Chroma index built by scripts/rag/financial_ingest_chroma_db.py
+        from scripts.rag import financial_ingest_chroma_db
+        return financial_ingest_chroma_db.retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
                                              sector=config.sector, mode=config.retrieval_mode)
     if os.getenv("RAG_BACKEND") == "qdrant":
         from scripts.rag.multimodal_rag import retrieve_local

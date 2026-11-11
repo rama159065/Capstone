@@ -110,7 +110,7 @@ Priorities:
 flowchart LR
   subgraph Offline["Offline (Colab, batch)"]
     Plan["corpus_plan.jsonl<br>1,004 ARS PDFs"] --> DL["download → Drive"]
-    DL --> Ingest["page analysis · OCR · chunking<br>(financial_ingest)"]
+    DL --> Ingest["page analysis · OCR · chunking<br>(financial_ingest_qdrant_db)"]
     Ingest --> QT["Qdrant annual_reports_text<br>dense + BM25 sparse"]
     Ingest -. optional .-> QV["Qdrant annual_reports_visual<br>ColPali"]
     XBRL["SEC companyfacts JSON<br>281 companies"] --> Facts["facts.sqlite<br>(new)"]
@@ -401,7 +401,7 @@ The corpus size is one setting, **`CORPUS`**, used by download, ingestion and co
 python -m scripts.downloads.download_annual_report_corpus --preset min500 --output-dir <drive>/annual_reports
 python -m scripts.rag.colab_pipeline run --pipeline colpali_qdrant --corpus-preset min500 --max-per-sector 0
 python -m scripts.rag.colab_pipeline coverage --pipeline colpali_qdrant --corpus-preset min500   # planned = 509
-python -m scripts.rag.financial_ingest ingest --manifest <drive>/annual_reports --corpus-preset min500 ...
+python -m scripts.rag.financial_ingest_qdrant_db ingest --manifest <drive>/annual_reports --corpus-preset min500 ...
 ```
 
 **What `min500` selects:** the 41 largest filings per sector, plus every filing of the companies the frozen eval set asks about. It is defined in `download_annual_report_corpus.preset_rows`.

@@ -4,8 +4,8 @@ import json
 import pytest
 
 from scripts.rag import page_audit
-from scripts.rag import vlm_ingest as vi
-from tests.test_vlm_ingest import args_for, corpus  # noqa: F401  (Chroma corpus fixture)
+from scripts.rag import financial_ingest_chroma_db as vi
+from tests.test_financial_ingest_chroma_db import args_for, corpus  # noqa: F401  (Chroma corpus fixture)
 
 OCR_TEXT = ("Revenue by segment in millions for fiscal 2025 as reported by the company. Upstream segment "
             "revenue 391,035 and downstream segment revenue 120,500 with other items 8,250 for the year.")
@@ -58,7 +58,7 @@ def test_misread_figure_escalates_to_the_paid_model(tmp_path, corpus, paid_chart
     chart = by_page[2]
     assert chart["reader"] == "paidVL" and chart["escalation"] == "paid" and paid.calls == 1
     assert json.loads(chart["unverified_numbers"]) == []
-    from scripts.rag.vlm_ingest import retrieve
+    from scripts.rag.financial_ingest_chroma_db import retrieve
     hit = retrieve("Downstream segment revenue", 5, root=tmp_path / "chroma", embedder=ingest.embedder)
     assert any("120,500" in h["text"] and h["metadata"]["reader"] == "paidVL" for h in hit)
 

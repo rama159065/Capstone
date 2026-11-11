@@ -5,7 +5,7 @@ import json
 import pytest
 
 from scripts.rag import page_audit as pa
-from tests.test_financial_ingest import make_pdf
+from tests.test_financial_ingest_qdrant_db import make_pdf
 
 
 def page(kind, text="", garbled=False, image_share=0.0):

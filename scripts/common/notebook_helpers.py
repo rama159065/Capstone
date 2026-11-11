@@ -1,6 +1,6 @@
 """Helpers shared by the notebooks in notebooks/ (they run on Colab or locally from the repo root).
 
-Everything here wraps existing modules: the EDGAR manifest and PDF download (rag.financial_ingest),
+Everything here wraps existing modules: the EDGAR manifest and PDF download (rag.financial_ingest_qdrant_db),
 the chat templates and scorer (evaluation.prompt_baselines), the SEC XBRL lookup
 (evaluation.build_financial_eval_set) and the frozen evaluation set.
 """
@@ -18,7 +18,7 @@ import numpy as np
 from scripts.common.paths import ROOT
 from scripts.evaluation import build_financial_eval_set as evalset
 from scripts.evaluation import prompt_baselines as pb
-from scripts.rag import financial_ingest as fi
+from scripts.rag import financial_ingest_qdrant_db as fi
 
 IN_COLAB = "google.colab" in sys.modules
 MANIFEST = fi.MANIFEST

@@ -3,9 +3,9 @@ import json
 
 import pytest
 
-from scripts.rag import financial_ingest as fi
-from scripts.rag import vlm_ingest as vi
-from tests.test_financial_ingest import make_pdf
+from scripts.rag import financial_ingest_qdrant_db as fi
+from scripts.rag import financial_ingest_chroma_db as vi
+from tests.test_financial_ingest_qdrant_db import make_pdf
 
 
 class FakeVLM:

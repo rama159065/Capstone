@@ -2,13 +2,13 @@
 
 Two pipelines over the sector corpus (scripts/downloads/download_annual_report_corpus.py):
 
-``colpali_qdrant`` (scripts/rag/financial_ingest.py), Qdrant server, two collections:
+``colpali_qdrant`` (scripts/rag/financial_ingest_qdrant_db.py), Qdrant server, two collections:
     annual_reports_text    all the text: every page's text layer, OCR for unreadable pages, and table chunks;
                    dense vector (RAM, HNSW) + number-aware BM25 sparse vector
     annual_reports_visual  ColPali on table, chart and image pages only: mean-pooled rows + cols (38 x 128 each,
                    RAM, HNSW) for the first stage; full 1030 x 128 multivector on disk (float16, mmap,
                    no HNSW) for the MaxSim rerank; payloads on disk
-``vlm_chroma`` (scripts/rag/vlm_ingest.py), Chroma only, text embeddings + a BM25 sidecar:
+``vlm_chroma`` (scripts/rag/financial_ingest_chroma_db.py), Chroma only, text embeddings + a BM25 sidecar:
     OCR or a VLM (local Qwen-VL, or an OpenAI-compatible API, self-hosted or paid) reads each table,
     chart, image and unreadable page image and writes it as Markdown text;
     clean narrative pages keep their text layer; all chunks are embedded as text into Chroma
@@ -56,8 +56,8 @@ import urllib.request
 
 from scripts.common.paths import ROOT
 from scripts.common.sector_corpus import MANIFEST_NAME, parse_sectors, read_manifest
-from scripts.rag import financial_ingest as fi
-from scripts.rag import vlm_ingest as vi
+from scripts.rag import financial_ingest_qdrant_db as fi
+from scripts.rag import financial_ingest_chroma_db as vi
 
 PIPELINES = ("colpali_qdrant", "vlm_chroma")
 IN_COLAB = "google.colab" in sys.modules or "COLAB_RELEASE_TAG" in os.environ
@@ -183,7 +183,7 @@ def start_qdrant(s: Settings):
         archive.unlink()
     env = {**os.environ, "QDRANT__SERVICE__HOST": "127.0.0.1", "QDRANT__SERVICE__HTTP_PORT": str(QDRANT_PORT),
            "QDRANT__STORAGE__STORAGE_PATH": str(s.root / "qdrant_storage"),
-           "QDRANT__STORAGE__SNAPSHOTS_PATH": str(s.root / "snapshots"),     # where financial_ingest.restore copies to
+           "QDRANT__STORAGE__SNAPSHOTS_PATH": str(s.root / "snapshots"),     # where financial_ingest_qdrant_db.restore copies to
            "QDRANT__TELEMETRY_DISABLED": "true"}
     process = subprocess.Popen([str(binary)], cwd=binary.parent, env=env, stdout=open(s.work / "qdrant.log", "ab"),
                                stderr=subprocess.STDOUT)

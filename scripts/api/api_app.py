@@ -461,9 +461,9 @@ def warm_up_retrieval() -> str:
     started = time.perf_counter()
     try:
         if backend == "financial_qdrant":
-            from scripts.rag.financial_ingest import retrieve_for_agent
+            from scripts.rag.financial_ingest_qdrant_db import retrieve_for_agent
         else:
-            from scripts.rag.vlm_ingest import retrieve_for_agent
+            from scripts.rag.financial_ingest_chroma_db import retrieve_for_agent
         retrieve_for_agent("total revenue", top_k=1)
     except Exception as exc:  # noqa: BLE001 - warm-up is best effort
         logger.warning("retrieval warm-up failed: %s", exc)

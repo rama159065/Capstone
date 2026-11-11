@@ -5,7 +5,7 @@
 #   docker compose --profile https up -d   # on a server with a domain name: https://$DOMAIN
 #
 # Restore the Colab index once (snapshots copied from Drive into ./snapshots):
-#   docker compose run --rm api python -m scripts.rag.financial_ingest restore \
+#   docker compose run --rm api python -m scripts.rag.financial_ingest_qdrant_db restore \
 #       --root /app/indexes/financial_qdrant --qdrant-url http://qdrant:6333 --snapshot-dir /snapshots
 # See docs/deployment.md.
 name: annual-report-copilot

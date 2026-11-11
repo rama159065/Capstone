@@ -2,9 +2,9 @@
 
 Date: 2026-11-04. This implements the PDF part of [financial_rag_final_design.md](financial_rag_final_design.md), sections 5 and 7.
 
-- Code: [scripts/rag/financial_ingest.py](../scripts/rag/financial_ingest.py)
+- Code: [scripts/rag/financial_ingest_qdrant_db.py](../scripts/rag/financial_ingest_qdrant_db.py)
 - Colab session: [notebooks/colab_financial_ingest.ipynb](../notebooks/colab_financial_ingest.ipynb)
-- Tests: [tests/test_financial_ingest.py](../tests/test_financial_ingest.py)
+- Tests: [tests/test_financial_ingest_qdrant_db.py](../tests/test_financial_ingest_qdrant_db.py)
 
 **Not covered here:** the 10-K HTML / XBRL facts DB (store A) is a separate step.
 
@@ -105,16 +105,16 @@ Numbers are stored only as payload strings. Pooling and float16 change which pag
 
 ```bash
 # Colab, after starting the Qdrant server (notebook cell 4)
-python -m scripts.rag.financial_ingest ingest --qdrant-url http://127.0.0.1:6333 \
+python -m scripts.rag.financial_ingest_qdrant_db ingest --qdrant-url http://127.0.0.1:6333 \
     --pdf-dir $DRIVE/edgar/pdfs --user-agent "name email@domain" \
     --snapshot-dir $DRIVE/snapshots --stages text,visual
-python -m scripts.rag.financial_ingest status
-python -m scripts.rag.financial_ingest query "total revenue 130,497" --ticker NVDA          # text path
-python -m scripts.rag.financial_ingest query "revenue by market chart" --ticker NVDA --visual
-python -m scripts.rag.financial_ingest restore --snapshot-dir $DRIVE/snapshots              # next session
+python -m scripts.rag.financial_ingest_qdrant_db status
+python -m scripts.rag.financial_ingest_qdrant_db query "total revenue 130,497" --ticker NVDA          # text path
+python -m scripts.rag.financial_ingest_qdrant_db query "revenue by market chart" --ticker NVDA --visual
+python -m scripts.rag.financial_ingest_qdrant_db restore --snapshot-dir $DRIVE/snapshots              # next session
 
 # Local smoke run (embedded Qdrant, hashing vectors, no GPU)
-python -m scripts.rag.financial_ingest ingest --root tmp/ingest_smoke --embedding-provider hashing \
+python -m scripts.rag.financial_ingest_qdrant_db ingest --root tmp/ingest_smoke --embedding-provider hashing \
     --stages text --limit-filings 3 --ocr none --reset
 ```
 
@@ -152,7 +152,7 @@ python -m scripts.rag.financial_ingest ingest --root tmp/ingest_smoke --embeddin
 
 | Check | Result |
 |---|---|
-| Offline tests | `tests/test_financial_ingest.py`: 7 passed. They cover number terms, windows, table split, pooling (shape, special tokens, row/column orientation), page classification, end-to-end text + visual ingest with a fake ColPali, number search (`391035` finds `391,035`), visual prefetch → rerank with a ticker/year filter, resume, model-mismatch guard, and a SHA-256 failure being recorded |
+| Offline tests | `tests/test_financial_ingest_qdrant_db.py`: 7 passed. They cover number terms, windows, table split, pooling (shape, special tokens, row/column orientation), page classification, end-to-end text + visual ingest with a fake ColPali, number search (`391035` finds `391,035`), visual prefetch → rerank with a ticker/year filter, resume, model-mismatch guard, and a SHA-256 failure being recorded |
 | Real filings, text stage (embedded Qdrant, hashing vectors) | NVDA FY2024–FY2026: 556 pages → 1,553 points. Sections found (`item_1` … `item_16`). FY2024 detected as 155/187 garbled pages and never indexed as text |
 | OCR | 2 garbled NVDA FY2024 pages OCR'd, front section first, ~4 s/page CPU |
 | Server-only paths (snapshot, restore, bulk indexing toggle, gRPC) | Calls checked against qdrant-client 1.20. **Not yet run against a Qdrant server**: running the Qdrant binary on the dev PC was blocked, so the first Colab session is the test |
@@ -191,7 +191,7 @@ The same code runs on the PC and on Colab. [scripts/common/runtime_profile.py](.
 
 ```powershell
 # 1. Build or refresh the local index (embedded Qdrant; stop the API first, since embedded Qdrant allows one process)
-.venv\Scripts\python.exe -m scripts.rag.financial_ingest ingest --root indexes\financial_qdrant --stages text
+.venv\Scripts\python.exe -m scripts.rag.financial_ingest_qdrant_db ingest --root indexes\financial_qdrant --stages text
 # 2. Serve
 uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
 streamlit run scripts\ui\api_streamlit_app.py

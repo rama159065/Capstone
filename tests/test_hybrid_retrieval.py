@@ -4,11 +4,11 @@ import json
 
 import pytest
 
-from scripts.rag import financial_ingest as fi
+from scripts.rag import financial_ingest_qdrant_db as fi
 from scripts.rag import hybrid
-from scripts.rag import vlm_ingest as vi
-from tests.test_financial_ingest import args_for as qdrant_args, make_pdf
-from tests.test_vlm_ingest import FakeVLM, args_for as chroma_args, corpus  # noqa: F401  (Chroma corpus fixture)
+from scripts.rag import financial_ingest_chroma_db as vi
+from tests.test_financial_ingest_qdrant_db import args_for as qdrant_args, make_pdf
+from tests.test_financial_ingest_chroma_db import FakeVLM, args_for as chroma_args, corpus  # noqa: F401  (Chroma corpus fixture)
 
 
 @pytest.fixture

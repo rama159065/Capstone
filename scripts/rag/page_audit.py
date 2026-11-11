@@ -1,7 +1,7 @@
 """Page audit: which parser each page of each downloaded filing needs, one CSV per PDF.
 
 Run it after downloading the corpus (``full`` or ``min500``). It reads the sector manifests, analyses every
-page with ``financial_ingest.analyse_pdf`` (the same analysis both ingestion pipelines use) and writes
+page with ``financial_ingest_qdrant_db.analyse_pdf`` (the same analysis both ingestion pipelines use) and writes
 
     <out>/<sector_slug>/<pdf file name without .pdf>.csv     pageNumber,parserUsage   (one row per page)
     <out>/_summary.csv                                       one row per filing: pages per parser + seconds
@@ -48,7 +48,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 from scripts.common.paths import ROOT
-from scripts.rag import financial_ingest as fi
+from scripts.rag import financial_ingest_qdrant_db as fi
 
 LABELS = ("pdfParser", "pdfParser+colpali", "ocr", "qwen3VL", "paidVL", "none")
 MIN_TEXT_WORDS = 15          # fewer real words than this: the page has (almost) no text layer
@@ -61,7 +61,7 @@ NUMBER = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+\.\d+%?|\d+%|\$\s?\d+")
 
 
 def route(page: dict) -> str:
-    """One page analysis (financial_ingest.analyse_page) -> parserUsage."""
+    """One page analysis (financial_ingest_qdrant_db.analyse_page) -> parserUsage."""
     kind, garbled = page["page_type"], page["garbled"]
     words = len(WORD.findall(page.get("text", "").lower()))
     numbers = len(NUMBER.findall(page.get("text", "")))

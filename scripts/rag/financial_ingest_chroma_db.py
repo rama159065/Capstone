@@ -3,7 +3,7 @@
 The two financial ingestion pipelines over the same manifests (one PDF file, or the
 sector corpus folder of scripts/downloads/download_annual_report_corpus.py):
 
-* Pipeline 1, ``scripts.rag.financial_ingest``: ColPali page vectors in Qdrant
+* Pipeline 1, ``scripts.rag.financial_ingest_qdrant_db``: ColPali page vectors in Qdrant
   ``visual_pages``. Mean-pooled rows and columns are kept in RAM for the first stage,
   and the full 1030 x 128 multivectors are kept on disk for the MaxSim rerank.
   Pages are found from their pixels.
@@ -51,17 +51,17 @@ Page readers (``--vlm``):
 Every reader's output is cached per page (routed: per reader), so switching readers re-reads pages but a rerun
 never does, and changing the paid model or the threshold reuses the OCR and Qwen3-VL readings.
 
-    python -m scripts.rag.vlm_ingest ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking --vlm ocr
-    python -m scripts.rag.vlm_ingest ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking --vlm transformers
-    python -m scripts.rag.vlm_ingest ingest --vlm openai --tickers CVX --max-pages-per-pdf 20      # local llama.cpp
+    python -m scripts.rag.financial_ingest_chroma_db ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking --vlm ocr
+    python -m scripts.rag.financial_ingest_chroma_db ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking --vlm transformers
+    python -m scripts.rag.financial_ingest_chroma_db ingest --vlm openai --tickers CVX --max-pages-per-pdf 20      # local llama.cpp
     # paid API, e.g. OpenAI:
     #   RAG_VISION_API_BASE=https://api.openai.com/v1 RAG_VISION_MODEL=gpt-4o-mini RAG_VISION_API_KEY=sk-...
-    python -m scripts.rag.vlm_ingest ingest --vlm openai --root indexes/financial_vlm_gpt4o --vlm-pages tables_charts
+    python -m scripts.rag.financial_ingest_chroma_db ingest --vlm openai --root indexes/financial_vlm_gpt4o --vlm-pages tables_charts
     # one reader per page, paid model only where Qwen3-VL disagrees with OCR:
     #   RAG_PAID_VISION_API_BASE=https://api.openai.com/v1 RAG_PAID_VISION_MODEL=gpt-4o RAG_PAID_VISION_API_KEY=sk-...
-    python -m scripts.rag.vlm_ingest ingest --vlm routed --qwen-reader transformers --paid-threshold 0.1
-    python -m scripts.rag.vlm_ingest query "net interest income" --sector banking
-    python -m scripts.rag.vlm_ingest status
+    python -m scripts.rag.financial_ingest_chroma_db ingest --vlm routed --qwen-reader transformers --paid-threshold 0.1
+    python -m scripts.rag.financial_ingest_chroma_db query "net interest income" --sector banking
+    python -m scripts.rag.financial_ingest_chroma_db status
 """
 from __future__ import annotations
 
@@ -84,7 +84,7 @@ import pymupdf
 from scripts.common.companies import normalize_ticker
 from scripts.common.paths import ROOT
 from scripts.common.sector_corpus import parse_sectors
-from scripts.rag import financial_ingest as fi
+from scripts.rag import financial_ingest_qdrant_db as fi
 from scripts.rag import hybrid
 
 DEFAULT_ROOT = Path(os.getenv("RAG_VLM_DIR", ROOT / "indexes/financial_vlm"))
@@ -524,7 +524,7 @@ def vlm_records(row, pages, transcripts, vlm_signature):
 class Bm25Index:
     """BM25 over the same chunks as the Chroma collection: SQLite FTS5 on number-aware terms.
 
-    Chroma's local store has dense search only. Terms come from ``financial_ingest.terms`` (pipeline 1's
+    Chroma's local store has dense search only. Terms come from ``financial_ingest_qdrant_db.terms`` (pipeline 1's
     sparse vectors), so ``$93,736`` is indexed as ``$93,736``, ``93,736`` and ``93736``. The file sits in the
     Chroma folder, so backups and restores of that folder carry it.
     """
@@ -617,7 +617,7 @@ class ChromaStore:
 
 
 def open_store(args, dim):
-    """Pipeline 2 writes to Chroma only; Qdrant is pipeline 1's database (scripts/rag/financial_ingest.py)."""
+    """Pipeline 2 writes to Chroma only; Qdrant is pipeline 1's database (scripts/rag/financial_ingest_qdrant_db.py)."""
     return ChromaStore(args.root)
 
 
@@ -788,7 +788,7 @@ def build_parser():
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="state, page analysis cache and the Chroma index")
     common.add_argument("--store", choices=["chroma"], default="chroma",
-                        help="Chroma only; Qdrant is pipeline 1 (scripts.rag.financial_ingest)")
+                        help="Chroma only; Qdrant is pipeline 1 (scripts.rag.financial_ingest_qdrant_db)")
     common.add_argument("--cache-dir", type=Path, help="VLM transcriptions (default <root>/vlm_pages); put it on Drive")
     sub = parser.add_subparsers(dest="command", required=True)
 
