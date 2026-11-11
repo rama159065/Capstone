@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 
-from scripts.domain_common import langsmith_utils
+from scripts.observability import langsmith_utils
 
 
 def test_configure_langsmith_is_optional_without_api_key(monkeypatch) -> None:

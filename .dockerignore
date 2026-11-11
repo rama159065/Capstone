@@ -1,0 +1,33 @@
+# Keep the image to code + small committed data. Indexes, PDFs and outputs are mounted at run time.
+.git
+.gitignore
+.venv
+venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ipynb_checkpoints
+.env
+.env.*
+!.env.example
+
+indexes
+output
+eval
+tmp
+snapshots
+notebooks
+docs
+tests
+*.pptx
+*.ipynb
+*.jpeg
+
+# Large raw data: PDFs and EDGAR side files (the manifests stay)
+data/processed
+**/*.pdf
+data/raw/financial_report_qa/edgar/10k
+data/raw/financial_report_qa/edgar/proxy
+data/raw/financial_report_qa/edgar/submissions
+data/raw/financial_report_qa/edgar/companyfacts
+data/raw/mutualFund

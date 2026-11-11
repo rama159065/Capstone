@@ -4,7 +4,17 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-import scripts.api_app as api_app
+import scripts.api.api_app as api_app
+
+
+def fake_financial(answer, cited, evidence_ids=("fin_chunk",)):
+    """A run_technique stand-in: the given answer and citations over the given evidence."""
+    def run(technique, llm_provider, config):
+        return {"technique": technique, "final_status": "answered", "answer": answer,
+                "citation_check": {"valid": True, "cited_chunk_ids": list(cited), "allowed_chunk_ids": list(evidence_ids)},
+                "evidence": [{"chunk_id": cid, "source_type": "annual_report_pdf", "ticker": "COST", "year": 2025,
+                              "page": 7, "preview": "financial evidence"} for cid in evidence_ids]}
+    return run
 
 
 def test_health_and_domains() -> None:
@@ -14,15 +24,15 @@ def test_health_and_domains() -> None:
     domains = client.get("/domains").json()["domains"]
 
     assert health["status"] == "ok"
-    assert "financial_report_qa" in health["domains"]
-    assert {row["domain"] for row in domains} >= {"travel_expense", "financial_report_qa"}
+    assert health["domains"] == ["financial_report_qa"]
+    assert [row["domain"] for row in domains] == ["financial_report_qa"]
 
 
 def test_request_logs_and_response_include_correlation_id(caplog) -> None:
     request_id = "12345678-1234-5678-1234-567812345678"
     client = TestClient(api_app.app)
 
-    with caplog.at_level("INFO", logger="scripts.api_app"):
+    with caplog.at_level("INFO", logger="scripts.api.api_app"):
         response = client.get("/health", headers={"X-Request-ID": request_id})
 
     assert response.status_code == 200
@@ -32,81 +42,33 @@ def test_request_logs_and_response_include_correlation_id(caplog) -> None:
 
 
 def test_langsmith_trace_metadata_contains_request_id(monkeypatch) -> None:
-    request_id = "12345678-1234-5678-1234-567812345678"
+    request_id = "87654321-4321-8765-4321-876543218765"
     captured_metadata: dict[str, Any] = {}
 
-    def fake_run_domain_agent(domain_config: Any, **kwargs: Any) -> dict[str, Any]:
-        return {
-            "domain": domain_config.domain,
-            "display_name": domain_config.display_name,
-            "final_status": "answered",
-            "query": kwargs["query"],
-        }
-
-    def capture_traced_call(name: str, func: Any, *args: Any, **kwargs: Any) -> Any:
-        captured_metadata.update(kwargs["metadata"])
+    def capture_traced_call(name: str, func: Any, *args: Any, run_type: str = "chain", tags: Any = None,
+                            metadata: dict[str, Any] | None = None, **kwargs: Any) -> Any:
+        captured_metadata.update(metadata or {})
         return func(*args, **kwargs)
 
-    monkeypatch.setattr(api_app, "run_domain_agent", fake_run_domain_agent)
+    monkeypatch.setattr(api_app, "run_technique", fake_financial("Answer [fin_chunk].", ["fin_chunk"]))
     monkeypatch.setattr(api_app, "run_traced", capture_traced_call)
     client = TestClient(api_app.app)
 
     response = client.post(
-        "/chat/travel_expense",
+        "/chat/financial_report_qa",
         headers={"X-Request-ID": request_id},
-        json={"query": "test query"},
+        json={"query": "What was Costco revenue in 2025?"},
     )
 
     assert response.status_code == 200
     assert captured_metadata["request_id"] == request_id
 
 
-def test_chat_domain_uses_shared_agent(monkeypatch) -> None:
-    def fake_run_domain_agent(domain_config: Any, **kwargs: Any) -> dict[str, Any]:
-        return {
-            "domain": domain_config.domain,
-            "display_name": domain_config.display_name,
-            "final_status": "answered",
-            "query": kwargs["query"],
-            "answer": "Travel evidence answer with chunk_1.",
-            "citation_check": {"valid": True, "cited_chunk_ids": ["chunk_1"]},
-            "human_review": {"required": False, "status": "auto_approved", "triggers": []},
-            "evidence": [{"chunk_id": "chunk_1", "preview": "receipt evidence"}],
-        }
-
-    monkeypatch.setattr(api_app, "run_domain_agent", fake_run_domain_agent)
-    client = TestClient(api_app.app)
-
-    response = client.post(
-        "/chat/travel_expense",
-        json={"query": "What documentation is required for travel expenses?"},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["domain"] == "travel_expense"
-    assert payload["final_status"] == "answered"
-    assert payload["langsmith"]["enabled"] is False
-    assert "1 retrieved evidence item" in payload["explanation"]
-    assert "chunk_1" in payload["explanation"]
-
-
-def test_chat_domain_validates_agent_response(monkeypatch) -> None:
-    monkeypatch.setattr(
-        api_app,
-        "run_domain_agent",
-        lambda domain_config, **kwargs: {
-            "domain": None,
-            "final_status": "answered",
-            "query": kwargs["query"],
-        },
-    )
+def test_chat_validates_agent_response(monkeypatch) -> None:
+    monkeypatch.setattr(api_app, "run_technique", lambda *args: {"final_status": "answered", "evidence": "not a list"})
     client = TestClient(api_app.app, raise_server_exceptions=False)
 
-    response = client.post(
-        "/chat/travel_expense",
-        json={"query": "What documentation is required for travel expenses?"},
-    )
+    response = client.post("/chat/financial_report_qa", json={"query": "What was Costco revenue in 2025?"})
 
     assert response.status_code == 500
     payload = response.json()
@@ -136,26 +98,10 @@ def test_chat_explanation_describes_refusal_and_review_reasons() -> None:
 
 
 def test_chat_endpoint_withholds_answer_without_valid_evidence_citations(monkeypatch) -> None:
-    monkeypatch.setattr(
-        api_app,
-        "run_domain_agent",
-        lambda domain_config, **kwargs: {
-            "domain": domain_config.domain,
-            "display_name": domain_config.display_name,
-            "final_status": "answered",
-            "query": kwargs["query"],
-            "answer": "Unsupported answer [unknown_chunk].",
-            "citation_check": {
-                "valid": True,
-                "cited_chunk_ids": ["unknown_chunk"],
-                "allowed_chunk_ids": ["chunk_1"],
-            },
-            "evidence": [{"chunk_id": "chunk_1", "preview": "available evidence"}],
-        },
-    )
+    monkeypatch.setattr(api_app, "run_technique", fake_financial("Unsupported answer [unknown_chunk].", ["unknown_chunk"]))
     client = TestClient(api_app.app)
 
-    response = client.post("/chat/travel_expense", json={"query": "test query"})
+    response = client.post("/chat/financial_report_qa", json={"query": "What was Costco revenue in 2025?"})
 
     assert response.status_code == 200
     payload = response.json()
@@ -187,7 +133,7 @@ def test_grounding_policy_marks_citation_checked_answer() -> None:
 def test_invalid_chat_request_returns_validation_error() -> None:
     client = TestClient(api_app.app)
 
-    response = client.post("/chat/travel_expense", json={"query": ""})
+    response = client.post("/chat/financial_report_qa", json={"query": ""})
 
     assert response.status_code == 422
     payload = response.json()
@@ -197,17 +143,18 @@ def test_invalid_chat_request_returns_validation_error() -> None:
     assert payload["request_id"] == response.headers["X-Request-ID"]
 
 
-def test_unknown_domain_returns_http_error_message() -> None:
+def test_removed_domains_are_not_served() -> None:
     client = TestClient(api_app.app)
 
-    response = client.post("/chat/not_a_domain", json={"query": "hello"})
-
+    for path in ("/chat/hr_policy", "/retrieve/travel_expense"):
+        response = client.post(path, json={"query": "hello"})
+        assert response.status_code == 404
+        assert response.json()["request_id"] == response.headers["X-Request-ID"]
+    response = client.post("/multimodal/hr_policy/retrieve", json={"query": "hello"})
     assert response.status_code == 404
     payload = response.json()
     assert payload["error"] == "http_error"
-    assert payload["message"] == "Unknown domain: not_a_domain. Use GET /domains to see supported domains."
-    assert payload["details"][0]["field"] == "domain"
-    assert payload["request_id"] == response.headers["X-Request-ID"]
+    assert payload["message"].startswith("Unknown domain")
 
 
 def test_unknown_route_explains_how_to_find_endpoints() -> None:
@@ -235,10 +182,10 @@ def test_unhandled_service_exception_returns_safe_error(monkeypatch) -> None:
     def raise_service_error(*args: Any, **kwargs: Any) -> dict[str, Any]:
         raise RuntimeError("internal service detail")
 
-    monkeypatch.setattr(api_app, "run_domain_agent", raise_service_error)
+    monkeypatch.setattr(api_app, "run_technique", raise_service_error)
     client = TestClient(api_app.app, raise_server_exceptions=False)
 
-    response = client.post("/chat/travel_expense", json={"query": "hello"})
+    response = client.post("/chat/financial_report_qa", json={"query": "hello"})
 
     assert response.status_code == 500
     assert response.json()["error"] == "internal_server_error"
@@ -249,18 +196,18 @@ def test_fastapi_documents_response_models() -> None:
     openapi = api_app.app.openapi()
     schemas = openapi["components"]["schemas"]
 
-    assert "ChatResponse" in schemas
     assert "FinancialChatResponse" in schemas
     assert "RetrieveResponse" in schemas
     assert api_app.app.docs_url == "/docs"
     assert api_app.app.redoc_url == "/redoc"
-    chat_operation = openapi["paths"]["/chat/{domain}"]["post"]
-    assert chat_operation["summary"] == "Answer a domain question"
+    chat_operation = openapi["paths"]["/chat/financial_report_qa"]["post"]
+    assert chat_operation["summary"] == "Answer a financial-report question"
+    assert "/chat/{domain}" not in openapi["paths"]
     assert chat_operation["description"]
     assert "429" in chat_operation["responses"]
-    assert "explanation" in schemas["ChatResponse"]["properties"]
-    assert "grounding" in schemas["ChatResponse"]["properties"]
-    query_field = schemas["ChatRequest"]["properties"]["query"]
+    assert "explanation" in schemas["FinancialChatResponse"]["properties"]
+    assert "grounding" in schemas["FinancialChatResponse"]["properties"]
+    query_field = schemas["FinancialChatRequest"]["properties"]["query"]
     assert query_field["minLength"] == 1
     assert query_field["maxLength"] == 4000
     assert query_field["description"]
@@ -327,41 +274,74 @@ def test_chat_financial_uses_financial_agent(monkeypatch) -> None:
     assert "citation validation passed" in payload["explanation"]
 
 
-def test_retrieve_domain_summarizes_evidence(monkeypatch) -> None:
-    monkeypatch.setattr(
-        api_app,
-        "retrieve_hybrid",
-        lambda *args, **kwargs: [
-            {
-                "chunk_id": "hr_1",
-                "rank": 1,
-                "rerank_score": 0.7,
-                "text": "FMLA leave request evidence.",
-                "metadata": {
-                    "title": "FMLA Guide",
-                    "source_type": "hr_leave_policy_pdf",
-                    "page": 2,
-                    "source_url": "https://example.test/fmla.pdf",
-                },
-            }
-        ],
-    )
-    client = TestClient(api_app.app)
-
-    response = client.post(
-        "/retrieve/hr_policy",
-        json={"query": "How do employees request FMLA leave?", "top_k": 1},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["count"] == 1
-    assert payload["evidence"][0]["chunk_id"] == "hr_1"
-
-
 def test_unknown_domain_returns_404() -> None:
     client = TestClient(api_app.app)
 
     response = client.post("/chat/not_a_domain", json={"query": "hello"})
 
     assert response.status_code == 404
+
+
+def test_grounding_policy_keeps_not_available_reply() -> None:
+    result = {"final_status": "not_available", "answer": "I don't have filings for Exxon Mobil.",
+              "coverage": {"reason": "company_not_in_filings"}, "citation_check": {"valid": False, "cited_chunk_ids": []}, "evidence": []}
+
+    response = api_app.apply_grounding_policy(result)
+
+    assert response["answer"] == "I don't have filings for Exxon Mobil." and response["final_status"] == "not_available"
+    assert response["grounding"]["status"] == "not_applicable" and "company_not_in_filings" in response["grounding"]["reason"]
+    assert "company_not_in_filings" in api_app.explain_chat_result(response)
+
+
+def test_grounding_policy_explains_citation_from_another_company() -> None:
+    result = {"final_status": "not_grounded", "answer": "Withheld.", "company_check": {"valid": False, "foreign_chunk_ids": ["c1"]},
+              "citation_check": {"valid": False, "cited_chunk_ids": ["c1"]}, "evidence": [{"chunk_id": "c1"}]}
+
+    response = api_app.apply_grounding_policy(result)
+
+    assert response["answer"] is None and "didn't ask about" in response["grounding"]["reason"]
+
+
+def test_financial_requests_pass_the_sector_filter_to_the_agent(monkeypatch) -> None:
+    seen: dict[str, Any] = {}
+
+    def fake_run_technique(technique: str, llm_provider: str, config: Any) -> dict[str, Any]:
+        seen["chat"] = config.sector
+        return {"technique": technique, "final_status": "insufficient_evidence", "answer": "", "evidence": []}
+
+    def fake_retrieve(config: Any) -> list[dict[str, Any]]:
+        seen["retrieve"] = config.sector
+        return []
+
+    monkeypatch.setattr(api_app, "run_technique", fake_run_technique)
+    monkeypatch.setattr(api_app, "retrieve_evidence", fake_retrieve)
+    client = TestClient(api_app.app)
+    body = {"query": "net interest income", "sector": "banking", "llm_provider": "mock"}
+    assert client.post("/chat/financial_report_qa", json=body).status_code == 200
+    assert client.post("/retrieve/financial_report_qa", json={"query": "net interest income", "sector": "banking"}).status_code == 200
+    assert seen == {"chat": "banking", "retrieve": "banking"}
+
+
+def test_openapi_declares_the_api_key_and_public_health():
+    api_app.app.openapi_schema = None
+    spec = api_app.app.openapi()
+    schemes = spec["components"]["securitySchemes"]
+    assert schemes["ApiKeyHeader"] == {**schemes["ApiKeyHeader"], "type": "apiKey", "in": "header", "name": "X-API-Key"}
+    assert schemes["BearerAuth"]["scheme"] == "bearer"
+    assert spec["paths"]["/health"]["get"]["security"] == []
+    assert "401" in spec["paths"]["/chat/financial_report_qa"]["post"]["responses"]
+    assert "401" not in spec["paths"]["/health"]["get"]["responses"]
+    assert spec["paths"]["/multimodal/{domain}/chat"]["post"]["summary"] == "Answer with the local multimodal pipeline"
+
+
+def test_export_openapi_writes_spec_yaml_and_swagger(tmp_path):
+    import json
+    import yaml
+    from scripts.api import export_openapi
+    files = export_openapi.export(tmp_path, ["http://example.test:8000/"])
+    spec = json.loads(files["json"].read_text(encoding="utf-8"))
+    assert spec["servers"] == [{"url": "http://example.test:8000"}]
+    assert "servers" not in api_app.app.openapi()                       # the live schema is not changed
+    assert yaml.safe_load(files["yaml"].read_text(encoding="utf-8"))["paths"].keys() == spec["paths"].keys()
+    page = files["html"].read_text(encoding="utf-8")
+    assert "SwaggerUIBundle" in page and export_openapi.CDN in page and "</script>" not in page.split("const spec")[1].split("window.ui")[0]

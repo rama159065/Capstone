@@ -87,7 +87,7 @@ The implemented capstone runtime uses LangGraph for both the dedicated financial
 security_guard -> plain_text_classifier -> planner -> hybrid_retriever -> evidence_guard -> answer_agent -> output_filter -> citation_critic -> governance
 ```
 
-Financial-report QA uses `scripts/financial_prompting_agent.py` and the non-financial domains use `scripts/domain_common/rag_agent.py` through each domain folder under `scripts/`. The graph applies input security checks, LLM/plain-text classification, hybrid retrieval, retrieved-evidence prompt-injection checks, output content filtering, citation validation, and governance/HITL routing before final release.
+Financial-report QA uses `scripts/agents/financial_prompting_agent.py` (the non-financial domains and their shared `rag_agent.py` were removed in November 2026). The graph applies input security checks, LLM/plain-text classification, hybrid retrieval, retrieved-evidence prompt-injection checks, output content filtering, citation validation, and governance/HITL routing before final release.
 
 The financial domain has the richest retrieval implementation: Chroma dense retrieval, BM25 over `pdf_chunks.jsonl`, reciprocal-rank fusion, simple reranking, table summaries, chart-summary hooks, OCR status, and separate recall@k evaluation. The remaining domains use the shared PDF-based Chroma + BM25 hybrid runtime today; downloaded JSON corpora are retained as raw data for future indexing expansion.
 

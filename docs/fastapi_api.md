@@ -9,23 +9,32 @@ Streaming is not currently implemented. The proposed SSE architecture, event con
 From the repository root, start the server:
 
 ```powershell
-uvicorn scripts.api_app:app --host 127.0.0.1 --port 8000
+uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
 ```
 
 Open the interactive Swagger UI at <http://127.0.0.1:8000/docs>, ReDoc at <http://127.0.0.1:8000/redoc>, or the raw OpenAPI schema at <http://127.0.0.1:8000/openapi.json>.
+
+When the server sets `API_AUTH_TOKEN`, click **Authorize** in Swagger and enter the key (as `X-API-Key` or as a Bearer token); "Try it out" then sends it. `/health` and the docs pages need no key.
+
+A copy of the contract that needs no running server lives in [docs/api/](api/): `openapi.json`, `openapi.yaml` and `swagger.html` (Swagger UI with the spec embedded). Regenerate it after changing a route or model:
+
+```powershell
+python -m scripts.api.export_openapi                                   # Try it out -> http://127.0.0.1:8000
+python -m scripts.api.export_openapi --server https://your-host         # add the deployed URL too (repeatable)
+```
 
 ## Routes
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/health` | Return service status and domain identifiers. |
-| `GET` | `/domains` | List domain identifiers, display names, descriptions, and default queries. |
-| `POST` | `/chat/{domain}` | Answer a question using a non-financial domain. |
+| `GET` | `/health` | Return service status, the served domain and runtime settings. |
+| `GET` | `/domains` | The served domain (`financial_report_qa`) with its display name, description and default query. |
+| `GET` | `/companies` | Companies, sectors and fiscal years the served index covers. |
 | `POST` | `/chat/financial_report_qa` | Answer a financial-report question using the selected financial technique. |
-| `POST` | `/retrieve/{domain}` | Return ranked evidence from a non-financial domain without generating an answer. |
+| `POST` | `/conversation/financial_report_qa` | One chat turn: clarify a missing company, year or measure first, then run the agents or the report pipeline. Used by the Streamlit chat. |
 | `POST` | `/retrieve/financial_report_qa` | Return ranked financial-report evidence without generating an answer. |
 
-The financial routes have dedicated request schemas and should be used for the `financial_report_qa` domain. The supported non-financial domain IDs are listed by `GET /domains`.
+The service answers financial report questions only (`financial_report_qa`). The routes for the five other Track B domains (`/chat/{domain}`, `/retrieve/{domain}`) were removed on 10 November 2026; the local multimodal routes accept `financial_report_qa` only.
 
 ## Chat requests
 
@@ -41,7 +50,7 @@ Chat requests are JSON objects. `query` is required; all other fields are option
 | `dense_top_k` | integer | `30` | 1–100 dense retrieval candidates. |
 | `bm25_top_k` | integer | `30` | 1–100 lexical retrieval candidates. |
 | `source_type` | string or null | `null` | Optional source category filter. |
-| `max_context_chars` | integer | `12000` | 1000–64000; non-financial and financial chat context limit. |
+| `max_context_chars` | integer | `12000` | 1000–64000; chat context limit. |
 | `enable_guardrails` | boolean | `true` | Enable input, evidence, and output safety checks. |
 | `enable_human_review` | boolean | `true` | Enable governance routing for human review. |
 | `enable_langsmith` | boolean | `false` | Request LangSmith tracing (credentials must be configured). |
@@ -57,17 +66,17 @@ Financial chat additionally accepts:
 | `year` | integer or null | `null` | Optional fiscal/reporting year filter. |
 | `self_consistency_samples` | integer | `3` | 1–5 answer samples for the self-consistency technique. |
 
-Example non-financial chat request:
+Example chat request (PowerShell):
 
 ```powershell
 $body = @{
-  query = "What documentation is required for travel expenses?"
+  query = "What was Costco's net income in fiscal 2025?"
   llm_provider = "mock"
   embedding_provider = "hashing"
 } | ConvertTo-Json
 
 Invoke-RestMethod -Method Post `
-  -Uri "http://127.0.0.1:8000/chat/travel_expense" `
+  -Uri "http://127.0.0.1:8000/chat/financial_report_qa" `
   -ContentType "application/json" `
   -Body $body
 ```
@@ -84,6 +93,92 @@ Example financial chat request:
 }
 ```
 
+## Conversation requests (clarify, then run)
+
+`POST /conversation/financial_report_qa` accepts every financial chat field plus:
+
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `conversation_id` | string or null | `null` | Returned by the first turn; send it back with each follow-up |
+| `clarify` | boolean | `true` | `false` skips clarification and behaves like `/chat/financial_report_qa` |
+
+[scripts/agents/financial_clarifier.py](../scripts/agents/financial_clarifier.py) reads each turn into slots: intent, companies, fiscal years and measure. It checks them against the companies and years the corpus actually has, from both PDF manifests. It is deterministic and makes no LLM call.
+
+| Intent | Needs before agents run | Defaults it states instead of asking |
+|---|---|---|
+| figure ("What was Apple's revenue?") | company, year, measure | — |
+| comparison | two or more companies, a year all of them have, measure | — |
+| trend | company, measure | all years in the corpus |
+| explain ("Why did Chevron's earnings fall?") | company | latest year |
+| report ("Generate a financial report for Apple") | company, year, then a **Yes/No confirmation** | — |
+| high-level ("Tell me about Microsoft") | the user chooses: key figures, explain, trend or full report | — |
+
+**Response `status`:**
+
+| Status | Meaning |
+|---|---|
+| `needs_clarification` | `message` and `questions[]`, each with `slot`, `question` and `options`. No agent has run. `coverage` is set when the filings can't answer the question as asked |
+| `answered` | The agents ran on `resolved_query` with the `ticker` and `year` filters. `result` is the normal financial chat response, and `assumptions` lists any defaults used |
+| `report_generated` | A confirmed report ran through the deterministic pipeline. `report_manifest` holds the artifacts; the report is pending visual review |
+| `report_unavailable` | No report profile exists yet for that company and year (only Apple FY2024 so far) |
+| `report_failed` | The report pipeline raised an error; the details are in the report trace |
+| `cancelled` | The user answered No to the report confirmation |
+
+**Rules:**
+- **Already complete:** a complete question runs unchanged, with no extra turn.
+- **Companies, years and measures the filings can't answer:** the reply says so first, gives no figure, and offers what is available. See [When the filings can't answer](#when-the-filings-cant-answer).
+- **Follow-ups keep context:** "and for 2023?" or "what about Visa?" reuse the measure and company. Any other sentence after an answer starts a new request.
+- **Escape hatches:** `continue` answers the question as asked; `start over` resets. After 3 clarification turns the question is answered as asked.
+- **Guarded messages:** advice, prediction and prompt-injection messages are never clarified. They go straight to the guarded agent, which refuses them.
+- **State:** conversations are kept in memory per API process with a 30-minute TTL, like the rate limiter. Run one worker, or use a shared store when scaling out.
+
+```json
+{"query": "What was Apple's revenue?"}
+→ {"status": "needs_clarification", "conversation_id": "…", "message": "Which fiscal year for Apple?",
+   "questions": [{"slot": "year", "options": ["FY2024", "FY2023", "…", "Latest"]}]}
+{"query": "FY2023", "conversation_id": "…"}
+→ {"status": "answered", "resolved_query": "What was Apple's revenue for FY2023?", "ticker": "AAPL", "year": 2023, "result": {…}}
+```
+
+### When the filings can't answer
+
+| Situation | `coverage.reason` | Example reply |
+|---|---|---|
+| Company with no filings | `company_not_in_filings` | "I don't have filings for Exxon Mobil, so I can't answer this from my documents. Similar companies I do have: Chevron. Which company should I use instead?" |
+| One company in a comparison has no filings | `company_not_in_filings` | "I don't have filings for Reliance Industries, so I can't make this comparison. I can answer for NVIDIA alone. Which company should I compare with NVIDIA instead?" The first option is "NVIDIA only" |
+| Year not in the filings | `year_not_in_filings` | "FY2027 is not in the filings I have; the latest is FY2026. Which fiscal year for Microsoft?" |
+| Measure a bank doesn't report | `metric_not_applicable` | "JPMorgan Chase doesn't report gross profit, because a bank's income statement has no such line. I won't calculate a substitute. I can give net revenue, net income or net interest income instead. Which measure?" |
+
+`coverage` also holds `status` (`not_available`) and, depending on the reason, `missing`, `similar`, `available`, `metric`, `companies` and `alternatives`.
+
+- **Sector map:** similar companies come from `SECTORS` in [financial_clarifier.py](../scripts/agents/financial_clarifier.py), our own map for the 60 listed companies. Nothing is suggested for a company outside the map.
+- **Banks:** the rule covers JPMorgan, Bank of America, Wells Fargo, Citigroup, Goldman Sachs and Morgan Stanley, for gross profit, gross margin, operating income and operating margin. Filings for the first three have no XBRL value for these measures; the other three aren't downloaded yet. Visa and Mastercard aren't banks and do report operating income.
+
+**The agent makes the same decision.** `continue`, `clarify: false` and `/chat/financial_report_qa` skip the questions, so `run_technique` checks again:
+
+| Case | `final_status` | Result |
+|---|---|---|
+| The filings can't answer | `not_available` | `answer` is the reply above, with `coverage`. Evidence is empty and `grounding.status` is `not_applicable` |
+| The answer cites a company the question didn't ask about, or a chunk it can't verify | `not_grounded` | The answer is withheld. `company_check` lists `expected_tickers` and `foreign_chunk_ids` |
+| Hosted LLM, answer verified by the critic (`agentic_graph` only) | `answered` (or `pending_human_review`) | The model's own answer. `support_check.verdict` is `supported` and `grounding` has `method: llm_support_check`, `semantic_answer_verified: true` |
+| Hosted LLM, answer not verified, or a single-prompt technique | `evidence_only` | Cited excerpts instead of the model's prose (`grounding.method: source_excerpts`). Excerpts from other companies are removed first |
+
+**Agent fields in financial responses** (`technique=agentic_graph`):
+- `support_check`: the critic's verdict (`supported`, `partially_supported`, `unsupported`, `unverified`), each claim with the judge's reason, and `numeric` (figures checked, figures missing from the cited chunks). `RAG_SUPPORT_CHECK=0` turns it off.
+- `agent_run`: the node path, steps and step budget, every tool call (`coverage_lookup`, `text_search`, `visual_search`, `calculator`), retrieval attempts, repairs and calculations.
+- `plan`: the planner's proposed tools, the tools that ran, the company × year targets, and any rule adjustments.
+
+See [agent_flows.md](agent_flows.md) for how these are produced.
+
+Guard refusals still win: a refused request stays `refused`.
+
+**Known limits:**
+- **Name detection uses rules.** A capitalised name after "of", "did" and similar words counts as a company, so "What did Tim Cook say?" is reported as having no filings. A company named without any of these cues gets a plain "Which company?".
+- **The year check is for single figures.** It runs on a figure question about one company and one year, because a year in a longer question may not be a fiscal year.
+- **Apple on EDGAR.** Apple counts as covered through its AnnualReports.com PDFs, so a question about its EDGAR ARS specifically (FIN-073) isn't declined by this check.
+- **Financial agent only.** `/multimodal/{domain}/chat` doesn't run these checks.
+- **Coverage comes from the PDF manifests.** With no manifests the check decides nothing. If a company is added to the corpus, add it to `NAMES`, `ALIASES` and `SECTORS`; a test fails if a corpus company has no entry.
+
 ## Retrieval requests
 
 Retrieval endpoints accept a JSON body with a required `query` (1–4000 characters) and optional `embedding_provider` (`hashing` or `hosted`), `hash_dimensions` (32–4096), `top_k` (1–20), `dense_top_k` and `bm25_top_k` (1–100), `source_type`, `enable_langsmith`, and `langsmith_project`.
@@ -96,9 +191,11 @@ Successful retrieval responses contain `domain`, `query`, `langsmith`, `count`, 
 
 Chat responses include the domain and final status, and may include the answer, an `explanation`, `grounding` status, citation checks, evidence previews, guardrail decisions, human-review information, orchestration metadata, elapsed time, and LangSmith tracing status. The API only returns a generated answer when there is retrieved evidence and citation validation reports cited chunk IDs that belong to that evidence. Otherwise, it withholds the generated answer (`answer: null`, `final_status: "not_grounded"`) and explains the reason. A guardrail refusal is marked `not_applicable` for answer grounding because no generated answer is being returned.
 
+Financial chat can also return `final_status` `not_available` with `coverage`, and `company_check` when citations were checked against the companies asked about. See [When the filings can't answer](#when-the-filings-cant-answer).
+
 The `grounding` object reports `status` (`grounded`, `not_grounded`, or `not_applicable`), evidence count, cited chunk IDs, and a reason. This is a citation/evidence consistency check, not a guarantee that every factual claim is entailed by its cited passage or is factually correct. The explanation does not expose hidden chain-of-thought.
 
-`GET /health` returns `status`, `service`, and `domains`. `GET /domains` returns a `domains` array with each domain's identifier, display name, description, and default query; non-financial domains also include their supported `source_types`.
+`GET /health` returns `status`, `service`, and `domains`. `GET /domains` returns a one-item `domains` array for `financial_report_qa` with its display name, description and default query.
 
 ## Errors and rate limits
 

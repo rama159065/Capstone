@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-import scripts.download_rag_corpora as corpora
+import scripts.downloads.download_rag_corpora as corpora
 
 
 def test_text_and_filename_helpers() -> None:
@@ -37,15 +37,9 @@ def test_corpus_writer_writes_document_and_skips_duplicate(tmp_path) -> None:
     assert payload["metadata"]["source_type"] == "unit"
 
 
-def test_record_extractors_and_dispatch_helpers() -> None:
-    data = {"results": [{"id": "1"}, {"id": "2"}]}
-    row = {"b": "two", "a": {"nested": True}, "empty": ""}
-
-    assert corpora.extract_world_bank_records(data) == [{"id": "1"}, {"id": "2"}]
-    assert corpora.first_present({"x": "", "y": "yes"}, ["x", "y"], "fallback") == "yes"
+def test_helpers_and_financial_only_dispatch(tmp_path) -> None:
+    import pytest
     assert corpora.safe_list_get(["a"], 3, "missing") == "missing"
-
-    text = corpora.record_to_text(row)
-    assert "a: {\"nested\": true}" in text
-    assert "b: two" in text
-    assert "empty" not in text
+    assert list(corpora.DOMAINS) == ["financial_report_qa"]
+    with pytest.raises(ValueError, match="Unsupported domain"):
+        corpora.fetch_domain("hr_policy", corpora.CorpusWriter(tmp_path, "hr_policy"), 1, "ua")

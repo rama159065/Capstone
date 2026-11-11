@@ -7,6 +7,11 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "rapidocr>=3,<4",
+    "onnxruntime>=1.17,<2",
+    "qdrant-client>=1.12,<2",
+    "pymupdf>=1.24,<2",
+    "reportlab>=4,<5",
     "fastapi>=0.115.0",
     "jupyterlab>=4.6.4",
     "langchain>=1.4.3",
@@ -29,12 +34,22 @@ dependencies = [
     "tqdm>=4.70.1",
     "transformers>=4.57.0,<5",
     "torch>=2.9.0",
+    "torchvision>=0.21.0",
+    "accelerate>=1,<2",
     "uvicorn>=0.30.0",
 ]
 
 [project.scripts]
 capstone-global = "capstone_global:main"
 
+[project.optional-dependencies]
+colpali = ["bitsandbytes>=0.48,<1"]
+
 [build-system]
 requires = ["uv_build>=0.12.23,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv]
+# The repo is run from source (python -m scripts...), not installed as a package; without this,
+# uv sync tries to build it and fails (no src/capstone).
+package = false
