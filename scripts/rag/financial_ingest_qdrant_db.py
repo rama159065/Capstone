@@ -70,7 +70,7 @@ from qdrant_client import QdrantClient, models
 from scripts.common.companies import sector_of
 from scripts.common.sector_corpus import parse_sectors, read_manifest as read_corpus_manifest, sector_slug
 from scripts.rag import chunk_schema, hybrid
-from scripts.rag.multimodal_rag import dense, term_id
+from scripts.rag.hashing import dense, term_id
 
 from scripts.common.paths import ROOT  # noqa: E402 - repo root
 DOMAIN = "financial_report_qa"
