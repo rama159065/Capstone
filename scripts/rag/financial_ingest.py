@@ -69,6 +69,7 @@ from qdrant_client import QdrantClient, models
 
 from scripts.common.companies import sector_of
 from scripts.common.sector_corpus import parse_sectors, read_manifest as read_corpus_manifest, sector_slug
+from scripts.rag import hybrid
 from scripts.rag.multimodal_rag import dense, term_id
 
 from scripts.common.paths import ROOT  # noqa: E402 - repo root
@@ -927,12 +928,28 @@ def reset(root, client):
 
 # ----------------------------------------------------------------------------- search (verification and serving)
 
-def search_text(client, embedder, query, top_k=10, flt=None, prefetch=50):
-    """Dense + number-aware sparse prefetch fused with Qdrant's native RRF."""
-    return client.query_points(TEXT, prefetch=[
-        models.Prefetch(query=embedder([query])[0], using="dense", filter=flt, limit=prefetch),
-        models.Prefetch(query=sparse_vector(query, query=True), using="bm25", filter=flt, limit=prefetch)],
-        query=models.FusionQuery(fusion=models.Fusion.RRF), limit=top_k, with_payload=True).points
+class TextHit:
+    """One fused text hit: ``payload``, ``score`` (RRF) and ``ranks`` ({"dense": 3, "bm25": 1})."""
+    __slots__ = ("payload", "score", "ranks")
+
+    def __init__(self, payload, score, ranks):
+        self.payload, self.score, self.ranks = payload, score, ranks
+
+
+def search_text(client, embedder, query, top_k=10, flt=None, prefetch=50, mode="hybrid"):
+    """Hybrid search over annual_reports_text: dense (MiniLM) and BM25 (number-aware sparse) run as two
+    queries with the same filter and are fused by ``hybrid.rrf_fuse``, so each hit keeps its per-retriever rank.
+    ``mode``: hybrid (default), dense or bm25."""
+    rankings, payloads = {}, {}
+    searches = [("dense", lambda: embedder([query])[0]), ("bm25", lambda: sparse_vector(query, query=True))]
+    for name, vector in searches:
+        if not hybrid.uses(mode, name):
+            continue
+        points = client.query_points(TEXT, query=vector(), using=name, query_filter=flt, limit=max(prefetch, top_k),
+                                     with_payload=True).points
+        rankings[name] = [p.id for p in points]
+        payloads.update({p.id: p.payload for p in points})
+    return [TextHit(payloads[e["id"]], e["rrf"], e["ranks"]) for e in hybrid.rrf_fuse(rankings, limit=top_k)]
 
 
 def search_visual(client, colpali, embedder, query, top_k=20, flt=None, prefetch=200):
@@ -955,10 +972,12 @@ def overlap(query, text):
     return len(wanted & set(terms(text))) / len(wanted) if wanted else 0.0
 
 
-def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30, sector=None, visual=None):
+def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30, sector=None, visual=None,
+                       mode="hybrid"):
     """Evidence for the financial agents from the text collection (+ the visual one when RAG_FIN_VISUAL=1).
 
-    Hybrid dense + sparse with Qdrant RRF, then a rerank by RRF + term overlap (numbers kept whole),
+    Hybrid dense + BM25 fused by RRF (``search_text``; ``mode`` = hybrid / dense / bm25), then a rerank by
+    RRF + term overlap (numbers kept whole),
     or by the cross-encoder when RAG_RERANKER_MODEL is set.
     Hits use the agent's evidence format, so citation checks work unchanged.
     ``visual``: True/False when the agent's planner chose (or skipped) visual_search; None keeps RAG_FIN_VISUAL=1.
@@ -973,16 +992,19 @@ def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30, se
         client, embedder = _serving["client"], _serving["embedder"]
         flt = query_filter(ticker, year, sector)
         fused = {}
-        for rank, hit in enumerate(search_text(client, embedder, query, max(candidates, top_k), flt), 1):
-            fused[hit.payload["chunk_id"]] = {"payload": hit.payload, "rrf": 1 / (60 + rank), "paths": ["text"]}
+        for rank, hit in enumerate(search_text(client, embedder, query, max(candidates, top_k), flt, mode=mode), 1):
+            fused[hit.payload["chunk_id"]] = {"payload": hit.payload, "rrf": 1 / (60 + rank), "paths": ["text"],
+                                              "ranks": hit.ranks}
         use_visual = os.getenv("RAG_FIN_VISUAL") == "1" if visual is None else visual
         if use_visual and client.collection_exists(VISUAL):
             if "colpali" not in _serving:
                 _serving["colpali"] = ColPali(os.getenv("RAG_FIN_COLPALI_MODEL", "vidore/colpali-v1.3-hf"))
             for rank, hit in enumerate(search_visual(client, _serving["colpali"], embedder, query, 20, flt), 1):
-                entry = fused.setdefault(hit.payload["chunk_id"], {"payload": hit.payload, "rrf": 0.0, "paths": []})
+                entry = fused.setdefault(hit.payload["chunk_id"], {"payload": hit.payload, "rrf": 0.0, "paths": [],
+                                                                    "ranks": {}})
                 entry["rrf"] += 1 / (60 + rank)
                 entry["paths"].append("visual")
+                entry["ranks"] = {**entry["ranks"], "colpali": rank}
     hits = []
     for entry in fused.values():
         p = entry["payload"]
@@ -993,7 +1015,7 @@ def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30, se
                      "image_path": None, "section": p.get("section"), "scale": p.get("scale"),
                      "preview": re.sub(r"\s+", " ", p.get("text", ""))[:500],
                      "rrf_score": entry["rrf"], "rerank_score": entry["rrf"] + 0.02 * overlap(query, p.get("text", "")),
-                     "retrieval_paths": entry["paths"], "metadata": dict(p)})
+                     "retrieval_paths": entry["paths"], "retrieval_ranks": entry["ranks"], "metadata": dict(p)})
     hits.sort(key=lambda h: h["rerank_score"], reverse=True)
     return cross_encoder_rerank(query, hits, top_k) if os.getenv("RAG_RERANKER_MODEL") else hits[:top_k]
 

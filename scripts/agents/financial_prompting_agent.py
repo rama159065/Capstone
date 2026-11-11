@@ -37,6 +37,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.common import hosted_llm
+from scripts.rag.hybrid import matched_by
 from scripts.common.agent_limits import STEP_LIMIT_ANSWER, graph_config, max_steps
 from scripts.agents.financial_clarifier import question_scope
 from scripts.guardrails import checks as guard_checks, patterns as guard_patterns
@@ -545,11 +546,11 @@ def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
     if os.getenv("RAG_BACKEND") == "financial_qdrant":   # collections built by scripts/rag/financial_ingest.py
         from scripts.rag.financial_ingest import retrieve_for_agent
         return retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
-                                  sector=config.sector, visual=config.visual)
+                                  sector=config.sector, visual=config.visual, mode=config.retrieval_mode)
     if os.getenv("RAG_BACKEND") == "financial_vlm":      # Chroma index built by scripts/rag/vlm_ingest.py
         from scripts.rag import vlm_ingest
         return vlm_ingest.retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
-                                             sector=config.sector)
+                                             sector=config.sector, mode=config.retrieval_mode)
     if os.getenv("RAG_BACKEND") == "qdrant":
         from scripts.rag.multimodal_rag import retrieve_local
         return retrieve_local("financial_report_qa", config.query, config.top_k,
@@ -560,7 +561,7 @@ def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
     embedder = indexer.get_embedder(config.embedding_provider, config.hash_dimensions)
 
     if config.retrieval_mode == "dense":
-        return indexer.retrieve_top_k(
+        hits = indexer.retrieve_top_k(
             collection=collection,
             embedder=embedder,
             query=config.query,
@@ -569,9 +570,16 @@ def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
             ticker=config.ticker,
             year=config.year,
         )
+        return [{**hit, "retrieval_ranks": {"dense": rank}} for rank, hit in enumerate(hits, 1)]
 
     chunk_rows = indexer.load_chunk_rows(DEFAULT_CHUNKS)
-    return indexer.retrieve_hybrid_top_k(
+    if config.retrieval_mode == "bm25":
+        rows = indexer.bm25_search(chunk_rows, config.query, config.top_k, source_type=config.source_type,
+                                   ticker=config.ticker, year=config.year)
+        return [{**indexer.hit_from_chunk(chunk_id=str(row["chunk_id"]), text=str(row.get("text", "")),
+                                          metadata=row.get("metadata", {}), rank=rank, bm25_score=row.get("bm25_score")),
+                 "retrieval_ranks": {"bm25": rank}} for rank, row in enumerate(rows, 1)]
+    hits = indexer.retrieve_hybrid_top_k(
         collection=collection,
         embedder=embedder,
         chunk_rows=chunk_rows,
@@ -585,6 +593,8 @@ def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
         ticker=config.ticker,
         year=config.year,
     )
+    return [{**hit, "retrieval_ranks": {name: hit[f"{name}_rank"] for name in ("dense", "bm25") if hit.get(f"{name}_rank")}}
+            for hit in hits]
 
 
 def evidence_to_context(evidence: list[dict[str, Any]], max_chars: int) -> str:
@@ -606,6 +616,7 @@ def evidence_to_context(evidence: list[dict[str, Any]], max_chars: int) -> str:
                 f"local_path: {hit.get('local_path')}",
                 f"image_path: {hit.get('image_path')}",
                 f"scores: distance={hit.get('distance')} bm25={hit.get('bm25_score')} rrf={hit.get('rrf_score')} rerank={hit.get('rerank_score')}",
+                *([f"matched_by: {matched_by(hit['retrieval_ranks'])}"] if hit.get("retrieval_ranks") else []),
                 "text:",
                 text,
             ]
@@ -1189,6 +1200,7 @@ def summarize_result(result: dict[str, Any]) -> dict[str, Any]:
                 "page": hit.get("page"),
                 "preview": hit.get("preview"),
                 "image_path": hit.get("image_path"),
+                "retrieval_ranks": hit.get("retrieval_ranks"),
             }
             for hit in evidence[:5]
         ],
@@ -1216,7 +1228,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--llm-provider", choices=["mock", "hosted"], default="mock")
     parser.add_argument("--embedding-provider", choices=["hashing", "hosted"], default="hashing")
     parser.add_argument("--hash-dimensions", type=int, default=384)
-    parser.add_argument("--retrieval-mode", choices=["dense", "hybrid"], default="hybrid")
+    parser.add_argument("--retrieval-mode", choices=["hybrid", "dense", "bm25"], default="hybrid")
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--dense-top-k", type=int, default=30)
     parser.add_argument("--bm25-top-k", type=int, default=30)

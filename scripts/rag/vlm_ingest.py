@@ -72,6 +72,7 @@ from scripts.common.companies import normalize_ticker
 from scripts.common.paths import ROOT
 from scripts.common.sector_corpus import parse_sectors
 from scripts.rag import financial_ingest as fi
+from scripts.rag import hybrid
 
 DEFAULT_ROOT = Path(os.getenv("RAG_VLM_DIR", ROOT / "indexes/financial_vlm"))
 CHROMA_COLLECTION = "annual_reports_vlm"
@@ -417,30 +418,30 @@ class ChromaStore:
                                    metadatas=[self.metadata(r[1]) for r in part])
         self.bm25.replace(doc_id, records)
 
-    def search(self, vector, query, top_k, ticker=None, year=None, sector=None, candidates=50):
-        """Dense (Chroma) + BM25 (FTS5) candidates fused by RRF; scores are RRF scores."""
+    def search(self, vector, query, top_k, ticker=None, year=None, sector=None, candidates=50, mode="hybrid"):
+        """Dense (Chroma) + BM25 (FTS5) rankings fused by ``hybrid.rrf_fuse``: [(rrf score, payload, ranks)].
+        ``mode``: hybrid (default), dense or bm25."""
         conditions = [{"ticker": ticker.upper()}] if ticker else []
         conditions += [{"fiscal_year": year}] if year else []
         sectors = sorted(parse_sectors(sector) or [])
         conditions += [{"sector_slug": sectors[0]} if len(sectors) == 1 else {"sector_slug": {"$in": sectors}}] if sectors else []
         where = conditions[0] if len(conditions) == 1 else {"$and": conditions} if conditions else None
-        result = self.collection.query(query_embeddings=[vector], n_results=max(top_k, candidates), where=where,
-                                       include=["documents", "metadatas", "distances"])
-        found = {meta["chunk_id"]: {**meta, "text": text} for text, meta in
-                 zip(result["documents"][0], result["metadatas"][0])}
-        dense = list(found)
-        keyword = self.bm25.search(query, max(top_k, candidates), ticker, year, sectors)
-        missing = [c for c in keyword if c not in found]
-        if missing:
-            extra = self.collection.get(where={"chunk_id": {"$in": missing}}, include=["documents", "metadatas"])
-            found.update({meta["chunk_id"]: {**meta, "text": text} for text, meta in zip(extra["documents"], extra["metadatas"])})
-        fused = {}
-        for ranking in (dense, keyword):                     # reciprocal rank fusion, k = 60
-            for rank, chunk_id in enumerate(ranking, 1):
-                if chunk_id in found:
-                    fused[chunk_id] = fused.get(chunk_id, 0.0) + 1 / (60 + rank)
-        best = sorted(fused, key=fused.get, reverse=True)[:top_k]
-        return [(fused[c], found[c]) for c in best]
+        found, rankings = {}, {}
+        if hybrid.uses(mode, "dense"):
+            result = self.collection.query(query_embeddings=[vector], n_results=max(top_k, candidates), where=where,
+                                           include=["documents", "metadatas"])
+            found = {meta["chunk_id"]: {**meta, "text": text} for text, meta in
+                     zip(result["documents"][0], result["metadatas"][0])}
+            rankings["dense"] = list(found)
+        if hybrid.uses(mode, "bm25"):
+            rankings["bm25"] = self.bm25.search(query, max(top_k, candidates), ticker, year, sectors)
+            missing = [c for c in rankings["bm25"] if c not in found]
+            if missing:
+                extra = self.collection.get(where={"chunk_id": {"$in": missing}}, include=["documents", "metadatas"])
+                found.update({meta["chunk_id"]: {**meta, "text": text}
+                              for text, meta in zip(extra["documents"], extra["metadatas"])})
+        fused = [e for e in hybrid.rrf_fuse(rankings) if e["id"] in found][:top_k]
+        return [(e["rrf"], found[e["id"]], e["ranks"]) for e in fused]
 
     def count(self):
         return self.collection.count()
@@ -533,7 +534,8 @@ def reset(args):
 
 # ----------------------------------------------------------------------------- retrieval
 
-def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAULT_ROOT, store="chroma", embedder=None):
+def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAULT_ROOT, store="chroma", embedder=None,
+             mode="hybrid"):
     """Hits in the agents' evidence format (chunk_id, text, ticker, year, sector, page, ...)."""
     root = Path(root)
     if embedder is None:
@@ -543,7 +545,8 @@ def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAUL
         raise ValueError("pipeline 2 serves from Chroma only; Qdrant is pipeline 1 (RAG_BACKEND=financial_qdrant)")
     backend = ChromaStore(root)
     hits = []
-    for score, p in backend.search(embedder([query])[0], query, top_k, ticker, year, sector):
+    vector = embedder([query])[0] if hybrid.uses(mode, "dense") else None
+    for score, p, ranks in backend.search(vector, query, top_k, ticker, year, sector, mode=mode):
         unverified = p.get("unverified_in_chunk") or []
         hits.append({"chunk_id": p["chunk_id"], "text": p.get("text", ""), "title": p.get("title"),
                      "source_type": p.get("source_type"), "ticker": p.get("ticker"), "year": p.get("fiscal_year"),
@@ -552,14 +555,14 @@ def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAUL
                      "text_source": p.get("text_source"), "content_type": p.get("content_type"),
                      "unverified_numbers": json.loads(unverified) if isinstance(unverified, str) else unverified,
                      "preview": re.sub(r"\s+", " ", p.get("text", ""))[:500], "score": float(score),
-                     "retrieval_paths": ["vlm_text"], "metadata": dict(p)})
+                     "retrieval_paths": ["vlm_text"], "retrieval_ranks": ranks, "metadata": dict(p)})
     return hits
 
 
 _serving: dict = {}
 
 
-def retrieve_for_agent(query, top_k=5, ticker=None, year=None, sector=None):
+def retrieve_for_agent(query, top_k=5, ticker=None, year=None, sector=None, mode="hybrid"):
     """Evidence for the financial agents (RAG_BACKEND=financial_vlm) from the index under RAG_VLM_DIR.
 
     Uses the Chroma index and the embedder recorded when it was built, loaded once per process.
@@ -573,7 +576,7 @@ def retrieve_for_agent(query, top_k=5, ticker=None, year=None, sector=None):
                                         state_name="vlm_ingest.sqlite3")
         _serving.clear()
         _serving.update(key=key, embedder=embedder)
-    hits = retrieve(query, top_k, ticker, year, sector, root=root, store=store, embedder=_serving["embedder"])
+    hits = retrieve(query, top_k, ticker, year, sector, root=root, store=store, embedder=_serving["embedder"], mode=mode)
     for rank, hit in enumerate(hits, 1):
         hit.update(rrf_score=1 / (60 + rank), rerank_score=hit["score"], image_path=None)
     return hits
