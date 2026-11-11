@@ -34,6 +34,8 @@ from collections import Counter, defaultdict
 from contextlib import nullcontext
 from pathlib import Path
 
+from scripts.common import hosted_llm
+
 EVAL_SET = Path("data/evaluation/financial_report_qa/eval_set_v1.jsonl")
 MANIFEST = Path("data/raw/financial_report_qa/edgar/pdf_manifest.jsonl")
 CHUNKS = Path("data/processed/financial_report_qa/baseline_chunks.jsonl")
@@ -196,16 +198,17 @@ class ChatClient:
 
     def chat(self, system: str, user: str, *, temperature: float, max_tokens: int, seed: int) -> dict:
         body = json.dumps({"model": self.model, "temperature": temperature, "max_tokens": max_tokens, "seed": seed,
+                           **{k: v for k, v in hosted_llm.payload_extras().items() if k != "max_tokens"},
                            "messages": [{"role": "system", "content": system},
                                         {"role": "user", "content": user}]}).encode()
         request = urllib.request.Request(f"{self.api_base}/chat/completions", data=body, method="POST",
                                          headers={"Content-Type": "application/json",
                                                   "Authorization": f"Bearer {self.api_key or 'none'}"})
         started = time.perf_counter()
-        with urllib.request.urlopen(request, timeout=self.timeout) as response:
+        with hosted_llm.open_url(request, self.timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
         usage = data.get("usage") or {}
-        return {"text": data["choices"][0]["message"]["content"] or "", "latency_s": time.perf_counter() - started,
+        return {"text": hosted_llm.clean_content(data["choices"][0]["message"]["content"]), "latency_s": time.perf_counter() - started,
                 "prompt_tokens": usage.get("prompt_tokens"), "completion_tokens": usage.get("completion_tokens")}
 
 

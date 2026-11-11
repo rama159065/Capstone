@@ -25,6 +25,7 @@ from pypdf import PdfReader
 from rank_bm25 import BM25Okapi
 from sklearn.feature_extraction.text import HashingVectorizer
 
+from scripts.common import hosted_llm
 from scripts.common.agent_limits import STEP_LIMIT_ANSWER, graph_config, max_steps
 from scripts.guardrails import checks as guard_checks, patterns as guard_patterns
 from scripts.prompts import domain as prompts
@@ -129,6 +130,7 @@ class HostedChatLLM:
             "model": self.model,
             "temperature": self.temperature,
             "messages": [self._message_to_dict(message) for message in messages],
+            **hosted_llm.payload_extras(),
         }
         request = urllib.request.Request(
             f"{self.api_base}/chat/completions",
@@ -141,12 +143,12 @@ class HostedChatLLM:
         )
         request.add_header("Idempotency-Key", hashlib.sha256(request.data).hexdigest())
         try:
-            with urllib.request.urlopen(request, timeout=float(os.getenv("RAG_HTTP_TIMEOUT_SECONDS", "45"))) as response:
+            with hosted_llm.open_url(request, float(os.getenv("RAG_HTTP_TIMEOUT_SECONDS", "45"))) as response:
                 raw = response.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
             raise
         data = json.loads(raw)
-        return MockResponse(str(data["choices"][0]["message"]["content"]))
+        return MockResponse(hosted_llm.clean_content(data["choices"][0]["message"]["content"]))
 
     @staticmethod
     def _message_to_dict(message: Any) -> dict[str, str]:

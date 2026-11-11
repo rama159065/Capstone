@@ -36,6 +36,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts.common import hosted_llm
 from scripts.common.agent_limits import STEP_LIMIT_ANSWER, graph_config, max_steps
 from scripts.agents.financial_clarifier import question_scope
 from scripts.guardrails import checks as guard_checks, patterns as guard_patterns
@@ -200,6 +201,7 @@ class HostedChatLLM:
             "model": self.model,
             "messages": [self._message_to_dict(message) for message in messages],
             "temperature": self.temperature,
+            **hosted_llm.payload_extras(),
         }
         body = json.dumps(payload).encode("utf-8")
         request = urllib.request.Request(
@@ -213,7 +215,7 @@ class HostedChatLLM:
         )
         request.add_header("Idempotency-Key", hashlib.sha256(request.data).hexdigest())
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+            with hosted_llm.open_url(request, self.timeout_seconds) as response:
                 raw = response.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
             raise
@@ -222,7 +224,7 @@ class HostedChatLLM:
 
         data = json.loads(raw)
         try:
-            return MockResponse(str(data["choices"][0]["message"]["content"]))
+            return MockResponse(hosted_llm.clean_content(data["choices"][0]["message"]["content"]))
         except (KeyError, IndexError, TypeError) as exc:
             raise RuntimeError(f"Unexpected hosted LLM response shape: {raw[:1000]}") from exc
 
