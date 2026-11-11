@@ -8,7 +8,7 @@ pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:ce
 blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
 <h1>PDF ingestion into Qdrant on Colab</h1>
 <p>Date: 2026-11-04. This implements the PDF part of <a href="financial_rag_final_design.html">financial_rag_final_design.md</a>, sections 5 and 7.</p>
-<ul><li>Code: <a href="../scripts/rag/financial_ingest.py">scripts/rag/financial_ingest.py</a></li><li>Colab session: <a href="../notebooks/colab_financial_ingest.ipynb">notebooks/colab_financial_ingest.ipynb</a></li><li>Tests: <a href="../tests/test_financial_ingest.py">tests/test_financial_ingest.py</a></li></ul>
+<ul><li>Code: <a href="../scripts/rag/financial_ingest_qdrant_db.py">scripts/rag/financial_ingest_qdrant_db.py</a></li><li>Colab session: <a href="../notebooks/colab_financial_ingest.ipynb">notebooks/colab_financial_ingest.ipynb</a></li><li>Tests: <a href="../tests/test_financial_ingest_qdrant_db.py">tests/test_financial_ingest_qdrant_db.py</a></li></ul>
 <p><strong>Not covered here:</strong> the 10-K HTML / XBRL facts DB (store A) is a separate step.</p>
 <hr>
 <h2>0. Getting the data (EDGAR → Drive)</h2>
@@ -36,16 +36,16 @@ python -m scripts.downloads.download_edgar_corpus --only 10k,companyfacts --tick
 <ul><li>HNSW building is paused during upload (<code>indexing_threshold=0</code>) and then restored.</li><li>The run waits for the collections to turn green.</li><li>Each collection is snapshotted and streamed to <code>--snapshot-dir</code> (Drive), and the SHA-256 is checked against Qdrant's checksum.</li><li>The local snapshot is deleted. Only the newest <code>--keep-snapshots</code> are kept on Drive.</li><li><code>ingest.sqlite3</code> and the page cache are copied next to the snapshots.</li></ul>
 <h2>3. Commands</h2>
 <pre><code># Colab, after starting the Qdrant server (notebook cell 4)
-python -m scripts.rag.financial_ingest ingest --qdrant-url http://127.0.0.1:6333 \
+python -m scripts.rag.financial_ingest_qdrant_db ingest --qdrant-url http://127.0.0.1:6333 \
     --pdf-dir $DRIVE/edgar/pdfs --user-agent &quot;name email@domain&quot; \
     --snapshot-dir $DRIVE/snapshots --stages text,visual
-python -m scripts.rag.financial_ingest status
-python -m scripts.rag.financial_ingest query &quot;total revenue 130,497&quot; --ticker NVDA          # text path
-python -m scripts.rag.financial_ingest query &quot;revenue by market chart&quot; --ticker NVDA --visual
-python -m scripts.rag.financial_ingest restore --snapshot-dir $DRIVE/snapshots              # next session
+python -m scripts.rag.financial_ingest_qdrant_db status
+python -m scripts.rag.financial_ingest_qdrant_db query &quot;total revenue 130,497&quot; --ticker NVDA          # text path
+python -m scripts.rag.financial_ingest_qdrant_db query &quot;revenue by market chart&quot; --ticker NVDA --visual
+python -m scripts.rag.financial_ingest_qdrant_db restore --snapshot-dir $DRIVE/snapshots              # next session
 
 # Local smoke run (embedded Qdrant, hashing vectors, no GPU)
-python -m scripts.rag.financial_ingest ingest --root tmp/ingest_smoke --embedding-provider hashing \
+python -m scripts.rag.financial_ingest_qdrant_db ingest --root tmp/ingest_smoke --embedding-provider hashing \
     --stages text --limit-filings 3 --ocr none --reset</code></pre>
 <p><strong>Main options:</strong></p>
 <table><thead><tr><th>Option</th><th>Values</th></tr></thead><tbody><tr><td><code>--embedding-provider</code></td><td><code>local</code> (MiniLM, 384-d, GPU if present; default), <code>hosted</code> (<code>EMBEDDING_API_BASE/KEY/MODEL</code>), <code>hashing</code> (offline tests)</td></tr><tr><td><code>--colpali-dtype</code></td><td><code>auto</code>: bf16 on L4/A100, fp16 on T4, fp32 on CPU</td></tr><tr><td><code>--tickers</code>, <code>--limit-filings</code>, <code>--max-pages-per-pdf</code></td><td>subsets for trials</td></tr><tr><td><code>--force</code></td><td>redo finished filings</td></tr></tbody></table>
@@ -59,7 +59,7 @@ python -m scripts.rag.financial_ingest ingest --root tmp/ingest_smoke --embeddin
 <p><strong>Storage limits</strong> (from the design, section 6):</p>
 <ul><li>Qdrant ~1.9 GB at 100 filings and ~19 GB at 1,000.</li><li>Rotating snapshots needs the same space again on Drive.</li></ul>
 <h2>5. Verified so far</h2>
-<table><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody><tr><td>Offline tests</td><td><code>tests/test_financial_ingest.py</code>: 7 passed. They cover number terms, windows, table split, pooling (shape, special tokens, row/column orientation), page classification, end-to-end text + visual ingest with a fake ColPali, number search (<code>391035</code> finds <code>391,035</code>), visual prefetch → rerank with a ticker/year filter, resume, model-mismatch guard, and a SHA-256 failure being recorded</td></tr><tr><td>Real filings, text stage (embedded Qdrant, hashing vectors)</td><td>NVDA FY2024–FY2026: 556 pages → 1,553 points. Sections found (<code>item_1</code> … <code>item_16</code>). FY2024 detected as 155/187 garbled pages and never indexed as text</td></tr><tr><td>OCR</td><td>2 garbled NVDA FY2024 pages OCR'd, front section first, ~4 s/page CPU</td></tr><tr><td>Server-only paths (snapshot, restore, bulk indexing toggle, gRPC)</td><td>Calls checked against qdrant-client 1.20. <strong>Not yet run against a Qdrant server</strong>: running the Qdrant binary on the dev PC was blocked, so the first Colab session is the test</td></tr><tr><td>ColPali on GPU</td><td><strong>Not yet run.</strong> Uses the same encoding code as the pooling evaluation script</td></tr></tbody></table>
+<table><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody><tr><td>Offline tests</td><td><code>tests/test_financial_ingest_qdrant_db.py</code>: 7 passed. They cover number terms, windows, table split, pooling (shape, special tokens, row/column orientation), page classification, end-to-end text + visual ingest with a fake ColPali, number search (<code>391035</code> finds <code>391,035</code>), visual prefetch → rerank with a ticker/year filter, resume, model-mismatch guard, and a SHA-256 failure being recorded</td></tr><tr><td>Real filings, text stage (embedded Qdrant, hashing vectors)</td><td>NVDA FY2024–FY2026: 556 pages → 1,553 points. Sections found (<code>item_1</code> … <code>item_16</code>). FY2024 detected as 155/187 garbled pages and never indexed as text</td></tr><tr><td>OCR</td><td>2 garbled NVDA FY2024 pages OCR'd, front section first, ~4 s/page CPU</td></tr><tr><td>Server-only paths (snapshot, restore, bulk indexing toggle, gRPC)</td><td>Calls checked against qdrant-client 1.20. <strong>Not yet run against a Qdrant server</strong>: running the Qdrant binary on the dev PC was blocked, so the first Colab session is the test</td></tr><tr><td>ColPali on GPU</td><td><strong>Not yet run.</strong> Uses the same encoding code as the pooling evaluation script</td></tr></tbody></table>
 <h2>6. Known limits</h2>
 <ul><li><strong>Restore:</strong> it copies the snapshot into the server's snapshots folder before recovering, because servers may refuse <code>file://</code> paths outside it. This is the first thing to check in session 2.</li><li><strong>Sections:</strong> a "contents" page mid-report keeps the previous section, and <code>Item 15</code> holds the statements for filers such as Nvidia.</li><li><strong>Garbled pages beyond the OCR limit:</strong> they have no text points; their numbers come from the 10-K HTML (store A).</li><li><strong>Embedded mode</strong> (no <code>--qdrant-url</code>) ignores payload indexes and on-disk settings. Use it for smoke runs only.</li></ul>
 <h2>7. Running the stack locally or on Colab (runtime profile)</h2>
@@ -70,7 +70,7 @@ python -m scripts.rag.financial_ingest ingest --root tmp/ingest_smoke --embeddin
 <ul><li><strong>Hybrid search:</strong> dense and number-aware sparse search, fused with Qdrant RRF, filtered by ticker and fiscal year.</li><li><strong>Rerank:</strong> by RRF plus term overlap.</li><li><strong>Visual pages:</strong> ColPali visual pages are added when <code>RAG_FIN_VISUAL=1</code>.</li><li><strong>Citable IDs:</strong> chunk IDs follow the agents' citation convention (<code>annual_report_&lt;doc&gt;_p&lt;page&gt;_&lt;part&gt;</code>), so citation checks and <code>apply_grounding_policy</code> work unchanged.</li><li><strong>Other domains:</strong> the non-financial domains keep their Chroma pipeline.</li></ul>
 <p><strong>Local commands:</strong></p>
 <pre><code># 1. Build or refresh the local index (embedded Qdrant; stop the API first, since embedded Qdrant allows one process)
-.venv\Scripts\python.exe -m scripts.rag.financial_ingest ingest --root indexes\financial_qdrant --stages text
+.venv\Scripts\python.exe -m scripts.rag.financial_ingest_qdrant_db ingest --root indexes\financial_qdrant --stages text
 # 2. Serve
 uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
 streamlit run scripts\ui\api_streamlit_app.py</code></pre>

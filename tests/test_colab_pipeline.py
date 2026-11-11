@@ -4,7 +4,7 @@ import json
 import pytest
 
 from scripts.rag import colab_pipeline as cp
-from tests.test_financial_ingest import FakeColPali, make_pdf
+from tests.test_financial_ingest_qdrant_db import FakeColPali, make_pdf
 
 
 @pytest.fixture
@@ -144,13 +144,13 @@ def test_serving_env_points_the_api_at_this_pipelines_index(drive):
 
 def test_agent_answers_from_the_vlm_index_with_a_sector_filter(drive, monkeypatch):
     from scripts.agents import financial_prompting_agent as agent
-    from scripts.rag import vlm_ingest
+    from scripts.rag import financial_ingest_chroma_db
     s = settings(drive, "vlm_chroma")
     cp.prepare(s)
     cp.ingest(s)
     for key, value in cp.serving_env(s).items():
         monkeypatch.setenv(key, value)
-    monkeypatch.setattr(vlm_ingest, "_serving", {})
+    monkeypatch.setattr(financial_ingest_chroma_db, "_serving", {})
     config = agent.AgentConfig(query="391035 revenue", ticker=None, year=None, source_type=None, top_k=5, dense_top_k=5,
                                bm25_top_k=5, retrieval_mode="hybrid", embedding_provider="hashing", hash_dimensions=384,
                                max_context_chars=4000, self_consistency_samples=1, sector="oil_and_gas")

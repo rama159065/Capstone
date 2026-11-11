@@ -11,7 +11,7 @@ import pytest
 from scripts.common.sector_corpus import read_jsonl, sector_slug
 from scripts.downloads import download_annual_report_corpus as dl
 from scripts.rag import colab_pipeline as cp
-from scripts.rag import financial_ingest as fi
+from scripts.rag import financial_ingest_qdrant_db as fi
 
 ROOT = Path(__file__).resolve().parents[1]
 PLAN = read_jsonl(dl.DEFAULT_DIR / dl.PLAN_NAME)
@@ -57,7 +57,7 @@ def test_ingest_keeps_only_the_presets_filings():
     assert fi.in_preset(rows, "min500") == [{"document_id": inside}]
     for parser in (fi.build_parser(),):
         assert parser.parse_args(["ingest", "--corpus-preset", "min500"]).corpus_preset == "min500"
-    from scripts.rag import vlm_ingest as vi
+    from scripts.rag import financial_ingest_chroma_db as vi
     assert vi.build_parser().parse_args(["ingest", "--corpus-preset", "min500"]).corpus_preset == "min500"
 
 

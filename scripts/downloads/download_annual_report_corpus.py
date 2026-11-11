@@ -16,7 +16,7 @@ Every manifest row carries ``sector`` / ``sector_slug`` / ``sic``, and the same
 fields as the EDGAR ARS manifest (``document_id = edgar_ars_<TICKER>_<YEAR>``,
 SHA-256, pages), so both indexers can read it:
 
-    python -m scripts.rag.financial_ingest ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking
+    python -m scripts.rag.financial_ingest_qdrant_db ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking
     python scripts/rag/index_financial_report_pdfs.py --manifest data/raw/financial_report_qa/annual_reports --sectors banking
 
 Reruns are resumable: PDFs already listed with the right size are skipped, and

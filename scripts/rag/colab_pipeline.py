@@ -2,14 +2,15 @@
 
 Two pipelines over the sector corpus (scripts/downloads/download_annual_report_corpus.py):
 
-``colpali_qdrant`` (scripts/rag/financial_ingest.py), Qdrant server, two collections:
+``colpali_qdrant`` (scripts/rag/financial_ingest_qdrant_db.py), Qdrant server, two collections:
     annual_reports_text    all the text: every page's text layer, OCR for unreadable pages, and table chunks;
                    dense vector (RAM, HNSW) + number-aware BM25 sparse vector
     annual_reports_visual  ColPali on table, chart and image pages only: mean-pooled rows + cols (38 x 128 each,
                    RAM, HNSW) for the first stage; full 1030 x 128 multivector on disk (float16, mmap,
                    no HNSW) for the MaxSim rerank; payloads on disk
-``vlm_chroma`` (scripts/rag/vlm_ingest.py), Chroma, text embeddings only:
-    a VLM reads each table, chart, image and unreadable page image and writes it as Markdown text;
+``vlm_chroma`` (scripts/rag/financial_ingest_chroma_db.py), Chroma only, text embeddings + a BM25 sidecar:
+    OCR or a VLM (local Qwen-VL, or an OpenAI-compatible API, self-hosted or paid) reads each table,
+    chart, image and unreadable page image and writes it as Markdown text;
     clean narrative pages keep their text layer; all chunks are embedded as text into Chroma
     (persisted on disk, HNSW loaded into RAM when queried)
 
@@ -55,8 +56,8 @@ import urllib.request
 
 from scripts.common.paths import ROOT
 from scripts.common.sector_corpus import MANIFEST_NAME, parse_sectors, read_manifest
-from scripts.rag import financial_ingest as fi
-from scripts.rag import vlm_ingest as vi
+from scripts.rag import financial_ingest_qdrant_db as fi
+from scripts.rag import financial_ingest_chroma_db as vi
 
 PIPELINES = ("colpali_qdrant", "vlm_chroma")
 IN_COLAB = "google.colab" in sys.modules or "COLAB_RELEASE_TAG" in os.environ
@@ -88,9 +89,13 @@ class Settings:
     snapshot_every: int = 0                 # batches between Drive snapshots; 0 = once, at the end of each sector
     stage_pdfs: bool = IN_COLAB             # copy each sector's PDFs from Drive to local disk before ingesting
     # vlm_chroma
-    vlm: str = "transformers"               # or "openai" / "mock"
-    vlm_model: str | None = None            # default Qwen/Qwen2.5-VL-3B-Instruct
-    vlm_pages: str = "visual"               # tables, charts, images + unreadable pages (no OCR here: skipped ones are lost)
+    vlm: str = "routed"                     # page reader: "routed" (per page, paidVL fallback) / "ocr" / "transformers"
+                                            # (Qwen3-VL) / "openai" (paid or self-hosted) / "mock"
+    qwen_reader: str = "transformers"       # routed: Qwen3-VL in-process, or "openai" (endpoint at RAG_VISION_API_BASE)
+    paid_threshold: float = 0.10            # routed: paidVL page -> paid model when > 10% of Qwen3-VL's figures fail OCR
+    paid_max_pages_per_pdf: int = 0         # routed: cap paid calls per filing (0 = no cap)
+    vlm_model: str | None = None            # default Qwen/Qwen3-VL-4B-Instruct (or -2B / -8B)
+    vlm_pages: str = "visual"               # tables, charts, images + unreadable pages
                                             # or "tables_charts_images" / "tables_charts" / "all"
     vlm_max_pages_per_pdf: int = 0
     # smoke runs
@@ -178,7 +183,7 @@ def start_qdrant(s: Settings):
         archive.unlink()
     env = {**os.environ, "QDRANT__SERVICE__HOST": "127.0.0.1", "QDRANT__SERVICE__HTTP_PORT": str(QDRANT_PORT),
            "QDRANT__STORAGE__STORAGE_PATH": str(s.root / "qdrant_storage"),
-           "QDRANT__STORAGE__SNAPSHOTS_PATH": str(s.root / "snapshots"),     # where financial_ingest.restore copies to
+           "QDRANT__STORAGE__SNAPSHOTS_PATH": str(s.root / "snapshots"),     # where financial_ingest_qdrant_db.restore copies to
            "QDRANT__TELEMETRY_DISABLED": "true"}
     process = subprocess.Popen([str(binary)], cwd=binary.parent, env=env, stdout=open(s.work / "qdrant.log", "ab"),
                                stderr=subprocess.STDOUT)
@@ -308,7 +313,9 @@ def ingest_colpali(s: Settings, sector, corpus=None):
 def ingest_vlm(s: Settings, sector, corpus=None):
     pages = {"rule": "visual"}.get(s.vlm_pages, s.vlm_pages)
     argv = ["ingest", *common_argv(s, sector, corpus), "--store", "chroma", "--cache-dir", str(s.vlm_cache),
-            "--vlm", s.vlm, "--vlm-pages", pages, "--vlm-max-pages-per-pdf", str(s.vlm_max_pages_per_pdf)]
+            "--vlm", s.vlm, "--vlm-pages", pages, "--vlm-max-pages-per-pdf", str(s.vlm_max_pages_per_pdf),
+            "--qwen-reader", s.qwen_reader, "--paid-threshold", str(s.paid_threshold),
+            "--paid-max-pages-per-pdf", str(s.paid_max_pages_per_pdf)]
     argv += ["--vlm-model", s.vlm_model] if s.vlm_model else []
     run = vi.VlmIngest(vi.build_parser().parse_args(argv), vlm=_loaded.get("vlm"), embedder=_loaded.get("embedder"))
     _loaded["embedder"] = run.embedder
@@ -448,7 +455,7 @@ def serving_env(s: Settings):
         if s.qdrant_url:
             env["QDRANT_URL"] = s.qdrant_url
     else:
-        env.update(RAG_BACKEND="financial_vlm", RAG_VLM_DIR=str(s.root), RAG_VLM_STORE="chroma")
+        env.update(RAG_BACKEND="financial_vlm", RAG_VLM_DIR=str(s.root))
     return env
 
 
@@ -515,6 +522,15 @@ def query(s: Settings, text, sector=None, ticker=None, year=None, top_k=5, visua
     return rows
 
 
+def page_audit(s: Settings, workers=None, force=False, limit=None, out=None):
+    """Which parser each downloaded page needs: <drive_root>/page_audit/<sector>/<pdf name>.csv (pageNumber,parserUsage)
+    plus _summary.csv / _summary.json. Reads the PDFs on Drive (CPU only: no GPU needed); finished filings are
+    skipped on a rerun, so after a disconnect just run it again. ``limit``: first N filings (a timing run)."""
+    from scripts.rag import page_audit as pa
+    return pa.run(s.corpus, out or s.drive_root / "page_audit", preset=s.corpus_preset, sectors=s.sectors or None,
+                  workers=workers or os.cpu_count(), force=force, limit=limit)
+
+
 def run(s: Settings, download_first=True):
     prepare(s)
     restore(s)
@@ -530,7 +546,8 @@ def run(s: Settings, download_first=True):
 
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["run", "prepare", "download", "restore", "ingest", "status", "coverage", "query"])
+    parser.add_argument("command", choices=["run", "prepare", "download", "restore", "ingest", "status", "coverage", "query",
+                                            "audit"])
     parser.add_argument("text", nargs="?", help="query text")
     parser.add_argument("--sector", help="query filter")
     parser.add_argument("--ticker", help="query filter")
@@ -541,8 +558,9 @@ def build_parser():
     defaults = Settings()
     for field in fields(Settings):
         value = getattr(defaults, field.name)
-        kind = int if field.name in {"max_per_sector", "workers", "batch_size", "snapshot_every", "ocr_max_pages_per_filing",
-                                     "vlm_max_pages_per_pdf",
+        kind = float if isinstance(value, float) \
+            else int if field.name in {"max_per_sector", "workers", "batch_size", "snapshot_every", "ocr_max_pages_per_filing",
+                                     "vlm_max_pages_per_pdf", "paid_max_pages_per_pdf",
                                      "limit_filings", "max_pages_per_pdf"} \
             else (lambda v: v.strip().lower() in {"1", "true", "yes"}) if isinstance(value, bool) \
             else Path if isinstance(value, Path) else str
@@ -562,7 +580,7 @@ def main(argv=None):
     if args.command == "run":
         return run(s, download_first=not args.no_download)
     return {"prepare": prepare, "download": download, "restore": restore, "ingest": ingest, "status": status,
-            "coverage": coverage}[args.command](s)
+            "coverage": coverage, "audit": page_audit}[args.command](s)
 
 
 if __name__ == "__main__":

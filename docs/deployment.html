@@ -154,7 +154,7 @@ python -m scripts.downloads.download_annual_report_corpus --preset full   --outp
 <hr>
 <h2>5. Costs</h2>
 <h3>5.1 How many pages need a vision model (measured)</h3>
-<p>All 14,701 pages of the 100 local filings were classified with the ingest's own page analysis (<code>financial_ingest.analyse_page</code>). The results are scaled to the 1,004-filing plan at 147 pages per filing, about <strong>147,600 pages</strong>.</p>
+<p>All 14,701 pages of the 100 local filings were classified with the ingest's own page analysis (<code>financial_ingest_qdrant_db.analyse_page</code>). The results are scaled to the 1,004-filing plan at 147 pages per filing, about <strong>147,600 pages</strong>.</p>
 <table><thead><tr><th>Page type</th><th>Share (measured)</th><th>Pages in the full corpus (estimate)</th></tr></thead><tbody><tr><td>Text or blank</td><td>68.9%</td><td>101,700</td></tr><tr><td>Table (text layer present)</td><td>10.4%</td><td>15,300</td></tr><tr><td>Chart or image</td><td>7.7%</td><td>11,300</td></tr><tr><td>Unreadable text (garbled, font-encoding garbage, outlined)</td><td>13.1%</td><td>19,300</td></tr><tr><td><strong>No usable text: charts, images and unreadable</strong></td><td><strong>20.7%</strong></td><td><strong>30,600</strong></td></tr><tr><td>No usable text + tables</td><td>31.1%</td><td>45,900</td></tr><tr><td>ColPali pages (<code>tables_charts_images</code>)</td><td>18.0%</td><td>26,600</td></tr></tbody></table>
 <p><strong>Caveat:</strong> the 100 filings come from 25 large companies. Other sectors may have more charts. Re-measure after the first sectors are ingested with <code>cp.status</code>.</p>
 <p><strong>This replaces earlier estimates.</strong> The structure doc assumed 44–75% visual pages. With 18%:</p>

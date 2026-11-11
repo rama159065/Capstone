@@ -5,7 +5,7 @@ import numpy as np
 import pymupdf
 import pytest
 
-from scripts.rag import financial_ingest as fi
+from scripts.rag import financial_ingest_qdrant_db as fi
 
 
 class FakeColPali:
@@ -285,7 +285,7 @@ def test_snapshot_every_n_batches_and_always_after_the_last(tmp_path, corpus, mo
 
 
 def test_visual_page_selection_is_shared_by_colpali_and_the_vlm():
-    from scripts.rag import vlm_ingest as vi
+    from scripts.rag import financial_ingest_chroma_db as vi
     kinds = ["text", "table", "chart", "image", "outlined_text", "blank", "text"]
     pages = [{"page": n, "page_type": k, "garbled": n == 7,
               "visual": k in {"table", "chart", "image", "outlined_text"} or n == 7} for n, k in enumerate(kinds, 1)]

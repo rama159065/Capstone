@@ -41,7 +41,7 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 <pre class="mermaid">flowchart LR
   subgraph Offline[&quot;Offline (Colab, batch)&quot;]
     Plan[&quot;corpus_plan.jsonl&lt;br&gt;1,004 ARS PDFs&quot;] --&gt; DL[&quot;download → Drive&quot;]
-    DL --&gt; Ingest[&quot;page analysis · OCR · chunking&lt;br&gt;(financial_ingest)&quot;]
+    DL --&gt; Ingest[&quot;page analysis · OCR · chunking&lt;br&gt;(financial_ingest_qdrant_db)&quot;]
     Ingest --&gt; QT[&quot;Qdrant annual_reports_text&lt;br&gt;dense + BM25 sparse&quot;]
     Ingest -. optional .-&gt; QV[&quot;Qdrant annual_reports_visual&lt;br&gt;ColPali&quot;]
     XBRL[&quot;SEC companyfacts JSON&lt;br&gt;281 companies&quot;] --&gt; Facts[&quot;facts.sqlite&lt;br&gt;(new)&quot;]
@@ -132,7 +132,7 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 <pre><code>python -m scripts.downloads.download_annual_report_corpus --preset min500 --output-dir &lt;drive&gt;/annual_reports
 python -m scripts.rag.colab_pipeline run --pipeline colpali_qdrant --corpus-preset min500 --max-per-sector 0
 python -m scripts.rag.colab_pipeline coverage --pipeline colpali_qdrant --corpus-preset min500   # planned = 509
-python -m scripts.rag.financial_ingest ingest --manifest &lt;drive&gt;/annual_reports --corpus-preset min500 ...</code></pre>
+python -m scripts.rag.financial_ingest_qdrant_db ingest --manifest &lt;drive&gt;/annual_reports --corpus-preset min500 ...</code></pre>
 <p>**What <code>min500</code> selects:** the 41 largest filings per sector, plus every filing of the companies the frozen eval set asks about. It is defined in <code>download_annual_report_corpus.preset_rows</code>.</p>
 <p><strong>Behaviour:</strong></p>
 <ul><li>Ingestion skips downloaded filings outside the preset; nothing is deleted. Switching to <code>full</code> later just adds the rest, and filings already ingested are skipped.</li><li><code>cp.coverage</code> counts against the preset, so "planned" is 509.</li></ul>

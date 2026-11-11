@@ -112,7 +112,7 @@ flowchart LR
 
 ### 3.1 Qdrant schema
 
-This is what `scripts/rag/financial_ingest.py` creates. It replaces the first draft's single collection.
+This is what `scripts/rag/financial_ingest_qdrant_db.py` creates. It replaces the first draft's single collection.
 
 | Collection · vector | Shape / type | Index | Storage | Purpose |
 |---|---|---|---|---|

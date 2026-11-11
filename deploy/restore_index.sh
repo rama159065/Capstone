@@ -9,7 +9,7 @@
 set -eu
 ROOT=/app/indexes/financial_qdrant
 mkdir -p "$ROOT"
-python -m scripts.rag.financial_ingest restore --root "$ROOT" --qdrant-url "${QDRANT_URL:-http://qdrant:6333}" \
+python -m scripts.rag.financial_ingest_qdrant_db restore --root "$ROOT" --qdrant-url "${QDRANT_URL:-http://qdrant:6333}" \
     --snapshot-dir /snapshots --server-snapshots-path /qdrant/snapshots
 chown -R "${APP_UID:-1000}:${APP_GID:-1000}" /app/indexes
 echo "restored into $ROOT; restart the API: docker compose restart api"

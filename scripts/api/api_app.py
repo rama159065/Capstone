@@ -155,8 +155,9 @@ class FinancialChatRequest(ChatRequest):
         "self_consistency",
         "agentic_graph",
     ] = Field("agentic_graph", description="Financial QA workflow to execute.")
-    retrieval_mode: Literal["dense", "hybrid"] = Field(
-        "hybrid", description="Use dense-only or hybrid dense-plus-BM25 retrieval."
+    retrieval_mode: Literal["hybrid", "dense", "bm25"] = Field(
+        "hybrid", description="hybrid (default): dense + BM25 fused by RRF, on Qdrant or Chroma; "
+                              "dense or bm25: one retriever only (for ablations)."
     )
     ticker: str | None = Field(None, description="Optional company ticker to filter financial evidence.")
     year: int | None = Field(None, description="Optional fiscal/reporting year filter.")
@@ -192,8 +193,9 @@ class RetrieveRequest(RetrievalEvaluationRequest):
     dense_top_k: int = Field(30, ge=1, le=100, description="Candidate count for dense retrieval.")
     bm25_top_k: int = Field(30, ge=1, le=100, description="Candidate count for BM25 retrieval.")
     source_type: str | None = Field(None, description="Optional source category filter.")
-    retrieval_mode: Literal["dense", "hybrid"] = Field(
-        "hybrid", description="Financial retrieval mode; non-financial domains always use hybrid search."
+    retrieval_mode: Literal["hybrid", "dense", "bm25"] = Field(
+        "hybrid", description="hybrid (default): dense + BM25 fused by RRF, on Qdrant or Chroma; "
+                              "dense or bm25: one retriever only (for ablations)."
     )
     ticker: str | None = Field(None, description="Optional company ticker filter for financial evidence.")
     year: int | None = Field(None, description="Optional fiscal/reporting year filter.")
@@ -459,9 +461,9 @@ def warm_up_retrieval() -> str:
     started = time.perf_counter()
     try:
         if backend == "financial_qdrant":
-            from scripts.rag.financial_ingest import retrieve_for_agent
+            from scripts.rag.financial_ingest_qdrant_db import retrieve_for_agent
         else:
-            from scripts.rag.vlm_ingest import retrieve_for_agent
+            from scripts.rag.financial_ingest_chroma_db import retrieve_for_agent
         retrieve_for_agent("total revenue", top_k=1)
     except Exception as exc:  # noqa: BLE001 - warm-up is best effort
         logger.warning("retrieval warm-up failed: %s", exc)
@@ -1114,6 +1116,7 @@ def retrieve_financial(request: RetrieveRequest) -> dict[str, Any]:
                 "image_path": hit.get("image_path"),
                 "rank": hit.get("rank"),
                 "score": hit.get("rerank_score"),
+                "retrieval_ranks": hit.get("retrieval_ranks"),
                 "preview": hit.get("preview"),
             }
             for hit in hits

@@ -326,7 +326,7 @@ Every setting is an environment variable. [.env.example](../.env.example) lists 
 
 ### 5.1 How many pages need a vision model (measured)
 
-All 14,701 pages of the 100 local filings were classified with the ingest's own page analysis (`financial_ingest.analyse_page`). The results are scaled to the 1,004-filing plan at 147 pages per filing, about **147,600 pages**.
+All 14,701 pages of the 100 local filings were classified with the ingest's own page analysis (`financial_ingest_qdrant_db.analyse_page`). The results are scaled to the 1,004-filing plan at 147 pages per filing, about **147,600 pages**.
 
 | Page type | Share (measured) | Pages in the full corpus (estimate) |
 |---|---|---|

@@ -14,7 +14,7 @@ corpus_plan.jsonl ──download──▶ Drive: annual_reports/<sector>/ ──
 | Plan | `data/raw/financial_report_qa/annual_reports/corpus_plan.jsonl` | 1,004 rows: sector, ticker, year, EDGAR URL, bytes. Every company is in `scripts/common/companies.py` | — |
 | Download | `scripts/downloads/download_annual_report_corpus.py` (`cp.download`) | Fetches each PDF from EDGAR at ≤8 requests/s with a contact e-mail, checks the `%PDF-` header and size, and records SHA-256 and pages in the sector manifest | skipping PDFs already listed with the right size |
 | Stage | `cp.stage` | Copies one sector's PDFs and manifest from Drive to the VM's local disk before ingesting | skipping files with the same size |
-| Ingest | `cp.ingest` → `financial_ingest.Ingest` or `vlm_ingest.VlmIngest` | One sector at a time; models loaded once for all sectors | per-filing state in SQLite; finished filings are skipped |
+| Ingest | `cp.ingest` → `financial_ingest_qdrant_db.Ingest` or `financial_ingest_chroma_db.VlmIngest` | One sector at a time; models loaded once for all sectors | per-filing state in SQLite; finished filings are skipped |
 | Back up | snapshot (Qdrant) or folder copy (Chroma) to Drive | After each sector (`snapshot_every=0`) | `cp.restore` at the start of the next session |
 | Check | `cp.status`, `cp.coverage` | Points per sector and failures; every planned filing as planned → downloaded → ingested / pending / failed | — |
 | Serve | `cp.serve` | FastAPI (one worker) + Streamlit on localhost, with `cp.serving_env(s)` pointing them at this index | — |
@@ -25,7 +25,7 @@ The plan is complete when `cp.coverage(s)["total"]["ingested"] == 1004`.
 
 Choose one with `PIPELINE` in the notebook. Both read the same sector manifests, and every chunk carries the same filing payload (`doc_id` = `edgar_ars_<TICKER>_<YEAR>`, `ticker`, `fiscal_year`, `sector`, `sector_slug`, `page`, citable `chunk_id`).
 
-| | `colpali_qdrant` ([financial_ingest.py](../scripts/rag/financial_ingest.py)) | `vlm_chroma` ([vlm_ingest.py](../scripts/rag/vlm_ingest.py)) |
+| | `colpali_qdrant` ([financial_ingest_qdrant_db.py](../scripts/rag/financial_ingest_qdrant_db.py)) | `vlm_chroma` ([financial_ingest_chroma_db.py](../scripts/rag/financial_ingest_chroma_db.py)) |
 |---|---|---|
 | Table, chart and image pages | ColPali v1.3 page vectors in Qdrant `annual_reports_visual` | Qwen2.5-VL transcribes them to Markdown text |
 | Unreadable text pages | RapidOCR text into `annual_reports_text` (all of them: `ocr_max_pages_per_filing=0`) | the VLM transcribes them too (`vlm_pages="visual"`) |
@@ -34,11 +34,11 @@ Choose one with `PIPELINE` in the notebook. Both read the same sector manifests,
 | Retrieval | dense + sparse fused with Qdrant RRF; with `RAG_FIN_VISUAL=1` also pooled prefetch → full MaxSim | dense search in Chroma |
 | Agent backend | `RAG_BACKEND=financial_qdrant` | `RAG_BACKEND=financial_vlm` |
 
-**Unreadable pages** are found by two checks (`financial_ingest.analyse_page`): garbled English (fewer than 5% stopwords among 40+ words, or `�` characters) and font-encoding garbage (`non_ascii_garbage`: more than 30% non-ASCII among 40+ letters and symbols, e.g. Costco 2024's `èçé ´±½¿¬`). On the 100 local PDFs the second check adds 155 pages, all garbage. Their text layer is never indexed: it is replaced by OCR (pipeline 1) or a VLM transcription (pipeline 2).
+**Unreadable pages** are found by two checks (`financial_ingest_qdrant_db.analyse_page`): garbled English (fewer than 5% stopwords among 40+ words, or `�` characters) and font-encoding garbage (`non_ascii_garbage`: more than 30% non-ASCII among 40+ letters and symbols, e.g. Costco 2024's `èçé ´±½¿¬`). On the 100 local PDFs the second check adds 155 pages, all garbage. Their text layer is never indexed: it is replaced by OCR (pipeline 1) or a VLM transcription (pipeline 2).
 
 **Collection names** are this corpus's own (`annual_reports_text`, `annual_reports_visual`), so `LocalRAG` (`scripts/rag/multimodal_rag.py`, `docs_text` / `visual_pages`) can share the Qdrant server. Snapshots from before the rename (`docs_text-*.snapshot`) are restored into the new names; an old live index stops with a message.
 
-Page selection is shared (`financial_ingest.visual_targets`): `tables_charts_images` (pages classified table, chart or image), `tables_charts`, `rule`/`visual` (those plus unreadable pages) or `all`.
+Page selection is shared (`financial_ingest_qdrant_db.visual_targets`): `tables_charts_images` (pages classified table, chart or image), `tables_charts`, `rule`/`visual` (those plus unreadable pages) or `all`.
 
 ## 3. Where everything lives
 
