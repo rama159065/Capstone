@@ -232,7 +232,7 @@ Python 3.12 or later and Windows x64 are required by the current project/managed
 
 ```powershell
 uv pip install --python .venv/Scripts/python.exe torch torchvision --index-url https://download.pytorch.org/whl/cpu
-uv pip install --python .venv/Scripts/python.exe "transformers>=4.57,<5" "sentence-transformers>=3,<6" "accelerate>=1,<2"
+uv pip install --python .venv/Scripts/python.exe "transformers>=4.57,<6" "sentence-transformers>=3,<6" "accelerate>=1,<2"
 .venv/Scripts/python.exe -m scripts.rag.run_local_multimodal prepare
 ```
 

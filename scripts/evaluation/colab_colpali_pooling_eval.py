@@ -14,7 +14,7 @@ the same full multivectors, and reports what each variant costs and loses:
 
 Colab (T4 or better):
 
-    !pip -q install "transformers>=4.57,<5" "qdrant-client>=1.12,<2" pymupdf sentence-transformers scikit-learn
+    !pip -q install "transformers>=4.57,<6" "qdrant-client>=1.12,<2" pymupdf sentence-transformers scikit-learn
     !mkdir -p /content/qdrant && cd /content/qdrant && \
       curl -sL https://github.com/qdrant/qdrant/releases/latest/download/qdrant-x86_64-unknown-linux-gnu.tar.gz | tar xz
     !cd /content/qdrant && nohup ./qdrant > qdrant.log 2>&1 &

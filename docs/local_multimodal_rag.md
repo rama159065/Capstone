@@ -15,7 +15,7 @@ The complete profile uses learned MiniLM text embeddings, BM25-style sparse retr
 ```powershell
 # CPU model runtime; install once in this project's virtual environment:
 uv pip install --python .venv/Scripts/python.exe torch torchvision --index-url https://download.pytorch.org/whl/cpu
-uv pip install --python .venv/Scripts/python.exe "transformers>=4.57,<5" "sentence-transformers>=3,<6" "accelerate>=1,<2"
+uv pip install --python .venv/Scripts/python.exe "transformers>=4.57,<6" "sentence-transformers>=3,<6" "accelerate>=1,<2"
 # Downloads model weights and the pinned Windows CPU runtime into indexes/:
 .venv/Scripts/python.exe -m scripts.rag.run_local_multimodal prepare
 # Ingests three independent PDFs, then runs actual inference through FastAPI:
