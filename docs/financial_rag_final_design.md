@@ -10,6 +10,21 @@ Labels:
 
 ---
 
+## 0. Update, 11 November 2026: the two pipelines as built
+
+The design below was written before the build. The corpus is now indexed by **two pipelines**, numbered by priority. The full layout is in [annual_report_rag_structure.md](annual_report_rag_structure.md).
+
+| | **Pipeline 1: Chroma text index** (main) | **Pipeline 2: Qdrant text + ColPali index** |
+|---|---|---|
+| Why | The Track B model (Qwen3-8B) reads text only, so every page must become text | Finds table, chart and image pages from their pixels; ready if a vision chat model is provided |
+| Code | `scripts/rag/financial_ingest_chroma_db.py`, notebook `colab_ingest_chroma_db.ipynb` | `scripts/rag/financial_ingest_qdrant_db.py`, notebook `colab_ingest_qdrant_db.ipynb` |
+| How pages are read | A reader per page from the page audit rules: text layer, native tables, RapidOCR, Qwen3-VL; `paidVL` pages run OCR → Qwen3-VL checked against OCR → a paid vision model only when more than 10% of its figures are unconfirmed | Text layer or RapidOCR for the text; ColPali page vectors (38 pooled in RAM, 1,030 full on disk) for table, chart and image pages |
+| Stored in | Chroma `annual_reports_vlm` + BM25 file (`chroma/bm25.sqlite3`) | Qdrant `annual_reports_text` (dense + BM25 sparse) and `annual_reports_visual` (section 5) |
+| Search | Hybrid dense + BM25 (RRF), cross-encoder rerank | Hybrid dense + BM25 (RRF), cross-encoder rerank, optional ColPali MaxSim |
+| Agent backend | `RAG_BACKEND=financial_vlm` | `RAG_BACKEND=financial_qdrant` |
+
+Both store one chunk schema (`scripts/rag/chunk_schema.py`) and accept ticker, year and sector filters. The page audit of 20 EDGAR filings (3,316 pages) sent 79.9% of pages to the PDF parser and about 3% to a vision model. Not built from this design: the facts DB (store A) and the 10-K HTML/iXBRL text source. Qwen3-VL and the paid model haven't run on a GPU yet.
+
 ## 1. Answers in brief
 
 | Question | Answer |

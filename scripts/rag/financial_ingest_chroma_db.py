@@ -1,13 +1,13 @@
-"""Pipeline 2 (Chroma only): table, chart and picture pages are read by OCR or a VLM, then chunks go to Chroma.
+"""Pipeline 1 (Chroma only): table, chart and picture pages are read by OCR or a VLM, then chunks go to Chroma.
 
 The two financial ingestion pipelines over the same manifests (one PDF file, or the
 sector corpus folder of scripts/downloads/download_annual_report_corpus.py):
 
-* Pipeline 1, ``scripts.rag.financial_ingest_qdrant_db``: ColPali page vectors in Qdrant
+* Pipeline 2, ``scripts.rag.financial_ingest_qdrant_db``: ColPali page vectors in Qdrant
   ``visual_pages``. Mean-pooled rows and columns are kept in RAM for the first stage,
   and the full 1030 x 128 multivectors are kept on disk for the MaxSim rerank.
   Pages are found from their pixels.
-* Pipeline 2 (this module), **Chroma only**: pages are turned into text first. Pages with a
+* Pipeline 1 (this module), **Chroma only**: pages are turned into text first. Pages with a
   table, chart or picture (or every page, with ``--vlm-pages all``) are rendered and read by
   the page reader chosen with ``--vlm`` (OCR, a local Qwen VLM, or an OpenAI-compatible API,
   self-hosted or paid): tables become Markdown tables, and charts become one line per
@@ -17,7 +17,7 @@ sector corpus folder of scripts/downloads/download_annual_report_corpus.py):
   number-aware terms, ``<root>/chroma/bm25.sqlite3``) is fused with the dense results by RRF,
   so exact figures such as ``391,035`` or ``$6.08`` are matched as whole terms.
 
-Every chunk carries the filing payload of pipeline 1 (ticker, fiscal year, sector,
+Every chunk carries the filing payload of pipeline 2 (ticker, fiscal year, sector,
 page, citable ``chunk_id``), ``text_source`` = vlm / native_pdf / ocr, and
 ````unverified_numbers``: figures the VLM wrote that the page's own text layer does
 not print. A VLM can misread digits, so these are flagged, never trusted silently.
@@ -324,7 +324,7 @@ class TranscriptCache:
 
 
 def vlm_targets(pages, mode, limit=0):
-    targets = fi.visual_targets(pages, mode)               # the same page selection as ColPali in pipeline 1
+    targets = fi.visual_targets(pages, mode)               # the same page selection as ColPali in pipeline 2
     return targets[:limit] if limit else targets
 
 
@@ -560,7 +560,7 @@ def vlm_records(row, pages, transcripts, vlm_signature):
 class Bm25Index:
     """BM25 over the same chunks as the Chroma collection: SQLite FTS5 on number-aware terms.
 
-    Chroma's local store has dense search only. Terms come from ``financial_ingest_qdrant_db.terms`` (pipeline 1's
+    Chroma's local store has dense search only. Terms come from ``financial_ingest_qdrant_db.terms`` (pipeline 2's
     sparse vectors), so ``$93,736`` is indexed as ``$93,736``, ``93,736`` and ``93736``. The file sits in the
     Chroma folder, so backups and restores of that folder carry it.
     """
@@ -653,7 +653,7 @@ class ChromaStore:
 
 
 def open_store(args, dim):
-    """Pipeline 2 writes to Chroma only; Qdrant is pipeline 1's database (scripts/rag/financial_ingest_qdrant_db.py)."""
+    """Pipeline 1 writes to Chroma only; Qdrant is pipeline 2's database (scripts/rag/financial_ingest_qdrant_db.py)."""
     return ChromaStore(args.root)
 
 
@@ -747,7 +747,7 @@ def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAUL
         embedder = fi.recorded_embedder(argparse.Namespace(root=root, embedding_provider="hashing", embedding_model=None),
                                         state_name="vlm_ingest.sqlite3")
     if store != "chroma":
-        raise ValueError("pipeline 2 serves from Chroma only; Qdrant is pipeline 1 (RAG_BACKEND=financial_qdrant)")
+        raise ValueError("pipeline 1 serves from Chroma only; Qdrant is pipeline 2 (RAG_BACKEND=financial_qdrant)")
     backend = ChromaStore(root)
     vector = embedder([query])[0] if hybrid.uses(mode, "dense") else None
     return [chunk_schema.evidence_hit(p, rrf_score=score, paths=["vlm_text"], ranks=ranks)
@@ -814,7 +814,7 @@ def build_parser():
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="state, page analysis cache and the Chroma index")
     common.add_argument("--store", choices=["chroma"], default="chroma",
-                        help="Chroma only; Qdrant is pipeline 1 (scripts.rag.financial_ingest_qdrant_db)")
+                        help="Chroma only; Qdrant is pipeline 2 (scripts.rag.financial_ingest_qdrant_db)")
     common.add_argument("--cache-dir", type=Path, help="VLM transcriptions (default <root>/vlm_pages); put it on Drive")
     sub = parser.add_subparsers(dest="command", required=True)
 

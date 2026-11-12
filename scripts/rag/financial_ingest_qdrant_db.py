@@ -222,7 +222,7 @@ VISUAL_PAGE_MODES = ("tables_charts_images", "tables_charts", "rule", "visual", 
 
 
 def visual_targets(pages, mode):
-    """Pages that go to ColPali (pipeline 1) or the VLM (pipeline 2).
+    """Pages that go to ColPali (pipeline 2) or the VLM (pipeline 1).
 
     tables_charts_images: pages classified table, chart or image
     tables_charts:        table and chart pages only

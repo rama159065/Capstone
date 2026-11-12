@@ -26,7 +26,7 @@ parserUsage values (decided from the page analysis, before any OCR or VLM runs):
                        against, so it goes to the strongest (paid) model
 
 These are predictions from cheap signals. Whether OCR or Qwen actually succeeds is only known by running them
-(pipeline 2 flags figures a model writes that the text layer doesn't print as ``unverified_numbers``).
+(pipeline 1 flags figures a model writes that the text layer doesn't print as ``unverified_numbers``).
 A chart with no printed values is ``qwen3VL``: a model can only estimate its bars, so treat those figures as estimates.
 The label is lower-case ``none`` on purpose: pandas reads the text ``None`` in a CSV as a missing value.
 A PDF that can't be opened (corrupt, encrypted, missing, checksum mismatch) gets no CSV; it is listed under

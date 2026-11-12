@@ -560,7 +560,7 @@ Versions are the ones locked in `uv.lock`. The container installs the `pyproject
 | `cross-encoder/ms-marco-MiniLM-L-6-v2` | API container | Serving (when `RAG_RERANKER_MODEL` is set) | ~90 MB, CPU |
 | `vidore/colpali-v1.3-hf` | Colab GPU | Build only (optional visual pages) | ~3B parameters; serving uses it only if `RAG_FIN_VISUAL=1` |
 | RapidOCR detection and recognition models | Colab | Build only | Bundled with `rapidocr` |
-| Qwen2.5-VL-3B (or a closed vision model) | Colab / API | Build only, pipeline 2 | Optional; see §5.3 |
+| Qwen2.5-VL-3B (or a closed vision model) | Colab / API | Build only, pipeline 1 | Optional; see §5.3 |
 
 ### 6.5 Index build environment (Colab)
 
@@ -629,8 +629,121 @@ Versions are the ones locked in `uv.lock`. The container installs the `pyproject
 
 ---
 
-## 7. Not verified here
+## 7. Paths and storage: local PC, Colab with Google Drive, and GCP
 
+Analysis of 11 November 2026. Sections 7.1–7.3 describe the code **as it is**; 7.4–7.6 are the **proposed** layout, which is **not implemented yet**.
+
+### 7.1 Where paths come from today
+
+Three separate layers decide paths, and they don't agree with each other:
+
+| Layer | File | What it decides |
+|---|---|---|
+| Repo root | `scripts/common/paths.py` (`ROOT`) | About 30 hard-coded repo-relative paths: `indexes/models/*`, `data/raw/...`, `output/...`, eval sets, samples |
+| Serving profile | `scripts/common/runtime_profile.py` (`local` / `server` / `colab`) | `RAG_INGEST_DIR`, `RAG_VLM_DIR`, `QDRANT_URL`, `CONVERSATION_DB`, `HF_HOME`, `API_BASE_URL`. These are defaults only: a variable you set yourself always wins |
+| Ingestion driver | `scripts/rag/colab_pipeline.py` (`Settings`) | `drive_root`, `work`, `<work>/<pipeline>`, the Drive backup folders, `vlm_pages/`, `page_audit/` |
+
+The same index ends up under different folder names in each environment:
+
+| | Local, serving | Local, ingesting with `colab_pipeline` | Colab live copy (VM disk) | Colab durable copy (Drive) | Docker / VM |
+|---|---|---|---|---|---|
+| Qdrant index | `indexes/financial_qdrant` | `indexes/pipelines/colpali_qdrant` | `/content/rag/colpali_qdrant` | `capstone_rag/snapshots/colpali_qdrant/` | `/app/indexes/financial_qdrant` + the `qdrant_storage` volume |
+| Chroma index | `indexes/financial_vlm` | `indexes/pipelines/vlm_chroma` | `/content/rag/vlm_chroma` | `capstone_rag/indexes/vlm_chroma/` | `/app/indexes/financial_vlm` |
+| PDFs | `data/raw/financial_report_qa/annual_reports` | `indexes/pipelines_drive/annual_reports` | copied per sector to `/content/rag/annual_reports` | `capstone_rag/annual_reports/` | not needed for serving |
+| Conversations | in memory | — | in memory | — | `indexes/state/conversations.sqlite3` |
+| Model cache | `~/.cache/huggingface` + `indexes/models/*` | same | `/content/hf_cache` | — | `/app/indexes/hf_cache` |
+
+### 7.2 Problems found
+
+1. **Local ingestion and local serving disagree.** Running `colab_pipeline` on the PC writes to `indexes/pipelines/<pipeline>`, but the `local` profile serves `indexes/financial_qdrant` and `indexes/financial_vlm`. The API doesn't find a freshly built index unless `RAG_INGEST_DIR` / `RAG_VLM_DIR` are set by hand. The current local test server works only because it sets `indexes/e2e_retail/work/...` explicitly.
+2. **Four names for the same index:** `financial_qdrant`, `colpali_qdrant`, `snapshots/colpali_qdrant`, and the `financial_ingest_qdrant_db` module name. Chroma has the same problem (`financial_vlm`, `vlm_chroma`, `chroma_db`). Copying between environments is error-prone.
+3. **The server can only restore Qdrant.** `deploy/restore_index.sh` restores Qdrant snapshots, but there's no Chroma equivalent (copy `chroma/` and `vlm_ingest.sqlite3` into `indexes/financial_vlm`). The Chroma index, now the main one for the text-only Qwen3-8B, has no scripted deployment path.
+4. **No GCP-specific setup.** `server` covers any Docker VM. GCS appears only in §3.4 as a manual way to move snapshots; nothing in the code reads from or writes to a bucket, and no bucket layout is defined.
+5. **Settings that are only set in some environments:**
+   - `CONVERSATION_DB` is in memory locally and on Colab, so clarifier state is lost on restart.
+   - `RAG_RERANKER_MODEL` (needs a local model path) isn't set in any profile, so the cross-encoder rerank, which put the income statements back in the top 4 in the Costco test, is off everywhere by default.
+   - `LLM_CA_CERT` needs a different file path in each environment, and Docker has no mounted secrets folder for it.
+6. **Model paths are hard-coded:** `indexes/models/<name>` is built in code (`run_local_multimodal.MODELS`, the ColPali and OCR indexers) and isn't tied to `HF_HOME`.
+
+### 7.3 Storage rules that already hold
+
+- **Chroma, Qdrant and SQLite never run on Drive or on a mounted bucket.** They need real file locks and fast random reads. The Colab driver builds on the VM's local disk (`/content/rag`) and copies to Drive after each sector.
+- **Serving needs only the indexes**, not the PDFs. The company list (`GET /companies`) comes from the index state files (`ingest.sqlite3`, `vlm_ingest.sqlite3`).
+- **State file names are stable** (`ingest.sqlite3`, `vlm_ingest.sqlite3`), so renaming folders doesn't invalidate an index.
+
+### 7.4 Proposed layout: one structure everywhere, one root per environment
+
+```
+<RAG_HOME>/
+  corpus/annual_reports/<sector>/*.pdf + pdf_manifest.jsonl     ingestion only
+  indexes/
+    qdrant_db/        ingest.sqlite3, pages/, qdrant_embedded/ (local)     = RAG_INGEST_DIR
+    chroma_db/        chroma/ (+ bm25.sqlite3), vlm_ingest.sqlite3, pages/ = RAG_VLM_DIR
+  cache/
+    vlm_pages/        OCR / Qwen3-VL / paid readings (never paid twice)
+    hf/               HF_HOME (MiniLM, reranker, ColPali, Qwen3-VL)
+  snapshots/qdrant_db/   Qdrant snapshots + ingest.sqlite3 backup
+  page_audit/<sector>/*.csv
+  state/conversations.sqlite3                                         = CONVERSATION_DB
+  secrets/llm_ca.crt                                                  = LLM_CA_CERT (never in git, Drive or a bucket)
+```
+
+The index folders are named after the entry points (`qdrant_db`, `chroma_db`). Only `RAG_HOME` changes per environment:
+
+| | Local (PC) | Colab | GCP VM |
+|---|---|---|---|
+| `RAG_HOME` (live) | `<repo>/indexes/rag_home` | `/content/rag` (fast VM disk) | `/srv/capstone` on a persistent disk, mounted into the containers as `/app/rag_home` |
+| Durable copy | the same folder | `MyDrive/capstone_rag` (same layout) | GCS bucket `gs://capstone-rag-<name>/` (same layout) |
+| Qdrant | embedded (`indexes/qdrant_db/qdrant_embedded`) | server on the VM | the compose `qdrant` service, restored from `snapshots/` |
+| How data arrives | — | `restore` from Drive at the start of a session | `gcloud storage rsync` from the bucket + Qdrant snapshot restore |
+
+### 7.5 How the data moves: Colab → Drive → GCS → GCP VM
+
+```
+Colab: build into /content/rag ──after each sector──► Drive (MyDrive/capstone_rag) ──once──► GCS bucket
+                                                                                             │
+GCP VM: gcloud storage rsync (bucket → /srv/capstone) ◄──────────────────────────────────────┘
+        Chroma: copy the folder as is        Qdrant: restore the snapshots into the compose server
+```
+
+Use the bucket rather than Drive as the source for the GCP deployment. A VM reads a bucket in its own region with its built-in service account, with no Google login on the server, and the copy is fast.
+
+```bash
+# Colab cell, after ingestion (Drive mounted; gcloud is preinstalled on Colab)
+from google.colab import auth; auth.authenticate_user()
+!gcloud config set project <your-gcp-project-id>
+!gcloud storage buckets create gs://capstone-rag-<yourname> --location=us-central1      # once
+!gcloud storage rsync -r /content/drive/MyDrive/capstone_rag/indexes/vlm_chroma gs://capstone-rag-<yourname>/indexes/chroma_db
+!gcloud storage rsync -r /content/drive/MyDrive/capstone_rag/snapshots/colpali_qdrant gs://capstone-rag-<yourname>/snapshots/qdrant_db
+
+# On the GCP VM (same region; the default service account can read the bucket)
+sudo mkdir -p /srv/capstone/indexes /srv/capstone/snapshots && sudo chown -R $USER /srv/capstone
+gcloud storage rsync -r gs://capstone-rag-<yourname>/indexes/chroma_db  /srv/capstone/indexes/chroma_db
+gcloud storage rsync -r gs://capstone-rag-<yourname>/snapshots/qdrant_db /srv/capstone/snapshots/qdrant_db
+# Until 7.6 is implemented, point the current compose paths at these folders, e.g. in .env:
+#   SNAPSHOT_DIR=/srv/capstone/snapshots/qdrant_db
+# and copy chroma_db into ./indexes/financial_vlm (the server profile's RAG_VLM_DIR).
+```
+
+### 7.6 Proposed implementation (about half a day; not done yet)
+
+1. **`scripts/common/storage.py`:** one `Layout` built from the profile and `RAG_HOME`, with every path in 7.4. `runtime_profile`, `colab_pipeline.Settings`, `page_audit`, the model lookups and the CA certificate all read from it, so nothing else builds index paths. This fixes problem 1.
+2. **The same folder names everywhere** (`qdrant_db`, `chroma_db`), falling back to the old names (`financial_qdrant`, `colpali_qdrant`, `financial_vlm`, `vlm_chroma`) when only those exist. Existing indexes on the PC and on Drive keep working, with no re-ingest.
+3. **A `gcp` profile** (the server profile plus `RAG_GCS_BUCKET`):
+   - `cp.export_to_gcs(s, bucket)` in Colab, copying Drive → bucket;
+   - `deploy/sync_from_gcs.sh` on the VM, copying the Chroma index and restoring Qdrant;
+   - a Chroma restore next to the existing Qdrant one.
+4. **Consistent defaults:**
+   - `CONVERSATION_DB` under `state/` in every profile;
+   - `RAG_RERANKER_MODEL` set automatically when the model is in `cache/hf`;
+   - `LLM_CA_CERT` defaulting to `secrets/llm_ca.crt`, with a read-only `secrets/` mount in compose.
+5. **Visibility and tests:** `/health` shows the resolved layout (paths only, no secrets), and a test checks each profile's paths.
+
+---
+
+## 8. Not verified here
+
+- **Paths (§7):** the layout in 7.4–7.6 is a proposal; the code still uses the folders in 7.1. The `gcloud storage` commands in 7.5 haven't been run.
 - **Docker isn't installed on the development PC**, so `docker compose build` and `up` haven't been run yet. Everything they run is tested without Docker; the tests check the compose and `.env.example` wiring. The first build on the target machine is the real check, and it takes about 10 minutes to pull Python and the CPU torch wheel.
 - **Snapshot restore into a Qdrant container** depends on the shared `/qdrant/snapshots` volume. The restore code is tested; the container path is not.
 - **Prices:**

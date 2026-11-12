@@ -157,18 +157,18 @@ awinancial_report_qannual_reports --corpus-preset min500 --out output\page_aud
 python -m scripts.rag.colab_pipeline audit --corpus-preset min500      # Colab: writes <drive_root>/page_audit
 ```
 
-### Two ingestion pipelines for visual pages
+### Two ingestion pipelines: 1 = Chroma text index, 2 = Qdrant ColPali index
 
 Both pipelines read the same manifests (a file or the sector corpus folder, with `--sectors`), and both put `sector`, `ticker`, `fiscal_year` and a citable `chunk_id` on every point.
 
-| | Pipeline 1: ColPali, `scripts.rag.financial_ingest_qdrant_db` (**Qdrant only**) | Pipeline 2: OCR / VLM, `scripts.rag.financial_ingest_chroma_db` (**Chroma only**) |
+| | Pipeline 1: OCR / VLM, `scripts.rag.financial_ingest_chroma_db` (**Chroma only**) | Pipeline 2: ColPali, `scripts.rag.financial_ingest_qdrant_db` (**Qdrant only**) |
 |---|---|---|
-| Visual pages become | ColPali multivectors: mean-pooled rows/columns in RAM (first stage), full 1030×128 on disk (MaxSim rerank) | Text written by the page reader (tables as Markdown tables, charts as labelled values), then chunked and embedded |
-| Pages | `--visual-pages rule` (tables, charts, pictures, unreadable pages), `tables_charts` or `all` | `--vlm-pages visual`, `tables_charts` or `all`; other pages keep their text layer |
-| Store | Qdrant `annual_reports_visual` (+ `annual_reports_text` for text, dense + sparse BM25) | Chroma `annual_reports_vlm` (dense) + a BM25 sidecar (`chroma/bm25.sqlite3`, SQLite FTS5 on number-aware terms), fused by RRF |
-| Page reader | `vidore/colpali-v1.3-hf` (retrieval only; OCR for unreadable text pages) | `--vlm ocr` (RapidOCR + native tables, CPU), `--vlm transformers` (local Qwen3-VL-4B (2B / 8B), 4-bit on GPU), `--vlm openai` (OpenAI-compatible: self-hosted Qwen-VL on vLLM / llama.cpp / Ollama, or a paid API such as OpenAI or Gemini via `RAG_VISION_API_BASE/MODEL/KEY`) or `mock` |
-| Numbers | stay as exact strings in the payload, never in vectors | figures the text layer doesn't print are flagged as `unverified_numbers` |
-| Chunk schema | the same fields in both indexes (`scripts/rag/chunk_schema.py`): filing, page, chunk, and provenance (`pipeline`, `text_source`, `reader`, `reader_model`, `page_route`, `escalation`, `number_check`, `unverified_numbers`) | same fields; lists stored as JSON strings |
+| Visual pages become | Text written by the page reader (tables as Markdown tables, charts as labelled values), then chunked and embedded | ColPali multivectors: mean-pooled rows/columns in RAM (first stage), full 1030×128 on disk (MaxSim rerank) |
+| Pages | `--vlm-pages visual`, `tables_charts` or `all`; other pages keep their text layer | `--visual-pages rule` (tables, charts, pictures, unreadable pages), `tables_charts` or `all` |
+| Store | Chroma `annual_reports_vlm` (dense) + a BM25 sidecar (`chroma/bm25.sqlite3`, SQLite FTS5 on number-aware terms), fused by RRF | Qdrant `annual_reports_visual` (+ `annual_reports_text` for text, dense + sparse BM25) |
+| Page reader | `--vlm routed` (default: a reader per page from the page audit rules, with the `paidVL` fallback OCR → Qwen3-VL → paid model), `--vlm ocr` (RapidOCR + native tables, CPU), `--vlm transformers` (local Qwen3-VL-4B (2B / 8B), 4-bit on GPU), `--vlm openai` (OpenAI-compatible: self-hosted Qwen-VL on vLLM / llama.cpp / Ollama, or a paid API such as OpenAI or Gemini via `RAG_VISION_API_BASE/MODEL/KEY`) or `mock` | `vidore/colpali-v1.3-hf` (retrieval only; OCR for unreadable text pages) |
+| Numbers | figures the text layer doesn't print are flagged as `unverified_numbers` | stay as exact strings in the payload, never in vectors |
+| Chunk schema | the same fields in both indexes (`scripts/rag/chunk_schema.py`): filing, page, chunk, and provenance (`pipeline`, `text_source`, `reader`, `reader_model`, `page_route`, `escalation`, `number_check`, `unverified_numbers`); Chroma stores lists as JSON strings | same fields |
 
 ```powershell
 python -m scripts.rag.financial_ingest_qdrant_db ingest --manifest data\raw\financial_report_qa\annual_reports --sectors banking --stages visual --visual-pages tables_charts
