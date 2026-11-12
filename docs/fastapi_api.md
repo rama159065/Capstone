@@ -60,7 +60,7 @@ Financial chat additionally accepts:
 
 | Field | Type | Default | Constraints / purpose |
 |---|---|---|---|
-| `technique` | string | `agentic_graph` | One of `baseline_rag`, `structured_few_shot`, `decomposition`, `self_consistency`, `agentic_graph`. |
+| `technique` | string | `agentic_graph` | One of `baseline_rag`, `structured_few_shot`, `decomposition`, `self_consistency`, `agentic_graph`, `trend_graph` (multi-year trend agent), `router` (supervisor: Q&A, trend, report handoff or refusal). The agent flows add `route`, `trend` and `handoff` to the response; a report request ends as `final_status = report_handoff`. See `agent_flows.md` §7a. |
 | `retrieval_mode` | string | `hybrid` | `dense` or `hybrid`. |
 | `ticker` | string or null | `null` | Optional company ticker filter. |
 | `year` | integer or null | `null` | Optional fiscal/reporting year filter. |

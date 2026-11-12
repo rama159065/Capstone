@@ -120,6 +120,7 @@ STATUS_HELP = {
     "insufficient_evidence": "The searches found nothing usable for this question.",
     "not_grounded": "Withheld: the citations didn't check out or named a company you didn't ask about.",
     "refused": "Blocked by a guardrail: advice, prompt injection or an unsafe request.",
+    "report_handoff": "The router read this as a full-report request: confirm it in the chat to run the report pipeline.",
 }
 READING_TIPS = (
     "**Critic support check**: *supported* means the cited pages state every claim and every figure.",
@@ -238,6 +239,8 @@ def render_result(result: dict[str, Any]) -> None:
         st.error(status)
     elif status in {"pending_human_review", "not_available", "not_grounded"}:
         st.warning(status)
+    elif status == "report_handoff":
+        st.info(status)
     else:
         st.success(status)
 
@@ -261,10 +264,18 @@ def render_result(result: dict[str, Any]) -> None:
             summary += " (mock judge)"
         st.caption(summary)
 
+    render_trend(result.get("trend") or {})
+
     agent_run = result.get("agent_run")
     if agent_run:
         with st.expander(f"Agent run: {agent_run.get('steps')}/{agent_run.get('max_steps')} steps", expanded=False):
             st.markdown(" → ".join(f"`{name.removesuffix('_step')}`" for name in agent_run.get("path", [])))
+            route = result.get("route") or {}
+            if route:
+                st.caption(f"Router: **{route.get('route')}** → {route.get('flow')} (decided by {route.get('decided_by')}; "
+                           f"LLM said {route.get('llm_route')!r}, rules said {route.get('rule_route')!r})")
+                if route.get("adjustments"):
+                    st.caption("Router adjustments: " + "; ".join(route["adjustments"]))
             plan = result.get("plan") or {}
             st.caption(f"Planner ({plan.get('planner', '?')}) tools: {', '.join(plan.get('tools') or [])} · "
                        f"retrieval attempts: {agent_run.get('retrieval_attempts')} · repairs: {agent_run.get('repairs')}")
@@ -320,6 +331,31 @@ def render_result(result: dict[str, Any]) -> None:
 
     with st.expander("Raw API response", expanded=False):
         st.code(json.dumps(result, ensure_ascii=False, indent=2), language="json")
+
+
+def render_trend(trend: dict[str, Any]) -> None:
+    """The trend agent's verified series: a table of every year and a chart of the verified ones."""
+    points = trend.get("points") or []
+    if not points:
+        return
+    title = f"Trend: {trend.get('company_name') or trend.get('company')} {trend.get('metric')}"
+    if trend.get("cagr") is not None:
+        title += f" · CAGR {trend['cagr']:.2f}%"
+    with st.expander(title, expanded=True):
+        changes = {c["to"]: c for c in trend.get("changes") or [] if c.get("status") == "ok"}
+        st.dataframe([{"fiscal year": f"FY{p['year']}", "figure": p.get("value_text"), "unit": p.get("unit"),
+                       "change vs prior": None if p["year"] not in changes else f"{changes[p['year']]['pct_change']:+.2f}%"
+                       if changes[p["year"]].get("pct_change") is not None else None,
+                       "status": p.get("status"), "page": p.get("page"), "chunk": p.get("chunk_id")} for p in points],
+                     width="stretch")
+        chart = trend.get("chart") or []
+        if len(chart) >= 2:
+            st.line_chart([{"fiscal year": f"FY{row['year']}", "value": row["value"]} for row in chart],
+                          x="fiscal year", y="value")
+        if trend.get("missing"):
+            st.caption("Not verified: " + ", ".join(trend["missing"]) + ". No figure is shown for these years.")
+        st.caption("Each figure was copied by the model and kept only if that year's filing states it; "
+                   "changes and CAGR are computed in code.")
 
 
 def render_turn(turn: dict[str, Any]) -> None:
@@ -398,8 +434,11 @@ def sidebar() -> dict[str, Any]:
             except ValueError:
                 st.sidebar.warning("Year must be numeric; ignoring filter.")
     settings["technique"] = advanced.selectbox(
-        "Technique", ["agentic_graph", "baseline_rag", "structured_few_shot", "decomposition", "self_consistency"],
-        help="agentic_graph is the full agent; the others are single-prompt baselines for comparison.")
+        "Technique", ["router", "agentic_graph", "trend_graph", "baseline_rag", "structured_few_shot", "decomposition",
+                      "self_consistency"],
+        help="router (default) sends each question to the Q&A agent, the trend agent or the report handoff; "
+             "agentic_graph is the Q&A agent alone; trend_graph is the multi-year trend agent; the others are "
+             "single-prompt baselines for comparison.")
 
     settings.update({
         "llm_provider": advanced.selectbox("LLM provider", LLM_PROVIDERS,

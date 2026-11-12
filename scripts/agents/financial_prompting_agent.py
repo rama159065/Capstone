@@ -96,6 +96,21 @@ class MockLLM:
                 "claims": [{"claim": "Mock claim.", "chunk_ids": ids, "supported": ok,
                             "reason": "Mock judge: citation present in the evidence." if ok else "Mock judge: no cited evidence."}],
                 "verdict": "supported" if ok else "unsupported"}))
+        if "Route JSON" in joined:
+            # Mock router: always proposes a lookup, so the router's rules decide trend, comparison and report.
+            return MockResponse(json.dumps({"route": "lookup", "tools": ["hybrid_financial_search"],
+                                            "needs_calculation": False, "reason": "Mock router."}))
+        if "Series JSON" in joined:
+            # Mock extractor: the first comma-grouped figure in the evidence and the chunk that prints it.
+            evidence_part = joined.split("Evidence:", 1)[-1]
+            for block in evidence_part.split("\n---")[0:]:
+                chunk = re.search(r"chunk_id:\s*([A-Za-z0-9_.=-]+)", block)
+                text = block.split("text:", 1)[-1]
+                figure = re.search(r"(?<![\d.])\d{1,3}(?:,\d{3})+(?:\.\d+)?", text)
+                if chunk and figure:
+                    return MockResponse(json.dumps({"value": figure.group(0), "unit": "millions", "chunk_id": chunk.group(1),
+                                                    "quote": text.strip()[:80]}))
+            return MockResponse(json.dumps({"value": None, "unit": "", "chunk_id": None, "quote": ""}))
         chunk_ids = [
             chunk_id
             for chunk_id in re.findall(r"chunk_id:\s*([A-Za-z0-9_.=-]+)", joined)
@@ -732,24 +747,54 @@ class AgentState(TypedDict, total=False):
     tool_calls: list[dict[str, Any]]
     calculations: list[dict[str, Any]]
     path: list[str]
+    route: dict[str, Any]
+    trend: dict[str, Any]
+    handoff: dict[str, Any]
 
 
-STOPPED = {"refused", "insufficient_evidence", "not_available"}
+STOPPED = {"refused", "insufficient_evidence", "not_available", "report_handoff"}
 # Nodes every run still needs after the evidence guard: answer, critic, governance (+ calculator when planned).
 MIN_TAIL = 3
+AGENT_FLOWS = ("agentic_graph", "trend_graph", "router")
 
 
 def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
-    """Planner -> executor -> critic graph with planner-chosen tools and budget-aware loops.
+    """Q&A agent: planner -> executor -> critic (see ``financial_graph``)."""
+    return financial_graph(llm, config, "agentic_graph")
 
-    Routing is decided per request from the state: the plan's tools (coverage check, ColPali, calculator),
-    missing evidence for a company/year (one broadened retrieval retry), CALC[...] in the answer (calculator
-    step), invalid citations (one repair with the critic's feedback). A loop is taken only if the rest of the
-    run still fits AGENT_MAX_STEPS, so the cap shortens a run instead of failing it. ``agent_run`` records the
-    path, every tool call and every calculation.
+
+def trend_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
+    """Multi-year trend agent: one search per fiscal year, a verified series, changes computed in code."""
+    return financial_graph(llm, config, "trend_graph")
+
+
+def router_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
+    """Supervisor: routes each question to the Q&A agent, the trend agent, the report handoff or a refusal."""
+    return financial_graph(llm, config, "router")
+
+
+def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> dict[str, Any]:
+    """The financial agent graphs. All three share the input guards, the critic (citations + support check, one
+    repair) and governance; they differ in how a request is planned:
+
+    * ``agentic_graph``: security -> plain_text -> plan -> retrieve <-> evidence_guard -> answer -> calculator? ->
+      critic <-> governance. The planner LLM picks the tools; a company/year with no evidence gets one broadened
+      retrieval retry; CALC[...] goes to the calculator; failed citations or support get one repair.
+    * ``router``: security -> plain_text -> route, where the router LLM (validated by ``financial_router.decide``)
+      sends the question to the Q&A path above (from retrieve), to the trend path, to a report handoff or to a
+      refusal. The route step also plans, so a routed run costs no extra step.
+    * ``trend_graph``: the router with the trend route forced (falls back to Q&A when no trend can be built).
+      Trend path: trend_fetch (one search per fiscal year) -> trend_series (LLM copies each year's figure, code
+      checks it is in that year's evidence, computes changes and CAGR) <-> retry missing years -> answer -> critic.
+
+    A loop is taken only if the rest of the run still fits AGENT_MAX_STEPS, so the cap shortens a run instead of
+    failing it. ``agent_run`` records the path, every tool call and every calculation.
     """
-    from scripts.agents import financial_tools as tools
+    from scripts.agents import financial_router as router, financial_tools as tools, financial_trend as trend
     from scripts.agents.financial_clarifier import METRICS, default_clarifier
+
+    if flow not in AGENT_FLOWS:
+        raise ValueError(f"Unsupported agent flow: {flow}")
 
     clarifier = default_clarifier()
     budget = max_steps()
@@ -805,6 +850,110 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
         plan = tools.normalize_plan(raw, state["query"], ticker=config.ticker, year=config.year,
                                     source_type=config.source_type, clarifier=clarifier)
         return {"plan": plan}
+
+    def route_node(state: AgentState) -> AgentState:
+        """Router (supervisor): choose the flow, then plan it. The router LLM's tools become the Q&A plan."""
+        query = state["query"]
+        raw = None
+        if flow == "router":
+            raw = safe_json_loads(invoke_prompt(llm, prompts.ROUTER_SYSTEM, prompts.ROUTER_HUMAN.format(query=query)),
+                                  fallback={})
+        started = time.perf_counter()
+        trend_plan = trend.trend_plan(query, config.ticker, config.year, clarifier)
+        decision = router.decide(raw, query, clarifier, trend_plan, ticker=config.ticker,
+                                 forced="trend" if flow == "trend_graph" else None)
+        route = decision["route"]
+        if route == "trend":
+            calls_log = [*state.get("tool_calls", []), {
+                "tool": "coverage_lookup", "attempt": 1, "known": bool(clarifier.directory),
+                "searchable": [tools.target_label(t) for t in trend_plan["targets"]],
+                "skipped": trend_plan["skipped_targets"], "ms": round((time.perf_counter() - started) * 1000)}]
+            return {"route": decision, "plan": trend_plan, "tool_calls": calls_log}
+        if route == "report":
+            handoff = router.report_handoff(query, clarifier, ticker=config.ticker, year=config.year)
+            return {"route": decision, "handoff": handoff, "final_status": "report_handoff", "answer": handoff["message"]}
+        if route == "out_of_scope":
+            return {"route": decision, "final_status": "refused", "answer": router.OUT_OF_SCOPE_ANSWER}
+        plan = tools.normalize_plan(raw, query, ticker=config.ticker, year=config.year,
+                                    source_type=config.source_type, clarifier=clarifier)
+        plan["intent"] = route
+        return {"route": decision, "plan": plan}
+
+    def trend_fetch_node(state: AgentState) -> AgentState:
+        """One filtered search per fiscal year. A retry searches only the years without a verified figure, with a
+        broadened query and twice the depth."""
+        plan = state.get("plan", {})
+        attempt = state.get("retrieval_attempts", 0) + 1
+        targets = plan.get("targets") or []
+        per_target = max(3, -(-config.top_k // max(1, len(targets)))) * (2 if attempt > 1 else 1)
+        if attempt > 1:
+            missing = set(state.get("evidence_check", {}).get("missing", []))
+            targets = [t for t in targets if tools.target_label(t) in missing]
+        evidence = list(state.get("evidence", []))
+        seen = {hit.get("chunk_id") for hit in evidence}
+        calls_log = list(state.get("tool_calls", []))
+        phrases = METRICS.get(plan.get("metric"), [])
+        for target in targets:
+            started = time.perf_counter()
+            query = trend.year_query(plan, target["year"], phrases, broadened=attempt > 1)
+            run_config = AgentConfig(**{**config.__dict__, "query": query, "ticker": target["ticker"],
+                                        "year": target["year"], "top_k": per_target, "visual": False})
+            hits = answer_evidence(run_config)
+            fresh = []
+            for hit in hits:
+                if hit.get("chunk_id") not in seen:
+                    seen.add(hit.get("chunk_id"))
+                    fresh.append({**hit, "target": tools.target_label(target)})
+            evidence.extend(fresh)
+            calls_log.append({"tool": "text_search", "attempt": attempt, "target": tools.target_label(target),
+                              "query": query, "top_k": per_target, "hits": len(hits), "new": len(fresh),
+                              "ms": round((time.perf_counter() - started) * 1000)})
+        return {"evidence": evidence, "retrieval_attempts": attempt, "tool_calls": calls_log}
+
+    def trend_series_node(state: AgentState) -> AgentState:
+        """Evidence guard, then each year's figure: copied by the LLM, kept only if that year's evidence states it.
+        Changes and CAGR are computed in code over the verified years."""
+        evidence = state.get("evidence", [])
+        guard = evidence_prompt_injection_guard(evidence)
+        if not guard["safe"]:
+            return {"evidence_guard": guard, "final_status": "refused",
+                    "answer": "Retrieved evidence contained unsafe instructions, so the answer was not generated."}
+        plan = state.get("plan", {})
+        previous = {p["year"]: p for p in (state.get("trend") or {}).get("points", [])}
+        attempt = state.get("retrieval_attempts", 1)
+        calls_log = list(state.get("tool_calls", []))
+        points = []
+        for target in plan.get("targets") or []:
+            year, label = target["year"], tools.target_label(target)
+            if previous.get(year, {}).get("status") == "ok":
+                points.append(previous[year])
+                continue
+            hits = [hit for hit in evidence if hit.get("target") == label]
+            if not hits:
+                points.append({"year": year, "value": None, "value_text": None, "unit": "", "chunk_id": None,
+                               "status": "no_evidence"})
+                continue
+            started = time.perf_counter()
+            raw = safe_json_loads(invoke_prompt(llm, prompts.SERIES_SYSTEM, prompts.SERIES_HUMAN.format(
+                company=plan.get("company_name"), metric=plan.get("metric"), year=year,
+                context=evidence_to_context(hits, min(config.max_context_chars, trend.SERIES_CONTEXT_CHARS)))),
+                fallback={})
+            point = trend.validate_point(raw, hits, year)
+            points.append(point)
+            calls_log.append({"tool": "series_extract", "attempt": attempt, "target": label, "status": point["status"],
+                              "value": point.get("value_text"), "chunk_id": point.get("chunk_id"),
+                              "ms": round((time.perf_counter() - started) * 1000)})
+        summary = trend.summarize(plan, points)
+        calls_log.append({"tool": "trend_calculator", "attempt": attempt, "verified_years": summary["verified_points"],
+                          "calculations": len(summary["calculations"]), "cagr": summary["cagr"]})
+        check = {"attempt": attempt, "evidence": len(evidence), "missing": summary["missing"],
+                 "skipped": [tools.target_label(t) for t in plan.get("skipped_targets") or []]}
+        update: AgentState = {"evidence_guard": guard, "evidence_check": check, "tool_calls": calls_log,
+                              "trend": {k: v for k, v in summary.items() if k != "calculations"},
+                              "calculations": summary["calculations"]}
+        if not evidence and not can_retry({**state, "evidence_check": check, "path": [*state.get("path", []), "x"]}):
+            update.update(final_status="insufficient_evidence", answer="No answer found in the available evidence.")
+        return update
 
     def executor_node(state: AgentState) -> AgentState:
         """Run the planned tools: coverage check, then one filtered search per target. A retry searches only
@@ -873,18 +1022,29 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
         if state.get("final_status") in STOPPED:
             return {}
         evidence = state.get("evidence", [])
-        context = evidence_to_context(evidence, config.max_context_chars)
         plan = state.get("plan", {})
-        human = prompts.GRAPH_ANSWER_HUMAN.format(
-            query=state["query"], context=context,
-            plan=json.dumps({key: plan.get(key) for key in ("intent", "tools", "targets")}, ensure_ascii=False))
-        if "calculator" in plan.get("tools", []):
-            human += "\n\n" + prompts.CALCULATOR_INSTRUCTION
+        series = state.get("trend") or {}
+        if series.get("verified_points"):
+            # Trend: the verified series and the code-computed changes, with only the chunks that state them.
+            used_ids = {p.get("chunk_id") for p in series.get("points", []) if p.get("status") == "ok"}
+            system = prompts.TREND_ANSWER_SYSTEM
+            human = prompts.TREND_ANSWER_HUMAN.format(
+                query=state["query"], company=series.get("company_name"), metric=series.get("metric"),
+                series=trend.series_text(series), changes=trend.changes_text(series),
+                context=evidence_to_context([h for h in evidence if h.get("chunk_id") in used_ids],
+                                            config.max_context_chars))
+        else:
+            system = prompts.GRAPH_ANSWER_SYSTEM
+            human = prompts.GRAPH_ANSWER_HUMAN.format(
+                query=state["query"], context=evidence_to_context(evidence, config.max_context_chars),
+                plan=json.dumps({key: plan.get(key) for key in ("intent", "tools", "targets")}, ensure_ascii=False))
+            if "calculator" in plan.get("tools", []):
+                human += "\n\n" + prompts.CALCULATOR_INSTRUCTION
         feedback = critic_feedback(state) if state.get("repair_count", 0) else ""
         if feedback:
             human += "\n\n" + prompts.REPAIR_INSTRUCTION.format(
                 feedback=feedback, allowed=", ".join(str(hit.get("chunk_id")) for hit in evidence))
-        return {"answer": invoke_prompt(llm, prompts.GRAPH_ANSWER_SYSTEM, human)}
+        return {"answer": invoke_prompt(llm, system, human)}
 
     def critic_feedback(state: AgentState) -> str:
         check, support = state.get("citation_check") or {}, state.get("support_check") or {}
@@ -910,8 +1070,11 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
         evidence = state.get("evidence", [])
         cited_hits = [hit for hit in evidence if str(hit.get("chunk_id")) in set(cited)]
         numeric = tools.numeric_grounding(answer, cited_hits, state.get("calculations", []))
+        calculations = "\n".join(f"{c['expression']} = {c['value']:,}" for c in state.get("calculations", [])
+                                 if c.get("grounded") and c.get("value") is not None) or "none"
         raw = invoke_prompt(llm, prompts.SUPPORT_SYSTEM, prompts.SUPPORT_HUMAN.format(
-            query=state["query"], answer=answer, context=evidence_to_context(cited_hits, config.max_context_chars)))
+            query=state["query"], answer=answer, context=evidence_to_context(cited_hits, config.max_context_chars),
+            calculations=calculations))
         judged = tools.parse_support(raw)
         verdict = judged["verdict"]
         if not numeric["grounded"] and verdict in ("supported", "partially_supported"):
@@ -995,6 +1158,11 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
     def should_continue_after_security(state: AgentState) -> Literal["stop", "continue"]:
         return "stop" if state.get("final_status") == "refused" else "continue"
 
+    def after_route(state: AgentState) -> Literal["stop", "trend", "qa"]:
+        if state.get("final_status") in STOPPED:
+            return "stop"
+        return "trend" if state.get("route", {}).get("route") == "trend" else "qa"
+
     def after_evidence(state: AgentState) -> Literal["stop", "retry", "answer"]:
         if state.get("final_status") in STOPPED:
             return "stop"
@@ -1013,19 +1181,27 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
         return "repair" if used(state) + tail(state) <= budget else "finish"      # answer (+calc), critic, governance
 
     graph = StateGraph(AgentState)
-    graph.add_node("security_step", step("security_step", security_node))
-    graph.add_node("plain_text_step", step("plain_text_step", plain_text_node))
-    graph.add_node("plan_step", step("plan_step", planner_node))
-    graph.add_node("retrieve_step", step("retrieve_step", executor_node))
-    graph.add_node("evidence_guard_step", step("evidence_guard_step", evidence_guard_node))
-    graph.add_node("answer_step", step("answer_step", answer_node))
-    graph.add_node("calculator_step", step("calculator_step", calculator_node))
-    graph.add_node("critic_step", step("critic_step", critic_node))
-    graph.add_node("governance_step", step("governance_step", governance_node))
+    first = "plan_step" if flow == "agentic_graph" else "route_step"
+    nodes = {"security_step": security_node, "plain_text_step": plain_text_node,
+             first: planner_node if flow == "agentic_graph" else route_node,
+             "retrieve_step": executor_node, "evidence_guard_step": evidence_guard_node,
+             "answer_step": answer_node, "calculator_step": calculator_node, "critic_step": critic_node,
+             "governance_step": governance_node}
+    if flow != "agentic_graph":
+        nodes.update(trend_fetch_step=trend_fetch_node, trend_series_step=trend_series_node)
+    for name, fn in nodes.items():
+        graph.add_node(name, step(name, fn))
     graph.set_entry_point("security_step")
     graph.add_conditional_edges("security_step", should_continue_after_security, {"stop": "critic_step", "continue": "plain_text_step"})
-    graph.add_conditional_edges("plain_text_step", should_continue_after_security, {"stop": "critic_step", "continue": "plan_step"})
-    graph.add_edge("plan_step", "retrieve_step")
+    graph.add_conditional_edges("plain_text_step", should_continue_after_security, {"stop": "critic_step", "continue": first})
+    if flow == "agentic_graph":
+        graph.add_edge("plan_step", "retrieve_step")
+    else:
+        graph.add_conditional_edges("route_step", after_route,
+                                    {"stop": "critic_step", "trend": "trend_fetch_step", "qa": "retrieve_step"})
+        graph.add_edge("trend_fetch_step", "trend_series_step")
+        graph.add_conditional_edges("trend_series_step", after_evidence,
+                                    {"stop": "critic_step", "retry": "trend_fetch_step", "answer": "answer_step"})
     graph.add_edge("retrieve_step", "evidence_guard_step")
     graph.add_conditional_edges("evidence_guard_step", after_evidence,
                                 {"stop": "critic_step", "retry": "retrieve_step", "answer": "answer_step"})
@@ -1041,10 +1217,13 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
                        "citation_check": {"valid": False, "reason": f"step limit of {max_steps()} reached"}}
     path = final_state.get("path", [])
     return {
-        "technique": "agentic_graph",
+        "technique": flow,
         "final_status": final_state.get("final_status"),
         "security": final_state.get("security"),
         "plain_text": final_state.get("plain_text"),
+        "route": final_state.get("route"),
+        "trend": final_state.get("trend"),
+        "handoff": final_state.get("handoff"),
         "plan": final_state.get("plan"),
         "answer": final_state.get("answer"),
         "citation_check": final_state.get("citation_check"),
@@ -1070,8 +1249,8 @@ def _run_technique(technique: str, llm_provider: str, config: AgentConfig) -> di
     def llm_factory(temperature: float = 0.0):
         return get_llm(llm_provider, temperature=temperature)
 
-    if technique == "agentic_graph":
-        return agentic_graph_prompt(llm_factory(0.0), config)
+    if technique in AGENT_FLOWS:
+        return financial_graph(llm_factory(0.0), config, technique)
 
     llm = llm_factory(0.0)
     guarded_config, guard_context = prepare_guarded_config(llm, config, technique)
@@ -1104,6 +1283,10 @@ def _run_technique(technique: str, llm_provider: str, config: AgentConfig) -> di
     return apply_governance(result, guarded_config, evidence, security, plain_text, evidence_guard)
 
 
+# Outcomes decided before any evidence: no coverage check, no evidence fallback.
+NOT_SCOPED = {"refused", "tool_error", "report_handoff"}
+
+
 def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dict[str, Any]:
     """Bound legacy comparison workflows and label unverified generation honestly."""
     from scripts.common.resilience import Calls, CallFailure
@@ -1116,7 +1299,7 @@ def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dic
                   "citation_check": {"valid": False, "cited_chunk_ids": []}}
     scope = {"expected": [], "coverage": None}
     verified = False
-    if result.get("final_status") not in {"refused", "tool_error"}:
+    if result.get("final_status") not in NOT_SCOPED:
         scope = question_scope(config.query, config.ticker)
     if scope["coverage"]:
         # The filings can't answer this, so nothing retrieved or generated may stand in for it.
@@ -1124,7 +1307,7 @@ def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dic
             result.pop(key, None)
         result.update(answer=scope["coverage"]["message"], final_status="not_available", coverage=scope["coverage"],
                       evidence=[], citation_check={"valid": False, "cited_chunk_ids": []})
-    elif result.get("final_status") not in {"refused", "tool_error"}:
+    elif result.get("final_status") not in NOT_SCOPED:
         evidence = result.get("evidence", [])
         if scope["expected"] and llm_provider != "mock":
             # An unfiltered search can return other companies; their excerpts must not become the answer.
@@ -1153,7 +1336,8 @@ def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dic
     if llm_provider != "mock":
         result.pop("parsed", None)
         result.pop("samples", None)
-    verified = verified and result.get("final_status") not in {"not_grounded", "not_available", "refused", "tool_error"}
+    verified = verified and result.get("final_status") not in {"not_grounded", "not_available", "refused", "tool_error",
+                                                               "report_handoff"}
     method = "mock" if llm_provider == "mock" else "llm_support_check" if verified else "source_excerpts"
     result.update(trace_id=calls.trace_id, trace=calls.events,
                   grounding={"method": method, "semantic_answer_verified": verified})
@@ -1164,7 +1348,7 @@ def answer_verified(result: dict[str, Any], evidence: list[dict[str, Any]]) -> b
     """The agent graph's critic found every claim and figure supported by evidence it still cites."""
     support, check = result.get("support_check") or {}, result.get("citation_check") or {}
     allowed = {str(hit.get("chunk_id")) for hit in evidence}
-    return (result.get("technique") == "agentic_graph" and support.get("verdict") == "supported"
+    return (result.get("technique") in AGENT_FLOWS and support.get("verdict") == "supported"
             and bool(check.get("valid")) and set(check.get("cited_chunk_ids") or []) <= allowed)
 
 
@@ -1182,6 +1366,9 @@ def summarize_result(result: dict[str, Any]) -> dict[str, Any]:
         "parsed": result.get("parsed"),
         "subquestions": result.get("subquestions"),
         "plan": result.get("plan"),
+        "route": result.get("route"),
+        "trend": result.get("trend"),
+        "handoff": result.get("handoff"),
         "agent_run": result.get("agent_run"),
         "support_check": result.get("support_check"),
         "security": result.get("security"),
@@ -1221,6 +1408,8 @@ def parse_args() -> argparse.Namespace:
             "decomposition",
             "self_consistency",
             "agentic_graph",
+            "trend_graph",
+            "router",
             "all",
         ],
         default="all",
@@ -1266,6 +1455,8 @@ def main() -> int:
         "decomposition",
         "self_consistency",
         "agentic_graph",
+        "trend_graph",
+        "router",
     ] if args.technique == "all" else [args.technique]
 
     results = {

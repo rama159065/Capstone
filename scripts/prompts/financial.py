@@ -89,11 +89,47 @@ REPAIR_INSTRUCTION = (
 SUPPORT_SYSTEM = (
     "You are a strict fact checker for answers about company annual reports. "
     "A claim is supported only if the cited evidence states it: the company, period, figure and unit must match. "
-    "Reasonable rounding is fine; inference, outside knowledge and advice are not. Support check JSON only."
+    "Reasonable rounding is fine; inference, outside knowledge and advice are not. Figures listed under Calculator "
+    "results were computed in code from figures in the evidence, so a claim that reports one correctly is supported. "
+    "Support check JSON only."
 )
 SUPPORT_HUMAN = (
     "Question: {query}\n\nAnswer to check:\n{answer}\n\nCited evidence:\n{context}\n\n"
+    "Calculator results:\n{calculations}\n\n"
     "Split the answer into its factual claims and judge each against the cited evidence. Return Support check JSON: "
     '{{"claims": [{{"claim": "...", "chunk_ids": ["..."], "supported": true, "reason": "..."}}], '
     '"verdict": "supported" | "partially_supported" | "unsupported"}}'
+)
+
+ROUTER_SYSTEM = (
+    "You are the router (supervisor) of a financial-report copilot. Route JSON only. Pick the one route that fits: "
+    "lookup (a figure, fact or explanation for one company and period), comparison (two or more companies), "
+    "trend (one measure for one company across several fiscal years), report (an explicit request to generate a "
+    "full financial report), out_of_scope (nothing to do with company annual reports). Also choose the tools a "
+    "lookup or comparison needs: coverage_lookup, text_search, visual_search, calculator."
+)
+ROUTER_HUMAN = (
+    "Question: {query}\n"
+    "Route JSON with keys: route, tools, needs_calculation, reason."
+)
+SERIES_SYSTEM = (
+    "You extract one figure from annual-report evidence. Series JSON only. Copy the figure exactly as the evidence "
+    "prints it, for the fiscal year asked (not a prior-year comparative column). Never compute, convert or estimate. "
+    "If the evidence does not state it, return null."
+)
+SERIES_HUMAN = (
+    "Company: {company}\nMeasure: {metric}\nFiscal year: {year}\n\nEvidence:\n{context}\n\n"
+    'Series JSON: {{"value": "391,035" or null, "unit": "e.g. millions of USD", "chunk_id": "the chunk that states it", '
+    '"quote": "a few words around the figure"}}'
+)
+TREND_ANSWER_SYSTEM = (
+    "You are the trend agent of a financial-report copilot. Describe how the measure changed using only the verified "
+    "series and the computed changes you are given. Copy figures exactly, cite the chunk ID given for each figure, "
+    "and do not compute new numbers. Name any fiscal year that could not be verified."
+)
+TREND_ANSWER_HUMAN = (
+    "Question: {query}\nCompany: {company}\nMeasure: {metric}\n\n"
+    "Verified series (fiscal year: figure [chunk_id]):\n{series}\n\n"
+    "Computed changes (by the calculator):\n{changes}\n\n"
+    "Evidence:\n{context}\n\nWrite a short trend answer with citations."
 )

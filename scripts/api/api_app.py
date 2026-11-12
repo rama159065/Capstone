@@ -154,7 +154,13 @@ class FinancialChatRequest(ChatRequest):
         "decomposition",
         "self_consistency",
         "agentic_graph",
-    ] = Field("agentic_graph", description="Financial QA workflow to execute.")
+        "trend_graph",
+        "router",
+    ] = Field("agentic_graph", description=(
+        "Financial QA workflow to execute. agentic_graph: the Q&A agent (planner, per-company searches, calculator, "
+        "critic). trend_graph: the multi-year trend agent (one search per fiscal year, verified series, changes and "
+        "CAGR computed in code). router: a supervisor that sends each question to the Q&A agent, the trend agent, "
+        "a report handoff or a refusal. The others are single-prompt baselines."))
     retrieval_mode: Literal["hybrid", "dense", "bm25"] = Field(
         "hybrid", description="hybrid (default): dense + BM25 fused by RRF, on Qdrant or Chroma; "
                               "dense or bm25: one retriever only (for ablations)."
@@ -312,13 +318,27 @@ class FinancialChatResponse(ChatResponse):
     evidence_preview: list[EvidenceResponse] | None = None
     support_check: dict[str, Any] | None = Field(
         default=None,
-        description="agentic_graph only: the critic's support check. `verdict` is supported, partially_supported, "
+        description="agentic_graph, trend_graph and router: the critic's support check. `verdict` is supported, partially_supported, "
                     "unsupported or unverified; `claims` are the judge's per-claim decisions; `numeric` lists figures "
                     "missing from the cited chunks. A hosted-LLM answer is shown only when the verdict is supported.",
     )
+    route: dict[str, Any] | None = Field(
+        default=None,
+        description="router and trend_graph: the chosen route (lookup, comparison, trend, report, out_of_scope), the "
+                    "LLM's and the rules' choices, who decided and any rule adjustments.",
+    )
+    trend: dict[str, Any] | None = Field(
+        default=None,
+        description="Trend route: the per-year series (each figure verified in that year's evidence), year-over-year "
+                    "changes, CAGR, missing years and chart rows.",
+    )
+    handoff: dict[str, Any] | None = Field(
+        default=None,
+        description="Report route: the company and year a full report would cover and whether a report profile exists.",
+    )
     agent_run: dict[str, Any] | None = Field(
         default=None,
-        description="agentic_graph only: the node path, step budget, every tool call (coverage_lookup, text_search, "
+        description="agentic_graph, trend_graph and router: the node path, step budget, every tool call (coverage_lookup, text_search, "
                     "visual_search, calculator), retrieval attempts, repairs and calculations.",
     )
 
@@ -712,6 +732,8 @@ def explain_chat_result(result: dict[str, Any]) -> str:
     grounding = result.get("grounding") or {}
     if status == "not_available":
         return str(grounding.get("reason") or "The filings can't answer this question.")
+    if status == "report_handoff":
+        return str(grounding.get("reason") or "The request was handed to the report pipeline.")
     if grounding.get("status") == "not_grounded":
         return str(grounding["reason"])
     security = result.get("security") or {}
@@ -786,6 +808,14 @@ def _citation_grounding(result: dict[str, Any]) -> dict[str, Any]:
             "evidence_count": 0,
             "cited_chunk_ids": [],
             "reason": "The request was refused before an answer was provided.",
+        }
+        return result
+    if result.get("final_status") == "report_handoff":
+        result["grounding"] = {
+            "status": "not_applicable",
+            "evidence_count": 0,
+            "cited_chunk_ids": [],
+            "reason": "The router handed a report request to the report pipeline, which runs after confirmation.",
         }
         return result
     if result.get("final_status") == "not_available":

@@ -8,6 +8,7 @@ How a question travels from Streamlit to an answer: which agents and tools run, 
 - The financial graph routes **per request**: the planner's tools decide whether the coverage check, ColPali search and calculator run; a comparison becomes one filtered search per company and year; a company with no evidence gets **one broadened retrieval retry**; an answer whose citations fail, or whose claims or figures the cited evidence doesn't state, gets **one repair** carrying the critic's feedback.
 - The critic is two checks: citation IDs must be retrieved IDs, and a **support check** (every figure must appear in a cited chunk; an LLM judge decides claim by claim). With a hosted LLM, the generated answer is shown only when both pass; otherwise the response falls back to cited excerpts.
 - Loops are **budget-aware**: a loop runs only if the rest of the run still fits `AGENT_MAX_STEPS` (default 10), so the cap shortens a run instead of failing it.
+- **Three agent flows share these guards, critic and governance** (section 7a): `agentic_graph` (the Q&A agent), `trend_graph` (multi-year trend agent) and `router` (a supervisor that sends each question to the Q&A agent, the trend agent, a report handoff or a refusal). Streamlit uses `router` by default.
 - Each response carries `agent_run`: the node path, every tool call, retrieval attempts, repairs and calculations. Streamlit shows it under **Agent run**.
 
 ---
@@ -17,7 +18,7 @@ How a question travels from Streamlit to an answer: which agents and tools run, 
 | Route | Who calls it | What runs |
 |---|---|---|
 | `POST /conversation/financial_report_qa` | Streamlit financial chat | Clarifier, then the financial agent graph (or the report pipeline) |
-| `POST /chat/financial_report_qa` | API clients, evaluation | The financial agent graph (`technique=agentic_graph`) or a single-prompt technique |
+| `POST /chat/financial_report_qa` | API clients, evaluation | An agent flow (`technique=agentic_graph`, `trend_graph` or `router`) or a single-prompt technique |
 | `POST /retrieve/...` | Evidence browsing | Retrieval only, no agents, no LLM |
 | `POST /multimodal/financial_report_qa/chat` | Local multimodal profile | Input guard, retrieval, fail-closed `safe_answer` (not LangGraph) |
 | `generate_financial_report` | Clarifier's "Full financial report" | Deterministic pipeline; numbers come only from the PDF |
@@ -199,6 +200,53 @@ The judge runs inside `critic_step`, so it adds one LLM call per critique but no
 | `refused` | Input, evidence or output guard blocked it |
 | `step_limit` | Hard cap reached (not expected with budget-aware routing) |
 | `tool_error` | A model or search call failed or timed out (`RAG_REQUEST_TIMEOUT_SECONDS`) |
+
+## 7a. Router (supervisor) and the multi-year trend agent
+
+Code: [financial_router.py](../scripts/agents/financial_router.py), [financial_trend.py](../scripts/agents/financial_trend.py), `financial_graph` in [financial_prompting_agent.py](../scripts/agents/financial_prompting_agent.py). Tests: [test_agent_flows.py](../tests/test_agent_flows.py).
+
+```mermaid
+flowchart TD
+    S[security_step] --> P[plain_text_step - LLM]
+    P --> R[route_step - router LLM + rules]
+    R -->|lookup / comparison| RT[retrieve_step ... Q&A agent, section 3]
+    R -->|trend| TF[trend_fetch_step - one search per fiscal year]
+    TF --> TS[trend_series_step - LLM copies each figure, code verifies, computes changes + CAGR]
+    TS -->|a year unverified and budget allows| TF
+    TS --> A[answer_step - trend prompt]
+    R -->|report| CR[critic_step]
+    R -->|out_of_scope| CR
+    RT --> A
+    A --> CR
+    CR -->|repair once| A
+    CR --> GV[governance_step]
+```
+
+**Router (`technique=router`).** The router LLM returns Route JSON (`route`, `tools`, `needs_calculation`, `reason`). `financial_router.decide` validates it the same way `normalize_plan` validates the planner:
+
+| Route | Goes to | Accepted when |
+|---|---|---|
+| `lookup` | Q&A agent (from `retrieve_step`) | Default |
+| `comparison` | Q&A agent: one filtered search per company × year | The LLM says so, or the parser finds two companies / compare words |
+| `trend` | Trend agent | One company, one measure and at least two indexed fiscal years (`trend_plan.feasible`); otherwise answered as a lookup or comparison |
+| `report` | Handoff (`final_status = report_handoff`, `handoff` with ticker, year, whether a report profile exists) | Only with an explicit request ("generate a full report"); the deterministic report runs after the user confirms in the chat |
+| `out_of_scope` | Refused | Only when the question names no company, measure or known intent |
+
+Explicit signals win: a question the parser reads as a report, comparison or trend goes there even if the LLM said otherwise; the LLM decides the rest (for example "How has Costco's revenue developed?", wording the rules don't know). `route` in the response records the LLM's and the rules' choices, `decided_by` and every adjustment. The route step also plans (its tools become the Q&A plan), so a routed run takes the **same 8 steps** as a direct one.
+
+**Trend agent (`technique=trend_graph`, or the router's `trend` route).**
+
+| Step | What it does | LLM? |
+|---|---|---|
+| `route_step` | `trend_plan`: company, measure, years (asked years the index holds, else every indexed year, at most 5); coverage recorded as a `coverage_lookup` call. If no trend can be built, the question goes to the Q&A path (`decided_by = technique`) | No |
+| `trend_fetch_step` | One filtered `text_search` per fiscal year ("Costco revenue fiscal year 2024"); a retry searches only unverified years, broadened and twice as deep | No |
+| `trend_series_step` | Evidence injection guard; per year, the LLM copies the figure (Series JSON: value, unit, chunk_id, quote). `validate_point` keeps it only if the chunk is in **that year's** search and its text contains the number (`ok`, `not_found`, `wrong_chunk`, `not_in_evidence`, `no_evidence`). Year-over-year change, % change and CAGR are **computed in code** and recorded as calculations | **Yes** (one call per year) |
+| `answer_step` | Trend prompt: the verified series with chunk IDs and the computed changes; the model describes them and may not compute new numbers. With no verified year it falls back to the Q&A prompt | **Yes** |
+| `critic_step`, `governance_step` | As in section 6. The judge now also sees the calculator results, so a correctly reported growth rate or CAGR counts as supported; `numeric_grounding` accepts them as calculations | Yes (judge) |
+
+Budget: 8 steps; one retry of unverified years adds 2 (10). The response's `trend` holds `points`, `changes`, `cagr`, `missing` and `chart` rows; Streamlit shows a table, a line chart of the verified years and names the years it could not verify.
+
+**Live check (local Retail index, mock LLM, 12 November 2026).** "How did Costco revenue change over the years?" → route `trend` (rules overrode the mock's `lookup`) → searches for FY2024 and FY2025 → 249,625 (p42) and 269,912 (p41), both verified → +8.13% → `answered`, `grounded`. The mock extractor takes the first figure on the page (net sales here); a hosted model picks the asked measure.
 
 ## 8. Worked runs (local Retail index, mock LLM)
 
