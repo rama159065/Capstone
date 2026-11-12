@@ -12,7 +12,8 @@ Fields (``FIELDS``):
     filing      domain, doc_id, filing_id, doc_kind, ticker, company, cik, sector, sector_slug, sic, year, fiscal_year,
                 accession_number, filing_date, source_url, source_type, content_sha256, pdf_name, title, doc_title
     page        page, section, page_type, scale, garbled, visual_rich, page_route
-    chunk       chunk_id, point_id, chunk_index, content_type (text | table), text, table_markdown (list)
+    chunk       chunk_id, point_id, chunk_index, content_type (text | table | page_description), text,
+                table_markdown (list)
     provenance  pipeline (qdrant_db | chroma_db), text_source (native_pdf | ocr | vlm),
                 reader (pdfParser | ocr | qwen3VL | paidVL | openaiVL | mock), reader_model, escalation,
                 number_check (text_layer | ocr | ocr_only | no_text_layer | no_reference),

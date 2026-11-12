@@ -94,6 +94,7 @@ class Settings:
     qwen_reader: str = "transformers"       # routed: Qwen3-VL in-process, or "openai" (endpoint at RAG_VISION_API_BASE)
     paid_threshold: float = 0.10            # routed: paidVL page -> paid model when > 10% of Qwen3-VL's figures fail OCR
     paid_max_pages_per_pdf: int = 0         # routed: cap paid calls per filing (0 = no cap)
+    describe_visuals: bool = True           # routed: Qwen3-VL search description of chart and image pages
     vlm_model: str | None = None            # default Qwen/Qwen3-VL-4B-Instruct (or -2B / -8B)
     vlm_pages: str = "visual"               # tables, charts, images + unreadable pages
                                             # or "tables_charts_images" / "tables_charts" / "all"
@@ -316,6 +317,7 @@ def ingest_vlm(s: Settings, sector, corpus=None):
             "--vlm", s.vlm, "--vlm-pages", pages, "--vlm-max-pages-per-pdf", str(s.vlm_max_pages_per_pdf),
             "--qwen-reader", s.qwen_reader, "--paid-threshold", str(s.paid_threshold),
             "--paid-max-pages-per-pdf", str(s.paid_max_pages_per_pdf)]
+    argv += [] if s.describe_visuals else ["--no-describe-visuals"]
     argv += ["--vlm-model", s.vlm_model] if s.vlm_model else []
     run = vi.VlmIngest(vi.build_parser().parse_args(argv), vlm=_loaded.get("vlm"), embedder=_loaded.get("embedder"))
     _loaded["embedder"] = run.embedder

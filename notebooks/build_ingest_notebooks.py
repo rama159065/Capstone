@@ -145,6 +145,7 @@ Drive PDFs (by sector) -> copy one sector to local disk -> analyse every page ->
 | chart without printed values, infographic | **Qwen3-VL** (GPU) | figures checked against the text layer |
 | table / chart / picture with an unusable text layer (`paidVL`) | OCR -> **Qwen3-VL**, figures checked against the OCR text -> **paid model** only when more than `PAID_THRESHOLD` of them are unconfirmed | without a paid model: Qwen3-VL kept, unconfirmed figures flagged |
 | blank page, photo or logo | skipped | |
+| chart and image pages (not OCR-routed) | also a **Qwen3-VL search description**: kind of visual, title, measures, series, years, no values | a `page_description` chunk, so chart pages are found by what they show |
 
 Every chunk records `reader`, `text_source`, `escalation` and `unverified_numbers`. Readings are cached on Drive per page
 and reader (`vlm_pages/`), so a rerun never pays twice, and the Chroma folder is copied to Drive after every sector.
@@ -169,6 +170,8 @@ PAID_THRESHOLD = 0.10  # @param {type:"number"}
 # paidVL pages go to the paid model when more than this share of Qwen3-VL's figures is not in the page's OCR text
 PAID_MAX_PAGES_PER_PDF = 0  # @param {type:"integer"}
 # cap on paid calls per filing (0 = no cap)
+DESCRIBE_VISUALS = True  # @param {type:"boolean"}
+# routed: Qwen3-VL writes a short search description of each chart and image page (no values), so they can be found
 VLM_PAGES = "visual"  # @param ["visual", "tables_charts_images", "tables_charts", "all"]
 # pages for the non-routed readers (routed chooses per page)'''
 
@@ -179,7 +182,7 @@ s = cp.Settings(
     pipeline="vlm_chroma", corpus_preset=CORPUS, drive_root=DRIVE_ROOT, sectors=SECTORS, user_agent=SEC_USER_AGENT,
     max_per_sector=2 if SMOKE_TEST else (MAX_PER_SECTOR or None),
     vlm=READER, vlm_model=QWEN_MODEL, qwen_reader=QWEN_READER, vlm_pages=VLM_PAGES,
-    paid_threshold=float(PAID_THRESHOLD), paid_max_pages_per_pdf=PAID_MAX_PAGES_PER_PDF,
+    paid_threshold=float(PAID_THRESHOLD), paid_max_pages_per_pdf=PAID_MAX_PAGES_PER_PDF, describe_visuals=DESCRIBE_VISUALS,
     run_name="_smoke" if SMOKE_TEST else "",
     limit_filings=1 if SMOKE_TEST else None,
     max_pages_per_pdf=30 if SMOKE_TEST else None,

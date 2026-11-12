@@ -48,6 +48,9 @@ Page readers (``--vlm``):
                   page go to the paid model (RAG_PAID_VISION_API_BASE / _MODEL / _API_KEY). The reading with fewer
                   unconfirmed figures is kept; its unconfirmed figures stay in unverified_numbers. Without a paid
                   model configured the Qwen3-VL reading is kept, flagged.
+                Chart and image pages (routed pdfParser+colpali, qwen3VL or paidVL) also get a Qwen3-VL search
+                description: a page_description chunk naming the kind of visual, its title, what it measures, the
+                series and the years, with no values (--no-describe-visuals turns it off).
 Every reader's output is cached per page (routed: per reader), so switching readers re-reads pages but a rerun
 never does, and changing the paid model or the threshold reuses the OCR and Qwen3-VL readings.
 
@@ -95,6 +98,14 @@ VLM_PROMPT = """Transcribe this annual report page into Markdown. Copy every num
 - Charts: state the chart title, then one line per labelled value saying which series, bar or year it belongs to, using the legend. Never estimate an unlabelled point.
 - Text: copy headings and paragraphs. Ignore photographs, logos and QR codes.
 Output only the transcription."""
+DESCRIBE_VERSION = 1
+DESCRIBE_TOKENS = 200
+DESCRIBE_PROMPT = """Describe this annual report page so it can be found by search, in at most 3 sentences.
+Say what kind of visual it is (bar chart, line chart, pie chart, table, map, infographic or photo), its title, what it
+measures, the series or categories, and the years or periods shown. Do not state any values other than years.
+Output only the description."""
+DESCRIBE_TYPES = {"chart", "image"}                          # page types worth a search description
+DESCRIBE_ROUTES = {"pdfParser+colpali", "qwen3VL", "paidVL"}   # not ocr (outlined text, scans) or none (photos, blank)
 MAX_PIXELS = 1280 * 28 * 28            # ~1.0 MP per page: ~980 visual tokens for Qwen3-VL (32 x 32 px each)
 RENDER_DPI = 150
 NUMBER = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+\.\d+|\d{3,}")   # 1,234 / 6.08 / 2025; not "31,"
@@ -176,13 +187,17 @@ class TransformersVLM:
         self.model = AutoModelForImageTextToText.from_pretrained(model, **options).eval()
         self.signature, self.quantization = f"transformers:{model}:{max_new_tokens}", quant
 
-    def transcribe(self, image, page):
-        messages = [{"role": "user", "content": [{"type": "image", "image": image}, {"type": "text", "text": VLM_PROMPT}]}]
+    def transcribe(self, image, page, prompt=None, max_new_tokens=None):
+        messages = [{"role": "user", "content": [{"type": "image", "image": image},
+                                                 {"type": "text", "text": prompt or VLM_PROMPT}]}]
         inputs = self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=True,
                                                     return_dict=True, return_tensors="pt").to(self.model.device)
         with self.torch.inference_mode():
-            output = self.model.generate(**inputs, max_new_tokens=self.max_new_tokens, do_sample=False)
+            output = self.model.generate(**inputs, max_new_tokens=max_new_tokens or self.max_new_tokens, do_sample=False)
         return self.processor.batch_decode(output[:, inputs["input_ids"].shape[1]:], skip_special_tokens=True)[0].strip()
+
+    def describe(self, image, page):
+        return self.transcribe(image, page, prompt=DESCRIBE_PROMPT, max_new_tokens=DESCRIBE_TOKENS)
 
 
 class OpenAIVLM:
@@ -196,13 +211,13 @@ class OpenAIVLM:
         self.signature = f"openai:{self.model}:{max_tokens}"
         self.delays = [float(x) for x in os.getenv("RAG_VISION_RETRY_DELAYS", "2,4,8").split(",") if x.strip()]
 
-    def transcribe(self, image, page):
+    def transcribe(self, image, page, prompt=None, max_tokens=None):
         buffer = io.BytesIO()
         image.save(buffer, format="PNG")
         content = [{"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()}},
-                   {"type": "text", "text": VLM_PROMPT}]
+                   {"type": "text", "text": prompt or VLM_PROMPT}]
         body = json.dumps({"model": self.model, "messages": [{"role": "user", "content": content}],
-                           "temperature": 0, "max_tokens": self.max_tokens, "stream": False}).encode()
+                           "temperature": 0, "max_tokens": max_tokens or self.max_tokens, "stream": False}).encode()
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -220,6 +235,23 @@ class OpenAIVLM:
                 except (TypeError, ValueError):
                     wait = self.delays[attempt]
                 time.sleep(wait)
+
+    def describe(self, image, page):
+        return self.transcribe(image, page, prompt=DESCRIBE_PROMPT, max_tokens=DESCRIBE_TOKENS)
+
+
+class PageDescriber:
+    """Adapter so a page description is read, cached and logged like any other reading.
+
+    A reader without ``describe`` (the mock, the OCR reader) gives no description, so nothing invented is indexed.
+    """
+
+    def __init__(self, model, signature):
+        self.model, self.signature = model, f"describe-v{DESCRIBE_VERSION}:{signature}"
+
+    def transcribe(self, image, page):
+        describe = getattr(self.model, "describe", None)
+        return describe(image, page) if describe else ""
 
 
 DEFAULT_TRANSFORMERS_MODEL = "Qwen/Qwen3-VL-4B-Instruct"   # 2B (fast, T4) / 4B (T4 in 4-bit) / 8B (L4, A100)
@@ -258,7 +290,7 @@ def make_vlm(args):
     if args.vlm == "routed":
         return RoutedReader(qwen_factory=lambda: make_qwen(args), qwen_signature=qwen_signature(args),
                             paid=paid_reader(args.max_new_tokens), threshold=args.paid_threshold,
-                            paid_limit=args.paid_max_pages_per_pdf)
+                            paid_limit=args.paid_max_pages_per_pdf, describe=not getattr(args, "no_describe_visuals", False))
     if args.vlm == "ocr":
         return OcrReader()
     if args.vlm == "openai":
@@ -272,8 +304,8 @@ def vlm_signature(args):
         return MockVLM.signature
     if args.vlm == "routed":
         paid = paid_reader(args.max_new_tokens)
-        return (f"routed-v{ROUTE_VERSION}:qwen={qwen_signature(args)}:ocr={ocr_reader_signature()}:"
-                f"paid={paid.signature if paid else None}:threshold={args.paid_threshold}:limit={args.paid_max_pages_per_pdf}")
+        return routed_signature(qwen_signature(args), ocr_reader_signature(), paid.signature if paid else None,
+                                args.paid_threshold, args.paid_max_pages_per_pdf, not getattr(args, "no_describe_visuals", False))
     if args.vlm == "ocr":
         return ocr_reader_signature()
     if args.vlm == "openai":
@@ -337,12 +369,12 @@ class RoutedReader:
     The Qwen3-VL model loads only when the first page needs it. ``paid`` is None when no paid model is configured.
     """
 
-    def __init__(self, qwen_factory, qwen_signature, ocr=None, paid=None, threshold=.10, paid_limit=0):
+    def __init__(self, qwen_factory, qwen_signature, ocr=None, paid=None, threshold=.10, paid_limit=0, describe=True):
         self._qwen_factory, self._qwen, self.qwen_signature = qwen_factory, None, qwen_signature
         self.ocr = ocr or OcrReader()
-        self.paid, self.threshold, self.paid_limit = paid, threshold, paid_limit
-        self.signature = (f"routed-v{ROUTE_VERSION}:qwen={qwen_signature}:ocr={self.ocr.signature}:"
-                          f"paid={paid.signature if paid else None}:threshold={threshold}:limit={paid_limit}")
+        self.paid, self.threshold, self.paid_limit, self.describe = paid, threshold, paid_limit, describe
+        self.signature = routed_signature(qwen_signature, self.ocr.signature, paid.signature if paid else None,
+                                          threshold, paid_limit, describe)
 
     @property
     def qwen(self):
@@ -355,7 +387,16 @@ class RoutedReader:
         out = {"ocr": (self.ocr.signature, lambda: self.ocr), "qwen3VL": (self.qwen_signature, lambda: self.qwen)}
         if self.paid:
             out["paidVL"] = (self.paid.signature, lambda: self.paid)
+        if self.describe:
+            describer = PageDescriber(None, self.qwen_signature)
+            out["describe"] = (describer.signature, lambda: PageDescriber(self.qwen, self.qwen_signature))
         return out
+
+
+def routed_signature(qwen, ocr, paid, threshold, limit, describe):
+    """Known before any model loads, so finished filings are skipped without loading them."""
+    return (f"routed-v{ROUTE_VERSION}:qwen={qwen}:ocr={ocr}:paid={paid}:threshold={threshold}:limit={limit}"
+            + (f":describe=v{DESCRIBE_VERSION}" if describe else ""))
 
 
 def cross_check(markdown, reference):
@@ -377,7 +418,7 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
     caches = {name: TranscriptCache(cache.dir, sig) for name, (sig, _) in reader.readers().items()}
     loaded = {name: c.load(doc_id) for name, c in caches.items()}
     getters = {name: get for name, (_, get) in reader.readers().items()}
-    entries, model_pages, paid_pages = {}, 0, 0
+    entries, model_pages, paid_pages, descriptions = {}, 0, 0, {}
 
     with pymupdf.open(pdf) as document:
         def read(name, page):
@@ -411,6 +452,11 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
             route = page_audit.route(page)
             number = page["page"]
             base = {"page": number, "route": route}
+            if reader.describe and page["page_type"] in DESCRIBE_TYPES and route in DESCRIBE_ROUTES:
+                text = try_read("describe", page).strip()
+                if text:
+                    descriptions[number] = {"text": text, "route": route, "reader_model": signatures["describe"],
+                                            "page": page}
             if route == "none":
                 entries[number] = {**base, "skip": True}
             elif route == "pdfParser":
@@ -460,7 +506,19 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                                    "escalation": ("not_needed" if not needs_more else "paid" if used == "paidVL"
                                                   else "paid_not_better" if needs_more and can_pay
                                                   else "no_paid_model" if reader.paid is None else "paid_limit")}
+    for number, description in descriptions.items():               # figures in a description must be on the page too
+        page = description.pop("page")
+        reference = loaded["ocr"].get(number, {}).get("markdown", "") if page["garbled"] else page["text"]
+        check = cross_check(description["text"], reference)
+        # Descriptions are asked for no values but years: with nothing to check against, flag every other figure.
+        description["unverified_numbers"] = check["unverified"] if check["share"] is not None else sorted(
+            {n for n in NUMBER.findall(description["text"]) if not re.fullmatch(r"(19|20)\d\d", n)})
+    if descriptions:
+        entries[DESCRIPTIONS] = descriptions
     return entries
+
+
+DESCRIPTIONS = "_descriptions"          # key in routed_filing's result: page -> Qwen3-VL search description
 
 
 def transcribe_filing(vlm, cache, row, pdf, pages, mode, limit=0):
@@ -522,8 +580,11 @@ def vlm_records(row, pages, transcripts, vlm_signature):
     ran, else the text layer."""
     from scripts.rag import page_audit
     base, records = fi.filing_payload(row), []
+    descriptions = transcripts.get(DESCRIPTIONS) or {}
     for page in pages:
         entry = transcripts.get(page["page"])
+        if page["page"] in descriptions:                            # a search description of a chart or image page
+            records.append(description_record(row, base, page, descriptions[page["page"]]))
         if entry and entry.get("skip"):
             continue                                                # routed: nothing to read on this page
         if entry:
@@ -553,6 +614,19 @@ def vlm_records(row, pages, transcripts, vlm_signature):
                 table_markdown=[chunk] if kind == "table" else [], **provenance)
             records.append((identifier, payload, fi.context_line(payload) + "\n" + chunk))
     return records
+
+
+def description_record(row, base, page, description):
+    """The page_description chunk: '<visual> on page N: <Qwen3-VL description>', searchable like any other chunk."""
+    kind = {"chart": "Chart", "image": "Figure"}.get(page["page_type"], "Visual")
+    text = f"{kind} on page {page['page']} (page description): {description['text']}"
+    identifier = fi.point_id(row["document_id"], page["page"], "describe", 0)
+    payload = chunk_schema.chunk_payload(
+        base, page, chunk_id=fi.chunk_name(row["document_id"], page["page"], "desc0"), point_id=identifier,
+        chunk_index=0, content_type="page_description", text=text, pipeline="chroma_db", text_source="vlm",
+        reader="qwen3VL", reader_model=description["reader_model"], page_route=description["route"],
+        number_check="text_layer", unverified_numbers=description["unverified_numbers"])
+    return identifier, payload, fi.context_line(payload) + "\n" + text
 
 
 # ----------------------------------------------------------------------------- vector stores
@@ -716,9 +790,11 @@ class VlmIngest:
             return "failed"
         seconds = time.time() - started
         self.state.mark(doc_id, "vlm", "complete", self.pipeline, len(records), seconds)
-        flagged = sum(1 for e in transcripts.values() if e.get("unverified_numbers"))
+        readings = {k: v for k, v in transcripts.items() if k != DESCRIPTIONS}
+        flagged = sum(1 for e in readings.values() if e.get("unverified_numbers"))
         print(json.dumps({"doc_id": doc_id, "sector": row.get("sector"), "status": "complete", "pages": len(pages),
-                          "vlm_pages": len(transcripts), "pages_with_unverified_numbers": flagged,
+                          "vlm_pages": len(readings), "described_pages": len(transcripts.get(DESCRIPTIONS) or {}),
+                          "pages_with_unverified_numbers": flagged,
                           "chunks": len(records), "seconds": round(seconds, 1)}), flush=True)
         return "complete"
 
@@ -841,6 +917,8 @@ def build_parser():
                         help="routed: send a paidVL page to the paid model when more than this share of Qwen3-VL's "
                              "figures is not in the page's OCR text")
     ingest.add_argument("--paid-max-pages-per-pdf", type=int, default=0, help="routed: cap paid calls per filing (0 = no cap)")
+    ingest.add_argument("--no-describe-visuals", action="store_true",
+                        help="routed: skip the Qwen3-VL search description of chart and image pages")
     ingest.add_argument("--vlm-model", help=f"HF model for transformers (default {DEFAULT_TRANSFORMERS_MODEL}); "
                                             "served model name for openai (default RAG_VISION_MODEL)")
     ingest.add_argument("--vlm-pages", choices=["visual", "tables_charts_images", "tables_charts", "all"], default="visual",

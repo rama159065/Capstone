@@ -44,6 +44,7 @@ Both read the same sector manifests, run the same page analysis (`financial_inge
 | Tables, charts or pictures with an unusable text layer (`paidVL`) | OCR → Qwen3-VL, every figure checked against the OCR text → a **paid vision model** only when more than 10% are unconfirmed | ColPali page vectors; text from OCR |
 | Model failure | A failed or empty Qwen3-VL or paid reading falls back to OCR; the filing still completes | — |
 | Blank pages, photos and logos | Skipped (`none`) | Not indexed when they have no text |
+| Finding chart and image pages | A Qwen3-VL **search description** chunk per chart or image page (kind, title, measures, series, years; no values) | ColPali page vectors (MaxSim) |
 | Stored in | Chroma `annual_reports_vlm`: MiniLM vectors (384-d) + a BM25 file `chroma/bm25.sqlite3` (SQLite FTS5, number-aware terms) | `annual_reports_text`: dense (MiniLM, RAM, HNSW) + BM25 sparse (IDF); `annual_reports_visual`: `mean_rows` + `mean_cols` (38 × 128 each, fp16, RAM, HNSW), full `colpali` (1,030 × 128, fp16, on disk, no HNSW), `summary` |
 | Chunking | 1,200-character windows, 200 overlap; tables split up to 3,000 characters with their title and header | the same |
 | Retrieval | Dense + BM25, fused by RRF (`scripts/rag/hybrid.py`) | Dense + BM25, fused by RRF; with `RAG_FIN_VISUAL=1` also pooled ColPali prefetch → full MaxSim rerank |
@@ -62,6 +63,8 @@ page analysis ─┬─ none ─────────────────
                                                  ├─ ≤ 10% unconfirmed ─▶ keep Qwen3-VL
                                                  └─ > 10% ─▶ paid model (if configured) ─▶ keep the reading with fewer unconfirmed figures
 ```
+
+**Finding chart pages:** chart and image pages routed `pdfParser+colpali`, `qwen3VL` or `paidVL` also get a **Qwen3-VL search description** (`DESCRIBE_PROMPT`): the kind of visual, its title, what it measures, the series and the years, with no values. It is stored as an extra `page_description` chunk (e.g. *"Chart on page 2 (page description): Bar chart titled Revenue by segment…"*), searched by dense and BM25 like any other chunk. Pages routed to OCR (outlined text, scans) and skipped pages are not described; a failed description is skipped; `--no-describe-visuals` turns it off. Figures in a description that the page doesn't print are flagged in `unverified_numbers`. Tested on CPU with Qwen3-VL-2B (llama.cpp): about 54 s per page, e.g. Walmart 2025 p2 → *"an infographic titled 'A message from our CEO'… revenues, operating income, … eCommerce sales, advertising, membership income"*.
 
 Every reading is cached on Drive per page and reader (`vlm_pages/`), so a rerun never pays twice, and changing the paid model or the threshold reuses the OCR and Qwen3-VL readings. On 20 EDGAR filings (3,316 pages) the page audit routed 79.9% of pages to `pdfParser`, 8.6% to `pdfParser+colpali`, 8.6% to `ocr`, 0.8% to `qwen3VL` and 2.2% to `paidVL`.
 
