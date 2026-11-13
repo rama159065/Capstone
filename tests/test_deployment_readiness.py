@@ -253,3 +253,16 @@ def test_warm_up_is_skipped_off_the_ingest_backends(monkeypatch):
     monkeypatch.setenv("API_WARMUP", "false")
     assert api_app.warm_up_retrieval() == "skipped"
 
+
+
+def test_chroma_version_is_the_same_where_the_index_is_built_and_served():
+    """Colab builds the Chroma index and the Docker image serves it: both must install the same chromadb."""
+    import re
+    pins = set(re.findall(r'"chromadb==([\d.]+)"', (ROOT / "pyproject.toml").read_text(encoding="utf-8")))
+    assert len(pins) == 1, "pyproject.toml must pin chromadb exactly"
+    pin = pins.pop()
+    for name in ("build_ingest_notebooks.py", "colab_ingest_chroma_db.ipynb", "colab_rag_pipelines.ipynb",
+                 "colab_financial_ingest.ipynb"):
+        text = (ROOT / "notebooks" / name).read_text(encoding="utf-8")
+        found = re.findall(r'chromadb([=<>!~][^\s"\\]*)', text)       # stops at a quote or a JSON escape
+        assert found and all(spec == f"=={pin}" for spec in found), (name, found)

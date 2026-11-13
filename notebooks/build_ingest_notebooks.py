@@ -321,7 +321,7 @@ def notebook(cells):
 
 
 def chroma():
-    setup = SETUP.replace("{PIP}", '"pymupdf>=1.24,<2" "qdrant-client>=1.12,<2" "chromadb>=1.1" "transformers>=4.57,<6" '
+    setup = SETUP.replace("{PIP}", '"pymupdf>=1.24,<2" "qdrant-client>=1.12,<2" "chromadb==1.5.9" "transformers>=4.57,<6" '
                                    '"sentence-transformers>=3" "rapidocr>=3,<4" onnxruntime "bitsandbytes>=0.48" accelerate') \
                  .replace("{MODULE}", "financial_ingest_chroma_db") \
                  .replace("{NO_GPU}", "OCR and the text layer work; Qwen3-VL will be very slow (use READER = 'ocr')")
