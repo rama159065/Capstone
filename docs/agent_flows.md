@@ -8,7 +8,7 @@ How a question travels from Streamlit to an answer: which agents and tools run, 
 - The financial graph routes **per request**: the planner's tools decide whether the coverage check, ColPali search and calculator run; a comparison becomes one filtered search per company and year; a company with no evidence gets **one broadened retrieval retry**; an answer whose citations fail, or whose claims or figures the cited evidence doesn't state, gets **one repair** carrying the critic's feedback.
 - The critic is two checks: citation IDs must be retrieved IDs, and a **support check** (every figure must appear in a cited chunk; an LLM judge decides claim by claim). With a hosted LLM, the generated answer is shown only when both pass; otherwise the response falls back to cited excerpts.
 - Loops are **budget-aware**: a loop runs only if the rest of the run still fits `AGENT_MAX_STEPS` (default 10), so the cap shortens a run instead of failing it.
-- **Three agent flows share these guards, critic and governance** (section 7a): `agentic_graph` (the Q&A agent), `trend_graph` (multi-year trend agent) and `router` (a supervisor that sends each question to the Q&A agent, the trend agent, a report handoff or a refusal). Streamlit uses `router` by default.
+- **Three agent flows share these guards, critic and governance** (section 7a): `agentic_graph` (the Q&A agent), `trend_graph` (multi-year trend agent) and `router` (a supervisor that sends each question to the Q&A agent, the trend agent, a report handoff or a refusal). Streamlit uses `router` by default. Each flow is a **multi-agent flow**: input guard, supervisor/planner, executor, extractor, answer and critic agents hand work to each other inside one bounded graph (section 7b).
 - Each response carries `agent_run`: the node path, every tool call, retrieval attempts, repairs and calculations. Streamlit shows it under **Agent run**.
 
 ---
@@ -247,6 +247,108 @@ Explicit signals win: a question the parser reads as a report, comparison or tre
 Budget: 8 steps; one retry of unverified years adds 2 (10). The response's `trend` holds `points`, `changes`, `cagr`, `missing` and `chart` rows; Streamlit shows a table, a line chart of the verified years and names the years it could not verify.
 
 **Live check (local Retail index, mock LLM, 12 November 2026).** "How did Costco revenue change over the years?" → route `trend` (rules overrode the mock's `lookup`) → searches for FY2024 and FY2025 → 249,625 (p42) and 269,912 (p41), both verified → +8.13% → `answered`, `grounded`. The mock extractor takes the first figure on the page (net sales here); a hosted model picks the asked measure.
+
+## 7b. Multi-agent view of the three flows
+
+All three flows are **multi-agent flows**: each question passes through several agents with separate roles, prompts and outputs, which hand work to each other. A critic agent can send work back for a rewrite. In the router flow, a supervisor agent also delegates to a specialist agent.
+
+### 7b.1 The agents
+
+| Agent | Node(s) | Kind | Role | Hands over to |
+|---|---|---|---|---|
+| **Supervisor (router)** | `route_step` (router flow) | LLM (Route JSON) + rules | Chooses the specialist for the question (Q&A, trend, report, refusal) and plans it | Q&A executor, trend executor, or the critic (report / refusal) |
+| **Input guard** | `security_step`, `plain_text_step` | regex + LLM (classifier) | Blocks prompt injection and code or tool abuse; checks that the question is a plain finance question and cleans it | planner / supervisor, or the critic when refused |
+| **Planner** | `plan_step` (Q&A flow); inside `route_step` (router and trend flows) | LLM (Plan JSON) + rules | Chooses tools; splits the question into one target per company × year (Q&A) or per fiscal year (trend) | executor |
+| **Retrieval executor** | `retrieve_step` (Q&A), `trend_fetch_step` (trend) | tools, no LLM | Runs `coverage_lookup`, then hybrid `text_search` (+ `visual_search`) per target; broadened retry of missing targets | evidence guard / extractor |
+| **Evidence guard** | `evidence_guard_step` (Q&A); start of `trend_series_step` (trend) | code | Blocks injected instructions in retrieved text; lists targets with no evidence | executor (retry) or answer agent |
+| **Figure extractor** | `trend_series_step` (trend) | LLM (Series JSON) + code | Copies each year's figure; code keeps it only if that year's chunk states it, then computes changes and CAGR | executor (retry of unverified years) or answer agent |
+| **Answer agent** | `answer_step` | LLM | Writes the cited answer (Q&A prompt) or the trend narrative (trend prompt); on a repair, receives the critic's feedback | calculator or critic |
+| **Calculator** | `calculator_step` (Q&A) | code | Evaluates `CALC[...]`; every operand must be in the evidence | critic |
+| **Critic** | `critic_step` | code + LLM (support judge) | Checks every citation ID, every figure and every claim against the cited chunks | answer agent (one repair) or governance |
+| **Governance** | `governance_step` | code | Output filter (allow / review / block) and human-review triggers | END |
+
+### 7b.2 Agents in each flow
+
+| Agent | `agentic_graph` (Q&A) | `trend_graph` (trend) | `router` (supervisor) |
+|---|---|---|---|
+| Supervisor | — | forced to `trend` (no LLM call); falls back to Q&A when no trend can be built | ✓ LLM route, validated by rules |
+| Input guard | ✓ | ✓ | ✓ |
+| Planner | ✓ LLM planner | rules (`trend_plan`) | ✓ the router's tools become the plan |
+| Retrieval executor | ✓ per company × year | ✓ per fiscal year | the chosen specialist's |
+| Evidence guard | ✓ | ✓ | ✓ |
+| Figure extractor | — | ✓ one LLM call per year | on the trend route |
+| Answer agent | ✓ Q&A prompt | ✓ trend prompt | the chosen specialist's |
+| Calculator | when planned | changes and CAGR computed by the extractor's code | on the Q&A route |
+| Critic | ✓ | ✓ | ✓ |
+| Governance | ✓ | ✓ | ✓ |
+| **LLM agents per question** (mock and typical runs) | 4: guard, planner, answer, judge | 3 + one per year: guard, extractor × years, answer, judge | 4–5: guard, router, (extractor × years), answer, judge |
+
+### 7b.3 Hand-offs per flow
+
+**Q&A flow (`agentic_graph`): planner → executor → answer → critic**
+
+```mermaid
+flowchart LR
+    U((question)) --> IG[Input guard agent]
+    IG -->|refused| CR
+    IG --> PL[Planner agent - LLM]
+    PL --> EX[Retrieval executor - tools]
+    EX --> EG[Evidence guard]
+    EG -->|company or year missing| EX
+    EG --> AN[Answer agent - LLM]
+    AN -->|CALC| CA[Calculator]
+    CA --> CR[Critic agent - judge]
+    AN --> CR
+    CR -->|repair once| AN
+    CR --> GV[Governance]
+    GV --> R((answer))
+```
+
+**Trend flow (`trend_graph`): planner → per-year executor → extractor → answer → critic**
+
+```mermaid
+flowchart LR
+    U((question)) --> IG[Input guard agent]
+    IG --> TP[Trend planner - rules]
+    TP -->|no trend possible| QA[Q&A agents]
+    TP --> TF[Executor - one search per year]
+    TF --> FX[Figure extractor agent - LLM per year + code check]
+    FX -->|year unverified| TF
+    FX --> AN[Answer agent - trend prompt]
+    AN --> CR[Critic agent - judge]
+    CR -->|repair once| AN
+    CR --> GV[Governance]
+    GV --> R((answer + series))
+```
+
+**Router flow (`router`): the supervisor delegates to a specialist**
+
+```mermaid
+flowchart LR
+    U((question)) --> IG[Input guard agent]
+    IG --> SV[Supervisor agent - LLM route + rules]
+    SV -->|lookup / comparison| QA[Q&A specialist: executor, evidence guard, answer, calculator]
+    SV -->|trend| TR[Trend specialist: per-year executor, extractor, answer]
+    SV -->|report| HO[Report hand-off]
+    SV -->|out of scope| RF[Refusal]
+    QA --> CR[Critic agent - judge]
+    TR --> CR
+    HO --> CR
+    RF --> CR
+    CR -->|repair once| QA
+    CR -->|repair once| TR
+    CR --> GV[Governance]
+    GV --> R((answer))
+```
+
+### 7b.4 How the agents are coordinated
+
+- **One shared state, one controller per run.** The agents are nodes of one compiled LangGraph state machine per flow (`financial_graph`). They read and write one shared state (`AgentState`: plan, evidence, answer, checks, trend, route), and pass work along graph edges. They are not separate processes sending each other messages.
+- **The next step is decided in code.** LLM agents propose: a route, a plan, a figure, an answer, a verdict. Each proposal is validated (`financial_router.decide`, `normalize_plan`, `validate_point`, `numeric_grounding`), and a routing function in code decides the next node. An LLM never picks the next node directly.
+- **The specialists are branches, not separate subgraphs.** In the router flow, the Q&A and trend specialists are branches of the supervisor's graph that share the critic and governance agents. They could be split into separately compiled subgraphs without changing the routing or the step budget.
+- **Bounded and auditable.** Every loop (retrieval retry, repair) runs only if the rest of the run fits `AGENT_MAX_STEPS` (10, the Track B cap). `agent_run` records the path, every tool call and every calculation, and `route` records the supervisor's decision: the LLM's choice, the rules' choice, who decided, and any adjustments.
+
+**In one line:** three bounded multi-agent flows. A supervisor routes questions to a planner–executor–critic Q&A agent team or a verify-and-retry trend agent team, and all three share one guard, critic and governance layer.
 
 ## 8. Worked runs (local Retail index, mock LLM)
 
