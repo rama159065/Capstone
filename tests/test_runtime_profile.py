@@ -22,6 +22,7 @@ def env(monkeypatch):
 
 def test_local_profile_keeps_chroma_until_an_ingest_exists(env, tmp_path):
     env["RAG_PROFILE"], env["RAG_INGEST_DIR"] = "local", str(tmp_path)
+    env["RAG_VLM_DIR"] = str(tmp_path / "no_vlm")          # not the repo's indexes/rag_home, which may hold a real index
     info = rp.apply_profile(force=True)
     assert info["profile"] == "local" and info["financial_backend"] == "chroma" and info["qdrant"] == "embedded"
     (tmp_path / "ingest.sqlite3").write_bytes(b"")

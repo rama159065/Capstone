@@ -50,8 +50,10 @@ def git(*args: str) -> str:
 
 
 def candidate_files() -> list[str]:
-    """Tracked files plus untracked files that .gitignore doesn't exclude (forward slashes)."""
+    """Tracked files plus untracked files that .gitignore doesn't exclude (forward slashes), plus the downloaded
+    manifests under data/raw/: .gitignore excludes that folder, but the code reads its .jsonl files."""
     listed = git("ls-files", "--cached", "--others", "--exclude-standard", "-z").split("\0")
+    listed += git("ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "data/raw/*.jsonl").split("\0")
     return sorted({f for f in listed if f and (ROOT / f).is_file()})
 
 

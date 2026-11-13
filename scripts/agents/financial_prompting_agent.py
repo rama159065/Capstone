@@ -749,13 +749,14 @@ class AgentState(TypedDict, total=False):
     path: list[str]
     route: dict[str, Any]
     trend: dict[str, Any]
+    sector_trend: dict[str, Any]
     handoff: dict[str, Any]
 
 
 STOPPED = {"refused", "insufficient_evidence", "not_available", "report_handoff"}
 # Nodes every run still needs after the evidence guard: answer, critic, governance (+ calculator when planned).
 MIN_TAIL = 3
-AGENT_FLOWS = ("agentic_graph", "trend_graph", "router")
+AGENT_FLOWS = ("agentic_graph", "trend_graph", "sector_trend_graph", "router")
 
 
 def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
@@ -766,6 +767,11 @@ def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
 def trend_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
     """Multi-year trend agent: one search per fiscal year, a verified series, changes computed in code."""
     return financial_graph(llm, config, "trend_graph")
+
+
+def sector_trend_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
+    """Sector trend agent: one measure across one sector's companies, year by year, over a fixed panel."""
+    return financial_graph(llm, config, "sector_trend_graph")
 
 
 def router_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
@@ -786,11 +792,17 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
     * ``trend_graph``: the router with the trend route forced (falls back to Q&A when no trend can be built).
       Trend path: trend_fetch (one search per fiscal year) -> trend_series (LLM copies each year's figure, code
       checks it is in that year's evidence, computes changes and CAGR) <-> retry missing years -> answer -> critic.
+    * ``sector_trend_graph``: the router with the sector trend route forced. Sector path: sector_fetch (one search
+      per company x year) -> sector_series (statement row read in code, else the LLM copies it; code checks each
+      figure is in that company-year's evidence; one broadened search per figure still missing, inside the node so
+      the run stays within AGENT_MAX_STEPS; fixed panel, totals, changes and CAGR in code) -> answer -> critic.
 
     A loop is taken only if the rest of the run still fits AGENT_MAX_STEPS, so the cap shortens a run instead of
     failing it. ``agent_run`` records the path, every tool call and every calculation.
     """
     from scripts.agents import financial_router as router, financial_tools as tools, financial_trend as trend
+    from scripts.agents import financial_sector_trend as sector_agent
+    from scripts.common.companies import NAMES
     from scripts.agents.financial_clarifier import METRICS, default_clarifier
 
     if flow not in AGENT_FLOWS:
@@ -860,9 +872,20 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
                                   fallback={})
         started = time.perf_counter()
         trend_plan = trend.trend_plan(query, config.ticker, config.year, clarifier)
-        decision = router.decide(raw, query, clarifier, trend_plan, ticker=config.ticker,
-                                 forced="trend" if flow == "trend_graph" else None)
+        sector_plan = sector_agent.sector_plan(query, clarifier, sector_filter=config.sector)
+        forced = {"trend_graph": "trend", "sector_trend_graph": "sector_trend"}.get(flow)
+        decision = router.decide(raw, query, clarifier, trend_plan, ticker=config.ticker, forced=forced,
+                                 sector_plan=sector_plan, sector=config.sector)
         route = decision["route"]
+        if route == "sector_trend":
+            calls_log = [*state.get("tool_calls", []), {
+                "tool": "coverage_lookup", "attempt": 1, "known": bool(clarifier.directory),
+                "sector": sector_plan["sector"], "companies": sector_plan["companies"], "years": sector_plan["years"],
+                "excluded": sector_plan["excluded"], "ms": round((time.perf_counter() - started) * 1000)}]
+            if not sector_plan["feasible"]:
+                return {"route": decision, "plan": sector_plan, "tool_calls": calls_log, "final_status": "not_available",
+                        "answer": sector_agent.not_available_message(sector_plan)}
+            return {"route": decision, "plan": sector_plan, "tool_calls": calls_log}
         if route == "trend":
             calls_log = [*state.get("tool_calls", []), {
                 "tool": "coverage_lookup", "attempt": 1, "known": bool(clarifier.directory),
@@ -955,6 +978,117 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
             update.update(final_status="insufficient_evidence", answer="No answer found in the available evidence.")
         return update
 
+    def sector_search(plan: dict, target: dict, attempt: int, seen: set) -> tuple[list[dict], dict]:
+        """One filtered search for a company-year; a retry broadens the query and searches twice as deep."""
+        started = time.perf_counter()
+        label = tools.target_label(target)
+        query = sector_agent.company_query(plan, target["ticker"], target["year"], METRICS.get(plan.get("metric"), []),
+                                           broadened=attempt > 1)
+        top_k = 3 * (2 if attempt > 1 else 1)
+        run_config = AgentConfig(**{**config.__dict__, "query": query, "ticker": target["ticker"],
+                                    "year": target["year"], "top_k": top_k, "visual": False, "sector": None})
+        hits = answer_evidence(run_config)
+        fresh = []
+        for hit in hits:
+            if hit.get("chunk_id") not in seen:
+                seen.add(hit.get("chunk_id"))
+                fresh.append({**hit, "target": label})
+        return fresh, {"tool": "text_search", "attempt": attempt, "target": label, "query": query, "top_k": top_k,
+                       "hits": len(hits), "new": len(fresh), "ms": round((time.perf_counter() - started) * 1000)}
+
+    def sector_fetch_node(state: AgentState) -> AgentState:
+        """One filtered search per company x fiscal year of the plan."""
+        plan = state.get("plan", {})
+        evidence, calls_log = [], list(state.get("tool_calls", []))
+        seen: set = set()
+        for target in plan.get("targets") or []:
+            fresh, log = sector_search(plan, target, 1, seen)
+            evidence.extend(fresh)
+            calls_log.append(log)
+        return {"evidence": evidence, "retrieval_attempts": 1, "tool_calls": calls_log}
+
+    def sector_figure(plan: dict, ticker: str, year: int, hits: list[dict], use_llm: bool) -> tuple[dict, dict]:
+        """The statement row read in code; with ``use_llm`` and no verified row, the LLM copies the figure, kept only
+        if that company-year's evidence states it on a line naming the measure."""
+        started = time.perf_counter()
+        raw = sector_agent.label_match(hits, plan.get("metric"), year)
+        point = trend.validate_point(raw, hits, year) if raw else {"year": year, "value": None, "value_text": None,
+                                                                   "unit": "", "chunk_id": None, "status": "not_found"}
+        method = "label"
+        if point.get("status") != "ok" and use_llm:
+            raw = safe_json_loads(invoke_prompt(llm, prompts.SERIES_SYSTEM, prompts.SERIES_HUMAN.format(
+                company=NAMES.get(ticker, ticker), metric=plan.get("metric"), year=year,
+                context=evidence_to_context(hits, min(config.max_context_chars, trend.SERIES_CONTEXT_CHARS)))),
+                fallback={})
+            point, method = trend.validate_point(raw, hits, year), "llm"
+            if point.get("status") == "ok" and not sector_agent.on_metric_line(point, hits, METRICS.get(plan.get("metric"), [])):
+                point = {**point, "value": None, "status": "not_on_metric_line"}
+        point["method"] = method
+        return point, {"tool": "series_extract", "target": f"{ticker} FY{year}", "method": method,
+                       "status": point["status"], "value": point.get("value_text"), "chunk_id": point.get("chunk_id"),
+                       "ms": round((time.perf_counter() - started) * 1000)}
+
+    def drop_flagged(evidence: list[dict]) -> tuple[list[dict], dict]:
+        """Chunks the injection guard flags are dropped (never shown to the LLM); the rest of the sector stands."""
+        guard = evidence_prompt_injection_guard(evidence)
+        if guard["safe"]:
+            return evidence, guard
+        flagged = {str(f.get("chunk_id") if isinstance(f, dict) else f) for f in guard.get("flagged_chunks") or []}
+        kept = [hit for hit in evidence if str(hit.get("chunk_id")) not in flagged]
+        return kept, {**guard, "safe": True, "action": "dropped_flagged_chunks", "dropped": sorted(flagged)}
+
+    def sector_series_node(state: AgentState) -> AgentState:
+        """Every company-year's figure, code first: the statement row; then one broadened, deeper search and the row
+        again; only then the LLM. Flagged chunks are dropped. Then the fixed panel and the sector table in code."""
+        evidence, guard = drop_flagged(list(state.get("evidence", [])))
+        plan = state.get("plan", {})
+        calls_log = list(state.get("tool_calls", []))
+        seen = {hit.get("chunk_id") for hit in state.get("evidence", [])}
+        dropped = list(guard.get("dropped") or [])
+        retried, series = 0, {}
+        for ticker in plan.get("companies") or []:
+            points = []
+            for year in plan.get("years") or []:
+                target = {"ticker": ticker, "year": year}
+                label = tools.target_label(target)
+                hits = [hit for hit in evidence if hit.get("target") == label]
+                point, log = sector_figure(plan, ticker, year, hits, use_llm=False)
+                calls_log.append({**log, "attempt": 1})
+                if point.get("status") != "ok":
+                    retried += 1
+                    fresh, search_log = sector_search(plan, target, 2, seen)
+                    fresh, fresh_guard = drop_flagged(fresh)
+                    dropped += fresh_guard.get("dropped") or []
+                    evidence.extend(fresh)
+                    calls_log.append(search_log)
+                    hits = [hit for hit in evidence if hit.get("target") == label]
+                    if hits:
+                        point, log = sector_figure(plan, ticker, year, hits, use_llm=True)
+                        calls_log.append({**log, "attempt": 2})
+                points.append(point)
+            company_plan = {"company": ticker, "company_name": NAMES.get(ticker, ticker), "metric": plan.get("metric"),
+                            "years": plan.get("years") or []}
+            series[ticker] = trend.summarize(company_plan, points)
+        if dropped:
+            guard = {**guard, "action": "dropped_flagged_chunks", "dropped": sorted(set(dropped))}
+        table = sector_agent.aggregate(plan, series)
+        calls_log.append({"tool": "sector_calculator", "panel": table["panel"], "years": table["years"],
+                          "calculations": len(table["calculations"]), "cagr_total": table["cagr_total"],
+                          "unusual_changes": len(table["unusual_changes"])})
+        check = {"attempt": 2 if retried else 1, "evidence": len(evidence), "missing": table["missing"],
+                 "retried": retried, "dropped_chunks": len(guard.get("dropped") or []),
+                 "skipped": [f"FY{y}" for y in plan.get("skipped_years") or []]}
+        update: AgentState = {"evidence": evidence, "evidence_guard": guard, "evidence_check": check,
+                              "tool_calls": calls_log, "retrieval_attempts": 2 if retried else 1,
+                              "sector_trend": {k: v for k, v in table.items() if k != "calculations"},
+                              "calculations": table["calculations"]}
+        if len(table["panel"]) < sector_agent.MIN_PANEL:
+            update.update(final_status="insufficient_evidence", answer=(
+                f"No sector trend: {plan.get('metric')} could be verified for every fiscal year for "
+                f"{len(table['panel'])} {plan.get('sector')} compan{'y' if len(table['panel']) == 1 else 'ies'}, and "
+                f"a sector trend needs at least {sector_agent.MIN_PANEL}."))
+        return update
+
     def executor_node(state: AgentState) -> AgentState:
         """Run the planned tools: coverage check, then one filtered search per target. A retry searches only
         the targets that found nothing, with a broadened query and twice the depth."""
@@ -1024,7 +1158,20 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         evidence = state.get("evidence", [])
         plan = state.get("plan", {})
         series = state.get("trend") or {}
-        if series.get("verified_points"):
+        table = state.get("sector_trend") or {}
+        if table.get("panel"):
+            # Sector trend: the code-computed table and the panel's verified figures, with only the chunks stating them.
+            used_ids = {p.get("chunk_id") for c in table.get("companies", []) if c.get("in_panel")
+                        for p in c.get("points", []) if p.get("status") == "ok"}
+            system = prompts.SECTOR_ANSWER_SYSTEM
+            human = prompts.SECTOR_ANSWER_HUMAN.format(
+                query=state["query"], sector=table.get("sector"), metric=table.get("metric"),
+                panel=", ".join(f"{n} ({t})" for n, t in zip(table.get("panel_names", []), table.get("panel", []))),
+                table=sector_agent.table_text(table), companies=sector_agent.companies_text(table),
+                excluded=sector_agent.excluded_text(table),
+                context=evidence_to_context([h for h in evidence if h.get("chunk_id") in used_ids],
+                                            config.max_context_chars))
+        elif series.get("verified_points"):
             # Trend: the verified series and the code-computed changes, with only the chunks that state them.
             used_ids = {p.get("chunk_id") for p in series.get("points", []) if p.get("status") == "ok"}
             system = prompts.TREND_ANSWER_SYSTEM
@@ -1145,6 +1292,11 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
             extra.append("unverified_calculation")
         if (state.get("support_check") or {}).get("verdict") not in (None, "supported"):
             extra.append("unsupported_claims")
+        table = state.get("sector_trend") or {}
+        if table and table.get("coverage_share", 1) < 0.5:
+            extra.append("low_sector_coverage")            # the panel holds under half the companies planned
+        if table.get("unusual_changes"):
+            extra.append("unusual_sector_change")          # a company figure moved more than RAG_SECTOR_OUTLIER_PCT
         if extra and config.enable_human_review:
             review = {**review, "required": True, "status": "pending_human_review",
                       "triggers": [*review.get("triggers", []), *extra]}
@@ -1158,10 +1310,14 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
     def should_continue_after_security(state: AgentState) -> Literal["stop", "continue"]:
         return "stop" if state.get("final_status") == "refused" else "continue"
 
-    def after_route(state: AgentState) -> Literal["stop", "trend", "qa"]:
+    def after_route(state: AgentState) -> Literal["stop", "trend", "sector", "qa"]:
         if state.get("final_status") in STOPPED:
             return "stop"
-        return "trend" if state.get("route", {}).get("route") == "trend" else "qa"
+        route = state.get("route", {}).get("route")
+        return {"trend": "trend", "sector_trend": "sector"}.get(route, "qa")
+
+    def after_sector(state: AgentState) -> Literal["stop", "answer"]:
+        return "stop" if state.get("final_status") in STOPPED else "answer"
 
     def after_evidence(state: AgentState) -> Literal["stop", "retry", "answer"]:
         if state.get("final_status") in STOPPED:
@@ -1188,7 +1344,8 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
              "answer_step": answer_node, "calculator_step": calculator_node, "critic_step": critic_node,
              "governance_step": governance_node}
     if flow != "agentic_graph":
-        nodes.update(trend_fetch_step=trend_fetch_node, trend_series_step=trend_series_node)
+        nodes.update(trend_fetch_step=trend_fetch_node, trend_series_step=trend_series_node,
+                     sector_fetch_step=sector_fetch_node, sector_series_step=sector_series_node)
     for name, fn in nodes.items():
         graph.add_node(name, step(name, fn))
     graph.set_entry_point("security_step")
@@ -1198,7 +1355,10 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         graph.add_edge("plan_step", "retrieve_step")
     else:
         graph.add_conditional_edges("route_step", after_route,
-                                    {"stop": "critic_step", "trend": "trend_fetch_step", "qa": "retrieve_step"})
+                                    {"stop": "critic_step", "trend": "trend_fetch_step", "sector": "sector_fetch_step",
+                                     "qa": "retrieve_step"})
+        graph.add_edge("sector_fetch_step", "sector_series_step")
+        graph.add_conditional_edges("sector_series_step", after_sector, {"stop": "critic_step", "answer": "answer_step"})
         graph.add_edge("trend_fetch_step", "trend_series_step")
         graph.add_conditional_edges("trend_series_step", after_evidence,
                                     {"stop": "critic_step", "retry": "trend_fetch_step", "answer": "answer_step"})
@@ -1223,6 +1383,7 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         "plain_text": final_state.get("plain_text"),
         "route": final_state.get("route"),
         "trend": final_state.get("trend"),
+        "sector_trend": final_state.get("sector_trend"),
         "handoff": final_state.get("handoff"),
         "plan": final_state.get("plan"),
         "answer": final_state.get("answer"),
@@ -1283,6 +1444,18 @@ def _run_technique(technique: str, llm_provider: str, config: AgentConfig) -> di
     return apply_governance(result, guarded_config, evidence, security, plain_text, evidence_guard)
 
 
+def request_deadline(technique: str, config: AgentConfig) -> float:
+    """Seconds a request may take: RAG_REQUEST_TIMEOUT_SECONDS, or RAG_SECTOR_TIMEOUT_SECONDS (default 300) for a
+    sector trend, which reads one figure per company x year."""
+    seconds = float(os.getenv("RAG_REQUEST_TIMEOUT_SECONDS", "60"))
+    sector = technique == "sector_trend_graph"
+    if technique == "router":
+        from scripts.agents import financial_router
+        from scripts.agents.financial_clarifier import default_clarifier
+        sector = financial_router.rule_route(config.query, default_clarifier(), config.ticker, config.sector)[0] == "sector_trend"
+    return max(seconds, float(os.getenv("RAG_SECTOR_TIMEOUT_SECONDS", "300"))) if sector else seconds
+
+
 # Outcomes decided before any evidence: no coverage check, no evidence fallback.
 NOT_SCOPED = {"refused", "tool_error", "report_handoff"}
 
@@ -1290,7 +1463,7 @@ NOT_SCOPED = {"refused", "tool_error", "report_handoff"}
 def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dict[str, Any]:
     """Bound legacy comparison workflows and label unverified generation honestly."""
     from scripts.common.resilience import Calls, CallFailure
-    calls = Calls(float(os.getenv("RAG_REQUEST_TIMEOUT_SECONDS", "60")))
+    calls = Calls(request_deadline(technique, config))
     try:
         result = calls.run("financial_workflow", lambda: _run_technique(technique, llm_provider, config))
     except CallFailure:
@@ -1307,6 +1480,8 @@ def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dic
             result.pop(key, None)
         result.update(answer=scope["coverage"]["message"], final_status="not_available", coverage=scope["coverage"],
                       evidence=[], citation_check={"valid": False, "cited_chunk_ids": []})
+    elif result.get("final_status") == "not_available" and (result.get("route") or {}).get("route") == "sector_trend":
+        pass                     # the sector plan already said why (no sector, measure or coverage); keep its reason
     elif result.get("final_status") not in NOT_SCOPED:
         evidence = result.get("evidence", [])
         if scope["expected"] and llm_provider != "mock":
@@ -1368,6 +1543,7 @@ def summarize_result(result: dict[str, Any]) -> dict[str, Any]:
         "plan": result.get("plan"),
         "route": result.get("route"),
         "trend": result.get("trend"),
+        "sector_trend": result.get("sector_trend"),
         "handoff": result.get("handoff"),
         "agent_run": result.get("agent_run"),
         "support_check": result.get("support_check"),
@@ -1409,6 +1585,7 @@ def parse_args() -> argparse.Namespace:
             "self_consistency",
             "agentic_graph",
             "trend_graph",
+            "sector_trend_graph",
             "router",
             "all",
         ],
@@ -1456,6 +1633,7 @@ def main() -> int:
         "self_consistency",
         "agentic_graph",
         "trend_graph",
+        "sector_trend_graph",
         "router",
     ] if args.technique == "all" else [args.technique]
 

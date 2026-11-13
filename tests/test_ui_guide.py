@@ -46,10 +46,21 @@ def test_status_legend_covers_every_answer_status():
             "not_grounded", "refused"} <= set(ui.STATUS_HELP)
 
 
-def test_guide_renders_and_an_example_click_sends_it(monkeypatch):
+def real_streamlit(monkeypatch):
+    """Other test files install a bare streamlit stub; AppTest needs the real package (imported once only)."""
     import sys
-    if not hasattr(sys.modules.get("streamlit"), "__path__"):     # other test files install a bare stub module
-        monkeypatch.delitem(sys.modules, "streamlit", raising=False)
+    if hasattr(sys.modules.get("streamlit"), "__path__"):
+        return
+    if getattr(real_streamlit, "module", None):
+        monkeypatch.setitem(sys.modules, "streamlit", real_streamlit.module)
+        return
+    monkeypatch.delitem(sys.modules, "streamlit", raising=False)
+    import streamlit
+    real_streamlit.module = streamlit
+
+
+def test_guide_renders_and_an_example_click_sends_it(monkeypatch):
+    real_streamlit(monkeypatch)
     from streamlit.testing.v1 import AppTest
     monkeypatch.setenv("API_BASE_URL", "http://127.0.0.1:9")        # nothing listens: fallback example
     monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "mock")
@@ -64,3 +75,70 @@ def test_guide_renders_and_an_example_click_sends_it(monkeypatch):
     assert not app.exception
     assert any(ui.DEFAULT_QUERY in m.markdown[0].value for m in app.chat_message
                if m.markdown)
+
+
+def test_demo_settings_hide_what_the_served_index_ignores(monkeypatch):
+    real_streamlit(monkeypatch)
+    from streamlit.testing.v1 import AppTest
+    assert ui.served_backend({"runtime": {"financial_backend": "financial_vlm"}}) == "financial_vlm"
+    assert ui.uses_corpus_index("financial_vlm") and ui.uses_corpus_index("financial_qdrant")
+    assert not ui.uses_corpus_index("chroma") and not ui.uses_corpus_index(None)
+
+    def labels(backend):
+        monkeypatch.setenv("TEST_UI_BACKEND", backend)
+        app = AppTest.from_function(sidebar_script, default_timeout=60).run()
+        assert not app.exception
+        return {w.label for w in [*app.selectbox, *app.slider, *app.text_input, *app.toggle]}
+
+    served = labels("financial_vlm")
+    assert {"Technique", "LLM provider", "Retrieval mode", "Evidence chunks (top k)", "Guardrails"} <= served
+    assert not served & {"FastAPI base URL", "Embedding provider", "Hash dimensions", "Dense candidates",
+                         "BM25 candidates", "Source type filter", "Self-consistency samples", "LangSmith project"}
+    assert {"Embedding provider", "Dense candidates"} <= labels("chroma")      # older default index: still used
+    assert ui.build_payload("q", {**ui.DEMO_DEFAULTS, "llm_provider": "mock", "top_k": 5, "technique": "router",
+                                  "retrieval_mode": "hybrid", "ticker": "", "year": None, "sectors": [],
+                                  "enable_guardrails": True, "enable_human_review": True,
+                                  "enable_langsmith": False})["hash_dimensions"] == 384
+
+
+def sidebar_script():
+    """AppTest script: the sidebar against an API that reports the backend in TEST_UI_BACKEND."""
+    import importlib.util
+    import os
+    from scripts.common.paths import ROOT
+    spec = importlib.util.spec_from_file_location("ui_under_test", ROOT / "scripts" / "ui" / "api_streamlit_app.py")
+    ui = importlib.util.module_from_spec(spec)           # a fresh copy bound to the real streamlit
+    spec.loader.exec_module(ui)
+    health = {"status": "ok", "runtime": {"financial_backend": os.environ["TEST_UI_BACKEND"]}}
+    ui.get_json = lambda base, path: health if path == "/health" else {}
+    ui.sidebar()
+
+
+def test_sector_trend_table_renders(monkeypatch):
+    real_streamlit(monkeypatch)
+    from streamlit.testing.v1 import AppTest
+    app = AppTest.from_function(sector_table_script, default_timeout=60).run()
+    assert not app.exception
+    assert app.expander[0].label == "Sector trend: Healthcare revenue · CAGR 5.08%"
+    assert len(app.dataframe) == 2 and any("Left out: Abbott" in c.value for c in app.caption)
+
+
+def sector_table_script():
+    """AppTest script: the sector table of a two-company healthcare panel."""
+    import importlib.util
+    from scripts.common.paths import ROOT
+    spec = importlib.util.spec_from_file_location("ui_sector", ROOT / "scripts" / "ui" / "api_streamlit_app.py")
+    ui = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ui)
+    point = lambda y, v: {"year": y, "value_text": v, "status": "ok"}
+    ui.render_sector_trend({
+        "sector": "Healthcare", "metric": "revenue", "cagr_total": 5.0838, "panel": ["ABBV", "AMGN"],
+        "panel_names": ["AbbVie", "Amgen"], "planned": ["ABBV", "ABT", "AMGN"], "sector_companies": 6,
+        "rows": [{"year": 2022, "total": 84377.0, "total_pct_change": None, "median_company_pct_change": None,
+                  "growing": None, "companies": 2},
+                 {"year": 2023, "total": 82508.0, "total_pct_change": -2.22, "median_company_pct_change": 0.33,
+                  "growing": 1, "companies": 2}],
+        "chart": [{"year": 2022, "total": 84377.0}, {"year": 2023, "total": 82508.0}],
+        "companies": [{"ticker": "ABBV", "company": "AbbVie", "in_panel": True, "cagr": 1.2,
+                       "points": [point(2022, "58,054"), point(2023, "54,318")]}],
+        "excluded": [{"ticker": "ABT", "company": "Abbott", "reason": "figure not verified for FY2023"}]})

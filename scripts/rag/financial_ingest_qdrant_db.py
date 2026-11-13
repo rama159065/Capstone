@@ -383,7 +383,11 @@ def pool_rows_cols(vectors, is_image):
 class PageOCR:
     def __init__(self, cuda=False, scale=2.0, min_confidence=.6):
         from rapidocr import RapidOCR
-        self.engine = RapidOCR(params={"Global.log_level": "warning", "EngineConfig.onnxruntime.use_cuda": cuda})
+        params = {"Global.log_level": "warning", "EngineConfig.onnxruntime.use_cuda": cuda}
+        threads = int(os.getenv("RAG_OCR_THREADS") or 0)        # 0: onnxruntime's default (every core)
+        if threads > 0:                                          # cap per process when several OCR workers run
+            params["EngineConfig.onnxruntime.intra_op_num_threads"] = threads
+        self.engine = RapidOCR(params=params)
         self.scale, self.min_confidence = scale, min_confidence
         self.signature = ocr_signature(scale, min_confidence)
 

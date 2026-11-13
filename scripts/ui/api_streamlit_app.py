@@ -14,7 +14,7 @@ Deployment settings (environment variables, see .env.example):
     API_TIMEOUT_SECONDS     per-request timeout (default 180)
     DEFAULT_LLM_PROVIDER    mock | hosted, preselected in the sidebar
     DEFAULT_EMBEDDING_PROVIDER  hashing | hosted
-    UI_SHOW_ADVANCED        1 = open the retrieval and tracing settings by default
+    UI_SHOW_ADVANCED        1 = open the "Demo settings" panel by default
     UI_APP_TITLE            page heading (default "Financial Report Copilot")
 """
 
@@ -46,6 +46,13 @@ EMBEDDING_PROVIDERS = ["hashing", "hosted"]
 DEFAULT_LLM_PROVIDER = os.getenv("DEFAULT_LLM_PROVIDER", "mock")
 DEFAULT_EMBEDDING_PROVIDER = os.getenv("DEFAULT_EMBEDDING_PROVIDER", "hashing")
 SHOW_ADVANCED = os.getenv("UI_SHOW_ADVANCED", "0").lower() in {"1", "true", "yes"}
+INDEX_BACKENDS = {"financial_qdrant", "financial_vlm"}            # sector-corpus indexes (see uses_corpus_index)
+BASELINE_TECHNIQUES = {"baseline_rag", "structured_few_shot", "decomposition", "self_consistency"}
+# Request values for settings the sidebar doesn't show (same as the API's own defaults).
+DEMO_DEFAULTS: dict[str, Any] = {
+    "embedding_provider": DEFAULT_EMBEDDING_PROVIDER, "hash_dimensions": 384, "dense_top_k": 30, "bm25_top_k": 30,
+    "source_type": "", "max_context_chars": 12000, "self_consistency_samples": 3, "langsmith_project": "",
+}
 _COMPANIES: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 DOMAIN = "financial_report_qa"        # the only domain this UI serves
 APP_TITLE = os.getenv("UI_APP_TITLE", "").strip() or "Financial Report Copilot"
@@ -265,6 +272,7 @@ def render_result(result: dict[str, Any]) -> None:
         st.caption(summary)
 
     render_trend(result.get("trend") or {})
+    render_sector_trend(result.get("sector_trend") or {})
 
     agent_run = result.get("agent_run")
     if agent_run:
@@ -358,6 +366,43 @@ def render_trend(trend: dict[str, Any]) -> None:
                    "changes and CAGR are computed in code.")
 
 
+def pct(value: float | None) -> str | None:
+    return None if value is None else f"{value:+.2f}%"
+
+
+def render_sector_trend(table: dict[str, Any]) -> None:
+    """The sector trend agent's table: sector total, changes and breadth per year, then each company's figures."""
+    rows = table.get("rows") or []
+    if not rows:
+        return
+    title = f"Sector trend: {table.get('sector')} {table.get('metric')}"
+    if table.get("cagr_total") is not None:
+        title += f" · CAGR {table['cagr_total']:.2f}%"
+    with st.expander(title, expanded=True):
+        st.caption(f"Panel: {', '.join(table.get('panel_names') or []) or 'none'} "
+                   f"({len(table.get('panel') or [])} of {len(table.get('planned') or [])} companies read; "
+                   f"{table.get('sector_companies')} indexed in the sector). Totals in USD millions.")
+        st.dataframe([{"fiscal year": f"FY{r['year']}",
+                       "sector total (USD m)": None if r["total"] is None else round(r["total"], 1),
+                       "total change": pct(r["total_pct_change"]),
+                       "median company change": pct(r["median_company_pct_change"]),
+                       "companies growing": None if r["growing"] is None else f"{r['growing']} of {r['companies']}"}
+                      for r in rows], width="stretch")
+        chart = table.get("chart") or []
+        if len(chart) >= 2:
+            st.line_chart([{"fiscal year": f"FY{c['year']}", "sector total": c["total"]} for c in chart],
+                          x="fiscal year", y="sector total")
+        st.dataframe([{"company": f"{c['company']} ({c['ticker']})", "in panel": c["in_panel"],
+                       **{f"FY{p['year']}": p.get("value_text") if p.get("status") == "ok" else p.get("status")
+                          for p in c.get("points") or []},
+                       "CAGR": pct(c.get("cagr"))} for c in table.get("companies") or []], width="stretch")
+        if table.get("excluded"):
+            st.caption("Left out: " + "; ".join(f"{e['company']} ({e['reason']})" for e in table["excluded"]))
+        st.caption("Each figure is read from that company's filing for that year (statement row, else the model) and "
+                   "kept only if the filing states it; totals, changes and CAGR are computed in code over companies "
+                   "verified in every year.")
+
+
 def render_turn(turn: dict[str, Any]) -> None:
     """Render one /conversation response: questions, an answer, or a report outcome."""
     status = turn.get("status")
@@ -403,14 +448,27 @@ def option_index(options: list[str], value: str) -> int:
     return options.index(value) if value in options else 0
 
 
+def served_backend(health: dict[str, Any]) -> str | None:
+    """The financial retrieval backend the API reports in /health (None for an older API)."""
+    return (health.get("runtime") or {}).get("financial_backend")
+
+
+def uses_corpus_index(backend: str | None) -> bool:
+    """True when the API answers from a sector-corpus index (Qdrant or Chroma). That index keeps the embedding
+    model it was built with and picks its own candidates, so the embedding, hash, candidate and source-type
+    settings have no effect and are not shown."""
+    return backend in INDEX_BACKENDS
+
+
 def sidebar() -> dict[str, Any]:
     st.sidebar.title("Filters and settings")
-    advanced = st.sidebar.expander("Advanced: backend, retrieval and tracing", expanded=SHOW_ADVANCED)
-    api_base = advanced.text_input("FastAPI base URL", DEFAULT_API_BASE)
-    if get_json(api_base, "/health").get("status") != "ok":      # say nothing while it works
+    api_base = DEFAULT_API_BASE                                   # API_BASE_URL (deployment setting)
+    health = get_json(api_base, "/health")
+    if health.get("status") != "ok":                             # say nothing while it works
         st.sidebar.warning("The copilot service is not reachable right now. Please try again shortly.")
+    corpus_index = uses_corpus_index(served_backend(health))
 
-    settings: dict[str, Any] = {"api_base": api_base, "ticker": "", "year": None, "sectors": []}
+    settings: dict[str, Any] = {"api_base": api_base, "ticker": "", "year": None, "sectors": [], **DEMO_DEFAULTS}
     companies = covered_companies(api_base)
     names = {row["ticker"]: row.get("company") or row["ticker"] for row in companies}
     settings["clarify"] = st.sidebar.toggle(
@@ -433,32 +491,42 @@ def sidebar() -> dict[str, Any]:
                 settings["year"] = int(year_value)
             except ValueError:
                 st.sidebar.warning("Year must be numeric; ignoring filter.")
-    settings["technique"] = advanced.selectbox(
-        "Technique", ["router", "agentic_graph", "trend_graph", "baseline_rag", "structured_few_shot", "decomposition",
+    demo = st.sidebar.expander("Demo settings", expanded=SHOW_ADVANCED)
+    settings["technique"] = demo.selectbox(
+        "Technique", ["router", "agentic_graph", "trend_graph", "sector_trend_graph", "baseline_rag", "structured_few_shot", "decomposition",
                       "self_consistency"],
-        help="router (default) sends each question to the Q&A agent, the trend agent or the report handoff; "
-             "agentic_graph is the Q&A agent alone; trend_graph is the multi-year trend agent; the others are "
+        help="router (default) sends each question to the Q&A agent, the trend agent, the sector trend agent or "
+             "the report handoff; agentic_graph is the Q&A agent alone; trend_graph is the multi-year trend agent; "
+             "sector_trend_graph is the sector trend agent; the others are "
              "single-prompt baselines for comparison.")
 
     settings.update({
-        "llm_provider": advanced.selectbox("LLM provider", LLM_PROVIDERS,
-                                           index=option_index(LLM_PROVIDERS, DEFAULT_LLM_PROVIDER)),
-        "embedding_provider": advanced.selectbox("Embedding provider", EMBEDDING_PROVIDERS,
-                                                 index=option_index(EMBEDDING_PROVIDERS, DEFAULT_EMBEDDING_PROVIDER)),
-        "retrieval_mode": advanced.selectbox("Retrieval mode", ["hybrid", "dense", "bm25"], index=0,
-                                             help="hybrid = dense + BM25 fused by RRF (recommended); dense or bm25 = one retriever only"),
-        "source_type": advanced.text_input("Source type filter", "").strip(),
-        "top_k": advanced.slider("Final top k", 1, 20, 5),
-        "dense_top_k": advanced.slider("Dense candidates", 1, 100, 30),
-        "bm25_top_k": advanced.slider("BM25 candidates", 1, 100, 30),
-        "hash_dimensions": advanced.selectbox("Hash dimensions", [384, 768, 1024, 1536], index=0),
-        "max_context_chars": advanced.slider("Max context chars", 1000, 64000, 12000, step=1000),
-        "self_consistency_samples": advanced.slider("Self-consistency samples", 1, 5, 3),
-        "enable_guardrails": advanced.toggle("Guardrails", True),
-        "enable_human_review": advanced.toggle("Human review routing", True),
-        "enable_langsmith": advanced.toggle("LangSmith tracing", False),
-        "langsmith_project": advanced.text_input("LangSmith project", ""),
+        "llm_provider": demo.selectbox("LLM provider", LLM_PROVIDERS,
+                                       index=option_index(LLM_PROVIDERS, DEFAULT_LLM_PROVIDER)),
+        "retrieval_mode": demo.selectbox("Retrieval mode", ["hybrid", "dense", "bm25"], index=0,
+                                         help="hybrid = dense + BM25 fused by RRF (recommended); dense or bm25 = one retriever only"),
+        "top_k": demo.slider("Evidence chunks (top k)", 1, 20, 5),
     })
+    if settings["technique"] in BASELINE_TECHNIQUES:             # single-prompt baselines only
+        settings["max_context_chars"] = demo.slider("Max context chars", 1000, 64000, 12000, step=1000)
+    if settings["technique"] == "self_consistency":
+        settings["self_consistency_samples"] = demo.slider("Self-consistency samples", 1, 5, 3)
+    if not corpus_index:                                         # older default Chroma index: these still apply
+        settings.update({
+            "embedding_provider": demo.selectbox("Embedding provider", EMBEDDING_PROVIDERS,
+                                                 index=option_index(EMBEDDING_PROVIDERS, DEFAULT_EMBEDDING_PROVIDER)),
+            "hash_dimensions": demo.selectbox("Hash dimensions", [384, 768, 1024, 1536], index=0),
+            "dense_top_k": demo.slider("Dense candidates", 1, 100, 30),
+            "bm25_top_k": demo.slider("BM25 candidates", 1, 100, 30),
+            "source_type": demo.text_input("Source type filter", "").strip(),
+        })
+    settings.update({
+        "enable_guardrails": demo.toggle("Guardrails", True),
+        "enable_human_review": demo.toggle("Human review routing", True),
+        "enable_langsmith": demo.toggle("LangSmith tracing", False),
+    })
+    if settings["enable_langsmith"]:
+        settings["langsmith_project"] = demo.text_input("LangSmith project", "")
 
     if st.sidebar.button("Clear chat", width="stretch"):
         st.session_state["messages"] = []
@@ -477,8 +545,7 @@ def main() -> None:
     companies = covered_companies(settings["api_base"])
     coverage = coverage_summary(companies)
     st.caption((f"Coverage: **{coverage}** of SEC annual reports." if coverage
-                else "Coverage: unknown (the API is not reachable).")
-               + " Streamlit → FastAPI → LangGraph agents → hybrid RAG.")
+                else "Coverage: unknown (the API is not reachable)."))
     if settings.get("llm_provider") == "mock":
         st.caption(":orange[Test mode: answers come from the mock LLM, so their wording is placeholder text. "
                    "Retrieval, citations, guardrails and the agent steps are real.]")

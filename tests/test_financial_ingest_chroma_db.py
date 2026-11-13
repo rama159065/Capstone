@@ -92,6 +92,28 @@ def test_page_choice_and_signature_without_loading_a_model(tmp_path, corpus):
     assert vi.vlm_signature(args) == "transformers:Qwen/Qwen3-VL-8B-Instruct:1200"
 
 
+def test_parallel_workers_give_the_same_index(tmp_path, corpus):
+    """--workers: filings are read in worker processes, embedded and written here; the index is the same."""
+    folder = corpus / "banking"
+    first = json.loads((folder / "pdf_manifest.jsonl").read_text(encoding="utf-8"))
+    second = {**first, "document_id": "edgar_ars_TEST_2024", "year": 2024, "local_path": "EDGAR_ARS_TEST_2024.pdf"}
+    (folder / second["local_path"]).write_bytes((folder / first["local_path"]).read_bytes())
+    (folder / "pdf_manifest.jsonl").write_text(json.dumps(first) + "\n" + json.dumps(second) + "\n", encoding="utf-8")
+
+    serial = vi.VlmIngest(args_for(tmp_path / "serial", corpus, "chroma", "--vlm", "mock"))
+    assert serial.run() == {"complete": 2}
+    parallel = vi.VlmIngest(args_for(tmp_path / "parallel", corpus, "chroma", "--vlm", "mock", "--workers", "2",
+                                     "--low-priority"))
+    assert parallel.run() == {"complete": 2}
+
+    def chunks(run):
+        got = run.store.collection.get(include=["documents"])
+        return sorted(zip(got["ids"], got["documents"]))
+    assert chunks(parallel) == chunks(serial) and parallel.store.bm25.count() == serial.store.bm25.count()
+    assert parallel.state.done("edgar_ars_TEST_2024", "vlm", parallel.pipeline)
+    assert vi.VlmIngest(args_for(tmp_path / "parallel", corpus, "chroma", "--vlm", "mock", "--workers", "2")).run() == {}
+
+
 class FakeOCR:
     signature = "fake-ocr"
 

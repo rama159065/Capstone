@@ -248,6 +248,32 @@ Budget: 8 steps; one retry of unverified years adds 2 (10). The response's `tren
 
 **Live check (local Retail index, mock LLM, 12 November 2026).** "How did Costco revenue change over the years?" → route `trend` (rules overrode the mock's `lookup`) → searches for FY2024 and FY2025 → 249,625 (p42) and 269,912 (p41), both verified → +8.13% → `answered`, `grounded`. The mock extractor takes the first figure on the page (net sales here); a hosted model picks the asked measure.
 
+**Sector trend agent (`technique=sector_trend_graph`, or the router's `sector_trend` route).** One measure across one sector's companies, fiscal year by fiscal year: "How did healthcare revenue trend from 2022 to 2025?". Code: [financial_sector_trend.py](../scripts/agents/financial_sector_trend.py). Tests: [test_sector_trend.py](../tests/test_sector_trend.py).
+
+```mermaid
+flowchart TD
+    R[route_step - sector_plan: sector, measure, years, companies] -->|sector_trend| SF[sector_fetch_step - one search per company x year]
+    R -->|plan not buildable| CR[critic_step]
+    SF --> SS[sector_series_step - statement row in code; else broadened search + row; else LLM; fixed panel + sector table in code]
+    SS -->|fewer than 2 companies verified| CR
+    SS --> A[answer_step - sector prompt]
+    A --> CR
+    CR -->|repair once| A
+    CR --> GV[governance_step]
+```
+
+| Step | What it does | LLM? |
+|---|---|---|
+| `route_step` | The clarifier's parser reads a sector name and no company plus trend words (or two years) as `sector_trend`; the sidebar's sector filter does the same for a company-less trend question. `sector_plan`: one sector, one measure, the years (asked years the sector's index holds, else its last 5), and the companies with a filing for **every** year (alphabetical, at most `RAG_SECTOR_MAX_COMPANIES`, default 8). The rest are listed in `excluded` with the reason. A plan that can't be built (no or several sectors, no measure, a measure banks don't report, fewer than 2 companies) ends as `not_available` with the reason | Router only |
+| `sector_fetch_step` | One `text_search` filtered by ticker and year per company × year ("AbbVie revenue fiscal year 2024", top 3) | No |
+| `sector_series_step` | Per company-year, **code first**: `label_match` reads the statement row ("Total revenues 36,751 33,424 28,190") in the column whose header is that year. Without one, a broadened search twice as deep, and the row again. Only then the LLM (Series JSON), whose figure must also sit on a line naming the measure (`on_metric_line`). `validate_point` applies to both. Chunks the injection guard flags are **dropped**, not trusted, and the rest of the sector stands. Then `aggregate`: the **fixed panel** (companies verified in every year), per year the sector total in USD millions, its change, the median company change and how many companies grew, plus the total's CAGR and the median company CAGR, all recorded as calculations | Only for rows code can't read |
+| `answer_step` | Sector prompt: the table, the panel's figures with chunk IDs and who was left out; no new numbers | **Yes** |
+| `critic_step`, `governance_step` | As in section 6. Extra human-review triggers: `low_sector_coverage` (panel under half the companies read) and `unusual_sector_change` (a company moved more than `RAG_SECTOR_OUTLIER_PCT`, default 50%, in a year) | Yes (judge) |
+
+Budget: 8 steps, as the retry runs inside `sector_series_step` (Track B's 10-step cap holds with one repair). A sector request gets `RAG_SECTOR_TIMEOUT_SECONDS` (default 300) instead of the 60-second request deadline. The response's `sector_trend` holds `rows`, `panel`, `excluded`, `companies` (each figure with `method` `label` or `llm`, page and chunk), the CAGRs and `unusual_changes`; Streamlit shows the sector table, a chart of the total and the per-company figures.
+
+**Live check (local Chroma index, 180 min500 filings, mock LLM, 13 November 2026).** "How did healthcare revenue trend from 2022 to 2025?" → `sector_trend`, 8 steps, 24 searches, 33 s. AbbVie (58,054 / 54,318 / 56,334 / 61,160) and Amgen (26,323 / 28,190 / 33,424 / 36,751) read from their statement rows; Abbott left out (no FY2023–24 statement row in the text layer, those pages were skipped at ingest); Danaher, Gilead and Intuitive Surgical left out (filings missing for some years). Sector total 84,377 → 97,911 USD m, CAGR 5.08%. "How did banking net interest income change from 2022 to 2025?" → no panel: bank income statements were rarely in the top hits and segment tables repeat the year header, so code read 5 of 32 figures and the line check rejected every mock guess; the answer says a sector trend needs at least 2 companies. A hosted extractor is needed for banks.
+
 ## 7b. Multi-agent view of the three flows
 
 All three flows are **multi-agent flows**: each question passes through several agents with separate roles, prompts and outputs, which hand work to each other. A critic agent can send work back for a rewrite. In the router flow, a supervisor agent also delegates to a specialist agent.

@@ -85,7 +85,12 @@ def test_directory_includes_filings_the_index_holds(tmp_path, monkeypatch):
         ("edgar_ars_XOM_2023", "text", "failed"),          # not searchable
         ("edgar_ars_XOM_2024", "visual", "complete"),      # images only: text stage decides
     ])
-    make_state(tmp_path / "vlm" / "vlm_ingest.sqlite3", [("edgar_ars_COST_2024", "complete")], with_stage=False)
+    make_state(tmp_path / "vlm" / "vlm_ingest.sqlite3", [          # pipeline 1 records its one stage as "vlm"
+        ("edgar_ars_COST_2024", "vlm", "complete"),
+        ("edgar_ars_MSFT_2024", "vlm", "processing"),     # interrupted run: not searchable
+    ])
+    make_state(tmp_path / "old" / "vlm_ingest.sqlite3", [("edgar_ars_COST_2024", "complete")], with_stage=False)
+    assert fc.indexed_filings(tmp_path / "old" / "vlm_ingest.sqlite3") == [("COST", 2024)]
     monkeypatch.setattr(fc, "MANIFESTS", ())
     monkeypatch.setenv("RAG_INGEST_DIR", str(tmp_path / "fq"))
     monkeypatch.setenv("RAG_VLM_DIR", str(tmp_path / "vlm"))

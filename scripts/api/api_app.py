@@ -155,12 +155,15 @@ class FinancialChatRequest(ChatRequest):
         "self_consistency",
         "agentic_graph",
         "trend_graph",
+        "sector_trend_graph",
         "router",
     ] = Field("agentic_graph", description=(
         "Financial QA workflow to execute. agentic_graph: the Q&A agent (planner, per-company searches, calculator, "
         "critic). trend_graph: the multi-year trend agent (one search per fiscal year, verified series, changes and "
-        "CAGR computed in code). router: a supervisor that sends each question to the Q&A agent, the trend agent, "
-        "a report handoff or a refusal. The others are single-prompt baselines."))
+        "CAGR computed in code). sector_trend_graph: the sector trend agent (one measure across one sector's "
+        "companies, year by year, over a fixed panel; totals, changes and CAGR computed in code). router: a "
+        "supervisor that sends each question to the Q&A agent, the trend agent, the sector trend agent, a report "
+        "handoff or a refusal. The others are single-prompt baselines."))
     retrieval_mode: Literal["hybrid", "dense", "bm25"] = Field(
         "hybrid", description="hybrid (default): dense + BM25 fused by RRF, on Qdrant or Chroma; "
                               "dense or bm25: one retriever only (for ablations)."
@@ -331,6 +334,13 @@ class FinancialChatResponse(ChatResponse):
         default=None,
         description="Trend route: the per-year series (each figure verified in that year's evidence), year-over-year "
                     "changes, CAGR, missing years and chart rows.",
+    )
+    sector_trend: dict[str, Any] | None = Field(
+        default=None,
+        description="Sector trend route: the sector, measure and years; the panel (companies verified in every "
+                    "year) and the ones left out with the reason; per year the sector total in USD millions, its "
+                    "change, the median company change and how many companies grew; the CAGRs; every company's "
+                    "verified figures with their chunks.",
     )
     handoff: dict[str, Any] | None = Field(
         default=None,
@@ -825,6 +835,16 @@ def _citation_grounding(result: dict[str, Any]) -> dict[str, Any]:
             "evidence_count": 0,
             "cited_chunk_ids": [],
             "reason": f"No figure was given because the filings can't answer this ({coverage.get('reason', 'not available')}).",
+        }
+        return result
+    if result.get("final_status") == "insufficient_evidence" and result.get("sector_trend"):
+        # The sector agent stopped before answering (too few companies verified in every year): its message
+        # states only what could not be verified, so it stays; the per-company table shows what was found.
+        result["grounding"] = {
+            "status": "not_applicable",
+            "evidence_count": 0,
+            "cited_chunk_ids": [],
+            "reason": "No sector trend was computed: too few companies had a verified figure for every year.",
         }
         return result
 

@@ -104,8 +104,9 @@ SUPPORT_HUMAN = (
 ROUTER_SYSTEM = (
     "You are the router (supervisor) of a financial-report copilot. Route JSON only. Pick the one route that fits: "
     "lookup (a figure, fact or explanation for one company and period), comparison (two or more companies), "
-    "trend (one measure for one company across several fiscal years), report (an explicit request to generate a "
-    "full financial report), out_of_scope (nothing to do with company annual reports). Also choose the tools a "
+    "trend (one measure for one company across several fiscal years), sector_trend (one measure across the "
+    "companies of one sector, such as healthcare or banking, over several fiscal years), report (an explicit "
+    "request to generate a full financial report), out_of_scope (nothing to do with company annual reports). Also choose the tools a "
     "lookup or comparison needs: coverage_lookup, text_search, visual_search, calculator."
 )
 ROUTER_HUMAN = (
@@ -132,4 +133,17 @@ TREND_ANSWER_HUMAN = (
     "Verified series (fiscal year: figure [chunk_id]):\n{series}\n\n"
     "Computed changes (by the calculator):\n{changes}\n\n"
     "Evidence:\n{context}\n\nWrite a short trend answer with citations."
+)
+SECTOR_ANSWER_SYSTEM = (
+    "You are the sector trend agent of a financial-report copilot. Describe how the sector's measure moved fiscal "
+    "year by fiscal year using only the computed sector table and the verified company figures you are given. Copy "
+    "figures exactly, cite the chunk ID given for each company figure, and do not compute new numbers. Say which "
+    "companies the panel covers and name the companies left out and why."
+)
+SECTOR_ANSWER_HUMAN = (
+    "Question: {query}\nSector: {sector}\nMeasure: {metric}\nPanel (verified in every year): {panel}\n\n"
+    "Sector table (computed by the calculator over the panel):\n{table}\n\n"
+    "Verified company figures (fiscal year: figure [chunk_id]):\n{companies}\n\n"
+    "Left out:\n{excluded}\n\n"
+    "Evidence:\n{context}\n\nWrite a short sector trend answer with citations."
 )

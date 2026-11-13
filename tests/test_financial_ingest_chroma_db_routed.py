@@ -93,7 +93,52 @@ def test_cross_check_and_signature():
     assert vi.cross_check(table("120,580"), OCR_TEXT)["unverified"] == ["120,580"]
     assert vi.cross_check(table("120,500"), "too short")["share"] is None                         # nothing to check
     args = vi.build_parser().parse_args(["ingest", "--vlm", "routed", "--qwen-reader", "mock", "--paid-threshold", "0.2"])
-    assert vi.vlm_signature(args).startswith("routed-v1:qwen=mock-v1:ocr=ocr:") and "threshold=0.2" in vi.vlm_signature(args)
+    assert vi.vlm_signature(args).startswith("routed-v2:qwen=mock-v1:ocr=ocr:") and "threshold=0.2" in vi.vlm_signature(args)
+    assert ":skip=" not in vi.vlm_signature(args)
+    skipping = vi.build_parser().parse_args(["ingest", "--vlm", "routed", "--qwen-reader", "mock",
+                                             "--skip-routes", "qwen3VL,paidVL"])
+    assert vi.vlm_signature(skipping).endswith(":skip=paidVL,qwen3VL")          # a later full run redoes the filings
+    assert vi.make_vlm(skipping).signature == vi.vlm_signature(skipping)
+    with pytest.raises(ValueError):
+        vi.RoutedReader(lambda: None, "q", ocr=Reader("ocr", ""), skip_routes=("ocr",))
+
+
+def test_skipped_routes_load_no_model_and_keep_a_usable_text_layer(tmp_path, corpus, monkeypatch):
+    real = page_audit.route
+    monkeypatch.setattr(page_audit, "route", lambda page: {2: "qwen3VL", 3: "paidVL"}.get(page["page"], real(page)))
+    ocr, broken = Reader("ocr", OCR_TEXT), Broken()
+    reader = vi.RoutedReader(lambda: broken, broken.signature, ocr=ocr, describe=False, skip_routes=("qwen3VL", "paidVL"))
+    _, by_page = run(tmp_path, corpus, reader)
+    assert broken.calls == 0 and reader._qwen is None and ocr.calls == 0     # no model, no OCR for skipped pages
+    assert {m["reader"] for m in by_page.values()} == {"pdfParser"}          # text layers only (the test chart's is
+    assert 3 not in by_page                                                   # too short); garbled: left for later
+
+
+RICH_OCR = ("Segment results in millions | Upstream 391,035 | Downstream 120,500 | Chemicals 8,250 | "
+            "Other 1,775 | Eliminations (2,310) | Total 519,250 | Prior year 498,120 | Change 4.2%")
+
+
+def test_table_without_figures_in_its_text_layer_is_read_by_ocr(tmp_path, corpus, monkeypatch):
+    real = page_audit.route
+    monkeypatch.setattr(page_audit, "route", lambda page: "pdfParser+colpali" if page["page"] == 2 else real(page))
+    monkeypatch.setattr(vi, "lacks_figures", lambda page: page["page"] == 2)
+    ocr = Reader("ocr", RICH_OCR)
+    reader = vi.RoutedReader(lambda: Broken(), "q", ocr=ocr, describe=False)
+    _, by_page = run(tmp_path, corpus, reader)
+    assert by_page[2]["reader"] == "ocr" and by_page[2]["escalation"] == "text_layer_lacks_figures"
+
+    few = Reader("ocr-few", OCR_TEXT)                                         # OCR finds no more figures:
+    reader = vi.RoutedReader(lambda: Broken(), "q", ocr=few, describe=False)
+    again = vi.VlmIngest(args_for(tmp_path / "few", corpus, "chroma", "--vlm", "routed"), vlm=reader)
+    assert again.run() == {"complete": 1}
+    pages = {m["page"]: m for m in again.store.collection.get(include=["metadatas"])["metadatas"]}
+    assert few.calls >= 1 and pages.get(2, {}).get("reader", "pdfParser") == "pdfParser"   # checked; layer stays
+
+
+def test_lacks_figures_rule():
+    assert vi.lacks_figures({"page_type": "table", "text": "Board of directors | Name | Since 2019"})
+    assert not vi.lacks_figures({"page_type": "table", "text": "Revenue 1,200 1,340 2.5 3.1 4,400 5,600"})
+    assert not vi.lacks_figures({"page_type": "text", "text": "no figures here"})       # plain text: never
 
 
 class Broken:

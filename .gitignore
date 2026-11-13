@@ -52,12 +52,7 @@ tmp/
 temp/
 *.tmp
 
-# Downloaded PDF corpora (re-downloadable from each pdf_manifest.jsonl; manifests stay tracked).
-# PDFs already committed under data/raw/ stay tracked; data/samples/ test PDFs are not affected.
-data/raw/**/*.pdf
-data/raw/**/*.part
-# EDGAR 10-K / proxy HTML and SEC JSON (re-downloadable with scripts/download_edgar_corpus.py; corpus_manifest.jsonl stays tracked)
-data/raw/financial_report_qa/edgar/10k/
-data/raw/financial_report_qa/edgar/proxy/
-data/raw/financial_report_qa/edgar/companyfacts/
-data/raw/financial_report_qa/edgar/submissions/
+# Downloaded corpora: PDFs, per-sector manifests, EDGAR HTML/JSON (re-downloadable with scripts/downloads/).
+# Files already committed under data/raw/ (corpus_plan.jsonl, the SEC facts JSON) stay tracked; data/samples/
+# test PDFs are not affected.
+data/raw/

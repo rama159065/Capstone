@@ -291,7 +291,8 @@ def make_vlm(args):
     if args.vlm == "routed":
         return RoutedReader(qwen_factory=lambda: make_qwen(args), qwen_signature=qwen_signature(args),
                             paid=paid_reader(args.max_new_tokens), threshold=args.paid_threshold,
-                            paid_limit=args.paid_max_pages_per_pdf, describe=not getattr(args, "no_describe_visuals", False))
+                            paid_limit=args.paid_max_pages_per_pdf, describe=not getattr(args, "no_describe_visuals", False),
+                            skip_routes=skip_routes_of(args))
     if args.vlm == "ocr":
         return OcrReader()
     if args.vlm == "openai":
@@ -306,7 +307,8 @@ def vlm_signature(args):
     if args.vlm == "routed":
         paid = paid_reader(args.max_new_tokens)
         return routed_signature(qwen_signature(args), ocr_reader_signature(), paid.signature if paid else None,
-                                args.paid_threshold, args.paid_max_pages_per_pdf, not getattr(args, "no_describe_visuals", False))
+                                args.paid_threshold, args.paid_max_pages_per_pdf, not getattr(args, "no_describe_visuals", False),
+                                skip_routes_of(args))
     if args.vlm == "ocr":
         return ocr_reader_signature()
     if args.vlm == "openai":
@@ -361,21 +363,42 @@ def vlm_targets(pages, mode, limit=0):
     return targets[:limit] if limit else targets
 
 
-ROUTE_VERSION = 1
+ROUTE_VERSION = 2          # v2: pdfParser+colpali tables/pictures with few text-layer figures are OCR-checked
+SKIPPABLE_ROUTES = ("qwen3VL", "paidVL")
+FEW_FIGURES = 6            # a table or picture page whose text layer has fewer figures than this gets OCR'd ...
+OCR_GAIN = 6               # ... and the OCR reading replaces it when OCR finds at least this many more figures
+
+
+def figures(text):
+    return {n.replace(",", "") for n in NUMBER.findall(text or "")}
+
+
+def lacks_figures(page):
+    """A pdfParser+colpali table or picture whose text layer has (almost) no figures: the numbers may be drawn as
+    images or outlines. In a 195-page sample of the min500 corpus, 10 such pages held about 49 figures each that only
+    OCR could read (RTX 2022 p131: 5 in the text layer, 90 on the page)."""
+    return page["page_type"] in {"table", "image"} and len(figures(page.get("text"))) < FEW_FIGURES
 
 
 class RoutedReader:
     """One reader per page (page_audit.route), with the paidVL fallback: OCR -> Qwen3-VL -> paid model.
 
     The Qwen3-VL model loads only when the first page needs it. ``paid`` is None when no paid model is configured.
+    ``skip_routes`` (qwen3VL, paidVL) leaves those pages to a later run: they keep their text layer if it is usable,
+    so a CPU-only machine can index everything OCR can read and Qwen3-VL fills in the rest later (cached OCR reused).
     """
 
-    def __init__(self, qwen_factory, qwen_signature, ocr=None, paid=None, threshold=.10, paid_limit=0, describe=True):
+    def __init__(self, qwen_factory, qwen_signature, ocr=None, paid=None, threshold=.10, paid_limit=0, describe=True,
+                 skip_routes=()):
         self._qwen_factory, self._qwen, self.qwen_signature = qwen_factory, None, qwen_signature
         self.ocr = ocr or OcrReader()
         self.paid, self.threshold, self.paid_limit, self.describe = paid, threshold, paid_limit, describe
+        unknown = set(skip_routes) - set(SKIPPABLE_ROUTES)
+        if unknown:
+            raise ValueError(f"--skip-routes takes {', '.join(SKIPPABLE_ROUTES)}, not {', '.join(sorted(unknown))}")
+        self.skip_routes = tuple(sorted(set(skip_routes)))
         self.signature = routed_signature(qwen_signature, self.ocr.signature, paid.signature if paid else None,
-                                          threshold, paid_limit, describe)
+                                          threshold, paid_limit, describe, self.skip_routes)
 
     @property
     def qwen(self):
@@ -394,10 +417,15 @@ class RoutedReader:
         return out
 
 
-def routed_signature(qwen, ocr, paid, threshold, limit, describe):
+def routed_signature(qwen, ocr, paid, threshold, limit, describe, skip_routes=()):
     """Known before any model loads, so finished filings are skipped without loading them."""
     return (f"routed-v{ROUTE_VERSION}:qwen={qwen}:ocr={ocr}:paid={paid}:threshold={threshold}:limit={limit}"
-            + (f":describe=v{DESCRIBE_VERSION}" if describe else ""))
+            + (f":describe=v{DESCRIBE_VERSION}" if describe else "")
+            + (f":skip={','.join(sorted(skip_routes))}" if skip_routes else ""))
+
+
+def skip_routes_of(args):
+    return tuple(r.strip() for r in (getattr(args, "skip_routes", None) or "").split(",") if r.strip())
 
 
 def cross_check(markdown, reference):
@@ -460,13 +488,17 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                                             "page": page}
             if route == "none":
                 entries[number] = {**base, "skip": True}
-            elif route == "pdfParser":
-                continue                                            # native text, chunked by vlm_records
+            elif route == "pdfParser" or route in reader.skip_routes:
+                continue                                            # native text (if usable), chunked by vlm_records
             elif route == "pdfParser+colpali":
                 tables = ["\n".join(lines) for lines in page.get("tables") or []]
                 body = "\n\n".join([*tables, fi.readable_text(page)[0]])
                 entries[number] = {**base, "markdown": body, "source": "native_pdf", "reader": "pdfParser",
                                    "unverified_numbers": [], "number_check": "text_layer"}
+                if lacks_figures(page):                             # figures drawn as images or outlines?
+                    ocr_text = read("ocr", page)
+                    if len(figures(ocr_text) - figures(page["text"])) >= OCR_GAIN:
+                        entries[number] = ocr_entry(page, base, "text_layer_lacks_figures")
             elif route == "ocr" or (limit and model_pages >= limit):
                 entries[number] = {**base, "markdown": read("ocr", page), "source": "ocr", "reader": "ocr",
                                    "reader_model": signatures["ocr"], "unverified_numbers": [], "number_check": "ocr_only"}
@@ -766,38 +798,103 @@ class VlmIngest:
         rows = fi.in_preset(rows, getattr(self.args, "corpus_preset", "full"))
         rows = rows[:self.args.limit_filings] if self.args.limit_filings else rows
         todo = [r for r in rows if self.args.force or not self.state.done(r["document_id"], "vlm", self.pipeline)]
-        print(f"{len(rows)} filings selected, {len(todo)} to ingest with {self.vlm_signature} -> {self.args.store}", flush=True)
-        summary = Counter()
-        for row in todo:
-            summary[self.ingest(row)] += 1
+        workers = max(1, getattr(self.args, "workers", 1) or 1)
+        print(f"{len(rows)} filings selected, {len(todo)} to ingest with {self.vlm_signature} -> {self.args.store}"
+              + (f" ({workers} workers)" if workers > 1 else ""), flush=True)
+        summary, started = Counter(), time.time()
+        if workers == 1 or len(todo) < 2:
+            for row in todo:
+                summary[self.ingest(row)] += 1
+            return dict(summary)
+        # Workers read the filings (page analysis, OCR, chunking); this process embeds and is the only Chroma writer.
+        from concurrent.futures import ProcessPoolExecutor, as_completed
+        with ProcessPoolExecutor(workers, initializer=_init_worker, initargs=(self.args,)) as pool:
+            futures = {}
+            for row in todo:
+                self.state.mark(row["document_id"], "vlm", "processing", self.pipeline)
+                futures[pool.submit(_prepare_in_worker, row)] = row
+            for done, future in enumerate(as_completed(futures), 1):
+                row = futures[future]
+                try:
+                    prepared = future.result()
+                except Exception as exc:
+                    summary[self._failed(row, exc, 0.0)] += 1
+                    continue
+                summary[self.write(row, *prepared)] += 1
+                elapsed = time.time() - started
+                print(json.dumps({"progress": f"{done}/{len(todo)}", "elapsed_min": round(elapsed / 60, 1),
+                                  "eta_min": round(elapsed / done * (len(todo) - done) / 60, 1)}), flush=True)
         return dict(summary)
 
     def ingest(self, row):
-        doc_id, started = row["document_id"], time.time()
-        self.state.mark(doc_id, "vlm", "processing", self.pipeline)
+        started = time.time()
+        self.state.mark(row["document_id"], "vlm", "processing", self.pipeline)
         try:
-            pdf = fi.resolve_pdf(row, self.args.pdf_dir, self.args.download_missing, self.args.user_agent)
-            pages = fi.load_pages(self.root, row, pdf, self.args.max_pages_per_pdf)
-            transcripts = transcribe_filing(self.vlm, self.cache, row, pdf, pages, self.args.vlm_pages,
-                                            self.args.vlm_max_pages_per_pdf)
-            records = vlm_records(row, pages, transcripts, self.vlm_signature)
+            prepared = prepare_filing(self.args, self.vlm, self.cache, self.root, self.vlm_signature, row)
+        except BaseException as exc:
+            return self._failed(row, exc, time.time() - started)
+        return self.write(row, *prepared)
+
+    def write(self, row, records, stats, seconds):
+        """Embed and store one prepared filing (this process only: one Chroma writer)."""
+        doc_id, started = row["document_id"], time.time()
+        try:
             vectors = self.embedder([text for _, _, text in records]) if records else []
             self.store.replace(doc_id, records, vectors)
-        except Exception as exc:
-            self.state.mark(doc_id, "vlm", "failed", self.pipeline, seconds=time.time() - started, error=repr(exc))
-            print(json.dumps({"doc_id": doc_id, "status": "failed", "error": repr(exc)}), flush=True)
-            if isinstance(exc, KeyboardInterrupt):
-                raise
-            return "failed"
-        seconds = time.time() - started
+        except BaseException as exc:
+            return self._failed(row, exc, seconds + time.time() - started)
+        seconds += time.time() - started
         self.state.mark(doc_id, "vlm", "complete", self.pipeline, len(records), seconds)
-        readings = {k: v for k, v in transcripts.items() if k != DESCRIPTIONS}
-        flagged = sum(1 for e in readings.values() if e.get("unverified_numbers"))
-        print(json.dumps({"doc_id": doc_id, "sector": row.get("sector"), "status": "complete", "pages": len(pages),
-                          "vlm_pages": len(readings), "described_pages": len(transcripts.get(DESCRIPTIONS) or {}),
-                          "pages_with_unverified_numbers": flagged,
+        print(json.dumps({"doc_id": doc_id, "sector": row.get("sector"), "status": "complete", **stats,
                           "chunks": len(records), "seconds": round(seconds, 1)}), flush=True)
         return "complete"
+
+    def _failed(self, row, exc, seconds):
+        self.state.mark(row["document_id"], "vlm", "failed", self.pipeline, seconds=seconds, error=repr(exc))
+        print(json.dumps({"doc_id": row["document_id"], "status": "failed", "error": repr(exc)}), flush=True)
+        if isinstance(exc, KeyboardInterrupt):
+            raise exc
+        return "failed"
+
+
+def prepare_filing(args, vlm, cache, root, signature, row):
+    """Read one filing into chunk records: (records, stats, seconds). Runs in a worker process with --workers."""
+    started = time.time()
+    pdf = fi.resolve_pdf(row, args.pdf_dir, args.download_missing, args.user_agent)
+    pages = fi.load_pages(Path(root), row, pdf, args.max_pages_per_pdf)
+    transcripts = transcribe_filing(vlm, cache, row, pdf, pages, args.vlm_pages, args.vlm_max_pages_per_pdf)
+    records = vlm_records(row, pages, transcripts, signature)
+    readings = {k: v for k, v in transcripts.items() if k != DESCRIPTIONS}
+    stats = {"pages": len(pages), "vlm_pages": len(readings),
+             "ocr_pages": sum(1 for e in readings.values() if e.get("reader") == "ocr"),
+             "described_pages": len(transcripts.get(DESCRIPTIONS) or {}),
+             "pages_with_unverified_numbers": sum(1 for e in readings.values() if e.get("unverified_numbers"))}
+    return records, stats, time.time() - started
+
+
+def lower_priority():
+    """Below-normal CPU priority for this process (and the processes it starts), so the machine stays usable."""
+    try:
+        import psutil
+        psutil.Process().nice(psutil.BELOW_NORMAL_PRIORITY_CLASS if os.name == "nt" else 10)
+    except Exception:
+        pass
+
+
+_WORKER = {}
+
+
+def _init_worker(args):
+    if getattr(args, "low_priority", False):
+        lower_priority()
+    signature = vlm_signature(args)
+    _WORKER.update(args=args, vlm=make_vlm(args), signature=signature,
+                   cache=TranscriptCache(args.cache_dir or Path(args.root) / "vlm_pages", signature))
+
+
+def _prepare_in_worker(row):
+    w = _WORKER
+    return prepare_filing(w["args"], w["vlm"], w["cache"], w["args"].root, w["signature"], row)
 
 
 def reset(args):
@@ -926,6 +1023,14 @@ def build_parser():
                         help="visual: tables, charts, pictures and unreadable pages (default); "
                              "tables_charts_images: no unreadable pages; tables_charts: the cheapest with a paid API")
     ingest.add_argument("--vlm-max-pages-per-pdf", type=int, default=0, help="0 = every target page")
+    ingest.add_argument("--skip-routes", default="",
+                        help="routed: comma-separated routes (qwen3VL, paidVL) to leave for a later run; their pages "
+                             "keep a usable text layer. For a CPU-only first pass without Qwen3-VL")
+    ingest.add_argument("--workers", type=int, default=1,
+                        help="filings read in parallel worker processes (page analysis, OCR); this process embeds "
+                             "and writes. Set RAG_OCR_THREADS to cap OCR threads per worker")
+    ingest.add_argument("--low-priority", action="store_true",
+                        help="below-normal CPU priority for this process and its workers")
     ingest.add_argument("--max-new-tokens", type=int, default=1200)
     ingest.add_argument("--embedding-provider", choices=["local", "hosted", "hashing"], default="local")
     ingest.add_argument("--embedding-model", default="sentence-transformers/all-MiniLM-L6-v2")
@@ -945,7 +1050,9 @@ def build_parser():
 def main(argv=None):
     args = build_parser().parse_args(argv)
     if args.command == "ingest":
-        VlmIngest(args).run()
+        if args.low_priority:
+            lower_priority()
+        print(json.dumps(VlmIngest(args).run()), flush=True)
     elif args.command == "status":
         status(args)
     else:
