@@ -148,7 +148,7 @@ Drive PDFs (by sector) -> copy one sector to local disk -> analyse every page ->
 | chart and image pages (not OCR-routed) | also a **Qwen3-VL search description**: kind of visual, title, measures, series, years, no values | a `page_description` chunk, so chart pages are found by what they show |
 
 Every chunk records `reader`, `text_source`, `escalation` and `unverified_numbers`. Readings are cached on Drive per page
-and reader (`vlm_pages/`), so a rerun never pays twice, and the Chroma folder is copied to Drive after every sector.
+and reader (`cache/vlm_pages/`), so a rerun never pays twice, and the Chroma folder is copied to Drive after every sector.
 
 **Runtime:** GPU (T4 runs Qwen3-VL-4B in 4-bit; L4/A100 for 8B). Only about 3% of pages need Qwen3-VL and about 10% need OCR
 (page audit of 20 filings). Rough cost for min500 (~80k pages), **estimates**:
@@ -207,8 +207,10 @@ CHROMA_NEXT = r'''## Next
   will get, plus the share per sector; it needs only a CPU.
 - **Faster Qwen3-VL:** serve it with vLLM on a bigger GPU and set `QWEN_READER = "openai"` with the secrets
   `VISION_API_BASE` / `VISION_MODEL`.
-- **Serving on your PC** after copying the index down: set `RAG_BACKEND=financial_vlm` and `RAG_VLM_DIR` to the folder that holds
-  `chroma/` and `vlm_ingest.sqlite3`.
+- **Serving on your PC:** copy `MyDrive/capstone_rag/indexes/chroma_db` to `<repo>/indexes/rag_home/indexes/chroma_db`;
+  the `local` profile serves it with no settings (`RAG_BACKEND=financial_vlm` is chosen when it is the only index).
+- **Deploying on GCP:** cell 12 copies the Drive copies to a bucket; on the VM `sh deploy/sync_from_gcs.sh` pulls them
+  (see `docs/deployment.md` section 7).
 - **Sectors:** ''' + SECTOR_LIST + "."
 
 # ============================================================================= Qdrant (visual index)
@@ -281,10 +283,27 @@ QDRANT_NEXT = r'''## Next
 - **Text first, ColPali later:** run with `STAGES = "text"` on a CPU runtime, then `STAGES = "visual"` on a GPU runtime.
 - **Storage:** the Drive snapshots of the full plan need more than the free 15 GB (about 17-29 GB of ColPali vectors for
   the full corpus; min500 is about half).
-- **Serving on your PC or the Docker server** after copying the snapshots down:
-  `python -m scripts.rag.financial_ingest_qdrant_db restore --root indexes/financial_qdrant --qdrant-url http://localhost:6333 --snapshot-dir <snapshots>`,
-  then `RAG_BACKEND=financial_qdrant` (see `docs/deployment.md`).
+- **Serving on the Docker server:** copy `MyDrive/capstone_rag/snapshots/qdrant_db` into `./snapshots/qdrant_db`, then
+  `docker compose run --rm --user root api sh deploy/restore_index.sh` (Qdrant restore + ingest state into
+  `<RAG_HOME>/indexes/qdrant_db`).
+- **Deploying on GCP:** cell 12 copies the Drive copies to a bucket; on the VM `sh deploy/sync_from_gcs.sh` pulls and
+  restores them (see `docs/deployment.md` section 7).
 - **Sectors:** ''' + SECTOR_LIST + "."
+
+
+GCS_EXPORT = r'''# @title 12. Optional: copy the Drive index copies to a Google Cloud Storage bucket (for the GCP VM)
+# The VM then runs `sh deploy/sync_from_gcs.sh` (docs/deployment.md section 7). Needs a GCP project with billing.
+GCS_BUCKET = ""                     # @param {type:"string"}   e.g. gs://capstone-rag-yourname
+GCP_PROJECT = ""                    # @param {type:"string"}
+if GCS_BUCKET:
+    from google.colab import auth
+    auth.authenticate_user()
+    if GCP_PROJECT:
+        !gcloud config set project {GCP_PROJECT}
+    !gcloud storage buckets describe {GCS_BUCKET} >/dev/null 2>&1 || gcloud storage buckets create {GCS_BUCKET} --location=us-central1
+    cp.export_to_gcs(s, GCS_BUCKET)
+else:
+    print("set GCS_BUCKET to export; skipped")'''
 
 
 def cell(kind, text):
@@ -324,11 +343,12 @@ def chroma():
                      'cp.query(s, "net oil-equivalent production", sector="oil_and_gas")\n'
                      'cp.query(s, "revenue by segment", sector="retail")'),
         cell("markdown", SERVE_MD.replace("{INDEX}", "the Chroma index").replace(
-            "{ENV}", "`RAG_BACKEND=financial_vlm`, `RAG_VLM_DIR=/content/rag/vlm_chroma`")),
+            "{ENV}", "`RAG_BACKEND=financial_vlm`, `RAG_VLM_DIR=/content/rag/indexes/chroma_db`")),
         cell("code", "# @title 8. " + SERVE_DEPS.split("# @title ", 1)[1].replace("{EXTRA}", "")),
         cell("code", "# @title 9. " + SERVE_START.split("# @title ", 1)[1]),
         cell("code", "# @title 10. " + SERVE_CHECK.split("# @title ", 1)[1]),
         cell("code", "# @title 11. " + SERVE_STOP.split("# @title ", 1)[1]),
+        cell("code", GCS_EXPORT),
         cell("markdown", CHROMA_NEXT),
     ])
 
@@ -358,12 +378,13 @@ def qdrant():
                      'if "visual" in STAGES:\n'
                      '    cp.query(s, "revenue by segment bar chart", sector="banking", visual=True)'),
         cell("markdown", SERVE_MD.replace("{INDEX}", "Qdrant (this VM)").replace(
-            "{ENV}", "`RAG_BACKEND=financial_qdrant`, `RAG_INGEST_DIR=/content/rag/colpali_qdrant`, `QDRANT_URL` "
+            "{ENV}", "`RAG_BACKEND=financial_qdrant`, `RAG_INGEST_DIR=/content/rag/indexes/qdrant_db`, `QDRANT_URL` "
                      "(serving needs the server, so `SMOKE_TEST = False`)")),
         cell("code", "# @title 8. " + SERVE_DEPS.split("# @title ", 1)[1].replace("{EXTRA}", extra)),
         cell("code", "# @title 9. " + SERVE_START.split("# @title ", 1)[1]),
         cell("code", "# @title 10. " + SERVE_CHECK.split("# @title ", 1)[1]),
         cell("code", "# @title 11. " + SERVE_STOP.split("# @title ", 1)[1]),
+        cell("code", GCS_EXPORT),
         cell("markdown", QDRANT_NEXT),
     ])
 

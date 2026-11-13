@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -6,7 +7,8 @@ import pytest
 from scripts.common import runtime_profile as rp
 
 KEYS = ("RAG_PROFILE", "RAG_INGEST_DIR", "RAG_VLM_DIR", "QDRANT_URL", "RAG_BACKEND", "RAG_DEVICE", "API_BASE_URL",
-        "HF_HOME", "COLAB_RELEASE_TAG")
+        "HF_HOME", "COLAB_RELEASE_TAG", "RAG_HOME", "CONVERSATION_DB", "RAG_RERANKER_MODEL", "LLM_CA_CERT",
+        "RAG_GCS_BUCKET", "RAG_DURABLE")
 
 
 @pytest.fixture
@@ -31,8 +33,9 @@ def test_colab_profile_defaults_and_explicit_values_win(env, monkeypatch):
     env["COLAB_RELEASE_TAG"] = "release-colab-test"
     env["QDRANT_URL"] = "http://10.0.0.5:6333"
     info = rp.apply_profile(force=True)
-    assert info["profile"] == "colab" and info["RAG_INGEST_DIR"] == "/content/rag/colpali_qdrant"
-    assert info["RAG_VLM_DIR"] == "/content/rag/vlm_chroma"          # the folders colab_pipeline writes
+    assert info["profile"] == "colab" and Path(info["RAG_INGEST_DIR"]) == Path("/content/rag/indexes/qdrant_db")
+    assert Path(info["RAG_VLM_DIR"]) == Path("/content/rag/indexes/chroma_db")      # the folders colab_pipeline writes
+    assert Path(info["HF_HOME"]) == Path("/content/rag/cache/hf") and info["durable"].endswith("capstone_rag")
     assert info["qdrant"] == "http://10.0.0.5:6333" and env["RAG_DEVICE"] == "cuda"
 
 

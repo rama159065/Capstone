@@ -135,9 +135,11 @@ def test_colpali_coverage_needs_every_stage(drive):
 def test_serving_env_points_the_api_at_this_pipelines_index(drive):
     env = cp.serving_env(settings(drive, "colpali_qdrant", qdrant_url="http://127.0.0.1:6333"))
     assert env["RAG_BACKEND"] == "financial_qdrant" and env["QDRANT_URL"] == "http://127.0.0.1:6333"
-    assert env["RAG_INGEST_DIR"] == str(drive / "work" / "colpali_qdrant")
+    assert env["RAG_INGEST_DIR"] == str(drive / "work" / "indexes" / "qdrant_db")     # the storage layout
     env = cp.serving_env(settings(drive, "vlm_chroma", run_name="_smoke"))
-    assert env["RAG_BACKEND"] == "financial_vlm" and env["RAG_VLM_DIR"] == str(drive / "work" / "vlm_chroma_smoke")
+    assert env["RAG_BACKEND"] == "financial_vlm"
+    assert env["RAG_VLM_DIR"] == str(drive / "work" / "indexes" / "chroma_db_smoke")
+    assert env["RAG_HOME"] == str(drive / "work")
     with pytest.raises(RuntimeError, match="Qdrant server"):
         cp.serve(settings(drive, "colpali_qdrant"))
 

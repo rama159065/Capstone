@@ -85,12 +85,13 @@ import urllib.request
 import pymupdf
 
 from scripts.common.companies import normalize_ticker
+from scripts.common import storage
 from scripts.common.paths import ROOT
 from scripts.common.sector_corpus import parse_sectors
 from scripts.rag import financial_ingest_qdrant_db as fi
 from scripts.rag import chunk_schema, hybrid
 
-DEFAULT_ROOT = Path(os.getenv("RAG_VLM_DIR", ROOT / "indexes/financial_vlm"))
+DEFAULT_ROOT = Path(os.getenv("RAG_VLM_DIR") or storage.layout().chroma_db)      # <RAG_HOME>/indexes/chroma_db
 CHROMA_COLLECTION = "annual_reports_vlm"
 PROMPT_VERSION = 1
 VLM_PROMPT = """Transcribe this annual report page into Markdown. Copy every number exactly as printed.

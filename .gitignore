@@ -21,6 +21,8 @@ env/
 *.pem
 *.p12
 *.pfx
+*.crt
+secrets/
 
 # IDE and OS files
 .idea/

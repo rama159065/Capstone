@@ -214,7 +214,7 @@ def test_compose_wires_the_services():
     services = compose["services"]
     assert {"qdrant", "api", "ui", "caddy"} <= set(services)
     assert "--workers" in services["api"]["command"] and "1" in services["api"]["command"]
-    assert services["api"]["environment"]["RAG_PROFILE"] == "server"
+    assert services["api"]["environment"]["RAG_PROFILE"] == "${RAG_PROFILE:-server}"     # gcp via .env
     assert "qdrant_snapshots:/qdrant/snapshots" in services["qdrant"]["volumes"]
     assert "qdrant_snapshots:/qdrant/snapshots" in services["api"]["volumes"]
     keys = {line.split("=")[0] for line in (ROOT / ".env.example").read_text(encoding="utf-8").splitlines()

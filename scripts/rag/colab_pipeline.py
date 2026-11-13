@@ -14,14 +14,18 @@ Two pipelines over the sector corpus (scripts/downloads/download_annual_report_c
     clean narrative pages keep their text layer; all chunks are embedded as text into Chroma
     (persisted on disk, HNSW loaded into RAM when queried)
 
-Where things live on Colab:
+Where things live (the storage layout of scripts/common/storage.py; <work> = RAG_HOME):
     <drive_root>/annual_reports/       PDFs by sector + manifests (durable)
     <work>/annual_reports/             the sector being ingested, copied from Drive to fast local disk
-    <work>/<pipeline>/                 the live index on the VM's fast local disk (lost at disconnect)
-    <drive_root>/snapshots/colpali_qdrant/   Qdrant snapshots + ingest state, written after every sector
+    <work>/indexes/qdrant_db/          live index of colpali_qdrant on the VM's fast local disk (lost at disconnect)
+    <work>/indexes/chroma_db/          live index of vlm_chroma
+    <drive_root>/snapshots/qdrant_db/  Qdrant snapshots + ingest state, written after every sector
                                        (a snapshot copies the whole collection; snapshot_every=N for every N batches)
-    <drive_root>/indexes/vlm_chroma/         copy of the Chroma index + state, written after every sector
-    <drive_root>/vlm_pages/            VLM transcriptions, one JSONL per filing (append-only, so safe on Drive)
+    <drive_root>/indexes/chroma_db/    copy of the Chroma index + state, written after every sector
+    <drive_root>/cache/vlm_pages/      VLM transcriptions, one JSONL per filing (append-only, so safe on Drive)
+Folders written before this layout (<work>/colpali_qdrant, <work>/vlm_chroma, <drive_root>/snapshots/colpali_qdrant,
+<drive_root>/indexes/vlm_chroma, <drive_root>/vlm_pages) are found and reused, so nothing needs renaming.
+``export`` copies the Drive copies to a Google Cloud Storage bucket for the GCP deployment (deploy/sync_from_gcs.sh).
 
 ``restore`` brings the Drive copy back to local disk at the start of a session, and
 ``ingest`` processes one sector at a time, skipping finished filings. So a new
@@ -34,7 +38,8 @@ Notebook: notebooks/colab_rag_pipelines.ipynb. From a terminal:
     python -m scripts.rag.colab_pipeline run --pipeline vlm_chroma --sectors banking --vlm-pages tables_charts
     python -m scripts.rag.colab_pipeline query --pipeline vlm_chroma "net interest income" --sector banking
 
-Locally (no Colab) the defaults are repo folders and embedded Qdrant (``--qdrant-url ""``).
+Locally (no Colab) <work> is the local RAG_HOME (<repo>/indexes/rag_home), the folder the local API serves, and
+Qdrant is embedded (``--qdrant-url ""``).
 """
 from __future__ import annotations
 
@@ -54,6 +59,7 @@ import tarfile
 import time
 import urllib.request
 
+from scripts.common import storage
 from scripts.common.paths import ROOT
 from scripts.common.sector_corpus import MANIFEST_NAME, parse_sectors, read_manifest
 from scripts.rag import financial_ingest_qdrant_db as fi
@@ -69,7 +75,7 @@ QDRANT_PORT = 6333
 class Settings:
     pipeline: str = "colpali_qdrant"
     drive_root: Path = Path("/content/drive/MyDrive/capstone_rag") if IN_COLAB else ROOT / "indexes/pipelines_drive"
-    work: Path = Path("/content/rag") if IN_COLAB else ROOT / "indexes/pipelines"
+    work: Path = storage.layout("colab" if IN_COLAB else "local").home    # RAG_HOME: the live copy
     corpus_preset: str = "full"             # "full" = 1,004 filings; "min500" = the 509-filing variant (Track B minimum)
     sectors: str = ""                       # names or slugs, comma-separated; "" = every downloaded sector
     max_per_sector: int | None = 20         # download: largest companies first; None = the whole plan
@@ -120,16 +126,20 @@ class Settings:
         return self.work / "annual_reports"
 
     @property
+    def kind(self):
+        return storage.PIPELINE_KIND[self.pipeline]
+
+    @property
     def root(self):
-        return self.work / (self.pipeline + self.run_name)
+        return storage.work_index(self.work, self.kind, self.run_name)
 
     @property
     def backup(self):
-        return self.drive_root / ("snapshots" if self.pipeline == "colpali_qdrant" else "indexes") / (self.pipeline + self.run_name)
+        return storage.durable_index(self.drive_root, self.kind, self.run_name)
 
     @property
     def vlm_cache(self):
-        return self.drive_root / "vlm_pages"
+        return storage.first_existing([self.drive_root / "cache" / "vlm_pages", self.drive_root / "vlm_pages"])
 
 
 _loaded = {}          # models and clients shared by every sector and every call in this process
@@ -450,8 +460,9 @@ def coverage(s: Settings, show=True):
 
 def serving_env(s: Settings):
     """Environment for FastAPI/agents so they answer from this pipeline's index (see runtime_profile)."""
-    env = {"RAG_PROFILE": "colab" if IN_COLAB else "local", "RAG_INGEST_DIR": str(s.work / "colpali_qdrant"),
-           "RAG_VLM_DIR": str(s.work / "vlm_chroma")}
+    env = {"RAG_PROFILE": "colab" if IN_COLAB else "local", "RAG_HOME": str(s.work),
+           "RAG_INGEST_DIR": str(storage.work_index(s.work, "qdrant_db", s.run_name)),
+           "RAG_VLM_DIR": str(storage.work_index(s.work, "chroma_db", s.run_name))}
     if s.pipeline == "colpali_qdrant":
         env.update(RAG_BACKEND="financial_qdrant", RAG_INGEST_DIR=str(s.root))
         if s.qdrant_url:
@@ -533,6 +544,28 @@ def page_audit(s: Settings, workers=None, force=False, limit=None, out=None):
                   workers=workers or os.cpu_count(), force=force, limit=limit)
 
 
+def export_to_gcs(s: Settings, bucket=None, dry_run=False):
+    """Copy the durable index copies (Drive) to a Google Cloud Storage bucket, in the storage layout the GCP VM reads
+    (deploy/sync_from_gcs.sh): <bucket>/indexes/chroma_db and <bucket>/snapshots/qdrant_db. Needs ``gcloud``
+    (preinstalled on Colab) and ``google.colab.auth.authenticate_user()`` first. Returns the commands it ran."""
+    bucket = (bucket or os.getenv("RAG_GCS_BUCKET") or "").strip()
+    if not bucket:
+        raise ValueError("give the bucket (gs://name) or set RAG_GCS_BUCKET")
+    bucket = bucket if bucket.startswith("gs://") else f"gs://{bucket}"
+    commands = []
+    for kind, target in (("chroma_db", "indexes/chroma_db"), ("qdrant_db", "snapshots/qdrant_db")):
+        source = storage.durable_index(s.drive_root, kind, s.run_name)
+        if source.exists():
+            commands.append(["gcloud", "storage", "rsync", "-r", str(source), f"{bucket.rstrip('/')}/{target}"])
+        else:
+            print(f"skipped {kind}: no copy at {source}")
+    for command in commands:
+        print(" ".join(command))
+        if not dry_run:
+            subprocess.run(command, check=True)
+    return commands
+
+
 def run(s: Settings, download_first=True):
     prepare(s)
     restore(s)
@@ -549,7 +582,8 @@ def run(s: Settings, download_first=True):
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=["run", "prepare", "download", "restore", "ingest", "status", "coverage", "query",
-                                            "audit"])
+                                            "audit", "export"])
+    parser.add_argument("--bucket", help="export: gs://bucket (default RAG_GCS_BUCKET)")
     parser.add_argument("text", nargs="?", help="query text")
     parser.add_argument("--sector", help="query filter")
     parser.add_argument("--ticker", help="query filter")
@@ -581,6 +615,8 @@ def main(argv=None):
         return query(s, args.text, args.sector, args.ticker, args.year, args.top_k, args.visual)
     if args.command == "run":
         return run(s, download_first=not args.no_download)
+    if args.command == "export":
+        return export_to_gcs(s, args.bucket)
     return {"prepare": prepare, "download": download, "restore": restore, "ingest": ingest, "status": status,
             "coverage": coverage, "audit": page_audit}[args.command](s)
 

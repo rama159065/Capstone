@@ -1,56 +1,46 @@
-"""Load the right settings for where the stack runs: this PC (``local``) or Google Colab (``colab``).
+"""Load the right settings for where the stack runs: ``local`` (this PC), ``colab``, ``server`` (any Docker host)
+or ``gcp`` (a Google Cloud VM running the compose stack).
 
-FastAPI calls :func:`apply_profile` at import, and the notebook does the same before
-starting the API and Streamlit. Every value is a default only: an environment variable
-you set yourself always wins. Choose a profile with ``RAG_PROFILE=local|server|colab``; without
-it, Colab is detected automatically and anything else is ``local``. ``server`` is for Docker
-(``docker-compose.yml``) or any VM: the same index folders as ``local``, Qdrant at
-``http://qdrant:6333`` and conversations in ``indexes/state/conversations.sqlite3``.
+FastAPI calls :func:`apply_profile` at import, and the notebooks do the same before starting the API and Streamlit.
+Every value is a default only: an environment variable you set yourself always wins (an empty value counts as
+unset). Choose a profile with ``RAG_PROFILE``; without it, Colab is detected automatically and anything else is
+``local``. Paths come from one layout (:mod:`scripts.common.storage`), rooted at ``RAG_HOME``:
 
-| Setting | local | colab |
-|---|---|---|
-| ``RAG_INGEST_DIR`` (ColPali/Qdrant index: state, page cache) | ``indexes/financial_qdrant`` | ``/content/rag/colpali_qdrant`` |
-| ``RAG_VLM_DIR`` (VLM/Chroma index) | ``indexes/financial_vlm`` | ``/content/rag/vlm_chroma`` |
-| ``QDRANT_URL`` | unset: embedded Qdrant in ``RAG_INGEST_DIR`` (one process at a time) | ``http://127.0.0.1:6333`` (server started by the notebook) |
-| ``RAG_BACKEND`` for financial QA | ``financial_qdrant`` once its ingest exists, else ``financial_vlm`` once that one exists, else the older Chroma index | same |
+| Setting | local | colab | server / gcp |
+|---|---|---|---|
+| ``RAG_HOME`` | ``<repo>/indexes/rag_home`` | ``/content/rag`` | ``/app/rag_home`` (host: ``RAG_HOME_DIR``) |
+| ``RAG_INGEST_DIR`` (pipeline 2, Qdrant) | ``<RAG_HOME>/indexes/qdrant_db`` (or an older folder holding an index) | same | same |
+| ``RAG_VLM_DIR`` (pipeline 1, Chroma) | ``<RAG_HOME>/indexes/chroma_db`` (or an older folder) | same | same |
+| ``QDRANT_URL`` | unset: embedded Qdrant (one process at a time) | ``http://127.0.0.1:6333`` | ``http://qdrant:6333`` |
+| ``CONVERSATION_DB`` | ``<RAG_HOME>/state/conversations.sqlite3`` | same | same |
+| ``HF_HOME`` | your usual cache (unchanged) | ``<RAG_HOME>/cache/hf`` | the image's ``/app/indexes/hf_cache`` |
+| ``RAG_DEVICE`` | ``cpu`` | ``cuda`` when a GPU is present | ``cpu`` |
+| ``API_BASE_URL`` (Streamlit -> FastAPI) | ``http://127.0.0.1:8000`` | same | ``http://api:8000`` |
+| ``RAG_RERANKER_MODEL`` | the local cross-encoder copy, when there is one | same | same |
+| ``LLM_CA_CERT`` | ``<RAG_HOME>/secrets/llm_ca.crt``, when it exists | same | same (compose mounts ``secrets/``) |
+| durable copy | ``RAG_HOME`` itself | ``MyDrive/capstone_rag`` | host folder (server), ``gs://$RAG_GCS_BUCKET`` (gcp) |
 
-The Colab folders are the ones ``scripts/rag/colab_pipeline.py`` writes (``<work>/<pipeline>``), so the API
-serves the corpus that notebook ingested. The older ``colab_financial_ingest.ipynb`` sets ``RAG_INGEST_DIR``
-itself, which still wins.
-| ``RAG_DEVICE`` (text models) | ``cpu`` | ``cuda`` if a GPU is present |
-| ``API_BASE_URL`` (Streamlit → FastAPI) | ``http://127.0.0.1:8000`` | ``http://127.0.0.1:8000`` (same VM) |
+``RAG_BACKEND`` for financial QA: ``financial_qdrant`` once its ingest exists, else ``financial_vlm`` once that one
+exists, else the older Chroma index. Set it yourself to choose (for example one API per pipeline).
 """
 from __future__ import annotations
 
-import importlib.util
 import logging
 import os
 from pathlib import Path
 
-from scripts.common.paths import ROOT  # noqa: E402 - repo root
+from scripts.common import storage
+from scripts.common.storage import detect  # noqa: F401 - public: runtime_profile.detect()
+
 LOGGER = logging.getLogger(__name__)
-PROFILES = {
-    "local": {"RAG_INGEST_DIR": str(ROOT / "indexes/financial_qdrant"), "RAG_VLM_DIR": str(ROOT / "indexes/financial_vlm"),
-              "RAG_DEVICE": "cpu", "API_BASE_URL": "http://127.0.0.1:8000"},
-    # Docker / any server: repo-relative index folders (mounted volumes) and the compose service names.
-    "server": {"RAG_INGEST_DIR": str(ROOT / "indexes/financial_qdrant"), "RAG_VLM_DIR": str(ROOT / "indexes/financial_vlm"),
-               "QDRANT_URL": "http://qdrant:6333", "RAG_DEVICE": "cpu", "API_BASE_URL": "http://api:8000",
-               "CONVERSATION_DB": str(ROOT / "indexes/state/conversations.sqlite3")},
-    "colab": {"RAG_INGEST_DIR": "/content/rag/colpali_qdrant", "RAG_VLM_DIR": "/content/rag/vlm_chroma",
-              "QDRANT_URL": "http://127.0.0.1:6333",
-              "API_BASE_URL": "http://127.0.0.1:8000", "HF_HOME": "/content/hf_cache"},
+PROFILES = {profile: {} for profile in storage.PROFILES}       # kept for callers that list the profile names
+SERVICES = {
+    "local": {"RAG_DEVICE": "cpu", "API_BASE_URL": "http://127.0.0.1:8000"},
+    "colab": {"QDRANT_URL": "http://127.0.0.1:6333", "API_BASE_URL": "http://127.0.0.1:8000"},
+    "server": {"QDRANT_URL": "http://qdrant:6333", "RAG_DEVICE": "cpu", "API_BASE_URL": "http://api:8000"},
+    "gcp": {"QDRANT_URL": "http://qdrant:6333", "RAG_DEVICE": "cpu", "API_BASE_URL": "http://api:8000"},
 }
 _applied: dict | None = None
-
-
-def detect():
-    if os.getenv("RAG_PROFILE"):
-        profile = os.environ["RAG_PROFILE"].strip().lower()
-        if profile not in PROFILES:
-            raise ValueError(f"RAG_PROFILE must be one of {', '.join(PROFILES)}")
-        return profile
-    on_colab = bool(os.getenv("COLAB_RELEASE_TAG")) or importlib.util.find_spec("google.colab") is not None
-    return "colab" if on_colab else "local"
 
 
 def gpu_available():
@@ -61,17 +51,36 @@ def gpu_available():
         return False
 
 
+def defaults_for(profile: str) -> dict[str, str]:
+    """Every default the profile would set (paths from the storage layout, services from SERVICES)."""
+    lay = storage.layout(profile)
+    values = {"RAG_HOME": str(lay.home)}
+    # Index folders: an explicit RAG_HOME or layout decides; an index under an older folder name is found too.
+    values.update(RAG_INGEST_DIR=str(lay.qdrant_db), RAG_VLM_DIR=str(lay.chroma_db),
+                  CONVERSATION_DB=str(lay.conversations))
+    values.update(SERVICES[profile])
+    if profile == "colab":
+        values["HF_HOME"] = str(lay.hf_home)
+        values["RAG_DEVICE"] = "cuda" if gpu_available() else "cpu"
+    reranker = lay.reranker()
+    if reranker:
+        values["RAG_RERANKER_MODEL"] = str(reranker)
+    cert = lay.ca_cert()
+    if cert:
+        values["LLM_CA_CERT"] = str(cert)
+    return values
+
+
 def apply_profile(profile=None, *, force=False):
     """Fill unset environment variables for the profile; returns what was decided (idempotent)."""
     global _applied
     if _applied is not None and not force and profile in (None, _applied["profile"]):
         return _applied
     profile = profile or detect()
-    defaults = dict(PROFILES[profile])
-    if profile == "colab" and gpu_available():
-        defaults["RAG_DEVICE"] = "cuda"
+    if profile not in SERVICES:
+        raise ValueError(f"RAG_PROFILE must be one of {', '.join(SERVICES)}")
     chosen = {}
-    for key, value in defaults.items():
+    for key, value in defaults_for(profile).items():
         if not os.getenv(key):
             os.environ[key] = value
         chosen[key] = os.environ[key]
@@ -80,18 +89,21 @@ def apply_profile(profile=None, *, force=False):
     if not os.getenv("RAG_BACKEND") and (index_ready or vlm_ready):
         os.environ["RAG_BACKEND"] = "financial_qdrant" if index_ready else "financial_vlm"
     backend = os.getenv("RAG_BACKEND") or "chroma"
+    lay = storage.layout(profile)
     _applied = {"profile": profile, "financial_backend": backend, "index_ready": index_ready, "vlm_index_ready": vlm_ready,
-                "qdrant": os.getenv("QDRANT_URL") or "embedded", **chosen}
+                "qdrant": os.getenv("QDRANT_URL") or "embedded", "durable": lay.durable or os.environ["RAG_HOME"],
+                "reranker": bool(os.getenv("RAG_RERANKER_MODEL")), "ca_cert": bool(os.getenv("LLM_CA_CERT")), **chosen}
     if backend == "chroma":
         LOGGER.info("runtime_profile=%s financial_backend=chroma (no ingest under %s or %s yet)",
                     profile, os.environ["RAG_INGEST_DIR"], os.environ["RAG_VLM_DIR"])
     else:
-        LOGGER.info("runtime_profile=%s financial_backend=%s qdrant=%s", profile, backend, _applied["qdrant"])
+        LOGGER.info("runtime_profile=%s financial_backend=%s qdrant=%s home=%s", profile, backend, _applied["qdrant"],
+                    os.environ["RAG_HOME"])
     return _applied
 
 
 def describe():
-    """Safe summary for /health: no keys or secrets."""
+    """Safe summary for /health: paths and switches only, no keys, certificates or secrets."""
     info = apply_profile()
-    return {key: info[key] for key in ("profile", "financial_backend", "index_ready", "vlm_index_ready", "qdrant",
-                                       "RAG_INGEST_DIR", "RAG_VLM_DIR")}
+    return {key: info.get(key) for key in ("profile", "financial_backend", "index_ready", "vlm_index_ready", "qdrant",
+                                           "RAG_HOME", "durable", "RAG_INGEST_DIR", "RAG_VLM_DIR", "reranker", "ca_cert")}

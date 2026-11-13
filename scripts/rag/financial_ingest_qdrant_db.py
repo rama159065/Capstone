@@ -72,10 +72,11 @@ from scripts.common.sector_corpus import parse_sectors, read_manifest as read_co
 from scripts.rag import chunk_schema, hybrid
 from scripts.rag.hashing import dense, term_id
 
+from scripts.common import storage
 from scripts.common.paths import ROOT  # noqa: E402 - repo root
 DOMAIN = "financial_report_qa"
 MANIFEST = ROOT / "data/raw/financial_report_qa/edgar/pdf_manifest.jsonl"
-DEFAULT_ROOT = Path(os.getenv("RAG_INGEST_DIR", ROOT / "indexes/financial_qdrant"))
+DEFAULT_ROOT = Path(os.getenv("RAG_INGEST_DIR") or storage.layout().qdrant_db)   # <RAG_HOME>/indexes/qdrant_db
 TEXT, VISUAL = "annual_reports_text", "annual_reports_visual"
 LEGACY = {TEXT: "docs_text", VISUAL: "visual_pages"}      # names before the rename (shared with LocalRAG)
 GRID = 32                          # ColPali v1.3: 32 x 32 image patches + special tokens
