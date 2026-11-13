@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Deploying the Annual Report Copilot on Google Cloud</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
+<h1>Deploying the Annual Report Copilot on Google Cloud</h1>
+<p>Written 13 November 2026. This page covers how long a Google Cloud deployment takes, which components and services it needs, and what it costs to run for 15 days. The settings, paths and scripts behind it are in <a href="deployment.md">deployment.md</a> §7 (storage layout and the <code>gcp</code> profile).</p>
+<h2>Summary</h2>
+<table><thead><tr><th></th><th>Full corpus (1,004 filings)</th><th><code>min500</code> (509 filings)</th></tr></thead><tbody><tr><td>Hands-on setup on Google Cloud (index already built)</td><td>~2–3 h the first time, ~30 min for redeploys</td><td>same</td></tr><tr><td>End to end, including the one-off index build on Colab</td><td>1–2 days</td><td>1–2 days (most of it Qwen3-VL GPU time)</td></tr><tr><td>Google Cloud cost for 15 days</td><td><strong>≈ $55</strong></td><td><strong>≈ $29</strong></td></tr><tr><td>Plus the one-off index build (Colab Pro + Drive)</td><td>+ $12 → <strong>≈ $67</strong></td><td>+ $12 → <strong>≈ $41</strong></td></tr><tr><td>LLM</td><td>Track B quota</td><td>Track B quota</td></tr></tbody></table>
+<p><strong>Where the prices come from:</strong></p>
+<ul><li>VM and storage prices are third-party list prices for <code>us-central1</code>, taken from <a href="deployment.md">deployment.md</a> §5–6.</li><li>The static IP charge was added here, and everything was scaled from 14 to 15 days.</li><li>Check the Google Cloud pricing calculator for your region before creating anything.</li></ul>
+<pre><code>Colab: build into /content/rag ──after each sector──► Drive (MyDrive/capstone_rag) ──cell 12 / cp.export_to_gcs──► gs://bucket
+GCP VM: sh deploy/sync_from_gcs.sh  (bucket ──gcloud storage rsync──► RAG_HOME_DIR, Qdrant restore, docker compose up)</code></pre>
+<h2>1. Time to deploy</h2>
+<h3>1.1 Build the index (one-off, on Colab)</h3>
+<p>This is the slow part.</p>
+<table><thead><tr><th>Step</th><th>min500 (509 filings)</th><th>Full (1,004)</th></tr></thead><tbody><tr><td>Download the PDFs from EDGAR to Drive</td><td>~15–30 min</td><td>~30–60 min</td></tr><tr><td>Page audit (optional, CPU)</td><td>~3–4 h</td><td>~6–8 h</td></tr><tr><td>Pipeline 1 (Chroma): text layer + OCR</td><td>~2.5–3.5 h</td><td>~5–8 h</td></tr><tr><td>Pipeline 1: Qwen3-VL pages + chart descriptions (~2.5k pages)</td><td>~10–28 GPU-hours on a T4 (less on an L4)</td><td>about 2×</td></tr><tr><td>Pipeline 2 (Qdrant): text + ColPali (only if you deploy it)</td><td>~4–7 h</td><td>~8–15 h</td></tr></tbody></table>
+<p>These times are estimates from measurements on a few filings. The first full sector gives the real numbers (<code>cp.status</code>).</p>
+<h3>1.2 Set up on Google Cloud</h3>
+<table><thead><tr><th>#</th><th>Step</th><th>Time</th></tr></thead><tbody><tr><td>1</td><td>Create a project, attach billing, create the bucket</td><td>~15 min</td></tr><tr><td>2</td><td>Copy Drive → bucket: cell 12 of either ingest notebook, or <code>cp.export_to_gcs</code></td><td>~10–20 min</td></tr><tr><td>3</td><td>Create the VM, persistent disk, static IP and firewall rules (22, 80, 443)</td><td>~15 min</td></tr><tr><td>4</td><td>Install Docker; clone the repo; write <code>.env</code>; put the CA certificate in <code>secrets/</code></td><td>~20 min</td></tr><tr><td>5</td><td>First <code>docker compose build</code> (Python + CPU torch)</td><td>~10–15 min</td></tr><tr><td>6</td><td><code>sh deploy/sync_from_gcs.sh</code>: pull the indexes, restore Qdrant, start the stack</td><td>~10–20 min</td></tr><tr><td>7</td><td>HTTPS via Caddy + <code>sslip.io</code>, then smoke tests (health and the three agents)</td><td>~20–30 min</td></tr><tr><td></td><td><strong>Total, first time</strong></td><td><strong>~2–3 h</strong>; later redeploys ~30 min</td></tr></tbody></table>
+<h2>2. Components and services</h2>
+<h3>2.1 Google Cloud</h3>
+<table><thead><tr><th>Service</th><th>What for</th><th>Setting</th></tr></thead><tbody><tr><td>Compute Engine VM</td><td>Runs the stack</td><td><code>e2-standard-4</code> (4 vCPU / 16 GB) for full; <code>e2-standard-2</code> (2 vCPU / 8 GB) for min500; Ubuntu 24.04 LTS</td></tr><tr><td>Persistent disk (balanced SSD)</td><td><code>RAG_HOME_DIR</code> (indexes, state), Docker images, model cache</td><td>100 GB full / 50 GB min500</td></tr><tr><td>Static external IP</td><td>A stable address for HTTPS</td><td>1 IPv4</td></tr><tr><td>VPC firewall rules</td><td>Only 22 (SSH, your IP), 80 and 443 are open; 8000, 8501 and 6333 stay closed</td><td>—</td></tr><tr><td>Cloud Storage bucket</td><td>Index copies from Colab: <code>indexes/chroma_db</code> and <code>snapshots/qdrant_db</code></td><td>~5–20 GB, same region as the VM</td></tr><tr><td>Default service account</td><td>Lets the VM read the bucket, with no keys on the server</td><td>Storage read access</td></tr></tbody></table>
+<h3>2.2 On the VM (Docker Compose)</h3>
+<p>One image serves both <code>api</code> and <code>ui</code>.</p>
+<table><thead><tr><th>Container</th><th>Role</th><th>Port</th></tr></thead><tbody><tr><td><code>caddy</code> (<code>https</code> profile)</td><td>HTTPS (Let's Encrypt) and a basic-auth login in front of the UI</td><td>80, 443 (public)</td></tr><tr><td><code>ui</code></td><td>Streamlit</td><td>8501 (localhost only)</td></tr><tr><td><code>api</code></td><td>FastAPI with the three agents (router, Q&amp;A, trend). MiniLM and the reranker run on CPU here, and Pipeline 1's Chroma index is read from disk</td><td>8000 (localhost only)</td></tr><tr><td><code>qdrant</code></td><td>Pipeline 2 collections (<code>annual_reports_text</code>, <code>annual_reports_visual</code>)</td><td>6333 (internal)</td></tr></tbody></table>
+<h3>2.3 Outside Google Cloud</h3>
+<table><thead><tr><th>Service</th><th>Role</th><th>Cost</th></tr></thead><tbody><tr><td>Track B LLM endpoint (Qwen3-8B)</td><td>All answers and the critic's fact-checking judge</td><td>team quota</td></tr><tr><td>Colab Pro + Google Drive 100 GB</td><td>Index build, and its long-term copy</td><td>$9.99 + $1.99 per month</td></tr><tr><td>GitHub</td><td>The code the VM clones</td><td>free</td></tr><tr><td>LangSmith (optional)</td><td>Traces</td><td>free tier</td></tr><tr><td><code>sslip.io</code> hostname</td><td>HTTPS without buying a domain (own domain ~$10–15/year)</td><td>free</td></tr><tr><td>Hugging Face Hub</td><td>Model downloads on first start, then cached</td><td>free</td></tr></tbody></table>
+<h2>3. Cost for 15 days</h2>
+<table><thead><tr><th>Item</th><th>Full corpus</th><th>min500</th></tr></thead><tbody><tr><td>VM compute (24 h × 15 days = 360 h)</td><td>e2-standard-4: 0.134 × 360 ≈ <strong>$48</strong></td><td>e2-standard-2: 0.067 × 360 ≈ <strong>$24</strong></td></tr><tr><td>Persistent disk</td><td>100 GB ≈ <strong>$5</strong></td><td>50 GB ≈ <strong>$2.5</strong></td></tr><tr><td>Static IP (in use)</td><td>≈ $0.005/h ≈ <strong>$2</strong></td><td>≈ <strong>$2</strong></td></tr><tr><td>Cloud Storage bucket</td><td>15–20 GB ≈ <strong>$0.20</strong></td><td>~8 GB ≈ <strong>$0.10</strong></td></tr><tr><td>Network egress (a demo's traffic)</td><td>&lt; <strong>$1</strong></td><td>&lt; <strong>$1</strong></td></tr><tr><td><strong>Google Cloud for 15 days</strong></td><td><strong>≈ $55</strong></td><td><strong>≈ $29</strong></td></tr><tr><td>One-off index build: Colab Pro + Drive</td><td>$12</td><td>$12</td></tr><tr><td>LLM</td><td>Track B quota</td><td>Track B quota</td></tr><tr><td><strong>Total</strong></td><td><strong>≈ $67</strong></td><td><strong>≈ $41</strong></td></tr></tbody></table>
+<p><strong>Optional:</strong> a paid vision model for Pipeline 1's <code>paidVL</code> pages adds about <strong>$1–$39</strong> for min500, depending on the model. This is pending the mentor's decision (<a href="chart_reading.md">chart_reading.md</a>).</p>
+<h3>3.1 Paying less</h3>
+<ul><li><strong>Run the VM only when needed.</strong> A stopped VM costs no compute, but the disk and the IP are still charged. Running 8 hours a day cuts the compute line to about a third.</li><li><strong>Use the free trial.</strong> New Google Cloud accounts get free trial credit, which would likely cover all of this; check the current terms when you sign up.</li><li><strong>Choose min500.</strong> It halves the VM size and the disk.</li><li><strong>Delete everything after grading:</strong> the VM <strong>and</strong> its disk, the static IP and the bucket. Otherwise billing continues.</li></ul>
+<h2>4. Step-by-step commands</h2>
+<p><strong>On Colab, after ingestion:</strong> run cell 12 of <code>colab_ingest_chroma_db.ipynb</code> or <code>colab_ingest_qdrant_db.ipynb</code>, or:</p>
+<pre><code>python -m scripts.rag.colab_pipeline export --pipeline vlm_chroma --bucket gs://capstone-rag-&lt;name&gt;</code></pre>
+<p>This authenticates, creates the bucket if needed, and copies both indexes from Drive.</p>
+<p><strong>On the VM:</strong></p>
+<pre><code># once: Docker Engine + Compose plugin, then the code
+git clone &lt;repo-url&gt; ~/capstone &amp;&amp; cd ~/capstone
+cp .env.example .env &amp;&amp; chmod 600 .env
+#   RAG_PROFILE=gcp
+#   RAG_GCS_BUCKET=gs://capstone-rag-&lt;name&gt;
+#   RAG_HOME_DIR=/srv/capstone          (on the persistent disk)
+#   LLM_API_BASE / LLM_API_KEY / LLM_MODEL, API_AUTH_TOKEN, DOMAIN=&lt;ip&gt;.sslip.io, BASIC_AUTH_HASH
+mkdir -p secrets &amp;&amp; cp &lt;path&gt;/llm_ca.crt secrets/llm_ca.crt
+sudo mkdir -p /srv/capstone &amp;&amp; sudo chown -R $USER /srv/capstone
+
+# pull both indexes from the bucket, restore Qdrant, start the stack
+sh deploy/sync_from_gcs.sh
+docker compose --profile https up -d
+
+# check
+curl -fsS http://127.0.0.1:8000/health      # profile gcp, both index folders, reranker / ca_cert flags</code></pre>
+<p><strong>After grading:</strong></p>
+<pre><code>docker compose down
+# then delete the VM, its disk, the static IP and the bucket in the console (or with gcloud)</code></pre>
+<h2>5. Not verified yet</h2>
+<ul><li><strong>Docker image:</strong> not built yet, because Docker isn't installed on the development PC. The first build on the VM is the real check.</li><li><strong>Index copy scripts:</strong> the <code>gcloud</code> steps (<code>cp.export_to_gcs</code>, <code>deploy/sync_from_gcs.sh</code>) haven't been run against a real bucket. Their syntax and the commands they build are tested.</li><li><strong>Qwen3-VL and ColPali at full scale:</strong> neither has run on a Colab GPU yet, so the GPU-hour estimates are uncertain.</li><li><strong>Prices:</strong> these are list prices. Some LLM and Colab prices change on 1 December and 1 January.</li></ul>
+<p><strong>Do a dry run first.</strong> Before the full sync, deploy 1–2 sectors end to end (about an hour) to confirm the build, the sync and the restore.</p>
+</body></html>
