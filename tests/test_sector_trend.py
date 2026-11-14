@@ -365,3 +365,25 @@ def test_api_keeps_the_sector_agents_stop_message(monkeypatch):
         "query": QUERY, "technique": "router", "llm_provider": "mock"}).json()
     assert body["final_status"] == "insufficient_evidence" and "needs at least 2" in body["answer"]
     assert body["grounding"]["status"] == "not_applicable" and body["sector_trend"]["panel"] == []
+
+
+def test_label_match_skips_pro_forma_tables_and_reads_wrapped_scale():
+    pro_forma = {"chunk_id": "pf", "text": (
+        "Supplemental Pro Forma Financial Information\nThe following table presents the unaudited supplemental pro forma "
+        "results of a hypothetical combined Amgen and\nHorizon for the years ended December 31, 2023 and 2022 (in\n"
+        "millions):\nYears ended December 31,\n2023 2022\nTotal revenue $ 30,969 $ 29,964\nNet income $ 5,383 $ 2,381")}
+    statement = {"chunk_id": "st", "text": (
+        "CONSOLIDATED STATEMENTS OF INCOME\n(In\nmillions, except per-share data)\n2024 2023 2022\n"
+        "Total revenues 33,424 28,190 26,323")}
+    assert sector.label_match([pro_forma], "revenue", 2023) is None
+    found = sector.label_match([pro_forma, statement], "revenue", 2023)
+    assert found["value"] == "28,190" and found["chunk_id"] == "st" and found["unit"] == "millions"
+
+
+def test_excluded_reason_names_the_unit_problem():
+    plan = {"companies": ["AMGN"], "years": [2023, 2024], "excluded": []}
+    point = lambda y, v, unit: {"year": y, "value": v, "value_text": str(v), "unit": unit, "status": "ok", "chunk_id": "c"}
+    series = {"AMGN": trend.summarize({"company": "AMGN", "metric": "revenue", "years": [2023, 2024]},
+                                      [point(2023, 28190, ""), point(2024, 33424, "millions")])}
+    table = sector.aggregate(plan, series)
+    assert table["excluded"] == [{"ticker": "AMGN", "company": "Amgen", "reason": "unit scale differs between years"}]

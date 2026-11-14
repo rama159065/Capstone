@@ -68,7 +68,9 @@ STATEMENT_LABELS: dict[str, tuple[str, ...]] = {
 }
 _ROW_FIGURE = re.compile(r"\(?-?\$?\s?\d{1,3}(?:,\d{3})+(?:\.\d+)?\)?|\(?-?\$?\s?\d+\.\d+\)?")
 _YEAR = re.compile(r"(?<!\d)(20[0-4]\d)(?!\d)")
-_SCALE = re.compile(r"\bin (thousands|millions|billions)\b", re.I)
+_SCALE = re.compile(r"\bin\s+(thousands|millions|billions)\b", re.I)     # "(in\nmillions)" wraps across lines
+_PRO_FORMA = re.compile(r"\bpro\s+forma\b", re.I)
+PRO_FORMA_LINES = 8          # a "pro forma" mention this close above a year header makes its table pro forma
 _TO_MILLIONS = {"thousand": 0.001, "million": 1.0, "billion": 1000.0, "trillion": 1_000_000.0}
 
 
@@ -209,14 +211,19 @@ def label_match(hits: list[dict[str, Any]], metric: str | None, year: int) -> di
     for hit in hits:
         text = str(hit.get("text") or "")
         header: list[int] = []
+        pro_forma, last_pro_forma = False, -PRO_FORMA_LINES - 1
         scale = _SCALE.search(text)
-        for line in text.splitlines():
+        for index, line in enumerate(text.splitlines()):
             lower, plain = _row_cells(line)
+            if _PRO_FORMA.search(lower):
+                last_pro_forma = index
             years = list(dict.fromkeys(int(y) for y in _YEAR.findall(lower)))
             if len(years) >= 2 and not _ROW_FIGURE.search(_YEAR.sub(" ", lower)):
                 header = years                              # "2024 2023 2022" or "| | 2024 | 2023 |"
+                # A pro forma table ("as if the acquisition had occurred on ...") is not the reported figure.
+                pro_forma = index - last_pro_forma <= PRO_FORMA_LINES
                 continue
-            if not header or year not in header:
+            if not header or year not in header or pro_forma:
                 continue
             label = next((l for l in labels if lower.startswith(l)), None)
             if not label:
@@ -347,9 +354,9 @@ def aggregate(plan: dict, series: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "sector_companies": len(plan.get("sector_companies") or []),
         "coverage_share": round(len(panel) / len(planned), 4) if planned else 0.0,
         "excluded": [*plan.get("excluded", []),
-                     *[{"ticker": c["ticker"], "company": c["company"], "reason": "figure not verified for "
-                        + ", ".join(f"FY{p['year']}" for p in c["points"] if p.get("status") != "ok")
-                        or "unit scale differs between years"} for c in companies if not c["in_panel"]]],
+                     *[{"ticker": c["ticker"], "company": c["company"], "reason": ("figure not verified for "
+                        + ", ".join(f"FY{p['year']}" for p in c["points"] if p.get("status") != "ok"))
+                        if any(p.get("status") != "ok" for p in c["points"]) else "unit scale differs between years"} for c in companies if not c["in_panel"]]],
         "rows": rows,
         "cagr_total": cagr_total,
         "median_company_cagr": median_cagr,
