@@ -141,6 +141,14 @@ Each change is listed in `plan.adjustments` and `plan.planner` says whether the 
 
 **Search depth.** Each target gets `max(3, ceil(top_k / targets))` hits; a retry searches twice as deep, with the question rewritten to its content words plus the metric's synonyms and statement names (for example "net income net earnings net profit consolidated statements annual report"). The filters stay the same, so a retry never borrows another company's or year's figures.
 
+## 4a. Parallel searches
+
+Added 14 November 2026. Every step that runs several filtered searches runs them **in parallel**, up to `RAG_SEARCH_WORKERS` (default 4) at a time: the Q&A executor (one search per company × year), the trend fetch (one per year), the sector fetch and its broadened retries (one per company × year), and the fund agent's company searches. The first search of a step runs alone, so the query embedder and other lazily loaded models are created once; then the rest run side by side. Results are taken **in target order** and de-duplicated afterwards, so the evidence, its order and `tool_calls` are exactly what a one-by-one loop gives (`tests/test_search_fan_out.py` compares 1 and 4 workers). Each parallel round is listed in `agent_run.search_fan_out` (searches, workers, wall time).
+
+The sector and fund nodes work in rounds: all first searches in parallel → statement rows read in code → all broadened searches for what is still missing in parallel → the LLM, one call at a time, only for figures code couldn't read. **LLM calls are never parallel**: the hosted Track B client sends one request at a time. The fan-out uses its own threads, not the 4-slot `Calls` pool, and embedded Qdrant (one in-process client) stays sequential. The step count is unchanged.
+
+Measured on the local API (bge index, 180 filings, mock LLM, an ingest running beside it): "How did healthcare revenue trend from 2022 to 2025?" (24 searches) 97 s with 1 worker → 33 s with 4; a three-bank comparison 6.9 s → 5.9 s. Answers, figures and CAGR were identical.
+
 ## 5. Step budget and loops
 
 `AGENT_MAX_STEPS` (default 10) caps node executions; LangGraph's `recursion_limit` is set to `AGENT_MAX_STEPS + 1` as a hard stop. The routing functions check the budget before taking a loop, so with the default cap a run takes **at most one loop** and never ends in `step_limit`:
@@ -508,6 +516,7 @@ The five other Track B domains (procurement, travel and expense, competitive res
 | `ANSWER_CACHE_SECONDS` | 0 | Reuse identical answers |
 | `RAG_MUTUAL_FUND_DIR` | `<RAG_HOME>/indexes/mutual_fund` | Fund database and fund cards; the `fund` route exists only when its database holds a filing |
 | `RAG_FUND_MAX_COMPANIES` | 10 | Most holdings a fund question reads annual reports for |
+| `RAG_SEARCH_WORKERS` | 4 | Searches a step runs at once (`financial_tools.fan_out`); `1` = one by one. Embedded Qdrant always runs them one by one. LLM calls are never run in parallel |
 | `CONVERSATION_DB` | in memory | Clarifier state in SQLite |
 
 ## 13. Limits

@@ -824,6 +824,7 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
 
     clarifier = default_clarifier()
     budget = max_steps()
+    fan_out_log: list[dict] = []          # parallel search rounds of this run (agent_run.search_fan_out)
     support_enabled = os.getenv("RAG_SUPPORT_CHECK", "1").strip().lower() not in {"0", "false", "off", "no"}
 
     def step(name, fn):
@@ -928,6 +929,35 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         plan["intent"] = route
         return {"route": decision, "plan": plan}
 
+    def search_job(label: str, query: str, top_k: int, tool: str = "text_search", attempt: int = 1,
+                   **overrides) -> dict:
+        """One filtered search for ``run_searches``: its target label, config and log fields."""
+        run_config = AgentConfig(**{**config.__dict__, "query": query, "top_k": top_k, "visual": False, **overrides})
+        return {"label": label, "config": run_config, "tool": tool, "attempt": attempt, "query": query, "top_k": top_k}
+
+    def run_searches(jobs: list[dict], seen: set, calls_log: list[dict]) -> list[list[dict]]:
+        """Fetch every job's hits (up to RAG_SEARCH_WORKERS at once, ``tools.fan_out``), then, in job order, keep the
+        hits not seen before and log each search: the evidence and its order are what a one-by-one loop gives."""
+        def fetch(job):
+            started = time.perf_counter()
+            hits = answer_evidence(job["config"])
+            return hits, round((time.perf_counter() - started) * 1000)
+        results, fan_log = tools.fan_out(fetch, jobs)
+        fresh_all = []
+        for job, (hits, ms) in zip(jobs, results):
+            fresh = []
+            for hit in hits:
+                if hit.get("chunk_id") not in seen:
+                    seen.add(hit.get("chunk_id"))
+                    fresh.append({**hit, "target": job["label"]})
+            fresh_all.append(fresh)
+            calls_log.append({"tool": job["tool"], "attempt": job["attempt"], "target": job["label"],
+                              "query": job["query"], "top_k": job["top_k"], "hits": len(hits), "new": len(fresh),
+                              "ms": ms})
+        if fan_log["workers"] > 1:
+            fan_out_log.append(fan_log)
+        return fresh_all
+
     def trend_fetch_node(state: AgentState) -> AgentState:
         """One filtered search per fiscal year. A retry searches only the years without a verified figure, with a
         broadened query and twice the depth."""
@@ -942,21 +972,10 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         seen = {hit.get("chunk_id") for hit in evidence}
         calls_log = list(state.get("tool_calls", []))
         phrases = METRICS.get(plan.get("metric"), [])
-        for target in targets:
-            started = time.perf_counter()
-            query = trend.year_query(plan, target["year"], phrases, broadened=attempt > 1)
-            run_config = AgentConfig(**{**config.__dict__, "query": query, "ticker": target["ticker"],
-                                        "year": target["year"], "top_k": per_target, "visual": False})
-            hits = answer_evidence(run_config)
-            fresh = []
-            for hit in hits:
-                if hit.get("chunk_id") not in seen:
-                    seen.add(hit.get("chunk_id"))
-                    fresh.append({**hit, "target": tools.target_label(target)})
+        jobs = [search_job(tools.target_label(t), trend.year_query(plan, t["year"], phrases, broadened=attempt > 1),
+                           per_target, attempt=attempt, ticker=t["ticker"], year=t["year"]) for t in targets]
+        for fresh in run_searches(jobs, seen, calls_log):
             evidence.extend(fresh)
-            calls_log.append({"tool": "text_search", "attempt": attempt, "target": tools.target_label(target),
-                              "query": query, "top_k": per_target, "hits": len(hits), "new": len(fresh),
-                              "ms": round((time.perf_counter() - started) * 1000)})
         return {"evidence": evidence, "retrieval_attempts": attempt, "tool_calls": calls_log}
 
     def trend_series_node(state: AgentState) -> AgentState:
@@ -1004,33 +1023,19 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
             update.update(final_status="insufficient_evidence", answer="No answer found in the available evidence.")
         return update
 
-    def sector_search(plan: dict, target: dict, attempt: int, seen: set) -> tuple[list[dict], dict]:
-        """One filtered search for a company-year; a retry broadens the query and searches twice as deep."""
-        started = time.perf_counter()
-        label = tools.target_label(target)
+    def sector_job(plan: dict, target: dict, attempt: int) -> dict:
+        """The filtered search for a company-year; a retry broadens the query and searches twice as deep."""
         query = sector_agent.company_query(plan, target["ticker"], target["year"], METRICS.get(plan.get("metric"), []),
                                            broadened=attempt > 1)
-        top_k = 3 * (2 if attempt > 1 else 1)
-        run_config = AgentConfig(**{**config.__dict__, "query": query, "ticker": target["ticker"],
-                                    "year": target["year"], "top_k": top_k, "visual": False, "sector": None})
-        hits = answer_evidence(run_config)
-        fresh = []
-        for hit in hits:
-            if hit.get("chunk_id") not in seen:
-                seen.add(hit.get("chunk_id"))
-                fresh.append({**hit, "target": label})
-        return fresh, {"tool": "text_search", "attempt": attempt, "target": label, "query": query, "top_k": top_k,
-                       "hits": len(hits), "new": len(fresh), "ms": round((time.perf_counter() - started) * 1000)}
+        return search_job(tools.target_label(target), query, 3 * (2 if attempt > 1 else 1), attempt=attempt,
+                          ticker=target["ticker"], year=target["year"], sector=None)
 
     def sector_fetch_node(state: AgentState) -> AgentState:
-        """One filtered search per company x fiscal year of the plan."""
+        """One filtered search per company x fiscal year of the plan, run in parallel (``run_searches``)."""
         plan = state.get("plan", {})
         evidence, calls_log = [], list(state.get("tool_calls", []))
-        seen: set = set()
-        for target in plan.get("targets") or []:
-            fresh, log = sector_search(plan, target, 1, seen)
+        for fresh in run_searches([sector_job(plan, t, 1) for t in plan.get("targets") or []], set(), calls_log):
             evidence.extend(fresh)
-            calls_log.append(log)
         return {"evidence": evidence, "retrieval_attempts": 1, "tool_calls": calls_log}
 
     def sector_figure(plan: dict, ticker: str, year: int, hits: list[dict], use_llm: bool) -> tuple[dict, dict]:
@@ -1071,30 +1076,33 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         calls_log = list(state.get("tool_calls", []))
         seen = {hit.get("chunk_id") for hit in state.get("evidence", [])}
         dropped = list(guard.get("dropped") or [])
-        retried, series = 0, {}
+        # Round 1: every company-year's statement row, in code. Round 2: one broadened search for each figure still
+        # missing, all in parallel, then the row again and only then the LLM (one call at a time).
+        found: dict[tuple, dict] = {}
         for ticker in plan.get("companies") or []:
-            points = []
             for year in plan.get("years") or []:
-                target = {"ticker": ticker, "year": year}
-                label = tools.target_label(target)
-                hits = [hit for hit in evidence if hit.get("target") == label]
-                point, log = sector_figure(plan, ticker, year, hits, use_llm=False)
+                label = tools.target_label({"ticker": ticker, "year": year})
+                point, log = sector_figure(plan, ticker, year, [h for h in evidence if h.get("target") == label],
+                                           use_llm=False)
                 calls_log.append({**log, "attempt": 1})
-                if point.get("status") != "ok":
-                    retried += 1
-                    fresh, search_log = sector_search(plan, target, 2, seen)
-                    fresh, fresh_guard = drop_flagged(fresh)
-                    dropped += fresh_guard.get("dropped") or []
-                    evidence.extend(fresh)
-                    calls_log.append(search_log)
-                    hits = [hit for hit in evidence if hit.get("target") == label]
-                    if hits:
-                        point, log = sector_figure(plan, ticker, year, hits, use_llm=True)
-                        calls_log.append({**log, "attempt": 2})
-                points.append(point)
+                found[(ticker, year)] = point
+        missing = [{"ticker": t, "year": y} for (t, y), point in found.items() if point.get("status") != "ok"]
+        retried = len(missing)
+        for target, fresh in zip(missing, run_searches([sector_job(plan, t, 2) for t in missing], seen, calls_log)):
+            fresh, fresh_guard = drop_flagged(fresh)
+            dropped += fresh_guard.get("dropped") or []
+            evidence.extend(fresh)
+        for target in missing:
+            hits = [hit for hit in evidence if hit.get("target") == tools.target_label(target)]
+            if hits:
+                point, log = sector_figure(plan, target["ticker"], target["year"], hits, use_llm=True)
+                calls_log.append({**log, "attempt": 2})
+                found[(target["ticker"], target["year"])] = point
+        series = {}
+        for ticker in plan.get("companies") or []:
             company_plan = {"company": ticker, "company_name": NAMES.get(ticker, ticker), "metric": plan.get("metric"),
                             "years": plan.get("years") or []}
-            series[ticker] = trend.summarize(company_plan, points)
+            series[ticker] = trend.summarize(company_plan, [found[(ticker, y)] for y in plan.get("years") or []])
         if dropped:
             guard = {**guard, "action": "dropped_flagged_chunks", "dropped": sorted(set(dropped))}
         table = sector_agent.aggregate(plan, series)
@@ -1150,20 +1158,22 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         metric = plan.get("metric")
         if plan.get("kind") == "holdings_growth":
             metric_plan = {"metric": metric}
-            figures: dict[str, dict[int, dict]] = {}
-            for t in targets:
-                ticker, year = t["ticker"], t["year"]
-                target = {"ticker": ticker, "year": year}
-                label = tools.target_label(target)
-                points: dict[int, dict] = {}
-                for attempt in (1, 2):
-                    retried = retried or attempt == 2
-                    fresh, log = sector_search(metric_plan, target, attempt, seen)
+            figures: dict[str, dict[int, dict]] = {t["ticker"]: {} for t in targets}
+            pending = list(targets)
+            for attempt in (1, 2):           # each round: every company's search in parallel, then the reads in order
+                if not pending:
+                    break
+                retried = retried or attempt == 2
+                fetched = run_searches([sector_job(metric_plan, {"ticker": t["ticker"], "year": t["year"]}, attempt)
+                                        for t in pending], seen, calls_log)
+                for fresh in fetched:
                     fresh, fresh_guard = drop_flagged(fresh)
                     dropped += fresh_guard.get("dropped") or []
                     evidence.extend(fresh)
-                    calls_log.append(log)
-                    hits = [hit for hit in evidence if hit.get("target") == label]
+                for t in pending:
+                    ticker, year = t["ticker"], t["year"]
+                    points = figures[ticker]
+                    hits = [hit for hit in evidence if hit.get("target") == tools.target_label({"ticker": ticker, "year": year})]
                     ids = {str(hit.get("chunk_id")) for hit in hits}
                     for fiscal_year in (year - 1, year):
                         if fiscal_year in points:
@@ -1179,34 +1189,21 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
                         if point.get("status") == "ok":
                             points[fiscal_year] = point
                             store.save_figure(ticker, fiscal_year, metric, point)
-                    if len(points) == 2:
-                        break
-                figures[ticker] = points
+                pending = [t for t in pending if len(figures[t["ticker"]]) < 2]
             calculations += fund_agent.growth(table, figures)
             calls_log.append({"tool": "fund_calculator", "companies": len(targets),
                               "weighted_growth_pct": table.get("weighted_growth_pct"),
                               "coverage_share": table.get("coverage_share")})
         else:
             covered = 0.0
-            for t in targets:
-                started = time.perf_counter()
-                target = {"ticker": t["ticker"], "year": t["year"]}
-                query = f"{NAMES.get(t['ticker'], t['ticker'])}: {state['query']}"
-                run_config = AgentConfig(**{**config.__dict__, "query": query, "ticker": t["ticker"], "year": t["year"],
-                                            "top_k": 3, "visual": False, "sector": None})
-                hits = answer_evidence(run_config)
-                fresh = []
-                for hit in hits:
-                    if hit.get("chunk_id") not in seen:
-                        seen.add(hit.get("chunk_id"))
-                        fresh.append({**hit, "target": tools.target_label(target)})
+            jobs = [search_job(tools.target_label({"ticker": t["ticker"], "year": t["year"]}),
+                               f"{NAMES.get(t['ticker'], t['ticker'])}: {state['query']}", 3, ticker=t["ticker"],
+                               year=t["year"], sector=None) for t in targets]
+            for t, fresh in zip(targets, run_searches(jobs, seen, calls_log)):
                 fresh, fresh_guard = drop_flagged(fresh)
                 dropped += fresh_guard.get("dropped") or []
                 evidence.extend(fresh)
                 covered += t["weight"] if fresh else 0.0
-                calls_log.append({"tool": "text_search", "attempt": 1, "target": tools.target_label(target),
-                                  "query": query, "top_k": 3, "hits": len(hits), "new": len(fresh),
-                                  "ms": round((time.perf_counter() - started) * 1000)})
             asked = sum(h["pct_of_net_assets"] or 0 for h in table.get("holdings") or [])
             table.update(covered_weight=round(covered, 4), asked_weight=round(asked, 4),
                          coverage_share=round(covered / asked, 4) if asked else 0.0)
@@ -1240,22 +1237,12 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         visual = "visual_search" in plan.get("tools", [])
         evidence = list(state.get("evidence", [])) if attempt > 1 else []
         seen = {hit.get("chunk_id") for hit in evidence}
-        for target in targets:
-            started = time.perf_counter()
-            run_config = AgentConfig(**{**config.__dict__, "query": query, "ticker": target.get("ticker"),
-                                        "year": target.get("year"), "top_k": per_target, "visual": visual,
-                                        "source_type": plan.get("source_type") or config.source_type})
-            hits = answer_evidence(run_config)
-            fresh = []
-            for hit in hits:
-                if hit.get("chunk_id") not in seen:
-                    seen.add(hit.get("chunk_id"))
-                    fresh.append({**hit, "target": tools.target_label(target)})
+        jobs = [search_job(tools.target_label(t), query, per_target,
+                           tool="text_search+visual_search" if visual else "text_search", attempt=attempt,
+                           ticker=t.get("ticker"), year=t.get("year"), visual=visual,
+                           source_type=plan.get("source_type") or config.source_type) for t in targets]
+        for fresh in run_searches(jobs, seen, calls_log):
             evidence.extend(fresh)
-            calls_log.append({"tool": "text_search+visual_search" if visual else "text_search", "attempt": attempt,
-                              "target": tools.target_label(target), "query": query, "top_k": per_target,
-                              "hits": len(hits), "new": len(fresh),
-                              "ms": round((time.perf_counter() - started) * 1000)})
         return {"plan": plan, "evidence": evidence, "retrieval_attempts": attempt, "tool_calls": calls_log}
 
     def evidence_guard_node(state: AgentState) -> AgentState:
@@ -1561,6 +1548,7 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
             "evidence_check": final_state.get("evidence_check"),
             "tool_calls": final_state.get("tool_calls", []),
             "calculations": final_state.get("calculations", []),
+            "search_fan_out": fan_out_log,
         },
     }
 

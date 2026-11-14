@@ -245,3 +245,46 @@ def parse_support(text: str) -> dict[str, Any]:
     else:
         verdict = "supported" if stated in ("", "supported") else "partially_supported"   # claims and verdict disagree
     return {"verdict": verdict, "claims": claims, "unsupported_claims": [str(c.get("claim", ""))[:300] for c in unsupported]}
+
+
+# ---------------------------------------------------------------------------- parallel search fan-out
+MAX_SEARCH_WORKERS = 8
+
+
+def search_workers() -> int:
+    """Searches a node may run at once: RAG_SEARCH_WORKERS (default 4, 1 = sequential). Embedded Qdrant (one in-process
+    client, no QDRANT_URL) stays sequential; Chroma opens a handle per search and a Qdrant server takes concurrent
+    queries. LLM calls are never fanned out: the hosted client sends one request at a time."""
+    try:
+        workers = int(os.getenv("RAG_SEARCH_WORKERS", "4"))
+    except ValueError:
+        workers = 4
+    backend = os.getenv("RAG_BACKEND", "")
+    if backend == "qdrant" or (backend == "financial_qdrant" and not os.getenv("QDRANT_URL")):
+        return 1
+    return max(1, min(workers, MAX_SEARCH_WORKERS))
+
+
+def fan_out(fn, items: list, workers: int | None = None) -> tuple[list, dict]:
+    """``[fn(item) for item in items]`` with up to ``workers`` running at once; results keep the items' order.
+
+    The first item runs alone, so lazily loaded models and clients (query embedder, reranker) are created once before
+    the rest run in parallel. Each task runs in a copy of the caller's context (trace IDs). The first exception is
+    raised, as in a loop. Returns the results and a log entry for ``agent_run``."""
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+    from contextvars import copy_context
+    items = list(items)
+    workers = search_workers() if workers is None else max(1, workers)
+    started = time.perf_counter()
+    if workers <= 1 or len(items) <= 2:
+        results = [fn(item) for item in items]
+        used = 1
+    else:
+        results = [fn(items[0])]
+        used = min(workers, len(items) - 1)
+        with ThreadPoolExecutor(max_workers=used, thread_name_prefix="rag-search") as pool:
+            futures = [pool.submit(copy_context().run, fn, item) for item in items[1:]]
+            results += [future.result() for future in futures]
+    return results, {"tool": "search_fan_out", "searches": len(items), "workers": used,
+                     "ms": round((time.perf_counter() - started) * 1000)}

@@ -342,6 +342,10 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 </ul>
 <p>Each change is listed in <code>plan.adjustments</code> and <code>plan.planner</code> says whether the LLM's plan (<code>llm</code>) or the fallback (<code>fallback</code>) was used, so a weak or mock LLM can't skip a needed tool and the trace shows who decided.</p>
 <p><strong>Search depth.</strong> Each target gets <code>max(3, ceil(top_k / targets))</code> hits; a retry searches twice as deep, with the question rewritten to its content words plus the metric's synonyms and statement names (for example &quot;net income net earnings net profit consolidated statements annual report&quot;). The filters stay the same, so a retry never borrows another company's or year's figures.</p>
+<h2>4a. Parallel searches</h2>
+<p>Added 14 November 2026. Every step that runs several filtered searches runs them <strong>in parallel</strong>, up to <code>RAG_SEARCH_WORKERS</code> (default 4) at a time: the Q&amp;A executor (one search per company × year), the trend fetch (one per year), the sector fetch and its broadened retries (one per company × year), and the fund agent's company searches. The first search of a step runs alone, so the query embedder and other lazily loaded models are created once; then the rest run side by side. Results are taken <strong>in target order</strong> and de-duplicated afterwards, so the evidence, its order and <code>tool_calls</code> are exactly what a one-by-one loop gives (<code>tests/test_search_fan_out.py</code> compares 1 and 4 workers). Each parallel round is listed in <code>agent_run.search_fan_out</code> (searches, workers, wall time).</p>
+<p>The sector and fund nodes work in rounds: all first searches in parallel → statement rows read in code → all broadened searches for what is still missing in parallel → the LLM, one call at a time, only for figures code couldn't read. <strong>LLM calls are never parallel</strong>: the hosted Track B client sends one request at a time. The fan-out uses its own threads, not the 4-slot <code>Calls</code> pool, and embedded Qdrant (one in-process client) stays sequential. The step count is unchanged.</p>
+<p>Measured on the local API (bge index, 180 filings, mock LLM, an ingest running beside it): &quot;How did healthcare revenue trend from 2022 to 2025?&quot; (24 searches) 97 s with 1 worker → 33 s with 4; a three-bank comparison 6.9 s → 5.9 s. Answers, figures and CAGR were identical.</p>
 <h2>5. Step budget and loops</h2>
 <p><code>AGENT_MAX_STEPS</code> (default 10) caps node executions; LangGraph's <code>recursion_limit</code> is set to <code>AGENT_MAX_STEPS + 1</code> as a hard stop. The routing functions check the budget before taking a loop, so with the default cap a run takes <strong>at most one loop</strong> and never ends in <code>step_limit</code>:</p>
 <table>
@@ -1229,6 +1233,11 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
   <td><code>RAG_FUND_MAX_COMPANIES</code></td>
   <td>10</td>
   <td>Most holdings a fund question reads annual reports for</td>
+</tr>
+<tr>
+  <td><code>RAG_SEARCH_WORKERS</code></td>
+  <td>4</td>
+  <td>Searches a step runs at once (<code>financial_tools.fan_out</code>); <code>1</code> = one by one. Embedded Qdrant always runs them one by one. LLM calls are never run in parallel</td>
 </tr>
 <tr>
   <td><code>CONVERSATION_DB</code></td>
