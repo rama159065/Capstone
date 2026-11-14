@@ -14,6 +14,7 @@ Every environment uses the same folder structure under one root, ``RAG_HOME``. O
       page_audit/<sector>/*.csv
       state/conversations.sqlite3            = CONVERSATION_DB
       secrets/llm_ca.crt                     = LLM_CA_CERT when present (never in git, Drive or a bucket)
+      secrets/embedding_ca.crt               = EMBEDDING_CA_CERT when present (same rule)
       logs/
 
 | Profile | ``RAG_HOME`` (live) | Durable copy (same layout) | Qdrant |
@@ -45,6 +46,7 @@ LEGACY_NAMES = {"qdrant_db": ("colpali_qdrant", "financial_qdrant"), "chroma_db"
 PIPELINE_KIND = {"colpali_qdrant": "qdrant_db", "vlm_chroma": "chroma_db"}     # colab_pipeline ids -> folder kind
 RERANKER = "ms-marco-MiniLM-L-6-v2"
 CA_CERT = "llm_ca.crt"
+EMBEDDING_CA_CERT = "embedding_ca.crt"
 DRIVE_ROOT = Path("/content/drive/MyDrive/capstone_rag")
 
 
@@ -157,6 +159,10 @@ class Layout:
 
     def ca_cert(self) -> Path | None:
         path = self.secrets / CA_CERT
+        return path if path.is_file() else None
+
+    def embedding_ca_cert(self) -> Path | None:
+        path = self.secrets / EMBEDDING_CA_CERT
         return path if path.is_file() else None
 
     def describe(self) -> dict:

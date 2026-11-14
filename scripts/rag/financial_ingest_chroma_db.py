@@ -773,14 +773,14 @@ class VlmIngest:
             reset(args)
         self.state = fi.State(self.root / "vlm_ingest.sqlite3")
         self.embedder = embedder or fi.Embedder(args.embedding_provider, args.embedding_model)
-        self.state.check("embedding", self.embedder.signature)
+        fi.check_embedding(self.state, self.embedder)     # bge-small local and hosted count as one model
         self.state.check("store", args.store)
         self._vlm = vlm
         self.vlm_signature = vlm.signature if vlm else vlm_signature(args)
         self.cache = TranscriptCache(args.cache_dir or self.root / "vlm_pages", self.vlm_signature)
         self.store = open_store(args, self.embedder.dim)
         self.pipeline = json.dumps({"analysis": fi.ANALYSIS_VERSION, "max_pages": args.max_pages_per_pdf,
-                                    "embedding": self.embedder.signature, "vlm": self.vlm_signature,
+                                    "embedding": self.embedder.portable, "vlm": self.vlm_signature,
                                     "prompt": PROMPT_VERSION, "pages": args.vlm_pages, "limit": args.vlm_max_pages_per_pdf,
                                     "chunks": [fi.CHUNK_CHARS, fi.OVERLAP_CHARS, fi.TABLE_CHARS]}, sort_keys=True)
 
@@ -1032,8 +1032,14 @@ def build_parser():
     ingest.add_argument("--low-priority", action="store_true",
                         help="below-normal CPU priority for this process and its workers")
     ingest.add_argument("--max-new-tokens", type=int, default=1200)
-    ingest.add_argument("--embedding-provider", choices=["local", "hosted", "hashing"], default="local")
-    ingest.add_argument("--embedding-model", default="sentence-transformers/all-MiniLM-L6-v2")
+    ingest.add_argument("--embedding-provider", choices=["local", "hosted", "hashing"],
+                        default=os.getenv("RAG_EMBEDDING_PROVIDER") or "local",
+                        help="local = --embedding-model on this machine; hosted = the shared embedding API "
+                             "(docs/embedding_key.md: EMBEDDING_API_KEY, EMBEDDING_CA_CERT); both default to "
+                             "bge-small-en-v1.5 and give the same vectors, so an index built one way is served either way")
+    ingest.add_argument("--embedding-model", default=fi.LOCAL_BGE_SMALL,
+                        help="local model (default BAAI/bge-small-en-v1.5). An index keeps the model it was built "
+                             "with: to continue an older all-MiniLM-L6-v2 index pass sentence-transformers/all-MiniLM-L6-v2")
     ingest.add_argument("--force", action="store_true", help="redo finished filings (transcriptions stay cached)")
     ingest.add_argument("--reset", action="store_true", help="drop the collection and state first")
 

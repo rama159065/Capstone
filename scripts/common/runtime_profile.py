@@ -18,6 +18,8 @@ unset). Choose a profile with ``RAG_PROFILE``; without it, Colab is detected aut
 | ``API_BASE_URL`` (Streamlit -> FastAPI) | ``http://127.0.0.1:8000`` | same | ``http://api:8000`` |
 | ``RAG_RERANKER_MODEL`` | the local cross-encoder copy, when there is one | same | same |
 | ``LLM_CA_CERT`` | ``<RAG_HOME>/secrets/llm_ca.crt``, when it exists | same | same (compose mounts ``secrets/``) |
+| ``EMBEDDING_CA_CERT`` | ``<RAG_HOME>/secrets/embedding_ca.crt``, when it exists | same | same |
+| ``RAG_EMBEDDING_PROVIDER`` (pipeline 1, bge-small) | unset: the provider that built the index (``local``) | same | ``hosted`` (the shared API; local model if unreachable) |
 | durable copy | ``RAG_HOME`` itself | ``MyDrive/capstone_rag`` | host folder (server), ``gs://$RAG_GCS_BUCKET`` (gcp) |
 
 ``RAG_BACKEND`` for financial QA: ``financial_qdrant`` once its ingest exists, else ``financial_vlm`` once that one
@@ -37,8 +39,12 @@ PROFILES = {profile: {} for profile in storage.PROFILES}       # kept for caller
 SERVICES = {
     "local": {"RAG_DEVICE": "cpu", "API_BASE_URL": "http://127.0.0.1:8000"},
     "colab": {"QDRANT_URL": "http://127.0.0.1:6333", "API_BASE_URL": "http://127.0.0.1:8000"},
-    "server": {"QDRANT_URL": "http://qdrant:6333", "RAG_DEVICE": "cpu", "API_BASE_URL": "http://api:8000"},
-    "gcp": {"QDRANT_URL": "http://qdrant:6333", "RAG_DEVICE": "cpu", "API_BASE_URL": "http://api:8000"},
+    # Deployed servers embed questions with the shared embedding API; an index of bge-small built locally (or on
+    # Colab) is served with it, and the local model takes over if the API can't be reached.
+    "server": {"QDRANT_URL": "http://qdrant:6333", "RAG_DEVICE": "cpu", "API_BASE_URL": "http://api:8000",
+               "RAG_EMBEDDING_PROVIDER": "hosted"},
+    "gcp": {"QDRANT_URL": "http://qdrant:6333", "RAG_DEVICE": "cpu", "API_BASE_URL": "http://api:8000",
+            "RAG_EMBEDDING_PROVIDER": "hosted"},
 }
 _applied: dict | None = None
 
@@ -68,6 +74,9 @@ def defaults_for(profile: str) -> dict[str, str]:
     cert = lay.ca_cert()
     if cert:
         values["LLM_CA_CERT"] = str(cert)
+    embedding_cert = lay.embedding_ca_cert()
+    if embedding_cert:
+        values["EMBEDDING_CA_CERT"] = str(embedding_cert)
     return values
 
 

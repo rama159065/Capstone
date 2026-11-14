@@ -82,8 +82,8 @@ class Settings:
     years: str | None = None                # download: e.g. "2024,2025"
     user_agent: str | None = os.getenv("SEC_USER_AGENT")
     qdrant_url: str | None = f"http://127.0.0.1:{QDRANT_PORT}" if IN_COLAB else None   # None = embedded (local runs)
-    embedding_provider: str = "local"
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_provider: str = "local"       # "hosted" = the shared embedding API (docs/embedding_key.md)
+    embedding_model: str | None = None      # None: BAAI/bge-small-en-v1.5 for vlm_chroma, all-MiniLM-L6-v2 for colpali_qdrant
     # colpali_qdrant
     stages: str = "text,visual"
     visual_pages: str = "tables_charts_images"   # ColPali pages; or "tables_charts" / "rule" (+ unreadable pages) / "all"
@@ -116,6 +116,8 @@ class Settings:
         if self.corpus_preset not in ("full", "min500"):
             raise ValueError("corpus_preset must be 'full' or 'min500'")
         self.drive_root, self.work = Path(self.drive_root), Path(self.work)
+        if self.embedding_model is None:      # pipeline 1 uses bge-small (also served by the shared API)
+            self.embedding_model = fi.LOCAL_BGE_SMALL if self.pipeline == "vlm_chroma" else "sentence-transformers/all-MiniLM-L6-v2"
 
     @property
     def corpus(self):
