@@ -11,10 +11,15 @@
 #   file it is told to recover.
 # Pipeline 1 (Chroma): a plain folder copy. Already in place when <RAG_HOME>/indexes/chroma_db/vlm_ingest.sqlite3
 #   exists (sync_from_gcs.sh); otherwise copied from /snapshots/chroma_db (or the older /snapshots/vlm_chroma).
+# Mutual funds: a plain folder copy. Already in place when <RAG_HOME>/indexes/mutual_fund/nport_mutual_fund.sqlite3
+#   exists (sync_from_gcs.sh); otherwise copied from /snapshots/mutual_fund, or unpacked from
+#   /snapshots/mutual_fund_data.zip (python -m scripts.rag.colab_pipeline pack-funds). Without it the fund route is off.
 set -eu
 HOME_DIR="${RAG_HOME:-/app/rag_home}"
 QDRANT_ROOT="$HOME_DIR/indexes/qdrant_db"
 CHROMA_ROOT="$HOME_DIR/indexes/chroma_db"
+FUND_ROOT="$HOME_DIR/indexes/mutual_fund"
+FUND_DB="nport_mutual_fund.sqlite3"
 has_snapshots() { ls "$1"/*.snapshot >/dev/null 2>&1; }
 
 SNAPS=""
@@ -42,6 +47,20 @@ else
         fi
     done
     [ -f "$CHROMA_ROOT/vlm_ingest.sqlite3" ] || echo "chroma: no index found (pipeline 1 skipped)"
+fi
+
+if [ -f "$FUND_ROOT/$FUND_DB" ]; then
+    echo "mutual funds: already in place at $FUND_ROOT"
+elif [ -f "/snapshots/mutual_fund/$FUND_DB" ]; then
+    mkdir -p "$FUND_ROOT"
+    cp -R /snapshots/mutual_fund/. "$FUND_ROOT/"
+    echo "mutual funds: copied /snapshots/mutual_fund into $FUND_ROOT"
+elif [ -f /snapshots/mutual_fund_data.zip ]; then
+    mkdir -p "$FUND_ROOT"
+    python -c "import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" /snapshots/mutual_fund_data.zip "$FUND_ROOT"
+    echo "mutual funds: unpacked /snapshots/mutual_fund_data.zip into $FUND_ROOT"
+else
+    echo "mutual funds: no data found (fund route off)"
 fi
 
 mkdir -p "$HOME_DIR/state"

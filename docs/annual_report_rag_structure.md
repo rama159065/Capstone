@@ -460,6 +460,8 @@ python -m scripts.downloads.download_mutual_fund bulk --quarter 2026q3
 python -m scripts.rag.nport_mutual_fund load --tsv-zip indexes/rag_home/indexes/mutual_fund/raw_mutual_fund/2026q3_nport_mutual_fund.zip --top 50
 ```
 
+**Colab and GCP.** `python -m scripts.rag.colab_pipeline pack-funds` zips the folder to `output/colab/mutual_fund_data.zip`; uploaded to `MyDrive/capstone_rag/`, it is restored by `cp.restore` on Colab, exported by `cp.export_to_gcs` to `gs://<bucket>/indexes/mutual_fund`, and pulled by `deploy/sync_from_gcs.sh` / `restore_index.sh` on the VM ([deployment.md](deployment.md) §7.4).
+
 **Isolation.** The fund code never opens `chroma_db`; the annual-report collections, their chunk schema and `tests/test_chunk_schema.py` are unchanged. Without `nport_mutual_fund.sqlite3` the API and agents behave exactly as before.
 
 ## 14. Pipeline 1 embeddings: bge-small-en-v1.5

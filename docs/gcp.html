@@ -1,4 +1,13 @@
 <!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>  RAG_PROFILE=gcp</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
+<!DOCTYPE html>
+
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Deploying the Annual Report Copilot on Google Cloud</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
 h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
 table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
@@ -355,20 +364,20 @@ cp .env.example .env &amp;&amp; chmod 600 .env
 mkdir -p secrets &amp;&amp; cp &lt;path&gt;/llm_ca.crt secrets/llm_ca.crt
 sudo mkdir -p /srv/capstone &amp;&amp; sudo chown -R $USER /srv/capstone
 
-# pull both indexes from the bucket, restore Qdrant, start the stack
-sh deploy/sync_from_gcs.sh
-docker compose --profile https up -d
-
-# optional: mutual fund data (a few MB, built on the VM in about a minute; deployment.md §7.4)
-docker compose run --rm -e SEC_USER_AGENT=&quot;capstone-research you@example.com&quot; api python -m scripts.downloads.download_mutual_fund latest
+<h1>pull both indexes from the bucket, restore Qdrant, start the stack</h1>
+<p>sh deploy/sync_from_gcs.sh
+docker compose --profile https up -d</p>
+<h1>mutual fund data: sync_from_gcs.sh already pulled gs://&lt;bucket&gt;/indexes/mutual_fund when cp.export_to_gcs put it</h1>
+<h1>there (from MyDrive/capstone_rag/mutual_fund_data.zip, made on the PC with <code>colab_pipeline pack-funds</code>).</h1>
+<h1>Not in the bucket? Build it on the VM instead (a few MB, about a minute; deployment.md §7.4):</h1>
+<p>docker compose run --rm -e SEC_USER_AGENT=&quot;capstone-research you@example.com&quot; api python -m scripts.downloads.download_mutual_fund latest
 docker compose run --rm api python -m scripts.rag.nport_mutual_fund load --xml /app/rag_home/indexes/mutual_fund/raw_mutual_fund
 docker compose run --rm api python -m scripts.rag.cards_mutual_fund build --embedding-provider hosted   # or local
-docker compose restart api
-
-# check
-curl -fsS http://127.0.0.1:8000/health      # profile gcp, both index folders, reranker / ca_cert flags
+docker compose restart api</p>
+<h1>check</h1>
+<p>curl -fsS http://127.0.0.1:8000/health      # profile gcp, both index folders, reranker / ca_cert flags
 curl -fsS http://127.0.0.1:8000/mutual_fund/funds   # 404 until fund data is loaded
-</code></pre>
+</code></pre></p>
 <p><strong>After grading:</strong></p>
 <pre><code class="language-bash">docker compose down
 # then delete the VM, its disk, the static IP and the bucket in the console (or with gcloud)
@@ -382,4 +391,6 @@ curl -fsS http://127.0.0.1:8000/mutual_fund/funds   # 404 until fund data is loa
 <li><strong>Prices:</strong> these are list prices. Some LLM and Colab prices change on 1 December and 1 January.</li>
 </ul>
 <p><strong>Do a dry run first.</strong> Before the full sync, deploy 1–2 sectors end to end (about an hour) to confirm the build, the sync and the restore.</p>
+</body></html>
+
 </body></html>

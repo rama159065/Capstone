@@ -7,6 +7,7 @@
 # scripts.rag.colab_pipeline export --bucket gs://...`):
 #   gs://<bucket>/indexes/chroma_db/      pipeline 1: chroma/ + vlm_ingest.sqlite3, copied as is
 #   gs://<bucket>/snapshots/qdrant_db/    pipeline 2: Qdrant snapshots + ingest.sqlite3, restored into the server
+#   gs://<bucket>/indexes/mutual_fund/    N-PORT database + fund-card Chroma folder, copied as is (the fund route)
 # The VM's default service account reads a bucket in the same project; no Google login on the server.
 # Safe to rerun: rsync copies only what changed, and a Qdrant restore replaces the collections.
 set -eu
@@ -28,8 +29,8 @@ fi
 case "$BUCKET" in gs://*) ;; *) BUCKET="gs://$BUCKET" ;; esac
 BUCKET="${BUCKET%/}"
 
-mkdir -p "$HOST_HOME/indexes/chroma_db" "$HOST_HOME/snapshots/qdrant_db" "$HOST_HOME/state"
-for pair in "indexes/chroma_db" "snapshots/qdrant_db"; do
+mkdir -p "$HOST_HOME/indexes/chroma_db" "$HOST_HOME/indexes/mutual_fund" "$HOST_HOME/snapshots/qdrant_db" "$HOST_HOME/state"
+for pair in "indexes/chroma_db" "snapshots/qdrant_db" "indexes/mutual_fund"; do
     if gcloud storage ls "$BUCKET/$pair/" >/dev/null 2>&1; then
         gcloud storage rsync -r "$BUCKET/$pair" "$HOST_HOME/$pair"
         echo "synced $BUCKET/$pair -> $HOST_HOME/$pair"

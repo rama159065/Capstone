@@ -765,8 +765,23 @@ docker compose restart api
 Notes:
 - `configs/funds_mutual_fund.json` (the funds to fetch) is in the image; the data is not.
 - Fund cards are embedded with bge-small. At serving time the API embeds a fund query with the provider `RAG_EMBEDDING_PROVIDER` picks (the server and GCP profiles prefer the shared API, which needs `EMBEDDING_API_KEY` and `secrets/embedding_ca.crt`) and falls back to the local model. Fund names resolve without the cards, so the cards matter only for questions that don't name a fund.
-- To copy instead of build: the whole `indexes/mutual_fund/` folder can be copied like `chroma_db` (Drive or the bucket), as long as no process has it open.
-- `sync_from_gcs.sh` and `restore_index.sh` don't copy it yet.
+
+**Copying the local data to Colab and GCP** (instead of building it again; same funds, same holdings date):
+
+```powershell
+# 1. on the PC: one zip of the database (SQLite backup, safe while the API runs), the fund cards and the raw filings, ~1 MB
+python -m scripts.rag.colab_pipeline pack-funds          # -> output/colab/mutual_fund_data.zip
+# 2. upload it to MyDrive/capstone_rag/mutual_fund_data.zip
+```
+
+| Where | What happens |
+|---|---|
+| Colab | `cp.restore(s)` (every ingest notebook calls it) unpacks the zip once into `MyDrive/capstone_rag/indexes/mutual_fund/` and copies that into `/content/rag/indexes/mutual_fund/`, where `cp.serve` and the API find it. Already in place: left alone. |
+| Bucket | `cp.export_to_gcs(s)` also runs `gcloud storage rsync` of `indexes/mutual_fund` to `gs://<bucket>/indexes/mutual_fund`. |
+| GCP VM | `sh deploy/sync_from_gcs.sh` pulls `indexes/mutual_fund` with the two indexes; `restore_index.sh` then finds it in place. |
+| Any Docker host | Put `mutual_fund_data.zip` (or a `mutual_fund/` folder) in `./snapshots` (`SNAPSHOT_DIR`); `restore_index.sh` unpacks or copies it into `RAG_HOME/indexes/mutual_fund`. |
+
+With no fund data anywhere, each step prints that it skipped it and the fund route stays off. `tests/test_colab_mutual_fund.py` covers the pack → restore → export path and the two deploy scripts.
 
 ## 8. Not verified here
 

@@ -219,8 +219,80 @@ def download(s: Settings):
     return dl.main(argv)
 
 
+FUND_DIR = "mutual_fund"               # <home>/indexes/mutual_fund, the same name on Drive, in the bucket and on the VM
+FUND_ZIP = "mutual_fund_data.zip"       # what pack_mutual_fund writes; upload it to MyDrive/capstone_rag/
+FUND_DB = "nport_mutual_fund.sqlite3"
+
+
+def pack_mutual_fund(source=None, out=None) -> Path:
+    """Zip the local mutual fund data (N-PORT database, fund-card Chroma folder, raw filings) for Colab and GCP:
+    upload the zip to MyDrive/capstone_rag/ and ``restore`` unpacks it. The database is copied with SQLite's backup
+    API, so a running API that reads it doesn't matter."""
+    import sqlite3
+    import tempfile
+    import zipfile
+    source = Path(source or storage.layout().mutual_fund)
+    if not (source / FUND_DB).exists():
+        raise FileNotFoundError(f"no {FUND_DB} in {source}: load the funds first (scripts.rag.nport_mutual_fund load)")
+    out = Path(out or ROOT / "output" / "colab" / FUND_ZIP)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    partial = out.with_suffix(".zip.partial")
+    with tempfile.TemporaryDirectory() as tmp:
+        db_copy = Path(tmp) / FUND_DB
+        src, dst = sqlite3.connect(f"file:{(source / FUND_DB).as_posix()}?mode=ro", uri=True), sqlite3.connect(db_copy)
+        try:
+            src.backup(dst)
+        finally:
+            src.close()
+            dst.close()
+        with zipfile.ZipFile(partial, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.write(db_copy, FUND_DB)
+            for path in sorted(source.rglob("*")):
+                if path.is_file() and path.name != FUND_DB and not path.name.startswith(FUND_DB + "-"):
+                    archive.write(path, path.relative_to(source).as_posix())
+    partial.replace(out)
+    print(f"mutual fund data packed: {out} ({out.stat().st_size / 1e6:.1f} MB); upload it to MyDrive/capstone_rag/")
+    return out
+
+
+def durable_mutual_fund(s: Settings) -> Path | None:
+    """<drive_root>/indexes/mutual_fund, unpacked from <drive_root>/mutual_fund_data.zip the first time."""
+    import zipfile
+    folder = s.drive_root / "indexes" / FUND_DIR
+    if (folder / FUND_DB).exists():
+        return folder
+    archive = s.drive_root / FUND_ZIP
+    if not archive.exists():
+        return None
+    folder.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(archive) as zf:
+        for name in zf.namelist():                               # no absolute paths or ".." out of the folder
+            if Path(name).is_absolute() or ".." in Path(name).parts:
+                raise ValueError(f"unsafe path in {archive}: {name}")
+        zf.extractall(folder)
+    print(f"mutual fund data unpacked from {archive} into {folder}")
+    return folder
+
+
+def restore_mutual_fund(s: Settings) -> bool:
+    """Copy the mutual fund data from Drive to <work>/indexes/mutual_fund, where the API finds it (RAG_HOME layout).
+    Without it the router's fund route simply stays off."""
+    live = s.work / "indexes" / FUND_DIR
+    if (live / FUND_DB).exists():
+        print(f"mutual fund data already in place: {live}")
+        return False
+    durable = durable_mutual_fund(s)
+    if durable is None:
+        print(f"no mutual fund data on Drive ({s.drive_root / FUND_ZIP}); the fund route stays off")
+        return False
+    shutil.copytree(durable, live, dirs_exist_ok=True)
+    print(f"mutual fund data restored from {durable} into {live}")
+    return True
+
+
 def restore(s: Settings):
-    """Bring the Drive copy back to local disk when this session has no index yet."""
+    """Bring the Drive copy back to local disk when this session has no index yet (and the mutual fund data)."""
+    restore_mutual_fund(s)
     if s.pipeline == "colpali_qdrant":
         if (s.root / "ingest.sqlite3").exists() or not list(s.backup.glob("*.snapshot")):
             print("nothing to restore (first session, or this runtime already has the index)")
@@ -548,8 +620,9 @@ def page_audit(s: Settings, workers=None, force=False, limit=None, out=None):
 
 def export_to_gcs(s: Settings, bucket=None, dry_run=False):
     """Copy the durable index copies (Drive) to a Google Cloud Storage bucket, in the storage layout the GCP VM reads
-    (deploy/sync_from_gcs.sh): <bucket>/indexes/chroma_db and <bucket>/snapshots/qdrant_db. Needs ``gcloud``
-    (preinstalled on Colab) and ``google.colab.auth.authenticate_user()`` first. Returns the commands it ran."""
+    (deploy/sync_from_gcs.sh): <bucket>/indexes/chroma_db, <bucket>/snapshots/qdrant_db and <bucket>/indexes/mutual_fund.
+    Needs ``gcloud`` (preinstalled on Colab) and ``google.colab.auth.authenticate_user()`` first. Returns the commands
+    it ran."""
     bucket = (bucket or os.getenv("RAG_GCS_BUCKET") or "").strip()
     if not bucket:
         raise ValueError("give the bucket (gs://name) or set RAG_GCS_BUCKET")
@@ -561,6 +634,11 @@ def export_to_gcs(s: Settings, bucket=None, dry_run=False):
             commands.append(["gcloud", "storage", "rsync", "-r", str(source), f"{bucket.rstrip('/')}/{target}"])
         else:
             print(f"skipped {kind}: no copy at {source}")
+    funds = durable_mutual_fund(s)
+    if funds is not None:
+        commands.append(["gcloud", "storage", "rsync", "-r", str(funds), f"{bucket.rstrip('/')}/indexes/{FUND_DIR}"])
+    else:
+        print(f"skipped mutual_fund: no {FUND_ZIP} or indexes/{FUND_DIR} under {s.drive_root}")
     for command in commands:
         print(" ".join(command))
         if not dry_run:
@@ -584,8 +662,9 @@ def run(s: Settings, download_first=True):
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=["run", "prepare", "download", "restore", "ingest", "status", "coverage", "query",
-                                            "audit", "export"])
+                                            "audit", "export", "pack-funds"])
     parser.add_argument("--bucket", help="export: gs://bucket (default RAG_GCS_BUCKET)")
+    parser.add_argument("--out", type=Path, help="pack-funds: zip path (default output/colab/mutual_fund_data.zip)")
     parser.add_argument("text", nargs="?", help="query text")
     parser.add_argument("--sector", help="query filter")
     parser.add_argument("--ticker", help="query filter")
@@ -619,6 +698,8 @@ def main(argv=None):
         return run(s, download_first=not args.no_download)
     if args.command == "export":
         return export_to_gcs(s, args.bucket)
+    if args.command == "pack-funds":
+        return pack_mutual_fund(out=args.out)
     return {"prepare": prepare, "download": download, "restore": restore, "ingest": ingest, "status": status,
             "coverage": coverage, "audit": page_audit}[args.command](s)
 

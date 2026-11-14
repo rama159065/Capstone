@@ -1,4 +1,13 @@
 <!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>1. The index. Copy from Drive (MyDrive/capstone_rag/snapshots/colpali_qdrant/) into ./snapshots</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
+<!DOCTYPE html>
+
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Deploying the Annual Report Copilot: options, steps and costs</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
 h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
 table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
@@ -156,21 +165,19 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 <pre><code class="language-bash">git clone &lt;repo&gt; &amp;&amp; cd Capstone          # or unzip the code bundle
 cp .env.example .env                     # LLM endpoint, API_AUTH_TOKEN, APP_UID/APP_GID (id -u / id -g)
 
-# 1. The index. Copy from Drive (MyDrive/capstone_rag/snapshots/colpali_qdrant/) into ./snapshots
-#    (on a VM: rclone or a GCS bucket, see 3.4):
-#    annual_reports_text-*.snapshot (+ .json), annual_reports_visual-*.snapshot, ingest.sqlite3, pages/
-docker compose up -d qdrant
-docker compose run --rm --user root api sh deploy/restore_index.sh
-
-# 2. Start everything
-docker compose up -d --build
-curl http://127.0.0.1:8000/health        # financial_backend should be financial_qdrant
-# UI: http://127.0.0.1:8501
-
-# 3. On a VM with a domain (A record → the VM's IP): HTTPS + a login in front of the UI
-#    set DOMAIN, BASIC_AUTH_USER, BASIC_AUTH_HASH in .env, open ports 80 and 443
-docker compose --profile https up -d
-</code></pre>
+<h1>1. The index. Copy from Drive (MyDrive/capstone_rag/snapshots/colpali_qdrant/) into ./snapshots</h1>
+<h1>(on a VM: rclone or a GCS bucket, see 3.4):</h1>
+<h1>annual_reports_text-<em>.snapshot (+ .json), annual_reports_visual-</em>.snapshot, ingest.sqlite3, pages/</h1>
+<p>docker compose up -d qdrant
+docker compose run --rm --user root api sh deploy/restore_index.sh</p>
+<h1>2. Start everything</h1>
+<p>docker compose up -d --build
+curl http://127.0.0.1:8000/health        # financial_backend should be financial_qdrant</p>
+<h1>UI: http://127.0.0.1:8501</h1>
+<h1>3. On a VM with a domain (A record → the VM's IP): HTTPS + a login in front of the UI</h1>
+<h1>set DOMAIN, BASIC_AUTH_USER, BASIC_AUTH_HASH in .env, open ports 80 and 443</h1>
+<p>docker compose --profile https up -d
+</code></pre></p>
 <p><strong>What the compose stack sets:</strong></p>
 <ul>
 <li><code>RAG_PROFILE=server</code>, <code>QDRANT_URL=http://qdrant:6333</code> and <code>API_BASE_URL=http://api:8000</code>.</li>
@@ -424,9 +431,9 @@ docker compose run --rm --user root api sh deploy/restore_index.sh
 <pre><code class="language-python"># Preview the selection without downloading
 !cd /content/Capstone &amp;&amp; python -m scripts.downloads.download_annual_report_corpus --preset {CORPUS} --dry-run --output-dir {DRIVE_ROOT}/annual_reports
 
-# Count the PDFs on Drive (expect 509 or 1004)
-!find {DRIVE_ROOT}/annual_reports -name &quot;*.pdf&quot; | wc -l
-</code></pre>
+<h1>Count the PDFs on Drive (expect 509 or 1004)</h1>
+<p>!find {DRIVE_ROOT}/annual_reports -name &quot;*.pdf&quot; | wc -l
+</code></pre></p>
 <h4>Without the notebook (any machine with the repo)</h4>
 <pre><code class="language-bash">python -m scripts.downloads.download_annual_report_corpus --preset min500 --output-dir &lt;folder&gt; --user-agent &quot;name email@domain&quot;
 python -m scripts.downloads.download_annual_report_corpus --preset full   --output-dir &lt;folder&gt; --user-agent &quot;name email@domain&quot;
@@ -1852,19 +1859,49 @@ python -m scripts.downloads.download_mutual_fund latest
 python -m scripts.rag.nport_mutual_fund load --xml indexes\rag_home\indexes\mutual_fund\raw_mutual_fund
 python -m scripts.rag.cards_mutual_fund build
 
-# Docker (server / gcp): the same commands inside the api container write to RAG_HOME_DIR/indexes/mutual_fund
-docker compose run --rm -e SEC_USER_AGENT=&quot;capstone-research you@example.com&quot; api python -m scripts.downloads.download_mutual_fund latest
+<h1>Docker (server / gcp): the same commands inside the api container write to RAG_HOME_DIR/indexes/mutual_fund</h1>
+<p>docker compose run --rm -e SEC_USER_AGENT=&quot;capstone-research you@example.com&quot; api python -m scripts.downloads.download_mutual_fund latest
 docker compose run --rm api python -m scripts.rag.nport_mutual_fund load --xml /app/rag_home/indexes/mutual_fund/raw_mutual_fund
 docker compose run --rm api python -m scripts.rag.cards_mutual_fund build      # add --embedding-provider hosted to use the shared API
 docker compose restart api
-</code></pre>
+</code></pre></p>
 <p>Notes:</p>
 <ul>
 <li><code>configs/funds_mutual_fund.json</code> (the funds to fetch) is in the image; the data is not.</li>
 <li>Fund cards are embedded with bge-small. At serving time the API embeds a fund query with the provider <code>RAG_EMBEDDING_PROVIDER</code> picks (the server and GCP profiles prefer the shared API, which needs <code>EMBEDDING_API_KEY</code> and <code>secrets/embedding_ca.crt</code>) and falls back to the local model. Fund names resolve without the cards, so the cards matter only for questions that don't name a fund.</li>
-<li>To copy instead of build: the whole <code>indexes/mutual_fund/</code> folder can be copied like <code>chroma_db</code> (Drive or the bucket), as long as no process has it open.</li>
-<li><code>sync_from_gcs.sh</code> and <code>restore_index.sh</code> don't copy it yet.</li>
 </ul>
+<p><strong>Copying the local data to Colab and GCP</strong> (instead of building it again; same funds, same holdings date):</p>
+<pre><code class="language-powershell"># 1. on the PC: one zip of the database (SQLite backup, safe while the API runs), the fund cards and the raw filings, ~1 MB
+python -m scripts.rag.colab_pipeline pack-funds          # -&gt; output/colab/mutual_fund_data.zip
+# 2. upload it to MyDrive/capstone_rag/mutual_fund_data.zip
+</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Where</th>
+  <th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Colab</td>
+  <td><code>cp.restore(s)</code> (every ingest notebook calls it) unpacks the zip once into <code>MyDrive/capstone_rag/indexes/mutual_fund/</code> and copies that into <code>/content/rag/indexes/mutual_fund/</code>, where <code>cp.serve</code> and the API find it. Already in place: left alone.</td>
+</tr>
+<tr>
+  <td>Bucket</td>
+  <td><code>cp.export_to_gcs(s)</code> also runs <code>gcloud storage rsync</code> of <code>indexes/mutual_fund</code> to <code>gs://&lt;bucket&gt;/indexes/mutual_fund</code>.</td>
+</tr>
+<tr>
+  <td>GCP VM</td>
+  <td><code>sh deploy/sync_from_gcs.sh</code> pulls <code>indexes/mutual_fund</code> with the two indexes; <code>restore_index.sh</code> then finds it in place.</td>
+</tr>
+<tr>
+  <td>Any Docker host</td>
+  <td>Put <code>mutual_fund_data.zip</code> (or a <code>mutual_fund/</code> folder) in <code>./snapshots</code> (<code>SNAPSHOT_DIR</code>); <code>restore_index.sh</code> unpacks or copies it into <code>RAG_HOME/indexes/mutual_fund</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>With no fund data anywhere, each step prints that it skipped it and the fund route stays off. <code>tests/test_colab_mutual_fund.py</code> covers the pack → restore → export path and the two deploy scripts.</p>
 <h2>8. Not verified here</h2>
 <ul>
 <li><strong>Paths (§7):</strong> the layout is implemented and tested; the local profile was verified live with both pipelines. Not run here: <code>gcloud storage</code> (<code>cp.export_to_gcs</code>, <code>deploy/sync_from_gcs.sh</code>) and the scripts inside Docker. <code>sh -n</code> checks their syntax, and the tests check the commands they build.</li>
@@ -1888,4 +1925,6 @@ docker compose restart api
 <li><a href="https://www.activepieces.com/blog/qdrant-pricing-in-2026-and-what-a-real-bill-costs">Qdrant pricing notes (activepieces)</a></li>
 <li><a href="https://costbench.com/software/vector-databases/qdrant/free-plan/">Qdrant free tier (costbench)</a></li>
 </ul>
+</body></html>
+
 </body></html>

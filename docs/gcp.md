@@ -138,7 +138,9 @@ sudo mkdir -p /srv/capstone && sudo chown -R $USER /srv/capstone
 sh deploy/sync_from_gcs.sh
 docker compose --profile https up -d
 
-# optional: mutual fund data (a few MB, built on the VM in about a minute; deployment.md §7.4)
+# mutual fund data: sync_from_gcs.sh already pulled gs://<bucket>/indexes/mutual_fund when cp.export_to_gcs put it
+# there (from MyDrive/capstone_rag/mutual_fund_data.zip, made on the PC with `colab_pipeline pack-funds`).
+# Not in the bucket? Build it on the VM instead (a few MB, about a minute; deployment.md §7.4):
 docker compose run --rm -e SEC_USER_AGENT="capstone-research you@example.com" api python -m scripts.downloads.download_mutual_fund latest
 docker compose run --rm api python -m scripts.rag.nport_mutual_fund load --xml /app/rag_home/indexes/mutual_fund/raw_mutual_fund
 docker compose run --rm api python -m scripts.rag.cards_mutual_fund build --embedding-provider hosted   # or local
