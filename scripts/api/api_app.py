@@ -156,14 +156,17 @@ class FinancialChatRequest(ChatRequest):
         "agentic_graph",
         "trend_graph",
         "sector_trend_graph",
+        "fund_graph",
         "router",
     ] = Field("agentic_graph", description=(
         "Financial QA workflow to execute. agentic_graph: the Q&A agent (planner, per-company searches, calculator, "
         "critic). trend_graph: the multi-year trend agent (one search per fiscal year, verified series, changes and "
         "CAGR computed in code). sector_trend_graph: the sector trend agent (one measure across one sector's "
-        "companies, year by year, over a fixed panel; totals, changes and CAGR computed in code). router: a "
-        "supervisor that sends each question to the Q&A agent, the trend agent, the sector trend agent, a report "
-        "handoff or a refusal. The others are single-prompt baselines."))
+        "companies, year by year, over a fixed panel; totals, changes and CAGR computed in code). fund_graph: the "
+        "fund agent (a mutual fund's SEC N-PORT holdings as cited rows, linked to the holdings' annual reports; needs "
+        "loaded fund data). router: a supervisor that sends each question to the Q&A agent, the trend agent, the "
+        "sector trend agent, the fund agent (when fund data is loaded), a report handoff or a refusal. The others are "
+        "single-prompt baselines."))
     retrieval_mode: Literal["hybrid", "dense", "bm25"] = Field(
         "hybrid", description="hybrid (default): dense + BM25 fused by RRF, on Qdrant or Chroma; "
                               "dense or bm25: one retriever only (for ablations)."
@@ -342,6 +345,12 @@ class FinancialChatResponse(ChatResponse):
                     "change, the median company change and how many companies grew; the CAGRs; every company's "
                     "verified figures with their chunks.",
     )
+    mutual_fund: dict[str, Any] | None = Field(
+        default=None,
+        description="Fund route: the fund, holdings date and accession; the lookup kind; the rows shown (top holdings, "
+                    "sector mix, exposure or holders); corpus coverage; for questions about the holdings' annual "
+                    "reports, each company's verified figures, growth and the weighted growth with its coverage.",
+    )
     handoff: dict[str, Any] | None = Field(
         default=None,
         description="Report route: the company and year a full report would cover and whether a report profile exists.",
@@ -434,6 +443,8 @@ app = FastAPI(
         {"name": "System", "description": "Service health and available-domain discovery."},
         {"name": "Chat", "description": "Run a guarded, citation-grounded answer workflow."},
         {"name": "Retrieval", "description": "Retrieve and return evidence without generating an answer."},
+        {"name": "Mutual funds", "description": "Loaded SEC N-PORT fund data: funds, holdings, holders and fund-card "
+                                                "search (read-only; questions go through the chat routes)."},
         {"name": "Multimodal RAG", "description": "Local multimodal profile: Qdrant text + ColPali page search "
                                                   "and local vision-model answers (`run_local_multimodal`)."},
     ],
@@ -826,6 +837,14 @@ def _citation_grounding(result: dict[str, Any]) -> dict[str, Any]:
             "evidence_count": 0,
             "cited_chunk_ids": [],
             "reason": "The router handed a report request to the report pipeline, which runs after confirmation.",
+        }
+        return result
+    if result.get("final_status") == "not_available" and (result.get("route") or {}).get("route") == "fund":
+        result["grounding"] = {
+            "status": "not_applicable",
+            "evidence_count": 0,
+            "cited_chunk_ids": [],
+            "reason": "The fund agent could not answer from the loaded N-PORT data; the answer says why.",
         }
         return result
     if result.get("final_status") == "not_available":
@@ -1253,3 +1272,9 @@ def retrieve_visual_multimodal(domain: str, request: MultimodalRequest) -> dict[
                 "trace_id": calls.trace_id, "trace": calls.events}
     except (ValueError, OSError, CallFailure) as exc:
         raise HTTPException(status_code=503, detail="ColPali retrieval unavailable; check model configuration and visual index.") from exc
+
+
+# Mutual fund endpoints (read-only; 404 until fund data is loaded). Kept in their own module.
+from scripts.api.routes_mutual_fund import router as mutual_fund_router  # noqa: E402 - after the app is built
+
+app.include_router(mutual_fund_router)

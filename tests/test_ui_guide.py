@@ -142,3 +142,33 @@ def sector_table_script():
         "companies": [{"ticker": "ABBV", "company": "AbbVie", "in_panel": True, "cagr": 1.2,
                        "points": [point(2022, "58,054"), point(2023, "54,318")]}],
         "excluded": [{"ticker": "ABT", "company": "Abbott", "reason": "figure not verified for FY2023"}]})
+
+
+def test_mutual_fund_table_renders(monkeypatch):
+    real_streamlit(monkeypatch)
+    from streamlit.testing.v1 import AppTest
+    app = AppTest.from_function(fund_table_script, default_timeout=60).run()
+    assert not app.exception
+    assert app.expander[0].label == "Holdings' growth: Vanguard 500 Index Fund · holdings as of 2026-06-30"
+    assert len(app.dataframe) == 2
+    assert any("Weighted growth 40.00%" in c.value for c in app.caption)
+    assert any("Not used: Acme Widgets Ltd (not in the corpus)" in c.value for c in app.caption)
+
+
+def fund_table_script():
+    """AppTest script: a fund answer's table (top holdings linked to their annual reports)."""
+    import importlib.util
+    from scripts.common.paths import ROOT
+    spec = importlib.util.spec_from_file_location("ui_fund", ROOT / "scripts" / "ui" / "api_streamlit_app.py")
+    ui = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ui)
+    point = lambda y, v: {"year": y, "value_text": v, "status": "ok"}
+    ui.render_mutual_fund({
+        "kind": "holdings_growth", "fund": "Vanguard 500 Index Fund", "period_end": "2026-06-30",
+        "accession": "0000036405-26-000473", "filing_date": "2026-08-27", "net_assets": 1e12,
+        "coverage": {"corpus_pct_of_net_assets": 86.8, "corpus_companies": 240},
+        "rows": [{"rank": 1, "holding": "NVIDIA Corp", "ticker": "NVDA", "% of net assets": 7.5}],
+        "companies": [{"ticker": "NVDA", "year": 2025, "weight": 7.5, "growth_pct": 40.0,
+                       "points": [point(2024, "100"), point(2025, "140")]}],
+        "weighted_growth_pct": 40.0, "covered_weight": 7.5, "asked_weight": 8.5,
+        "excluded": [{"company": "Acme Widgets Ltd", "weight": 1.0, "reason": "not in the corpus"}]})

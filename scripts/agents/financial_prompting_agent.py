@@ -148,6 +148,7 @@ class MockLLM:
                 "ticker", "xbrl", "financial", "apple", "microsoft", "amazon",
                 "aapl", "msft", "amzn", "nvda", "earnings", "profit", "margin", "eps", "dividend",
                 "growth", "debt", "assets", "operating", "expenses",
+                "fund", "etf", "holdings", "n-port", "nport",
             }
             blocked_terms = {"<script", "```", "select *", "ignore previous"}
             return MockResponse(
@@ -305,6 +306,7 @@ FINANCIAL_INTENT_TERMS = {
     "risk", "xbrl", "sec", "filing", "ticker", "table", "chart", "financial",
     "balance sheet", "cash flow", "operating", "margin", "aapl", "msft", "amzn",
     "nvda", "apple", "microsoft", "amazon", "nvidia",
+    "mutual fund", "etf", "n-port", "fund holdings",
 }
 INVESTMENT_REVIEW_TERMS = {
     "buy", "sell", "hold", "investment advice", "recommend", "price target",
@@ -647,6 +649,7 @@ def extract_citations(answer: str) -> list[str]:
     patterns = [
         r"annual_report_[A-Za-z0-9_.=-]+",
         r"sec_facts_[A-Za-z0-9_.=-]+",
+        r"nport_[A-Za-z0-9_.=-]+",                 # fund rows (agent_mutual_fund)
     ]
     citations: set[str] = set()
     for pattern in patterns:
@@ -750,13 +753,14 @@ class AgentState(TypedDict, total=False):
     route: dict[str, Any]
     trend: dict[str, Any]
     sector_trend: dict[str, Any]
+    mutual_fund: dict[str, Any]
     handoff: dict[str, Any]
 
 
 STOPPED = {"refused", "insufficient_evidence", "not_available", "report_handoff"}
 # Nodes every run still needs after the evidence guard: answer, critic, governance (+ calculator when planned).
 MIN_TAIL = 3
-AGENT_FLOWS = ("agentic_graph", "trend_graph", "sector_trend_graph", "router")
+AGENT_FLOWS = ("agentic_graph", "trend_graph", "sector_trend_graph", "fund_graph", "router")
 
 
 def agentic_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
@@ -772,6 +776,11 @@ def trend_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
 def sector_trend_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
     """Sector trend agent: one measure across one sector's companies, year by year, over a fixed panel."""
     return financial_graph(llm, config, "sector_trend_graph")
+
+
+def fund_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
+    """Fund agent: a mutual fund's N-PORT holdings (fixed SQL rows as evidence), linked to the holdings' annual reports."""
+    return financial_graph(llm, config, "fund_graph")
 
 
 def router_graph_prompt(llm, config: AgentConfig) -> dict[str, Any]:
@@ -796,12 +805,17 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
       per company x year) -> sector_series (statement row read in code, else the LLM copies it; code checks each
       figure is in that company-year's evidence; one broadened search per figure still missing, inside the node so
       the run stays within AGENT_MAX_STEPS; fixed panel, totals, changes and CAGR in code) -> answer -> critic.
+    * ``fund_graph``: the router with the fund route forced. Fund path: fund_lookup (fixed SQL over the N-PORT tables,
+      each row an evidence item) -> fund_company (only for questions about the holdings' annual reports: one filtered
+      search per company, statement row in code, LLM last, figures cached; weighted growth in code) -> answer -> critic.
 
     A loop is taken only if the rest of the run still fits AGENT_MAX_STEPS, so the cap shortens a run instead of
     failing it. ``agent_run`` records the path, every tool call and every calculation.
     """
     from scripts.agents import financial_router as router, financial_tools as tools, financial_trend as trend
     from scripts.agents import financial_sector_trend as sector_agent
+    from scripts.agents import agent_mutual_fund as fund_agent
+    from scripts.prompts import prompts_mutual_fund as fund_prompts
     from scripts.common.companies import NAMES
     from scripts.agents.financial_clarifier import METRICS, default_clarifier
 
@@ -873,10 +887,22 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         started = time.perf_counter()
         trend_plan = trend.trend_plan(query, config.ticker, config.year, clarifier)
         sector_plan = sector_agent.sector_plan(query, clarifier, sector_filter=config.sector)
-        forced = {"trend_graph": "trend", "sector_trend_graph": "sector_trend"}.get(flow)
+        forced = {"trend_graph": "trend", "sector_trend_graph": "sector_trend", "fund_graph": "fund"}.get(flow)
         decision = router.decide(raw, query, clarifier, trend_plan, ticker=config.ticker, forced=forced,
                                  sector_plan=sector_plan, sector=config.sector)
         route = decision["route"]
+        if route == "fund":
+            fund_plan = fund_agent.fund_plan(query, clarifier, ticker=config.ticker)
+            calls_log = [*state.get("tool_calls", []), {
+                "tool": "fund_search", "attempt": 1, "kind": fund_plan.get("kind"), "fund": fund_plan.get("fund"),
+                "period_end": fund_plan.get("period_end"),
+                "method": (fund_plan.get("fund_search") or {}).get("method", "names"),
+                "ms": round((time.perf_counter() - started) * 1000)}]
+            if not fund_plan["feasible"]:
+                return {"route": decision, "plan": fund_plan, "tool_calls": calls_log,
+                        "final_status": "refused" if fund_plan.get("advice") else "not_available",
+                        "answer": fund_agent.not_available_message(fund_plan)}
+            return {"route": decision, "plan": fund_plan, "tool_calls": calls_log}
         if route == "sector_trend":
             calls_log = [*state.get("tool_calls", []), {
                 "tool": "coverage_lookup", "attempt": 1, "known": bool(clarifier.directory),
@@ -1089,6 +1115,107 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
                 f"a sector trend needs at least {sector_agent.MIN_PANEL}."))
         return update
 
+    def fund_lookup_node(state: AgentState) -> AgentState:
+        """fund_lookup: the plan's fixed SQL queries; every row is an evidence item with its own ID."""
+        plan = state.get("plan", {})
+        started = time.perf_counter()
+        found = fund_agent.lookup(plan)
+        evidence, guard = drop_flagged(found["evidence"])
+        ms = round((time.perf_counter() - started) * 1000)
+        calls_log = [*state.get("tool_calls", []), *[{**call, "rows": len(evidence), "ms": ms} for call in found["calls"]]]
+        update: AgentState = {"evidence": evidence, "evidence_guard": guard, "mutual_fund": found["table"],
+                              "tool_calls": calls_log, "retrieval_attempts": 1,
+                              "evidence_check": {"attempt": 1, "evidence": len(evidence), "missing": [], "skipped": []}}
+        if not evidence:
+            company = found["table"].get("company") or "the company"
+            update.update(final_status="not_available",
+                          answer=f"None of the loaded funds reports an equity holding of {company}.")
+        return update
+
+    def fund_company_node(state: AgentState) -> AgentState:
+        """The holdings' annual reports: for each top holding, the report filed by the holdings date. Growth questions
+        read the measure for that fiscal year and the one before from the same filing (statement row in code, one
+        broadened search, the LLM last; a cached figure is reused when its chunk is retrieved again); text questions
+        add a filtered search per company. Weighted growth and coverage are computed in code."""
+        plan = state.get("plan", {})
+        table = {**(state.get("mutual_fund") or {})}
+        table["excluded"] = list(table.get("excluded") or [])
+        store = fund_agent.default_store()
+        evidence, calls_log = list(state.get("evidence", [])), list(state.get("tool_calls", []))
+        seen = {hit.get("chunk_id") for hit in evidence}
+        targets = fund_agent.company_targets(table, clarifier.directory or {})
+        table["companies"] = [{"ticker": t["ticker"], "year": t["year"], "weight": t["weight"], "report": t["report"]}
+                              for t in targets]
+        calculations, dropped, retried = list(state.get("calculations", [])), [], False
+        metric = plan.get("metric")
+        if plan.get("kind") == "holdings_growth":
+            metric_plan = {"metric": metric}
+            figures: dict[str, dict[int, dict]] = {}
+            for t in targets:
+                ticker, year = t["ticker"], t["year"]
+                target = {"ticker": ticker, "year": year}
+                label = tools.target_label(target)
+                points: dict[int, dict] = {}
+                for attempt in (1, 2):
+                    retried = retried or attempt == 2
+                    fresh, log = sector_search(metric_plan, target, attempt, seen)
+                    fresh, fresh_guard = drop_flagged(fresh)
+                    dropped += fresh_guard.get("dropped") or []
+                    evidence.extend(fresh)
+                    calls_log.append(log)
+                    hits = [hit for hit in evidence if hit.get("target") == label]
+                    ids = {str(hit.get("chunk_id")) for hit in hits}
+                    for fiscal_year in (year - 1, year):
+                        if fiscal_year in points:
+                            continue
+                        cached = store.cached_figure(ticker, fiscal_year, metric)
+                        if cached and str(cached["chunk_id"]) in ids:
+                            points[fiscal_year] = cached
+                            calls_log.append({"tool": "company_figures", "target": f"{ticker} FY{fiscal_year}",
+                                              "cached": True, "chunk_id": cached["chunk_id"]})
+                            continue
+                        point, figure_log = sector_figure(metric_plan, ticker, fiscal_year, hits, use_llm=attempt == 2)
+                        calls_log.append({**figure_log, "attempt": attempt})
+                        if point.get("status") == "ok":
+                            points[fiscal_year] = point
+                            store.save_figure(ticker, fiscal_year, metric, point)
+                    if len(points) == 2:
+                        break
+                figures[ticker] = points
+            calculations += fund_agent.growth(table, figures)
+            calls_log.append({"tool": "fund_calculator", "companies": len(targets),
+                              "weighted_growth_pct": table.get("weighted_growth_pct"),
+                              "coverage_share": table.get("coverage_share")})
+        else:
+            covered = 0.0
+            for t in targets:
+                started = time.perf_counter()
+                target = {"ticker": t["ticker"], "year": t["year"]}
+                query = f"{NAMES.get(t['ticker'], t['ticker'])}: {state['query']}"
+                run_config = AgentConfig(**{**config.__dict__, "query": query, "ticker": t["ticker"], "year": t["year"],
+                                            "top_k": 3, "visual": False, "sector": None})
+                hits = answer_evidence(run_config)
+                fresh = []
+                for hit in hits:
+                    if hit.get("chunk_id") not in seen:
+                        seen.add(hit.get("chunk_id"))
+                        fresh.append({**hit, "target": tools.target_label(target)})
+                fresh, fresh_guard = drop_flagged(fresh)
+                dropped += fresh_guard.get("dropped") or []
+                evidence.extend(fresh)
+                covered += t["weight"] if fresh else 0.0
+                calls_log.append({"tool": "text_search", "attempt": 1, "target": tools.target_label(target),
+                                  "query": query, "top_k": 3, "hits": len(hits), "new": len(fresh),
+                                  "ms": round((time.perf_counter() - started) * 1000)})
+            asked = sum(h["pct_of_net_assets"] or 0 for h in table.get("holdings") or [])
+            table.update(covered_weight=round(covered, 4), asked_weight=round(asked, 4),
+                         coverage_share=round(covered / asked, 4) if asked else 0.0)
+        guard = state.get("evidence_guard") or {"safe": True}
+        if dropped:
+            guard = {**guard, "action": "dropped_flagged_chunks", "dropped": sorted(set(dropped))}
+        return {"evidence": evidence, "mutual_fund": table, "calculations": calculations, "tool_calls": calls_log,
+                "evidence_guard": guard, "retrieval_attempts": 2 if retried else 1}
+
     def executor_node(state: AgentState) -> AgentState:
         """Run the planned tools: coverage check, then one filtered search per target. A retry searches only
         the targets that found nothing, with a broadened query and twice the depth."""
@@ -1159,7 +1286,21 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         plan = state.get("plan", {})
         series = state.get("trend") or {}
         table = state.get("sector_trend") or {}
-        if table.get("panel"):
+        fund_table = state.get("mutual_fund") or {}
+        if fund_table:
+            # Fund: the rows (and, for linked questions, only the company chunks that state a verified figure).
+            used = evidence
+            if fund_table.get("kind") == "holdings_growth":
+                used_ids = {p.get("chunk_id") for c in fund_table.get("companies", []) for p in c.get("points", [])
+                            if p.get("status") == "ok"}
+                used = [h for h in evidence if h.get("source_type") == "nport" or h.get("chunk_id") in used_ids]
+            system = fund_prompts.FUND_ANSWER_SYSTEM
+            human = fund_prompts.FUND_ANSWER_HUMAN.format(
+                query=state["query"], fund=fund_table.get("fund") or fund_table.get("company") or "loaded funds",
+                period_end=fund_table.get("period_end") or "each fund's latest loaded filing",
+                accession=fund_table.get("accession") or "per row", kind=fund_table.get("kind"),
+                table=fund_agent.table_text(fund_table), context=evidence_to_context(used, config.max_context_chars))
+        elif table.get("panel"):
             # Sector trend: the code-computed table and the panel's verified figures, with only the chunks stating them.
             used_ids = {p.get("chunk_id") for c in table.get("companies", []) if c.get("in_panel")
                         for p in c.get("points", []) if p.get("status") == "ok"}
@@ -1287,6 +1428,12 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
             evidence_guard=state.get("evidence_guard"),
             output_filter=output_filter,
         )
+        if (state.get("route") or {}).get("route") == "fund":
+            kept = fund_agent.review_triggers(state.get("query", ""), review.get("triggers", []))
+            if kept != review.get("triggers", []):
+                review = {**review, "triggers": kept}
+                if not kept:
+                    review.update(required=False, status="not_required")
         extra = []
         if any(not c.get("grounded") for c in state.get("calculations", [])):
             extra.append("unverified_calculation")
@@ -1297,6 +1444,8 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
             extra.append("low_sector_coverage")            # the panel holds under half the companies planned
         if table.get("unusual_changes"):
             extra.append("unusual_sector_change")          # a company figure moved more than RAG_SECTOR_OUTLIER_PCT
+        if fund_agent.low_coverage(state.get("mutual_fund") or {}):
+            extra.append("low_fund_coverage")              # the companies used carry under half the fund weight asked
         if extra and config.enable_human_review:
             review = {**review, "required": True, "status": "pending_human_review",
                       "triggers": [*review.get("triggers", []), *extra]}
@@ -1310,11 +1459,16 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
     def should_continue_after_security(state: AgentState) -> Literal["stop", "continue"]:
         return "stop" if state.get("final_status") == "refused" else "continue"
 
-    def after_route(state: AgentState) -> Literal["stop", "trend", "sector", "qa"]:
+    def after_route(state: AgentState) -> Literal["stop", "trend", "sector", "fund", "qa"]:
         if state.get("final_status") in STOPPED:
             return "stop"
         route = state.get("route", {}).get("route")
-        return {"trend": "trend", "sector_trend": "sector"}.get(route, "qa")
+        return {"trend": "trend", "sector_trend": "sector", "fund": "fund"}.get(route, "qa")
+
+    def after_fund(state: AgentState) -> Literal["stop", "company", "answer"]:
+        if state.get("final_status") in STOPPED:
+            return "stop"
+        return "company" if state.get("plan", {}).get("needs_companies") else "answer"
 
     def after_sector(state: AgentState) -> Literal["stop", "answer"]:
         return "stop" if state.get("final_status") in STOPPED else "answer"
@@ -1345,7 +1499,8 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
              "governance_step": governance_node}
     if flow != "agentic_graph":
         nodes.update(trend_fetch_step=trend_fetch_node, trend_series_step=trend_series_node,
-                     sector_fetch_step=sector_fetch_node, sector_series_step=sector_series_node)
+                     sector_fetch_step=sector_fetch_node, sector_series_step=sector_series_node,
+                     fund_lookup_step=fund_lookup_node, fund_company_step=fund_company_node)
     for name, fn in nodes.items():
         graph.add_node(name, step(name, fn))
     graph.set_entry_point("security_step")
@@ -1356,7 +1511,10 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
     else:
         graph.add_conditional_edges("route_step", after_route,
                                     {"stop": "critic_step", "trend": "trend_fetch_step", "sector": "sector_fetch_step",
-                                     "qa": "retrieve_step"})
+                                     "fund": "fund_lookup_step", "qa": "retrieve_step"})
+        graph.add_conditional_edges("fund_lookup_step", after_fund,
+                                    {"stop": "critic_step", "company": "fund_company_step", "answer": "answer_step"})
+        graph.add_edge("fund_company_step", "answer_step")
         graph.add_edge("sector_fetch_step", "sector_series_step")
         graph.add_conditional_edges("sector_series_step", after_sector, {"stop": "critic_step", "answer": "answer_step"})
         graph.add_edge("trend_fetch_step", "trend_series_step")
@@ -1384,6 +1542,7 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         "route": final_state.get("route"),
         "trend": final_state.get("trend"),
         "sector_trend": final_state.get("sector_trend"),
+        "mutual_fund": final_state.get("mutual_fund"),
         "handoff": final_state.get("handoff"),
         "plan": final_state.get("plan"),
         "answer": final_state.get("answer"),
@@ -1448,11 +1607,12 @@ def request_deadline(technique: str, config: AgentConfig) -> float:
     """Seconds a request may take: RAG_REQUEST_TIMEOUT_SECONDS, or RAG_SECTOR_TIMEOUT_SECONDS (default 300) for a
     sector trend, which reads one figure per company x year."""
     seconds = float(os.getenv("RAG_REQUEST_TIMEOUT_SECONDS", "60"))
-    sector = technique == "sector_trend_graph"
+    sector = technique in ("sector_trend_graph", "fund_graph")
     if technique == "router":
         from scripts.agents import financial_router
         from scripts.agents.financial_clarifier import default_clarifier
-        sector = financial_router.rule_route(config.query, default_clarifier(), config.ticker, config.sector)[0] == "sector_trend"
+        route = financial_router.rule_route(config.query, default_clarifier(), config.ticker, config.sector)[0]
+        sector = route in ("sector_trend", "fund")      # one search per company: the fund route reads several too
     return max(seconds, float(os.getenv("RAG_SECTOR_TIMEOUT_SECONDS", "300"))) if sector else seconds
 
 
@@ -1472,7 +1632,9 @@ def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dic
                   "citation_check": {"valid": False, "cited_chunk_ids": []}}
     scope = {"expected": [], "coverage": None}
     verified = False
-    if result.get("final_status") not in NOT_SCOPED:
+    route_name = (result.get("route") or {}).get("route")
+    # A fund answer cites N-PORT rows, not one company's filings: the company scope rules don't apply to it.
+    if result.get("final_status") not in NOT_SCOPED and route_name != "fund":
         scope = question_scope(config.query, config.ticker)
     if scope["coverage"]:
         # The filings can't answer this, so nothing retrieved or generated may stand in for it.
@@ -1480,8 +1642,8 @@ def run_technique(technique: str, llm_provider: str, config: AgentConfig) -> dic
             result.pop(key, None)
         result.update(answer=scope["coverage"]["message"], final_status="not_available", coverage=scope["coverage"],
                       evidence=[], citation_check={"valid": False, "cited_chunk_ids": []})
-    elif result.get("final_status") == "not_available" and (result.get("route") or {}).get("route") == "sector_trend":
-        pass                     # the sector plan already said why (no sector, measure or coverage); keep its reason
+    elif result.get("final_status") == "not_available" and route_name in ("sector_trend", "fund"):
+        pass                     # the sector or fund plan already said why; keep its reason
     elif result.get("final_status") not in NOT_SCOPED:
         evidence = result.get("evidence", [])
         if scope["expected"] and llm_provider != "mock":
@@ -1544,6 +1706,7 @@ def summarize_result(result: dict[str, Any]) -> dict[str, Any]:
         "route": result.get("route"),
         "trend": result.get("trend"),
         "sector_trend": result.get("sector_trend"),
+        "mutual_fund": result.get("mutual_fund"),
         "handoff": result.get("handoff"),
         "agent_run": result.get("agent_run"),
         "support_check": result.get("support_check"),
@@ -1586,6 +1749,7 @@ def parse_args() -> argparse.Namespace:
             "agentic_graph",
             "trend_graph",
             "sector_trend_graph",
+            "fund_graph",
             "router",
             "all",
         ],

@@ -110,6 +110,12 @@ class Layout:
         return self.index("chroma_db")
 
     @property
+    def mutual_fund(self) -> Path:
+        """Mutual fund data (``nport_mutual_fund.sqlite3``, ``chroma_mutual_fund/``, ``raw_mutual_fund/``);
+        ``RAG_MUTUAL_FUND_DIR`` wins. Kept apart from ``chroma_db`` so the annual-report index is never touched."""
+        return Path(os.getenv("RAG_MUTUAL_FUND_DIR") or self.indexes / "mutual_fund")
+
+    @property
     def corpus(self) -> Path:
         return self.home / "annual_reports"
 

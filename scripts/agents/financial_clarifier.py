@@ -328,6 +328,12 @@ class Clarifier:
             conversation.pending = []
             return self.result(conversation, "passthrough", action="answer", resolved_query=text,
                                ticker=None, year=None, original=text)
+        if self.fund_question(text):
+            # A fund question needs a fund, not a company and year: the fund agent resolves the fund and period itself
+            # and says which fund it needs when the question is ambiguous. Only when fund data is loaded.
+            conversation.pending = []
+            return self.result(conversation, "passthrough", action="answer", resolved_query=text,
+                               ticker=None, year=None, original=text, route_hint="fund")
         if RESET.match(text):
             self.restart(conversation, "")
             return self.ask(conversation, "Sure, what would you like to know?", [])
@@ -381,6 +387,11 @@ class Clarifier:
             return self.ready(conversation, forced=bool(missing))
         conversation.turns += 1
         return self.ask(conversation, None, missing)
+
+    @staticmethod
+    def fund_question(text):
+        from scripts.agents.financial_router import fund_question
+        return fund_question(text)
 
     def restart(self, conversation, text):
         conversation.__dict__.update(Conversation(conversation.conversation_id, original_query=text).__dict__)

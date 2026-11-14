@@ -8,7 +8,7 @@ pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:ce
 blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
 <h1>Mutual Fund Data with the Annual Report Copilot: Data, Storage, RAG and Agents</h1>
 <p>How US mutual fund data (SEC Form N-PORT holdings, N-CSR shareholder reports, 497K summary prospectuses) can sit next to the existing annual-report corpus, and how the agents would use both to answer one question. Date: 13 November 2026.</p>
-<p>This is a design: none of the mutual fund parts below are built yet. Related: <a href="mutual_fund_corpus_plan.html">mutual_fund_corpus_plan.html</a> (the 500 fund documents to download), <a href="agent_flows.html">agent_flows.md</a> (the existing agents), <a href="annual_report_rag_structure.html">annual_report_rag_structure.md</a> (the existing index).</p>
+<p>Steps 1 to 6 of the plan (section 8) are built; section 10 lists the code, the commands and what was measured on real filings. Step 7 (<code>fund_reports</code>: N-CSR and 497K text) is not built. Related: <a href="mutual_fund_corpus_plan.html">mutual_fund_corpus_plan.html</a> (the 500 fund documents to download), <a href="agent_flows.html">agent_flows.md</a> (the existing agents), <a href="annual_report_rag_structure.html">annual_report_rag_structure.md</a> (the existing index).</p>
 <p><strong>In short</strong></p>
 <ul>
 <li><strong>The link between the two datasets is the company.</strong> A fund owns shares of companies; the corpus holds those companies' annual reports. Each fund holding is mapped to a corpus ticker, and each holdings date to the annual report available at that date. Every answer can then cite both the fund filing and the company's own filing.</li>
@@ -319,7 +319,7 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 <li><strong>CIK</strong> comes from the corpus manifests, or from SEC's <code>company_tickers.json</code>, so the link also works by CIK.</li>
 </ul>
 <h3>4.2 Time: holdings date → annual report</h3>
-<p>Holdings are dated (<code>REPORT_ENDING_PERIOD</code>); companies close their fiscal years at different times (Apple in September, Walmart in January). Rule: <strong>use each company's latest annual report filed on or before the holdings date</strong> (<code>filing_date &lt;= period_end</code>), using <code>filing_date</code> and <code>year</code> from the manifests. That is what an investor could have read at the time, so no answer uses information from the future.</p>
+<p>Holdings are dated by the report date (<code>REPORT_DATE</code> in the bulk data, <code>repPdDate</code> in the XML; <code>REPORT_ENDING_PERIOD</code> / <code>repPdEnd</code> is the fund's fiscal year end, not the holdings date); companies close their fiscal years at different times (Apple in September, Walmart in January). Rule: <strong>use each company's latest annual report filed on or before the holdings date</strong> (<code>filing_date &lt;= period_end</code>), using <code>filing_date</code> and <code>year</code> from the manifests. That is what an investor could have read at the time, so no answer uses information from the future.</p>
 <h3>4.3 Figures: a cache of verified company numbers</h3>
 <p>Fund-level measures need company figures (revenue, net income and so on). The trend and sector trend agents already verify such figures one company-year at a time; the design keeps them:</p>
 <pre><code>company_figures(ticker, fiscal_year, metric, value, unit, chunk_id, page, method, verified_at)
@@ -332,7 +332,7 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
     NC[&quot;N-CSR and 497K&lt;br&gt;HTML documents&quot;]
     AR[&quot;Annual reports (ARS)&lt;br&gt;existing corpus&quot;]
   end
-  subgraph SQL[&quot;SQL: nport.sqlite3&quot;]
+  subgraph SQL[&quot;SQL: nport_mutual_fund.sqlite3&quot;]
     T1[&quot;funds, filings,&lt;br&gt;holdings, returns&quot;]
     T2[&quot;security_map,&lt;br&gt;holding_link&quot;]
     T3[&quot;fund_exposure&quot;]
@@ -341,7 +341,7 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
   subgraph Vectors[&quot;Vector collections&quot;]
     V1[&quot;annual_reports_vlm&lt;br&gt;(existing)&quot;]
     V2[&quot;fund_reports&lt;br&gt;(N-CSR, 497K sections)&quot;]
-    V3[&quot;fund_cards&lt;br&gt;(one per fund and period)&quot;]
+    V3[&quot;fund_cards_mutual_fund&lt;br&gt;(one per fund and period)&quot;]
   end
   NP --&gt; T1 --&gt; T2 --&gt; T3
   T1 --&gt; V3
@@ -359,14 +359,14 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 </thead>
 <tbody>
 <tr>
-  <td><code>nport.sqlite3</code></td>
-  <td><code>indexes/funds/nport.sqlite3</code></td>
+  <td><code>nport_mutual_fund.sqlite3</code></td>
+  <td><code>indexes/mutual_fund/nport_mutual_fund.sqlite3</code></td>
   <td>The tables in 5.1</td>
   <td>New loader: parse XML or TSV, filter to the chosen funds, map holdings</td>
 </tr>
 <tr>
-  <td><code>fund_cards</code></td>
-  <td>New collection in the served backend (Chroma <code>indexes/chroma_db</code> or Qdrant)</td>
+  <td><code>fund_cards_mutual_fund</code></td>
+  <td>Chroma collection in its own folder, <code>indexes/mutual_fund/chroma_mutual_fund</code> (bge-small-en-v1.5), so the annual-report index is never opened</td>
   <td>One text card per fund and period</td>
   <td>Written by code from the tables, then embedded</td>
 </tr>
@@ -668,5 +668,116 @@ company_figures(ticker, fiscal_year, metric, value, unit, chunk_id, page, method
 <li>Which funds to load: the largest equity funds and ETFs by net assets (best overlap) or a sample across categories (wider but thinner overlap).</li>
 <li>Whether bond holdings should link to the issuer's annual report (credit questions) or stay out of scope.</li>
 <li>Hosted LLM cost for <code>company_figures</code> reads that code can't do; cached once, but the first run over many holdings could take many calls.</li>
+</ul>
+<h2>10. Implementation (14 November 2026)</h2>
+<p>Every file of the layer has <code>_mutual_fund</code> in its name.</p>
+<table>
+<thead>
+<tr>
+  <th>Layer</th>
+  <th>File</th>
+  <th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Download</td>
+  <td><code>scripts/downloads/download_mutual_fund.py</code>, <code>configs/funds_mutual_fund.json</code></td>
+  <td><code>latest</code>: the newest <code>NPORT-P</code> XML of each configured fund from EDGAR (<code>nport_&lt;accession&gt;_mutual_fund.xml</code> + <code>manifest_mutual_fund.jsonl</code> with filing dates). <code>bulk --quarter 2026q3</code>: the quarterly ZIP (<code>2026q3_nport_mutual_fund.zip</code>). SEC contact from <code>SEC_USER_AGENT</code></td>
+</tr>
+<tr>
+  <td>Load and map</td>
+  <td><code>scripts/rag/nport_mutual_fund.py</code></td>
+  <td>XML or bulk ZIP (streamed: the 950 MB holdings table is never held in memory) into the tables of 5.1; holdings mapped ticker, CUSIP-6, ISIN, LEI, then name; <code>fund_exposure</code> view; <code>coverage</code>, <code>sector_mix</code></td>
+</tr>
+<tr>
+  <td>Cards</td>
+  <td><code>scripts/rag/cards_mutual_fund.py</code></td>
+  <td>One card per filing, written by code, embedded with <code>BAAI/bge-small-en-v1.5</code> (local, or the shared API with <code>hosted</code>: the same vectors) into Chroma <code>fund_cards_mutual_fund</code>. The signature is recorded; another model is refused unless <code>--reset</code></td>
+</tr>
+<tr>
+  <td>Tools</td>
+  <td><code>scripts/agents/tools_mutual_fund.py</code></td>
+  <td><code>FundStore</code>: fixed, parameterised SQL only; rows become evidence with IDs <code>nport_&lt;accession digits&gt;_&lt;row&gt;</code>; <code>company_figures</code> cache; <code>report_for</code> (the date rule of 4.2)</td>
+</tr>
+<tr>
+  <td>Agent</td>
+  <td><code>scripts/agents/agent_mutual_fund.py</code>, <code>scripts/prompts/prompts_mutual_fund.py</code></td>
+  <td>Fund plan (<code>top_holdings</code>, <code>sector_mix</code>, <code>exposure</code>, <code>holders</code>, <code>facts</code>, <code>flows</code>, <code>returns</code>, <code>holdings_growth</code>, <code>holdings_text</code>), weighted growth in code, fund answer prompt</td>
+</tr>
+<tr>
+  <td>Graph</td>
+  <td><code>financial_prompting_agent.py</code> (edited)</td>
+  <td><code>fund_graph</code> flow and the router's <code>fund</code> route: route -&gt; <code>fund_lookup_step</code> -&gt; <code>fund_company_step</code> (only for the holdings' annual reports) -&gt; answer -&gt; critic -&gt; governance</td>
+</tr>
+<tr>
+  <td>API</td>
+  <td><code>scripts/api/routes_mutual_fund.py</code></td>
+  <td><code>GET /mutual_fund/funds</code>, <code>/holdings</code>, <code>/holders/{ticker}</code>, <code>/search</code>; chat responses carry <code>mutual_fund</code></td>
+</tr>
+<tr>
+  <td>UI</td>
+  <td><code>scripts/ui/ui_mutual_fund.py</code></td>
+  <td>Holdings table, sector mix chart, exposure or holders, growth table, coverage line</td>
+</tr>
+<tr>
+  <td>Tests</td>
+  <td><code>tests/test_*_mutual_fund.py</code>, <code>tests/data_mutual_fund.py</code></td>
+  <td>Synthetic N-PORT filings with the real structure; no network or models</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-powershell">$env:SEC_USER_AGENT = &quot;capstone-research you@example.com&quot;
+python -m scripts.downloads.download_mutual_fund latest
+python -m scripts.rag.nport_mutual_fund load --xml indexes\rag_home\indexes\mutual_fund\raw_mutual_fund
+python -m scripts.rag.cards_mutual_fund build            # bge-small-en-v1.5, local; --embedding-provider hosted for the shared API
+python -m scripts.rag.nport_mutual_fund status
+</code></pre>
+<p><strong>No change without fund data.</strong> The <code>fund</code> route exists only when <code>nport_mutual_fund.sqlite3</code> holds a filing and the question names a loaded fund or asks about fund holdings. Without it the router, the clarifier and every other flow behave exactly as before; a router LLM that proposes <code>fund</code> is overruled by the rules. With fund data, the clarifier passes fund questions straight to the agent. The annual-report Chroma index is never opened by the fund code.</p>
+<p><strong>Measured on real filings</strong> (four Vanguard index funds, holdings as of 30 June 2026, filed 28 August 2026):</p>
+<table>
+<thead>
+<tr>
+  <th>Fund</th>
+  <th>Accession</th>
+  <th>Corpus companies held</th>
+  <th>Share of net assets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Vanguard 500 Index Fund</td>
+  <td>0000036405-26-000473</td>
+  <td>240</td>
+  <td>86.7%</td>
+</tr>
+<tr>
+  <td>Vanguard Growth Index Fund</td>
+  <td>0000036405-26-000474</td>
+  <td>73</td>
+  <td>90.1%</td>
+</tr>
+<tr>
+  <td>Vanguard Value Index Fund</td>
+  <td>0000036405-26-000475</td>
+  <td>176</td>
+  <td>82.6%</td>
+</tr>
+<tr>
+  <td>Vanguard Total Stock Market Index Fund</td>
+  <td>0000036405-26-000480</td>
+  <td>274</td>
+  <td>77.3%</td>
+</tr>
+</tbody>
+</table>
+<p>Name matching refuses a match when the holding's name has a distinguishing word the company's name lacks: Apple Hospitality REIT is not Apple, Portland General Electric is not GE, Coca-Cola Consolidated is not Coca-Cola, Hilton Grand Vacations is not Hilton. A filer's <code>N/A</code> in the LEI or ISIN field is treated as missing.</p>
+<p><strong>Decisions made while building:</strong></p>
+<ul>
+<li>The holdings date is <code>REPORT_DATE</code> / <code>repPdDate</code> (checked against the 2026 Q3 bulk ZIP's column headers and the XML).</li>
+<li>Fund cards of similar index funds score close together (top-two gaps of 0.005 to 0.03 for the four Vanguard funds), so a card counts as a match only when it beats the next card by 0.03; otherwise the agent asks which fund. Fund names in the question resolve first.</li>
+<li>Advice wording (&quot;should I buy&quot;, &quot;best fund&quot;) is refused by the fund plan. &quot;Hold&quot; and &quot;holdings&quot; describe the data in a fund question, so they do not trigger the investment-language review there.</li>
+<li>A figure the LLM copies for both years from one chunk is left out (&quot;the same figure was read for both years&quot;) instead of becoming 0% growth.</li>
+<li>Linked questions use only companies whose annual report is indexed. With 52 companies indexed today, most of the largest holdings of these funds are not yet covered: they are listed as not used, and the answer goes to human review (<code>low_fund_coverage</code>) when the companies used carry under half of the weight asked about.</li>
 </ul>
 </body></html>

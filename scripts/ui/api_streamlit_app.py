@@ -36,6 +36,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.common.companies import NAMES as COMPANY_NAMES, SECTOR_NAMES  # noqa: E402 - after the repo is on sys.path
+from scripts.ui.ui_mutual_fund import render_mutual_fund  # noqa: E402
 
 
 DEFAULT_API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")   # set by the runtime profile
@@ -273,6 +274,7 @@ def render_result(result: dict[str, Any]) -> None:
 
     render_trend(result.get("trend") or {})
     render_sector_trend(result.get("sector_trend") or {})
+    render_mutual_fund(result.get("mutual_fund") or {})
 
     agent_run = result.get("agent_run")
     if agent_run:
@@ -493,11 +495,12 @@ def sidebar() -> dict[str, Any]:
                 st.sidebar.warning("Year must be numeric; ignoring filter.")
     demo = st.sidebar.expander("Demo settings", expanded=SHOW_ADVANCED)
     settings["technique"] = demo.selectbox(
-        "Technique", ["router", "agentic_graph", "trend_graph", "sector_trend_graph", "baseline_rag", "structured_few_shot", "decomposition",
+        "Technique", ["router", "agentic_graph", "trend_graph", "sector_trend_graph", "fund_graph", "baseline_rag", "structured_few_shot", "decomposition",
                       "self_consistency"],
         help="router (default) sends each question to the Q&A agent, the trend agent, the sector trend agent or "
              "the report handoff; agentic_graph is the Q&A agent alone; trend_graph is the multi-year trend agent; "
-             "sector_trend_graph is the sector trend agent; the others are "
+             "sector_trend_graph is the sector trend agent; fund_graph is the mutual fund agent (needs loaded "
+             "N-PORT data; the router uses it for fund questions); the others are "
              "single-prompt baselines for comparison.")
 
     settings.update({
