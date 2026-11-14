@@ -77,6 +77,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import sqlite3
 import time
 import urllib.error
@@ -1043,6 +1044,15 @@ def build_parser():
     ingest.add_argument("--force", action="store_true", help="redo finished filings (transcriptions stay cached)")
     ingest.add_argument("--reset", action="store_true", help="drop the collection and state first")
 
+    again = sub.add_parser("reembed", parents=[common],
+                           help="copy an index under --root with new vectors (same chunks, text, metadata and BM25)")
+    again.add_argument("--from-root", type=Path, required=True, help="the existing pipeline 1 index to copy")
+    again.add_argument("--embedding-provider", choices=["local", "hosted", "hashing"],
+                       default=os.getenv("RAG_EMBEDDING_PROVIDER") or "local")
+    again.add_argument("--embedding-model", default=fi.LOCAL_BGE_SMALL)
+    again.add_argument("--threads", type=int, default=4, help="torch CPU threads (keep the machine usable)")
+    again.add_argument("--low-priority", action="store_true", help="below-normal CPU priority")
+
     sub.add_parser("status", parents=[common])
     search = sub.add_parser("query", parents=[common])
     search.add_argument("text")
@@ -1053,12 +1063,86 @@ def build_parser():
     return parser
 
 
+def embed_input(text, metadata):
+    """What a chunk's vector was made from at ingest: the context line, then the chunk (``text_records``)."""
+    return fi.context_line(metadata) + "\n" + text
+
+
+def reembed(args, embedder=None):
+    """A copy of the index at ``--from-root`` under ``--root`` with new vectors: same chunk IDs, text, metadata, BM25
+    sidecar and page analysis; only the embeddings change. Resumable filing by filing. The ingest state comes along
+    with the new embedding recorded, so ``ingest --root <new>`` later adds the filings still missing."""
+    source, target = Path(args.from_root), Path(args.root)
+    if source.resolve() == target.resolve():
+        raise SystemExit("--root must be a new folder, not --from-root")
+    old_state = source / "vlm_ingest.sqlite3"
+    if not old_state.exists():
+        raise SystemExit(f"no pipeline 1 index at {source} (vlm_ingest.sqlite3 missing)")
+    embedder = embedder or fi.Embedder(args.embedding_provider, args.embedding_model)
+    with sqlite3.connect(old_state) as db:
+        settings = dict(db.execute("SELECT key, value FROM settings"))
+        done = db.execute("SELECT doc_id, stage, pipeline, points, seconds FROM filings WHERE status='complete' "
+                          "ORDER BY doc_id").fetchall()
+    state = fi.State(target / "vlm_ingest.sqlite3")
+    fi.check_embedding(state, embedder)
+    for key, value in settings.items():
+        if key != "embedding":
+            state.check(key, value)
+    target.mkdir(parents=True, exist_ok=True)
+    if (source / "pages").exists():
+        shutil.copytree(source / "pages", target / "pages", dirs_exist_ok=True)     # page analysis cache
+    (target / "chroma").mkdir(parents=True, exist_ok=True)
+    if not (target / "chroma" / "bm25.sqlite3").exists():
+        shutil.copy2(source / "chroma" / "bm25.sqlite3", target / "chroma" / "bm25.sqlite3")   # text only: unchanged
+    old = ChromaStore(source).collection
+    new = ChromaStore(target)
+    todo = [row for row in done if not state.done(row[0], row[1], reembedded(row[2], embedder))]
+    print(json.dumps({"filings": len(done), "to_reembed": len(todo), "from": str(source), "to": str(target),
+                      "embedding": embedder.signature}), flush=True)
+    started, chunks = time.time(), 0
+    for number, (doc_id, stage, pipeline, points, seconds) in enumerate(todo, 1):
+        t = time.time()
+        got = old.get(where={"doc_id": doc_id}, include=["documents", "metadatas"])
+        vectors = embedder([embed_input(text, meta) for text, meta in zip(got["documents"], got["metadatas"])])
+        new.collection.delete(where={"doc_id": doc_id})
+        for start in range(0, len(got["ids"]), 256):
+            end = start + 256
+            new.collection.upsert(ids=got["ids"][start:end], embeddings=vectors[start:end],
+                                  documents=got["documents"][start:end], metadatas=got["metadatas"][start:end])
+        state.mark(doc_id, stage, "complete", reembedded(pipeline, embedder), len(got["ids"]), seconds)
+        chunks += len(got["ids"])
+        elapsed = time.time() - started
+        print(json.dumps({"doc_id": doc_id, "chunks": len(got["ids"]), "seconds": round(time.time() - t, 1),
+                          "progress": f"{number}/{len(todo)}", "elapsed_min": round(elapsed / 60, 1),
+                          "eta_min": round(elapsed / number * (len(todo) - number) / 60, 1)}), flush=True)
+    summary = {"reembedded_filings": len(todo), "chunks": chunks, "minutes": round((time.time() - started) / 60, 1),
+               "old_count": old.count(), "new_count": new.count(), "bm25": new.bm25.count(),
+               "embedding": embedder.signature}
+    summary["counts_match"] = summary["old_count"] == summary["new_count"] == summary["bm25"]
+    print(json.dumps(summary), flush=True)
+    return summary
+
+
+def reembedded(pipeline, embedder):
+    """The filing's pipeline marker with the new embedding, as ``VlmIngest`` writes it for the same settings."""
+    marker = json.loads(pipeline)
+    marker["embedding"] = embedder.portable
+    return json.dumps(marker, sort_keys=True)
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
     if args.command == "ingest":
         if args.low_priority:
             lower_priority()
         print(json.dumps(VlmIngest(args).run()), flush=True)
+    elif args.command == "reembed":
+        if args.low_priority:
+            lower_priority()
+        if args.threads:
+            import torch
+            torch.set_num_threads(args.threads)
+        reembed(args)
     elif args.command == "status":
         status(args)
     else:

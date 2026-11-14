@@ -154,3 +154,38 @@ def test_colab_settings_pick_the_model_per_pipeline(tmp_path):
     assert cp.Settings(pipeline="vlm_chroma", drive_root=tmp_path, work=tmp_path).embedding_model == "BAAI/bge-small-en-v1.5"
     assert (cp.Settings(pipeline="colpali_qdrant", drive_root=tmp_path, work=tmp_path).embedding_model
             == "sentence-transformers/all-MiniLM-L6-v2")
+
+
+class RecordingEmbedder(FakeEmbedder):
+    def __init__(self, signature):
+        super().__init__(signature)
+        self.inputs = []
+
+    def __call__(self, texts):
+        self.inputs += list(texts)
+        return super().__call__(texts)
+
+
+def test_reembed_copies_the_index_with_new_vectors_and_resumable_state(tmp_path, corpus):
+    old_root = tmp_path / "chroma"
+    old = vi.VlmIngest(args_for(tmp_path, corpus, "chroma", "--vlm", "mock"), embedder=RecordingEmbedder(MINILM_SIG))
+    old.run()
+    original_inputs = list(old.embedder.inputs)
+    new_root = tmp_path / "bge"
+    bge = RecordingEmbedder(LOCAL_SIG)
+    args = vi.build_parser().parse_args(["reembed", "--from-root", str(old_root), "--root", str(new_root)])
+    summary = vi.reembed(args, embedder=bge)
+    assert summary["counts_match"] and summary["new_count"] == old.store.count() > 0
+    assert sorted(bge.inputs) == sorted(original_inputs)                       # same text as at ingest, new model
+    copy = vi.ChromaStore(new_root).collection.get(include=["documents", "metadatas"])
+    first = old.store.collection.get(include=["documents", "metadatas"])
+    assert sorted(zip(copy["ids"], copy["documents"])) == sorted(zip(first["ids"], first["documents"]))
+    with sqlite3.connect(new_root / "vlm_ingest.sqlite3") as db:
+        assert db.execute("SELECT value FROM settings WHERE key='embedding'").fetchone() == (LOCAL_SIG,)
+    assert vi.reembed(args, embedder=bge)["reembedded_filings"] == 0           # resumable: nothing left
+    resumed = vi.VlmIngest(args_for(tmp_path / "x", corpus, "chroma", "--vlm", "mock", "--root", str(new_root)),
+                           embedder=FakeEmbedder(HOSTED_SIG))
+    assert resumed.run() == {}                                                 # ingest sees the filing as done
+    with pytest.raises(SystemExit):
+        vi.reembed(vi.build_parser().parse_args(["reembed", "--from-root", str(old_root), "--root", str(old_root)]),
+                   embedder=bge)
