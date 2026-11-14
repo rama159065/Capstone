@@ -96,6 +96,22 @@ def test_report_needs_confirmation(talk):
     assert talk("No")["status"] == "cancelled"
 
 
+def test_report_for_a_profiled_company_outside_the_index(tmp_path):
+    """A report reads its own source PDF, so a company with a profile works even when the index doesn't hold it;
+    other questions about that company still say it isn't covered."""
+    (tmp_path / "apple_2024.json").write_text('{"ticker": "AAPL", "year": 2024}', encoding="utf-8")
+    clarifier, store = Clarifier({"MSFT": [2024, 2025]}, profiles_dir=tmp_path), ConversationStore()
+    conversation = store.get()
+    confirm = clarifier.step(conversation, "Generate a full financial report for Apple 2024")
+    assert confirm["questions"][0]["slot"] == "confirm"
+    done = clarifier.step(conversation, "Yes")
+    assert done["action"] == "report" and done["report"]["ticker"] == "AAPL" and done["report"]["profile"]
+    question = clarifier.step(store.get(), "What was Apple's net income in fiscal 2024?")
+    assert question["status"] != "ready" and "don't have filings for Apple" in json.dumps(question)
+    year = clarifier.step(store.get(), "Generate a full financial report for Apple")
+    assert year["questions"][0]["slot"] == "year" and year["questions"][0]["options"][0] == "FY2024"
+
+
 def test_complete_eval_style_questions_are_not_held_back(talk):
     peer = talk("What revenue does the peer-comparison chart in Microsoft's FY2025 report show, and how does it "
                 "compare with the peer median?")

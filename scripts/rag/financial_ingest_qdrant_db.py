@@ -317,7 +317,9 @@ class Embedder:
         elif provider == "local":
             import torch
             from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer(model, device="cuda" if torch.cuda.is_available() else "cpu")
+            from scripts.common.local_models import LOAD_LOCK      # loads in parallel threads break each other
+            with LOAD_LOCK:
+                self.model = SentenceTransformer(model, device="cuda" if torch.cuda.is_available() else "cpu")
             self.dim = self.model.get_sentence_embedding_dimension()
             self.signature = f"local:{model}:{self.dim}"
         elif provider == "hosted":

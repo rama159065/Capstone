@@ -398,8 +398,9 @@ class Clarifier:
 
     def uncovered(self, slots, query):
         """Names of the companies the question asks about that we hold no filings for."""
-        covered = [c for c in slots.companies if c in self.directory]
-        names = [name(c) for c in slots.companies if c not in self.directory]
+        directory = self.known(slots)
+        covered = [c for c in slots.companies if c in directory]
+        names = [name(c) for c in slots.companies if c not in directory]
         if len(covered) < (2 if slots.intent == "comparison" else 1):
             names += [n for n in self.unknown_names(query) if n not in names]
         return names
@@ -421,13 +422,14 @@ class Clarifier:
             return missing
         if slots.intent is None:
             missing.append("intent")
-        covered = [c for c in slots.companies if c in self.directory]
+        directory = self.known(slots)
+        covered = [c for c in slots.companies if c in directory]
         conversation.unknown_companies = self.uncovered(slots, conversation.original_query)
         conversation.banks_without_metric = self.banks_without(slots)
         if len(covered) < (2 if slots.intent == "comparison" else 1):
             missing.append("companies" if slots.intent == "comparison" else "company")
         elif slots.intent in {"figure", "comparison", "report"}:
-            available = self.common_years(covered)
+            available = self.common_years(covered, directory)
             if slots.latest and available:
                 slots.years, slots.latest = [available[-1]], False
             if not slots.years or any(y not in available for y in slots.years):
@@ -449,8 +451,9 @@ class Clarifier:
     def sector_years(self, sector):
         return sorted({y for t in self.sector_members(sector) for y in self.directory.get(t, [])})
 
-    def common_years(self, companies):
-        sets = [set(self.directory.get(c, [])) for c in companies]
+    def common_years(self, companies, directory=None):
+        directory = self.directory if directory is None else directory
+        sets = [set(directory.get(c, [])) for c in companies]
         return sorted(set.intersection(*sets)) if sets else []
 
     def similar_companies(self, slots, limit=3):
@@ -516,7 +519,8 @@ class Clarifier:
     def ask(self, conversation, message, missing):
         conversation.pending = missing
         slots, questions, coverage = conversation.slots, [], None
-        covered = [c for c in slots.companies if c in self.directory]
+        directory = self.known(slots)
+        covered = [c for c in slots.companies if c in directory]
         for slot in missing:
             if slot == "intent":
                 subject = name(covered[0]) if covered else "the company"
@@ -536,7 +540,7 @@ class Clarifier:
                 questions.append({"slot": slot, "question": prefix + ask,
                                   "options": alone + [f"{name(t)} ({t})" for t in first + others]})
             elif slot == "year":
-                available = self.common_years(covered)
+                available = self.common_years(covered, directory)
                 outside = [y for y in slots.years if y not in available]
                 prefix = ""
                 if outside:
@@ -586,8 +590,9 @@ class Clarifier:
                 conversation.assumptions.append("Some details were not given; answering the question as asked.")
             return self.result(conversation, "ready", action="answer", resolved_query=self.compose(conversation),
                                ticker=None, year=None, sector=slots.sectors[0], original=conversation.original_query)
-        covered = [c for c in slots.companies if c in self.directory]
-        available = self.common_years(covered) if covered else []
+        directory = self.known(slots)
+        covered = [c for c in slots.companies if c in directory]
+        available = self.common_years(covered, directory) if covered else []
         if not slots.years and available:
             if slots.intent == "trend" or slots.all_years:
                 slots.years = available
@@ -628,7 +633,8 @@ class Clarifier:
 
     def report_spec(self, conversation):
         slots = conversation.slots
-        ticker = next((c for c in slots.companies if c in self.directory), None)
+        directory = self.known(slots)
+        ticker = next((c for c in slots.companies if c in directory), None)
         year = slots.years[-1] if slots.years else None
         return {"ticker": ticker, "year": year, "profile": self.profile_for(ticker, year)}
 
@@ -641,6 +647,26 @@ class Clarifier:
             if data.get("ticker") == ticker and int(data.get("year", 0)) == year:
                 return str(path)
         return None
+
+    def report_directory(self):
+        """Ticker -> fiscal years with a report profile. A report reads its own source PDF, not the index."""
+        out = {}
+        for path in sorted(self.profiles_dir.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                out.setdefault(data["ticker"], set()).add(int(data["year"]))
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
+        return {ticker: sorted(years) for ticker, years in out.items()}
+
+    def known(self, slots):
+        """The companies and years a request can use: the indexed filings, plus the report profiles for a report."""
+        if slots.intent != "report":
+            return self.directory
+        merged = {ticker: list(years) for ticker, years in self.directory.items()}
+        for ticker, years in self.report_directory().items():
+            merged[ticker] = sorted(set(merged.get(ticker, [])) | set(years))
+        return merged
 
     def available_reports(self):
         out = []

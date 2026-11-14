@@ -41,6 +41,41 @@ def test_examples_drop_what_the_coverage_cannot_show():
                          "look_for": "Citations to the filing pages"}]
 
 
+FUNDS = [{"series_name": "VANGUARD VALUE INDEX FUND", "family": "Vanguard", "filings": [{"period_end": "2026-06-30"}]},
+         {"series_name": "VANGUARD 500 INDEX FUND", "family": "Vanguard", "filings": [{"period_end": "2026-06-30"}]}]
+SECTORS = [
+    {"ticker": "ABBV", "company": "AbbVie Inc.", "sector": "Healthcare", "years": [2022, 2023, 2024, 2025]},
+    {"ticker": "AMGN", "company": "Amgen Inc.", "sector": "Healthcare", "years": [2023, 2024, 2025]},
+    {"ticker": "JPM", "company": "JPMorgan Chase & Co.", "sector": "Banking", "years": [2022, 2023, 2024, 2025]},
+    {"ticker": "BAC", "company": "Bank of America Corporation", "sector": "Banking", "years": [2022, 2023, 2024, 2025]},
+    {"ticker": "BAC2", "company": "Bank Two", "sector": "Banking", "years": [2024, 2025]},
+]
+
+
+def test_examples_cover_trends_sectors_funds_and_reports():
+    examples = ui.example_questions(SECTORS, FUNDS, [{"ticker": "AAPL", "company": "Apple Inc.", "year": 2024}])
+    by = {e["capability"]: e for e in examples}
+    assert by["Multi-year trend"]["question"] == "How did AbbVie's revenue trend from 2022 to 2025?"
+    assert by["Sector trend"]["question"] == "How did healthcare revenue trend from 2023 to 2025?"   # not banks first
+    assert by["Fund holdings"]["question"] == "What are the top 10 holdings of the Vanguard 500 Index Fund?"
+    assert by["Look-through growth"]["question"] == "How did revenue of the Vanguard 500 Index Fund's top 10 holdings grow?"
+    assert by["Full financial report"]["question"] == "Generate a full financial report for Apple 2024"
+    groups = [e["group"] for e in examples]
+    assert groups == sorted(groups, key=["Companies", "Sectors", "Mutual funds", "Reports", "Safety"].index)
+    without = {e["capability"] for e in ui.example_questions(SECTORS)}
+    assert not without & {"Fund holdings", "Look-through growth", "Full financial report"}
+    banks = [r for r in SECTORS if r["sector"] == "Banking"]
+    assert ui.sector_example(banks)["question"] == "How did banking net income trend from 2023 to 2025?"  # latest 3
+
+
+def test_fund_coverage_and_names():
+    assert ui.fund_name(FUNDS[1]) == "Vanguard 500 Index Fund"
+    assert ui.fund_name({"series_name": "SPDR S&P 500 ETF TRUST"}) == "Spdr S&P 500 ETF Trust"
+    assert ui.fund_summary(FUNDS) == "2 mutual funds (Vanguard, N-PORT as of 2026-06-30)"
+    assert ui.fund_summary([]) is None
+    assert {r["ticker"] for r in ui.report_profiles()} >= {"AAPL"}
+
+
 def test_status_legend_covers_every_answer_status():
     assert {"answered", "evidence_only", "pending_human_review", "not_available", "insufficient_evidence",
             "not_grounded", "refused"} <= set(ui.STATUS_HELP)
