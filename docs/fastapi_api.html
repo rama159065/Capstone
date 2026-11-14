@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>FastAPI API Reference</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
+<h1>FastAPI API Reference</h1>
+<p>The FastAPI backend exposes domain discovery, guarded chat, evidence retrieval and read-only mutual fund lookups. Request validation, response schemas, and endpoint descriptions are also published in the interactive API documentation.</p>
+<p>Streaming is not currently implemented. The proposed SSE architecture, event contract, security controls, grounding gates, and HITL workflow are described in the <a href="fastapi_streaming_design.html">FastAPI streaming design</a>.</p>
+<h2>Start the API</h2>
+<p>From the repository root, start the server:</p>
+<pre><code class="language-powershell">uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
+</code></pre>
+<p>Open the interactive Swagger UI at <a href="http://127.0.0.1:8000/docs">http://127.0.0.1:8000/docs</a>, ReDoc at <a href="http://127.0.0.1:8000/redoc">http://127.0.0.1:8000/redoc</a>, or the raw OpenAPI schema at <a href="http://127.0.0.1:8000/openapi.json">http://127.0.0.1:8000/openapi.json</a>.</p>
+<p>When the server sets <code>API_AUTH_TOKEN</code>, click <strong>Authorize</strong> in Swagger and enter the key (as <code>X-API-Key</code> or as a Bearer token); &quot;Try it out&quot; then sends it. <code>/health</code> and the docs pages need no key.</p>
+<p>A copy of the contract that needs no running server lives in <a href="api/">docs/api/</a>: <code>openapi.json</code>, <code>openapi.yaml</code> and <code>swagger.html</code> (Swagger UI with the spec embedded). Regenerate it after changing a route or model:</p>
+<pre><code class="language-powershell">python -m scripts.api.export_openapi                                   # Try it out -&gt; http://127.0.0.1:8000
+python -m scripts.api.export_openapi --server https://your-host         # add the deployed URL too (repeatable)
+</code></pre>
+<h2>Routes</h2>
+<table>
+<thead>
+<tr>
+  <th>Method</th>
+  <th>Path</th>
+  <th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>GET</code></td>
+  <td><code>/health</code></td>
+  <td>Return service status, the served domain and runtime settings.</td>
+</tr>
+<tr>
+  <td><code>GET</code></td>
+  <td><code>/domains</code></td>
+  <td>The served domain (<code>financial_report_qa</code>) with its display name, description and default query.</td>
+</tr>
+<tr>
+  <td><code>GET</code></td>
+  <td><code>/companies</code></td>
+  <td>Companies, sectors and fiscal years the served index covers.</td>
+</tr>
+<tr>
+  <td><code>POST</code></td>
+  <td><code>/chat/financial_report_qa</code></td>
+  <td>Answer a financial-report question using the selected financial technique.</td>
+</tr>
+<tr>
+  <td><code>POST</code></td>
+  <td><code>/conversation/financial_report_qa</code></td>
+  <td>One chat turn: clarify a missing company, year or measure first, then run the agents or the report pipeline. Used by the Streamlit chat.</td>
+</tr>
+<tr>
+  <td><code>POST</code></td>
+  <td><code>/retrieve/financial_report_qa</code></td>
+  <td>Return ranked financial-report evidence without generating an answer.</td>
+</tr>
+<tr>
+  <td><code>GET</code></td>
+  <td><code>/mutual_fund/funds</code></td>
+  <td>Loaded funds and their N-PORT filings (404 until fund data is loaded).</td>
+</tr>
+<tr>
+  <td><code>GET</code></td>
+  <td><code>/mutual_fund/holdings</code></td>
+  <td>Top equity holdings of one fund filing, with corpus coverage and sector mix.</td>
+</tr>
+<tr>
+  <td><code>GET</code></td>
+  <td><code>/mutual_fund/holders/{ticker}</code></td>
+  <td>Loaded funds holding a corpus company, largest weight first.</td>
+</tr>
+<tr>
+  <td><code>GET</code></td>
+  <td><code>/mutual_fund/search</code></td>
+  <td>Fund cards nearest a query (bge-small-en-v1.5, collection <code>fund_cards_mutual_fund</code>).</td>
+</tr>
+</tbody>
+</table>
+<p>The service answers financial report questions only (<code>financial_report_qa</code>). The routes for the five other Track B domains (<code>/chat/{domain}</code>, <code>/retrieve/{domain}</code>) were removed on 10 November 2026; the local multimodal routes accept <code>financial_report_qa</code> only.</p>
+<h2>Chat requests</h2>
+<p>Chat requests are JSON objects. <code>query</code> is required; all other fields are optional.</p>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Constraints / purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>query</code></td>
+  <td>string</td>
+  <td>—</td>
+  <td>Required, 1–4000 characters.</td>
+</tr>
+<tr>
+  <td><code>llm_provider</code></td>
+  <td>string</td>
+  <td><code>mock</code></td>
+  <td><code>mock</code> or <code>hosted</code>. Hosted mode requires the configured chat endpoint environment variables.</td>
+</tr>
+<tr>
+  <td><code>embedding_provider</code></td>
+  <td>string</td>
+  <td><code>hashing</code></td>
+  <td><code>hashing</code> or <code>hosted</code>.</td>
+</tr>
+<tr>
+  <td><code>hash_dimensions</code></td>
+  <td>integer</td>
+  <td><code>384</code></td>
+  <td>32–4096; used by hashing embeddings.</td>
+</tr>
+<tr>
+  <td><code>top_k</code></td>
+  <td>integer</td>
+  <td><code>5</code></td>
+  <td>1–20; maximum evidence passed to the answer workflow.</td>
+</tr>
+<tr>
+  <td><code>dense_top_k</code></td>
+  <td>integer</td>
+  <td><code>30</code></td>
+  <td>1–100 dense retrieval candidates.</td>
+</tr>
+<tr>
+  <td><code>bm25_top_k</code></td>
+  <td>integer</td>
+  <td><code>30</code></td>
+  <td>1–100 lexical retrieval candidates.</td>
+</tr>
+<tr>
+  <td><code>source_type</code></td>
+  <td>string or null</td>
+  <td><code>null</code></td>
+  <td>Optional source category filter.</td>
+</tr>
+<tr>
+  <td><code>max_context_chars</code></td>
+  <td>integer</td>
+  <td><code>12000</code></td>
+  <td>1000–64000; chat context limit.</td>
+</tr>
+<tr>
+  <td><code>enable_guardrails</code></td>
+  <td>boolean</td>
+  <td><code>true</code></td>
+  <td>Enable input, evidence, and output safety checks.</td>
+</tr>
+<tr>
+  <td><code>enable_human_review</code></td>
+  <td>boolean</td>
+  <td><code>true</code></td>
+  <td>Enable governance routing for human review.</td>
+</tr>
+<tr>
+  <td><code>enable_langsmith</code></td>
+  <td>boolean</td>
+  <td><code>false</code></td>
+  <td>Request LangSmith tracing (credentials must be configured).</td>
+</tr>
+<tr>
+  <td><code>langsmith_project</code></td>
+  <td>string or null</td>
+  <td><code>null</code></td>
+  <td>Optional project override.</td>
+</tr>
+</tbody>
+</table>
+<p>Financial chat additionally accepts:</p>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Constraints / purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>technique</code></td>
+  <td>string</td>
+  <td><code>agentic_graph</code></td>
+  <td>One of <code>baseline_rag</code>, <code>structured_few_shot</code>, <code>decomposition</code>, <code>self_consistency</code>, <code>agentic_graph</code>, <code>trend_graph</code> (multi-year trend agent), <code>sector_trend_graph</code> (one measure across a sector), <code>fund_graph</code> (mutual fund agent; needs loaded fund data), <code>router</code> (supervisor: Q&amp;A, trend, sector trend, fund, report handoff or refusal). The agent flows add <code>route</code>, <code>trend</code>, <code>sector_trend</code>, <code>mutual_fund</code> and <code>handoff</code> to the response; a report request ends as <code>final_status = report_handoff</code>. See <code>agent_flows.md</code> §7a and §7c.</td>
+</tr>
+<tr>
+  <td><code>sector</code></td>
+  <td>string or null</td>
+  <td><code>null</code></td>
+  <td>Optional sector filter (e.g. <code>banking</code>; comma-separated for several).</td>
+</tr>
+<tr>
+  <td><code>retrieval_mode</code></td>
+  <td>string</td>
+  <td><code>hybrid</code></td>
+  <td><code>dense</code> or <code>hybrid</code>.</td>
+</tr>
+<tr>
+  <td><code>ticker</code></td>
+  <td>string or null</td>
+  <td><code>null</code></td>
+  <td>Optional company ticker filter.</td>
+</tr>
+<tr>
+  <td><code>year</code></td>
+  <td>integer or null</td>
+  <td><code>null</code></td>
+  <td>Optional fiscal/reporting year filter.</td>
+</tr>
+<tr>
+  <td><code>self_consistency_samples</code></td>
+  <td>integer</td>
+  <td><code>3</code></td>
+  <td>1–5 answer samples for the self-consistency technique.</td>
+</tr>
+</tbody>
+</table>
+<p>Example chat request (PowerShell):</p>
+<pre><code class="language-powershell">$body = @{
+  query = &quot;What was Costco's net income in fiscal 2025?&quot;
+  llm_provider = &quot;mock&quot;
+  embedding_provider = &quot;hashing&quot;
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post `
+  -Uri &quot;http://127.0.0.1:8000/chat/financial_report_qa&quot; `
+  -ContentType &quot;application/json&quot; `
+  -Body $body
+</code></pre>
+<p>Example financial chat request:</p>
+<pre><code class="language-json">{
+  &quot;query&quot;: &quot;What does Apple say about revenue?&quot;,
+  &quot;ticker&quot;: &quot;AAPL&quot;,
+  &quot;year&quot;: 2024,
+  &quot;technique&quot;: &quot;agentic_graph&quot;,
+  &quot;llm_provider&quot;: &quot;mock&quot;
+}
+</code></pre>
+<h2>Conversation requests (clarify, then run)</h2>
+<p><code>POST /conversation/financial_report_qa</code> accepts every financial chat field plus:</p>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Type</th>
+  <th>Default</th>
+  <th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>conversation_id</code></td>
+  <td>string or null</td>
+  <td><code>null</code></td>
+  <td>Returned by the first turn; send it back with each follow-up</td>
+</tr>
+<tr>
+  <td><code>clarify</code></td>
+  <td>boolean</td>
+  <td><code>true</code></td>
+  <td><code>false</code> skips clarification and behaves like <code>/chat/financial_report_qa</code></td>
+</tr>
+</tbody>
+</table>
+<p><a href="../scripts/agents/financial_clarifier.py">scripts/agents/financial_clarifier.py</a> reads each turn into slots: intent, companies, fiscal years and measure. It checks them against the companies and years the corpus actually has, from both PDF manifests. It is deterministic and makes no LLM call.</p>
+<table>
+<thead>
+<tr>
+  <th>Intent</th>
+  <th>Needs before agents run</th>
+  <th>Defaults it states instead of asking</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>figure (&quot;What was Apple's revenue?&quot;)</td>
+  <td>company, year, measure</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>comparison</td>
+  <td>two or more companies, a year all of them have, measure</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>trend</td>
+  <td>company, measure</td>
+  <td>all years in the corpus</td>
+</tr>
+<tr>
+  <td>explain (&quot;Why did Chevron's earnings fall?&quot;)</td>
+  <td>company</td>
+  <td>latest year</td>
+</tr>
+<tr>
+  <td>report (&quot;Generate a financial report for Apple&quot;)</td>
+  <td>company, year, then a <strong>Yes/No confirmation</strong></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>high-level (&quot;Tell me about Microsoft&quot;)</td>
+  <td>the user chooses: key figures, explain, trend or full report</td>
+  <td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Response <code>status</code>:</strong></p>
+<table>
+<thead>
+<tr>
+  <th>Status</th>
+  <th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>needs_clarification</code></td>
+  <td><code>message</code> and <code>questions[]</code>, each with <code>slot</code>, <code>question</code> and <code>options</code>. No agent has run. <code>coverage</code> is set when the filings can't answer the question as asked</td>
+</tr>
+<tr>
+  <td><code>answered</code></td>
+  <td>The agents ran on <code>resolved_query</code> with the <code>ticker</code> and <code>year</code> filters. <code>result</code> is the normal financial chat response, and <code>assumptions</code> lists any defaults used</td>
+</tr>
+<tr>
+  <td><code>report_generated</code></td>
+  <td>A confirmed report ran through the deterministic pipeline. <code>report_manifest</code> holds the artifacts; the report is pending visual review</td>
+</tr>
+<tr>
+  <td><code>report_unavailable</code></td>
+  <td>No report profile exists yet for that company and year (only Apple FY2024 so far)</td>
+</tr>
+<tr>
+  <td><code>report_failed</code></td>
+  <td>The report pipeline raised an error; the details are in the report trace</td>
+</tr>
+<tr>
+  <td><code>cancelled</code></td>
+  <td>The user answered No to the report confirmation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rules:</strong></p>
+<ul>
+<li><strong>Already complete:</strong> a complete question runs unchanged, with no extra turn.</li>
+<li><strong>Companies, years and measures the filings can't answer:</strong> the reply says so first, gives no figure, and offers what is available. See <a href="#when-the-filings-cant-answer">When the filings can't answer</a>.</li>
+<li><strong>Follow-ups keep context:</strong> &quot;and for 2023?&quot; or &quot;what about Visa?&quot; reuse the measure and company. Any other sentence after an answer starts a new request.</li>
+<li><strong>Escape hatches:</strong> <code>continue</code> answers the question as asked; <code>start over</code> resets. After 3 clarification turns the question is answered as asked.</li>
+<li><strong>Guarded messages:</strong> advice, prediction and prompt-injection messages are never clarified. They go straight to the guarded agent, which refuses them.</li>
+<li><strong>State:</strong> conversations are kept in memory per API process with a 30-minute TTL, like the rate limiter. Run one worker, or use a shared store when scaling out.</li>
+</ul>
+<pre><code class="language-json">{&quot;query&quot;: &quot;What was Apple's revenue?&quot;}
+→ {&quot;status&quot;: &quot;needs_clarification&quot;, &quot;conversation_id&quot;: &quot;…&quot;, &quot;message&quot;: &quot;Which fiscal year for Apple?&quot;,
+   &quot;questions&quot;: [{&quot;slot&quot;: &quot;year&quot;, &quot;options&quot;: [&quot;FY2024&quot;, &quot;FY2023&quot;, &quot;…&quot;, &quot;Latest&quot;]}]}
+{&quot;query&quot;: &quot;FY2023&quot;, &quot;conversation_id&quot;: &quot;…&quot;}
+→ {&quot;status&quot;: &quot;answered&quot;, &quot;resolved_query&quot;: &quot;What was Apple's revenue for FY2023?&quot;, &quot;ticker&quot;: &quot;AAPL&quot;, &quot;year&quot;: 2023, &quot;result&quot;: {…}}
+</code></pre>
+<h3>When the filings can't answer</h3>
+<table>
+<thead>
+<tr>
+  <th>Situation</th>
+  <th><code>coverage.reason</code></th>
+  <th>Example reply</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Company with no filings</td>
+  <td><code>company_not_in_filings</code></td>
+  <td>&quot;I don't have filings for Exxon Mobil, so I can't answer this from my documents. Similar companies I do have: Chevron. Which company should I use instead?&quot;</td>
+</tr>
+<tr>
+  <td>One company in a comparison has no filings</td>
+  <td><code>company_not_in_filings</code></td>
+  <td>&quot;I don't have filings for Reliance Industries, so I can't make this comparison. I can answer for NVIDIA alone. Which company should I compare with NVIDIA instead?&quot; The first option is &quot;NVIDIA only&quot;</td>
+</tr>
+<tr>
+  <td>Year not in the filings</td>
+  <td><code>year_not_in_filings</code></td>
+  <td>&quot;FY2027 is not in the filings I have; the latest is FY2026. Which fiscal year for Microsoft?&quot;</td>
+</tr>
+<tr>
+  <td>Measure a bank doesn't report</td>
+  <td><code>metric_not_applicable</code></td>
+  <td>&quot;JPMorgan Chase doesn't report gross profit, because a bank's income statement has no such line. I won't calculate a substitute. I can give net revenue, net income or net interest income instead. Which measure?&quot;</td>
+</tr>
+</tbody>
+</table>
+<p><code>coverage</code> also holds <code>status</code> (<code>not_available</code>) and, depending on the reason, <code>missing</code>, <code>similar</code>, <code>available</code>, <code>metric</code>, <code>companies</code> and <code>alternatives</code>.</p>
+<ul>
+<li><strong>Sector map:</strong> similar companies come from <code>SECTORS</code> in <a href="../scripts/agents/financial_clarifier.py">financial_clarifier.py</a>, our own map for the 60 listed companies. Nothing is suggested for a company outside the map.</li>
+<li><strong>Banks:</strong> the rule covers JPMorgan, Bank of America, Wells Fargo, Citigroup, Goldman Sachs and Morgan Stanley, for gross profit, gross margin, operating income and operating margin. Filings for the first three have no XBRL value for these measures; the other three aren't downloaded yet. Visa and Mastercard aren't banks and do report operating income.</li>
+</ul>
+<p><strong>The agent makes the same decision.</strong> <code>continue</code>, <code>clarify: false</code> and <code>/chat/financial_report_qa</code> skip the questions, so <code>run_technique</code> checks again:</p>
+<table>
+<thead>
+<tr>
+  <th>Case</th>
+  <th><code>final_status</code></th>
+  <th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>The filings can't answer</td>
+  <td><code>not_available</code></td>
+  <td><code>answer</code> is the reply above, with <code>coverage</code>. Evidence is empty and <code>grounding.status</code> is <code>not_applicable</code></td>
+</tr>
+<tr>
+  <td>The answer cites a company the question didn't ask about, or a chunk it can't verify</td>
+  <td><code>not_grounded</code></td>
+  <td>The answer is withheld. <code>company_check</code> lists <code>expected_tickers</code> and <code>foreign_chunk_ids</code></td>
+</tr>
+<tr>
+  <td>Hosted LLM, answer verified by the critic (<code>agentic_graph</code> only)</td>
+  <td><code>answered</code> (or <code>pending_human_review</code>)</td>
+  <td>The model's own answer. <code>support_check.verdict</code> is <code>supported</code> and <code>grounding</code> has <code>method: llm_support_check</code>, <code>semantic_answer_verified: true</code></td>
+</tr>
+<tr>
+  <td>Hosted LLM, answer not verified, or a single-prompt technique</td>
+  <td><code>evidence_only</code></td>
+  <td>Cited excerpts instead of the model's prose (<code>grounding.method: source_excerpts</code>). Excerpts from other companies are removed first</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Agent fields in financial responses</strong> (<code>technique=agentic_graph</code>):</p>
+<ul>
+<li><code>support_check</code>: the critic's verdict (<code>supported</code>, <code>partially_supported</code>, <code>unsupported</code>, <code>unverified</code>), each claim with the judge's reason, and <code>numeric</code> (figures checked, figures missing from the cited chunks). <code>RAG_SUPPORT_CHECK=0</code> turns it off.</li>
+<li><code>agent_run</code>: the node path, steps and step budget, every tool call (<code>coverage_lookup</code>, <code>text_search</code>, <code>visual_search</code>, <code>calculator</code>), retrieval attempts, repairs and calculations.</li>
+<li><code>plan</code>: the planner's proposed tools, the tools that ran, the company × year targets, and any rule adjustments.</li>
+</ul>
+<p>See <a href="agent_flows.html">agent_flows.md</a> for how these are produced.</p>
+<p>Guard refusals still win: a refused request stays <code>refused</code>.</p>
+<p><strong>Known limits:</strong></p>
+<ul>
+<li><strong>Name detection uses rules.</strong> A capitalised name after &quot;of&quot;, &quot;did&quot; and similar words counts as a company, so &quot;What did Tim Cook say?&quot; is reported as having no filings. A company named without any of these cues gets a plain &quot;Which company?&quot;.</li>
+<li><strong>The year check is for single figures.</strong> It runs on a figure question about one company and one year, because a year in a longer question may not be a fiscal year.</li>
+<li><strong>Apple on EDGAR.</strong> Apple counts as covered through its AnnualReports.com PDFs, so a question about its EDGAR ARS specifically (FIN-073) isn't declined by this check.</li>
+<li><strong>Financial agent only.</strong> <code>/multimodal/{domain}/chat</code> doesn't run these checks.</li>
+<li><strong>Coverage comes from the PDF manifests.</strong> With no manifests the check decides nothing. If a company is added to the corpus, add it to <code>NAMES</code>, <code>ALIASES</code> and <code>SECTORS</code>; a test fails if a corpus company has no entry.</li>
+</ul>
+<h2>Retrieval requests</h2>
+<p>Retrieval endpoints accept a JSON body with a required <code>query</code> (1–4000 characters) and optional <code>embedding_provider</code> (<code>hashing</code> or <code>hosted</code>), <code>hash_dimensions</code> (32–4096), <code>top_k</code> (1–20), <code>dense_top_k</code> and <code>bm25_top_k</code> (1–100), <code>source_type</code>, <code>enable_langsmith</code>, and <code>langsmith_project</code>.</p>
+<p>Financial retrieval also accepts <code>retrieval_mode</code> (<code>dense</code> or <code>hybrid</code>), <code>ticker</code>, and <code>year</code>. Non-financial domains use hybrid retrieval.</p>
+<p>Successful retrieval responses contain <code>domain</code>, <code>query</code>, <code>langsmith</code>, <code>count</code>, and an <code>evidence</code> array. Evidence fields may include <code>chunk_id</code>, <code>title</code>, <code>source_type</code>, <code>ticker</code>, <code>year</code>, <code>page</code>, <code>source_url</code>, <code>image_path</code>, <code>rank</code>, <code>score</code>, and <code>preview</code>; which fields are present depends on the domain and source.</p>
+<h2>Responses</h2>
+<p>Chat responses include the domain and final status, and may include the answer, an <code>explanation</code>, <code>grounding</code> status, citation checks, evidence previews, guardrail decisions, human-review information, orchestration metadata, elapsed time, and LangSmith tracing status. The API only returns a generated answer when there is retrieved evidence and citation validation reports cited chunk IDs that belong to that evidence. Otherwise, it withholds the generated answer (<code>answer: null</code>, <code>final_status: &quot;not_grounded&quot;</code>) and explains the reason. A guardrail refusal is marked <code>not_applicable</code> for answer grounding because no generated answer is being returned.</p>
+<p>Financial chat can also return <code>final_status</code> <code>not_available</code> with <code>coverage</code>, and <code>company_check</code> when citations were checked against the companies asked about. See <a href="#when-the-filings-cant-answer">When the filings can't answer</a>.</p>
+<p>The <code>grounding</code> object reports <code>status</code> (<code>grounded</code>, <code>not_grounded</code>, or <code>not_applicable</code>), evidence count, cited chunk IDs, and a reason. This is a citation/evidence consistency check, not a guarantee that every factual claim is entailed by its cited passage or is factually correct. The explanation does not expose hidden chain-of-thought.</p>
+<p><code>GET /health</code> returns <code>status</code>, <code>service</code>, and <code>domains</code>. <code>GET /domains</code> returns a one-item <code>domains</code> array for <code>financial_report_qa</code> with its display name, description and default query.</p>
+<h2>Errors and rate limits</h2>
+<p>Errors use a consistent JSON shape:</p>
+<pre><code class="language-json">{
+  &quot;error&quot;: &quot;validation_error&quot;,
+  &quot;message&quot;: &quot;Request validation failed.&quot;,
+  &quot;details&quot;: [
+    {
+      &quot;field&quot;: &quot;body.query&quot;,
+      &quot;message&quot;: &quot;String should have at least 1 character&quot;,
+      &quot;type&quot;: &quot;string_too_short&quot;
+    }
+  ],
+  &quot;request_id&quot;: &quot;12345678-1234-5678-1234-567812345678&quot;
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Status</th>
+  <th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>404</code></td>
+  <td>Unknown domain includes a link to <code>GET /domains</code>; unknown routes include a link to the API docs.</td>
+</tr>
+<tr>
+  <td><code>405</code></td>
+  <td>HTTP method is not supported for the endpoint; the response includes the <code>Allow</code> header.</td>
+</tr>
+<tr>
+  <td><code>422</code></td>
+  <td>Request body or parameter validation failed; <code>details</code> identifies invalid fields.</td>
+</tr>
+<tr>
+  <td><code>429</code></td>
+  <td>Rate limit exceeded; response includes the configured limit and a <code>Retry-After</code> header.</td>
+</tr>
+<tr>
+  <td><code>500</code></td>
+  <td>Unexpected server error. Internal exception details are logged by the server and are not returned to clients.</td>
+</tr>
+</tbody>
+</table>
+<p>Error responses include the request's <code>request_id</code>, which also appears in the <code>X-Request-ID</code> response header and can be used to find the corresponding server log.</p>
+<p>The API allows 60 requests per minute per client IP across all routes. The current limiter is in-memory and per application process. Multi-worker or replicated deployments need a shared rate-limit store to enforce a unified limit. Client identity uses the direct peer address; configure trusted proxy handling at the deployment boundary when running behind a reverse proxy.</p>
+<h2>LangSmith tracing</h2>
+<p>Set <code>LANGSMITH_API_KEY</code> (or <code>LANGCHAIN_API_KEY</code>) and either pass <code>&quot;enable_langsmith&quot;: true</code> or set <code>LANGSMITH_TRACING=true</code>. <code>langsmith_project</code> can override the default project name. If tracing is requested without credentials, the response reports tracing as disabled with a reason.</p>
+<h2>Request logging and trace correlation</h2>
+<p>The API logs one completion event per request with its request ID, HTTP method, path, response status, and elapsed milliseconds. Client IP addresses, request bodies, query text, authorization data, and response content are intentionally excluded from access logs. Server-side unexpected exceptions are logged with stack traces; clients receive only the sanitized <code>500</code> error.</p>
+<p>Every response includes an <code>X-Request-ID</code> header. A valid UUID from the incoming <code>X-Request-ID</code> header is reused; missing or invalid values are replaced with a generated UUID. When LangSmith tracing is enabled, that same ID is attached to the trace metadata so an API log event can be correlated with its LangSmith run. The API also logs whether LangSmith tracing was enabled and the selected project (never credentials).</p>
+<h2>Mutual fund routes</h2>
+<p>Added 14 November 2026. Read-only lookups over the loaded SEC N-PORT data (<code>RAG_HOME/indexes/mutual_fund/</code>, see <a href="annual_report_rag_structure.html">annual_report_rag_structure.md</a> §13). They are covered by the same API key and rate limit as every route, and answer <strong>404</strong> with <code>&quot;No mutual fund data is loaded&quot;</code> until <code>nport_mutual_fund load</code> has run. Questions about funds go through the chat routes instead (router <code>fund</code> route, <a href="agent_flows.html">agent_flows.md</a> §7c).</p>
+<table>
+<thead>
+<tr>
+  <th>Route</th>
+  <th>Parameters</th>
+  <th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>GET /mutual_fund/funds</code></td>
+  <td>—</td>
+  <td><code>count</code>, <code>funds</code>: series ID, name, family, registrant, CIK and each filing (accession, holdings date, net assets, filing date)</td>
+</tr>
+<tr>
+  <td><code>GET /mutual_fund/holdings</code></td>
+  <td><code>series_id</code> (required), <code>year</code> (holdings year, default latest), <code>limit</code> (1–500, default 25)</td>
+  <td><code>filing</code>, <code>coverage</code> (equity share of net assets, corpus companies and their share, by mapping method), <code>holdings</code> (rank, issuer, corpus ticker, % of net assets, USD value, share classes summed, mapping method), <code>sector_mix</code></td>
+</tr>
+<tr>
+  <td><code>GET /mutual_fund/holders/{ticker}</code></td>
+  <td><code>limit</code> (1–200, default 25)</td>
+  <td><code>ticker</code>, <code>company</code>, <code>holders</code>: each loaded fund's latest weight and value; 404 for a ticker outside the corpus</td>
+</tr>
+<tr>
+  <td><code>GET /mutual_fund/search</code></td>
+  <td><code>q</code> (2–300 characters), <code>top_k</code> (1–10, default 3)</td>
+  <td><code>hits</code>: fund cards with <code>series_id</code>, <code>series_name</code>, <code>period_end</code>, <code>accession</code>, <code>score</code> (cosine similarity) and the card text</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-powershell">Invoke-RestMethod &quot;http://127.0.0.1:8000/mutual_fund/funds&quot;
+Invoke-RestMethod &quot;http://127.0.0.1:8000/mutual_fund/holdings?series_id=S000002839&amp;limit=5&quot;
+Invoke-RestMethod &quot;http://127.0.0.1:8000/mutual_fund/holders/NVDA&quot;
+Invoke-RestMethod &quot;http://127.0.0.1:8000/mutual_fund/search?q=Vanguard%20value%20stocks%20fund&quot;
+</code></pre>
+<h3>Fund questions through chat</h3>
+<pre><code class="language-json">{
+  &quot;query&quot;: &quot;How did revenue of the Vanguard Value Index Fund's top 10 holdings grow?&quot;,
+  &quot;technique&quot;: &quot;router&quot;,
+  &quot;llm_provider&quot;: &quot;hosted&quot;
+}
+</code></pre>
+<p>The response's <code>route.route</code> is <code>fund</code> and <code>mutual_fund</code> holds the table the answer was written from:</p>
+<table>
+<thead>
+<tr>
+  <th>Field</th>
+  <th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>kind</code></td>
+  <td><code>top_holdings</code>, <code>holders</code>, <code>exposure</code>, <code>sector_mix</code>, <code>facts</code>, <code>flows</code>, <code>returns</code>, <code>holdings_growth</code> or <code>holdings_text</code></td>
+</tr>
+<tr>
+  <td><code>fund</code>, <code>series_id</code>, <code>accession</code>, <code>period_end</code>, <code>filing_date</code>, <code>net_assets</code></td>
+  <td>The filing the rows come from (<code>holders</code>: <code>ticker</code>, <code>company</code> instead)</td>
+</tr>
+<tr>
+  <td><code>rows</code>, <code>sector_mix</code></td>
+  <td>What the UI shows as tables</td>
+</tr>
+<tr>
+  <td><code>coverage</code></td>
+  <td>Equity share, corpus companies and their share of net assets</td>
+</tr>
+<tr>
+  <td><code>companies</code></td>
+  <td>Linked questions: each holding's weight, annual-report fiscal year, verified figures (value, chunk, <code>method</code> label or llm) and growth</td>
+</tr>
+<tr>
+  <td><code>weighted_growth_pct</code>, <code>covered_weight</code>, <code>asked_weight</code>, <code>coverage_share</code></td>
+  <td>Weighted growth over the covered holdings and how much of the weight asked about it covers</td>
+</tr>
+<tr>
+  <td><code>excluded</code></td>
+  <td>Holdings not used and why (not in the corpus, no indexed report filed by the holdings date, figure not verified, same figure read for both years)</td>
+</tr>
+</tbody>
+</table>
+<p>Evidence rows have IDs <code>nport_&lt;accession digits&gt;_&lt;row&gt;</code>; citations to them validate like annual-report chunk IDs. Statuses: <code>answered</code>; <code>pending_human_review</code> (for example <code>low_fund_coverage</code>); <code>not_available</code> with the reason (no fund data, fund not loaded, several funds match: &quot;which Vanguard fund? Loaded: ...&quot;); <code>refused</code> for advice wording. On <code>/conversation</code>, a fund question is passed straight to the agents (<code>clarifier: &quot;passthrough&quot;</code>).</p>
+</body></html>

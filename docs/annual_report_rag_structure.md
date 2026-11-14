@@ -2,7 +2,9 @@
 
 Updated 13 November 2026. How the plan in [annual_report_corpus_plan.html](annual_report_corpus_plan.html) becomes a searchable index that the financial agents and the API answer from. The plan is 1,004 Form ARS PDFs from 281 companies in 13 sectors (11.3 GB), or the 509-filing `min500` preset.
 
-This page covers the stages, both pipelines' flows (ingestion and query), the collections and their metadata, the models, the evaluation metrics, where everything lives, serving and commands.
+This page covers the stages, both pipelines' flows (ingestion and query), the collections and their metadata, the models, the evaluation metrics, where everything lives, serving and commands. Section 13 adds the mutual fund data (SEC N-PORT holdings) that sits beside this index and links to it by company; section 14 the switch of Pipeline 1 to bge-small-en-v1.5 embeddings.
+
+Updated 14 November 2026: mutual fund stores (§13), Pipeline 1 embeddings (§14), collections table (§5.1) and models (§6).
 
 There are **two pipelines over the same corpus**:
 
@@ -184,7 +186,9 @@ What happens at each step:
 
 | Store | Collection / file | Vectors and index | Where it lives | What one record is |
 |---|---|---|---|---|
-| Chroma (Pipeline 1) | `annual_reports_vlm` | MiniLM 384-d, cosine, HNSW (`hnsw:space=cosine`) | `<RAG_HOME>/indexes/chroma_db/chroma/` | one chunk: text, table piece or page description |
+| Chroma (Pipeline 1) | `annual_reports_vlm` | 384-d, cosine, HNSW (`hnsw:space=cosine`). New indexes: `bge-small-en-v1.5` (local or the shared API, §14); the index built so far: MiniLM (a bge copy is in `chroma_db_bge`) | `<RAG_HOME>/indexes/chroma_db/chroma/` | one chunk: text, table piece or page description |
+| Chroma (mutual funds) | `fund_cards_mutual_fund` | `bge-small-en-v1.5` 384-d, cosine | `<RAG_HOME>/indexes/mutual_fund/chroma_mutual_fund/` (its own folder) | one card per fund and N-PORT filing (§13) |
+| SQLite (mutual funds) | `nport_mutual_fund.sqlite3`: `funds`, `filings`, `flows`, `monthly_returns`, `holdings`, `security_map`, `holding_link`, view `fund_exposure`, `company_figures` | — (exact SQL, not vectors) | `<RAG_HOME>/indexes/mutual_fund/` | one fund, filing, holding, mapping or cached company figure (§13) |
 | SQLite FTS5 (Pipeline 1) | `chroma/bm25.sqlite3`, table `chunks(terms, chunk_id, doc_id, ticker, fiscal_year, sector_slug)` (only `terms` is indexed) | BM25 over number-aware terms (`tokenchars '$,.%'`) | next to Chroma | one chunk's terms |
 | Qdrant (Pipeline 2) | `annual_reports_text` | `dense`: MiniLM 384-d, cosine, HNSW m=16 / ef_construct=100, in RAM. `bm25`: sparse, `Modifier.IDF`; term ids are the first 4 bytes of each term's SHA-256 (`hashing.term_id`) | Qdrant storage; payloads on disk | one chunk |
 | Qdrant (Pipeline 2) | `annual_reports_visual` | `colpali`: 1,030 × 128 fp16 multivector, MaxSim, on disk, no HNSW (m=0). `mean_rows` and `mean_cols`: 38 × 128 fp16 multivectors, MaxSim, HNSW in RAM. `summary`: MiniLM 384-d of the page text | Qdrant storage; payloads on disk | one table, chart or image page |
@@ -219,7 +223,8 @@ The agent receives these as evidence keys (`EVIDENCE_KEYS`):
 
 | Task | Model | Where it runs | Used by |
 |---|---|---|---|
-| Text embeddings (chunks, page summaries) | `sentence-transformers/all-MiniLM-L6-v2` (384-d) | CPU or GPU | both pipelines |
+| Text embeddings (chunks, page summaries) | Pipeline 1: `BAAI/bge-small-en-v1.5` (384-d, default since 14 November 2026; locally or through the shared Track B embedding API, same vectors). Pipeline 2: `sentence-transformers/all-MiniLM-L6-v2` (384-d) | CPU or GPU, or the shared API | both pipelines |
+| Fund cards | `BAAI/bge-small-en-v1.5` (local or shared API) | CPU | mutual funds (§13) |
 | Page images → visual vectors | `vidore/colpali-v1.3-hf` through `transformers` (128-d multivectors, 1,030 per page) | GPU (T4 or better); very slow on CPU | Pipeline 2, visual stage |
 | Page transcription and search descriptions | `Qwen/Qwen3-VL-4B-Instruct` (default; `-2B` for speed, `-8B` on L4/A100), in-process with `transformers` (4-bit with bitsandbytes on CUDA), or any OpenAI-compatible endpoint (`--qwen-reader openai`: vLLM, llama.cpp, Ollama) | GPU; about 50–100 s per page on CPU (measured with 2B) | Pipeline 1, `qwen3VL` / `paidVL` pages and descriptions |
 | Paid fallback reader | any OpenAI-compatible vision model (`RAG_PAID_VISION_API_BASE` / `_MODEL` / `_API_KEY`) | hosted API | Pipeline 1, `paidVL` pages with more than 10% unconfirmed figures; off unless configured, and pending mentor approval ([chart_reading.md](chart_reading.md)) |
@@ -231,7 +236,7 @@ The agent receives these as evidence keys (`EVIDENCE_KEYS`):
 
 | Step | Model or method | Pipeline 1 (Chroma) | Pipeline 2 (Qdrant) |
 |---|---|---|---|
-| Query embedding | `all-MiniLM-L6-v2` (must match the index) | ✓ | ✓ |
+| Query embedding | the index's recorded model (must match): bge-small (Pipeline 1, new) or MiniLM (Pipeline 2, and the Chroma index built so far) | ✓ | ✓ |
 | Lexical search | BM25 over number-aware terms (`391,035`, `391035` and `$6.08` kept whole) | SQLite FTS5 `bm25()` | Qdrant sparse vectors with IDF |
 | Fusion | Reciprocal Rank Fusion, k = 60 (`scripts/rag/hybrid.py`) | ✓ | ✓ |
 | Visual search | ColPali v1.3 query encoder; pooled prefetch, then exact MaxSim | — | with `RAG_FIN_VISUAL=1` (or `auto`) |
@@ -344,7 +349,7 @@ bin/qdrant, qdrant.log, logs/         Qdrant server binary; API and Streamlit lo
 
 Smoke runs (`SMOKE_TEST = True`) write to `chroma_db_smoke` / `qdrant_db_smoke` (with embedded Qdrant) and never touch the real index.
 
-**On your PC:** `indexes/rag_home/indexes/chroma_db` and `indexes/rag_home/indexes/qdrant_db` (embedded Qdrant). **GCP:** the same layout on the VM's persistent disk, copied from `gs://$RAG_GCS_BUCKET`.
+**On your PC:** `indexes/rag_home/indexes/chroma_db` and `indexes/rag_home/indexes/qdrant_db` (embedded Qdrant), plus `indexes/rag_home/indexes/mutual_fund/` (fund database, fund cards and the downloaded N-PORT XML, §13). **GCP:** the same layout on the VM's persistent disk, copied from `gs://$RAG_GCS_BUCKET`.
 
 ## 9. Serving
 
@@ -407,3 +412,58 @@ The page mix was measured on 100 local filings and scaled to about 147,600 pages
 - **Mixed pages:** a text page with a small embedded chart is read through its text layer only, so values that exist only as pixels are missed.
 - **Evaluation coverage:** the scoreboard above is from one filing (Chevron 2024). The frozen 86-item set hasn't been run against the `min500` indexes yet.
 - **Not implemented** from [financial_rag_final_design.md](financial_rag_final_design.md): the 10-K HTML/iXBRL text source and the facts DB. Numbers come from the ARS PDFs only.
+
+## 13. Mutual fund data beside the annual-report index
+
+Added 14 November 2026. Design and measurements: [mutual_fund_rag_design.md](mutual_fund_rag_design.md). Every file of this layer has `_mutual_fund` in its name.
+
+**What it is.** US mutual funds and ETFs report their full portfolio on SEC Form N-PORT. A fund's holdings are mapped to the corpus companies, so a question can go from a fund to the annual reports of the companies it holds. The data is exact numbers that are summed and ranked, so it is stored in **SQLite**, not embedded; only a short **fund card** per fund and filing is embedded, so search can find a fund by the way people name it.
+
+```
+EDGAR NPORT-P XML ──download_mutual_fund──▶ raw_mutual_fund/ ──nport_mutual_fund load──▶ nport_mutual_fund.sqlite3 ──cards_mutual_fund build──▶ Chroma fund_cards_mutual_fund
+(or the quarterly bulk ZIP, 440 MB)          + manifest_mutual_fund.jsonl                     holdings → corpus tickers               (bge-small-en-v1.5)
+                                                                                                │
+                                                       fund agent (router `fund` route) ◀───────┴──── links each holding to its company's annual report in annual_reports_vlm
+```
+
+| Stage | Code | What it does |
+|---|---|---|
+| Download | `scripts/downloads/download_mutual_fund.py` (`latest`, `bulk`) | The newest `NPORT-P` of each fund in `configs/funds_mutual_fund.json` (EDGAR, `SEC_USER_AGENT` contact), or one quarterly ZIP |
+| Load | `scripts/rag/nport_mutual_fund.py load` | XML or ZIP (streamed) into the tables; re-loading a filing replaces it |
+| Map | same, `map_holdings` | Holding → corpus ticker by reported ticker, issuer CUSIP-6, ISIN, LEI, then cleaned name (equity of corporate issuers only). Identifiers matched once are learned. Unmatched holdings stay unmatched |
+| Cards | `scripts/rag/cards_mutual_fund.py build` | One card per filing (fund, date, net assets, top 10, sector mix, corpus coverage), embedded with bge-small into `fund_cards_mutual_fund` |
+| Check | `nport_mutual_fund status`, `cards_mutual_fund search "..."` | Funds, periods, coverage by mapping method; nearest cards |
+
+**Holdings date.** `filings.period_end` is the date the holdings are reported for (`REPORT_DATE` in the bulk data, `repPdDate` in the XML). `REPORT_ENDING_PERIOD` / `repPdEnd` is the fund's fiscal year end, kept as `fiscal_year_end`.
+
+**Link to the annual reports.** A question about the holdings' companies uses, for each company, its latest annual report filed on or before the holdings date (manifest `filing_date`) that is indexed: no look-ahead, and never a filing the index doesn't hold. Figures are read from that filing (statement row in code, LLM last) and cached in `company_figures` with their chunk ID.
+
+**Loaded now** (holdings as of 30 June 2026):
+
+| Fund | Corpus companies held | Share of net assets |
+|---|---|---|
+| Vanguard 500 Index | 240 | 86.7% |
+| Vanguard Growth Index | 73 | 90.1% |
+| Vanguard Value Index | 176 | 82.6% |
+| Vanguard Total Stock Market Index | 274 | 77.3% |
+
+With 52 companies indexed today, most of the largest holdings' annual reports are not yet searchable; questions about them list those companies as not used.
+
+```bash
+export SEC_USER_AGENT="capstone-research you@example.com"
+python -m scripts.downloads.download_mutual_fund latest                        # configs/funds_mutual_fund.json
+python -m scripts.rag.nport_mutual_fund load --xml indexes/rag_home/indexes/mutual_fund/raw_mutual_fund
+python -m scripts.rag.cards_mutual_fund build                                   # bge-small, local; --embedding-provider hosted for the shared API
+python -m scripts.rag.nport_mutual_fund status
+# many funds: the quarterly ZIP
+python -m scripts.downloads.download_mutual_fund bulk --quarter 2026q3
+python -m scripts.rag.nport_mutual_fund load --tsv-zip indexes/rag_home/indexes/mutual_fund/raw_mutual_fund/2026q3_nport_mutual_fund.zip --top 50
+```
+
+**Isolation.** The fund code never opens `chroma_db`; the annual-report collections, their chunk schema and `tests/test_chunk_schema.py` are unchanged. Without `nport_mutual_fund.sqlite3` the API and agents behave exactly as before.
+
+## 14. Pipeline 1 embeddings: bge-small-en-v1.5
+
+Since 14 November 2026 Pipeline 1 embeds with `BAAI/bge-small-en-v1.5` by default: locally (`--embedding-provider local`) or through the shared Track B embedding API (`hosted`, needs `EMBEDDING_API_KEY` and the API's CA; see [embedding_key.md](embedding_key.md)). The API serves the same model and returns the same vectors (cosine 1.0), so an index built one way is continued or served the other way without redoing filings. `RAG_EMBEDDING_PROVIDER` picks the provider at serving time (the server and GCP profiles prefer `hosted`), with a fallback to the other if it can't start.
+
+The 180 filings indexed before the switch were embedded with MiniLM and keep that model: resume them with `--embedding-model sentence-transformers/all-MiniLM-L6-v2`. `financial_ingest_chroma_db reembed --from-root <minilm index> --root <new index>` copies the chunks, text, metadata and BM25 index and re-embeds only the vectors (resumable, one filing at a time); a bge copy is being built at `indexes/rag_home/indexes/chroma_db_bge`. To serve it, point `RAG_VLM_DIR` at that folder (or swap the folder names) and restart the API. Pipeline 2 still defaults to MiniLM.

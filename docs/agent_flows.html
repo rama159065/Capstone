@@ -9,10 +9,57 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 <h1>Agent Flows: Calls, Routing and Execution</h1>
 <p>How a question travels from Streamlit to an answer: which agents and tools run, which steps call the LLM, how LangGraph decides each branch, and what the response records. Code: <a href="../scripts/agents/financial_prompting_agent.py">financial_prompting_agent.py</a>, <a href="../scripts/agents/financial_tools.py">financial_tools.py</a>, <a href="../scripts/agents/financial_clarifier.py">financial_clarifier.py</a>, <a href="../scripts/api/api_app.py">api_app.py</a>.</p>
 <p><strong>In short</strong></p>
-<ul><li>Every flow is a <strong>LangGraph state machine compiled in code</strong>. The LLM never picks the next node. It works <em>inside</em> three nodes (plain-text check, planner, answer) and its output is validated before anything uses it.</li><li>The financial graph routes <strong>per request</strong>: the planner's tools decide whether the coverage check, ColPali search and calculator run; a comparison becomes one filtered search per company and year; a company with no evidence gets <strong>one broadened retrieval retry</strong>; an answer whose citations fail, or whose claims or figures the cited evidence doesn't state, gets <strong>one repair</strong> carrying the critic's feedback.</li><li>The critic is two checks: citation IDs must be retrieved IDs, and a <strong>support check</strong> (every figure must appear in a cited chunk; an LLM judge decides claim by claim). With a hosted LLM, the generated answer is shown only when both pass; otherwise the response falls back to cited excerpts.</li><li>Loops are <strong>budget-aware</strong>: a loop runs only if the rest of the run still fits <code>AGENT_MAX_STEPS</code> (default 10), so the cap shortens a run instead of failing it.</li><li><strong>Three agent flows share these guards, critic and governance</strong> (section 7a): <code>agentic_graph</code> (the Q&amp;A agent), <code>trend_graph</code> (multi-year trend agent) and <code>router</code> (a supervisor that sends each question to the Q&amp;A agent, the trend agent, a report handoff or a refusal). Streamlit uses <code>router</code> by default. Each flow is a <strong>multi-agent flow</strong>: input guard, supervisor/planner, executor, extractor, answer and critic agents hand work to each other inside one bounded graph (section 7b).</li><li>Each response carries <code>agent_run</code>: the node path, every tool call, retrieval attempts, repairs and calculations. Streamlit shows it under <strong>Agent run</strong>.</li></ul>
-<hr>
+<ul>
+<li>Every flow is a <strong>LangGraph state machine compiled in code</strong>. The LLM never picks the next node. It works <em>inside</em> three nodes (plain-text check, planner, answer) and its output is validated before anything uses it.</li>
+<li>The financial graph routes <strong>per request</strong>: the planner's tools decide whether the coverage check, ColPali search and calculator run; a comparison becomes one filtered search per company and year; a company with no evidence gets <strong>one broadened retrieval retry</strong>; an answer whose citations fail, or whose claims or figures the cited evidence doesn't state, gets <strong>one repair</strong> carrying the critic's feedback.</li>
+<li>The critic is two checks: citation IDs must be retrieved IDs, and a <strong>support check</strong> (every figure must appear in a cited chunk; an LLM judge decides claim by claim). With a hosted LLM, the generated answer is shown only when both pass; otherwise the response falls back to cited excerpts.</li>
+<li>Loops are <strong>budget-aware</strong>: a loop runs only if the rest of the run still fits <code>AGENT_MAX_STEPS</code> (default 10), so the cap shortens a run instead of failing it.</li>
+<li><strong>Five agent flows share these guards, critic and governance</strong> (sections 7a and 7c): <code>agentic_graph</code> (the Q&amp;A agent), <code>trend_graph</code> (multi-year trend agent), <code>sector_trend_graph</code> (one measure across a sector), <code>fund_graph</code> (mutual fund holdings, linked to the holdings' annual reports) and <code>router</code> (a supervisor that sends each question to one of them, a report handoff or a refusal). The fund route exists only when fund data is loaded. Streamlit uses <code>router</code> by default. Each flow is a <strong>multi-agent flow</strong>: input guard, supervisor/planner, executor, extractor, answer and critic agents hand work to each other inside one bounded graph (section 7b).</li>
+<li>Each response carries <code>agent_run</code>: the node path, every tool call, retrieval attempts, repairs and calculations. Streamlit shows it under <strong>Agent run</strong>.</li>
+</ul>
+<hr />
 <h2>1. Entry points</h2>
-<table><thead><tr><th>Route</th><th>Who calls it</th><th>What runs</th></tr></thead><tbody><tr><td><code>POST /conversation/financial_report_qa</code></td><td>Streamlit financial chat</td><td>Clarifier, then the financial agent graph (or the report pipeline)</td></tr><tr><td><code>POST /chat/financial_report_qa</code></td><td>API clients, evaluation</td><td>An agent flow (<code>technique=agentic_graph</code>, <code>trend_graph</code> or <code>router</code>) or a single-prompt technique</td></tr><tr><td><code>POST /retrieve/...</code></td><td>Evidence browsing</td><td>Retrieval only, no agents, no LLM</td></tr><tr><td><code>POST /multimodal/financial_report_qa/chat</code></td><td>Local multimodal profile</td><td>Input guard, retrieval, fail-closed <code>safe_answer</code> (not LangGraph)</td></tr><tr><td><code>generate_financial_report</code></td><td>Clarifier's "Full financial report"</td><td>Deterministic pipeline; numbers come only from the PDF</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Route</th>
+  <th>Who calls it</th>
+  <th>What runs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>POST /conversation/financial_report_qa</code></td>
+  <td>Streamlit financial chat</td>
+  <td>Clarifier, then the financial agent graph (or the report pipeline)</td>
+</tr>
+<tr>
+  <td><code>POST /chat/financial_report_qa</code></td>
+  <td>API clients, evaluation</td>
+  <td>An agent flow (<code>technique=agentic_graph</code>, <code>trend_graph</code>, <code>sector_trend_graph</code>, <code>fund_graph</code> or <code>router</code>) or a single-prompt technique</td>
+</tr>
+<tr>
+  <td><code>GET /mutual_fund/...</code></td>
+  <td>API clients, checks</td>
+  <td>Loaded funds, holdings, holders, fund-card search: SQL and vector lookups only, no agents (section 7c)</td>
+</tr>
+<tr>
+  <td><code>POST /retrieve/...</code></td>
+  <td>Evidence browsing</td>
+  <td>Retrieval only, no agents, no LLM</td>
+</tr>
+<tr>
+  <td><code>POST /multimodal/financial_report_qa/chat</code></td>
+  <td>Local multimodal profile</td>
+  <td>Input guard, retrieval, fail-closed <code>safe_answer</code> (not LangGraph)</td>
+</tr>
+<tr>
+  <td><code>generate_financial_report</code></td>
+  <td>Clarifier's &quot;Full financial report&quot;</td>
+  <td>Deterministic pipeline; numbers come only from the PDF</td>
+</tr>
+</tbody>
+</table>
 <h2>2. End-to-end request path (financial conversation)</h2>
 <pre class="mermaid">sequenceDiagram
     participant U as Streamlit
@@ -43,7 +90,54 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
         M-&gt;&gt;M: grounding policy (citations must match retrieved chunk IDs)
         M--&gt;&gt;U: answer + citations + evidence + agent_run
     end</pre>
-<table><thead><tr><th>Stage</th><th>Where</th><th>Decides</th><th>LLM?</th></tr></thead><tbody><tr><td>Middleware</td><td><code>api_app</code></td><td><code>X-Request-ID</code>, per-IP rate limit (429), API key (401)</td><td>No</td></tr><tr><td>Clarifier</td><td><code>financial_clarifier.Clarifier.step</code></td><td>Company, years, metric, intent; asks up to 3 follow-up questions; refuses companies or years outside the index</td><td>No</td></tr><tr><td>Answer cache</td><td><code>AnswerCache</code></td><td>Reuses an identical request's answer; never caches errors or <code>step_limit</code></td><td>No</td></tr><tr><td>Agent graph</td><td><code>agentic_graph_prompt</code></td><td>Sections 3–5</td><td>3 nodes</td></tr><tr><td>Post-graph checks</td><td><code>run_technique</code></td><td>Coverage (<code>not_available</code>), company scope, hosted-LLM excerpt rule</td><td>No</td></tr><tr><td>Grounding policy</td><td><code>apply_grounding_policy</code></td><td>Withholds an answer whose citations don't match retrieved chunk IDs</td><td>No</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Stage</th>
+  <th>Where</th>
+  <th>Decides</th>
+  <th>LLM?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Middleware</td>
+  <td><code>api_app</code></td>
+  <td><code>X-Request-ID</code>, per-IP rate limit (429), API key (401)</td>
+  <td>No</td>
+</tr>
+<tr>
+  <td>Clarifier</td>
+  <td><code>financial_clarifier.Clarifier.step</code></td>
+  <td>Company, years, metric, intent; asks up to 3 follow-up questions; refuses companies or years outside the index</td>
+  <td>No</td>
+</tr>
+<tr>
+  <td>Answer cache</td>
+  <td><code>AnswerCache</code></td>
+  <td>Reuses an identical request's answer; never caches errors or <code>step_limit</code></td>
+  <td>No</td>
+</tr>
+<tr>
+  <td>Agent graph</td>
+  <td><code>agentic_graph_prompt</code></td>
+  <td>Sections 3–5</td>
+  <td>3 nodes</td>
+</tr>
+<tr>
+  <td>Post-graph checks</td>
+  <td><code>run_technique</code></td>
+  <td>Coverage (<code>not_available</code>), company scope, hosted-LLM excerpt rule</td>
+  <td>No</td>
+</tr>
+<tr>
+  <td>Grounding policy</td>
+  <td><code>apply_grounding_policy</code></td>
+  <td>Withholds an answer whose citations don't match retrieved chunk IDs</td>
+  <td>No</td>
+</tr>
+</tbody>
+</table>
 <h2>3. The financial agent graph</h2>
 <pre class="mermaid">flowchart TD
     S[security_step] --&gt;|blocked| CR
@@ -62,32 +156,378 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
     CR --&gt;|valid, or already repaired, or no budget| GV[governance_step]
     GV --&gt; E((END))</pre>
 <h3>Nodes</h3>
-<table><thead><tr><th>Node</th><th>Role</th><th>LLM?</th><th>Reads</th><th>Writes</th></tr></thead><tbody><tr><td><code>security_step</code></td><td>Input guard: prompt injection, code or tool abuse, length</td><td>No (regex)</td><td>query</td><td><code>security</code>, refusal</td></tr><tr><td><code>plain_text_step</code></td><td>Is this a safe, plain-language finance question? Returns a cleaned query</td><td><strong>Yes</strong> (JSON)</td><td>query</td><td><code>plain_text</code>, refusal</td></tr><tr><td><code>plan_step</code></td><td><strong>Planner.</strong> The LLM proposes <code>intent</code>, <code>tools</code>, <code>needs_calculation</code>; <code>normalize_plan</code> validates it and splits targets</td><td><strong>Yes</strong> + rules</td><td>query, request ticker/year</td><td><code>plan</code></td></tr><tr><td><code>retrieve_step</code></td><td><strong>Executor.</strong> Runs the plan: <code>coverage_lookup</code>, then <code>text_search</code> (+ <code>visual_search</code>) per target. On a retry, only missing targets</td><td>No</td><td>plan, evidence check</td><td><code>evidence</code>, <code>tool_calls</code>, <code>retrieval_attempts</code></td></tr><tr><td><code>evidence_guard_step</code></td><td>Injection check on retrieved text; which targets found nothing</td><td>No</td><td>evidence</td><td><code>evidence_guard</code>, <code>evidence_check</code></td></tr><tr><td><code>answer_step</code></td><td>Answer only from evidence, citing chunk IDs; <code>CALC[...]</code> for arithmetic; on repair, gets the critic's feedback</td><td><strong>Yes</strong></td><td>evidence, plan, citation check</td><td><code>answer</code></td></tr><tr><td><code>calculator_step</code></td><td>Evaluates <code>CALC[...]</code> safely and checks each operand appears in the evidence</td><td>No</td><td>answer, evidence</td><td><code>answer</code>, <code>calculations</code></td></tr><tr><td><code>critic_step</code></td><td>(1) Every cited chunk ID must be in the retrieved evidence. (2) If so, the <strong>support check</strong>: every figure in the answer must appear in a cited chunk (code), and an LLM judge decides whether the cited text states each claim</td><td><strong>Yes</strong> (judge) + code</td><td>answer, evidence, calculations</td><td><code>citation_check</code>, <code>support_check</code>, <code>repair_count</code></td></tr><tr><td><code>governance_step</code></td><td>Output filter (allow/review/block), human-review triggers, unverified calculations</td><td>No</td><td>everything</td><td><code>output_filter</code>, <code>human_review</code>, final status</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Node</th>
+  <th>Role</th>
+  <th>LLM?</th>
+  <th>Reads</th>
+  <th>Writes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>security_step</code></td>
+  <td>Input guard: prompt injection, code or tool abuse, length</td>
+  <td>No (regex)</td>
+  <td>query</td>
+  <td><code>security</code>, refusal</td>
+</tr>
+<tr>
+  <td><code>plain_text_step</code></td>
+  <td>Is this a safe, plain-language finance question? Returns a cleaned query</td>
+  <td><strong>Yes</strong> (JSON)</td>
+  <td>query</td>
+  <td><code>plain_text</code>, refusal</td>
+</tr>
+<tr>
+  <td><code>plan_step</code></td>
+  <td><strong>Planner.</strong> The LLM proposes <code>intent</code>, <code>tools</code>, <code>needs_calculation</code>; <code>normalize_plan</code> validates it and splits targets</td>
+  <td><strong>Yes</strong> + rules</td>
+  <td>query, request ticker/year</td>
+  <td><code>plan</code></td>
+</tr>
+<tr>
+  <td><code>retrieve_step</code></td>
+  <td><strong>Executor.</strong> Runs the plan: <code>coverage_lookup</code>, then <code>text_search</code> (+ <code>visual_search</code>) per target. On a retry, only missing targets</td>
+  <td>No</td>
+  <td>plan, evidence check</td>
+  <td><code>evidence</code>, <code>tool_calls</code>, <code>retrieval_attempts</code></td>
+</tr>
+<tr>
+  <td><code>evidence_guard_step</code></td>
+  <td>Injection check on retrieved text; which targets found nothing</td>
+  <td>No</td>
+  <td>evidence</td>
+  <td><code>evidence_guard</code>, <code>evidence_check</code></td>
+</tr>
+<tr>
+  <td><code>answer_step</code></td>
+  <td>Answer only from evidence, citing chunk IDs; <code>CALC[...]</code> for arithmetic; on repair, gets the critic's feedback</td>
+  <td><strong>Yes</strong></td>
+  <td>evidence, plan, citation check</td>
+  <td><code>answer</code></td>
+</tr>
+<tr>
+  <td><code>calculator_step</code></td>
+  <td>Evaluates <code>CALC[...]</code> safely and checks each operand appears in the evidence</td>
+  <td>No</td>
+  <td>answer, evidence</td>
+  <td><code>answer</code>, <code>calculations</code></td>
+</tr>
+<tr>
+  <td><code>critic_step</code></td>
+  <td>(1) Every cited chunk ID must be in the retrieved evidence. (2) If so, the <strong>support check</strong>: every figure in the answer must appear in a cited chunk (code), and an LLM judge decides whether the cited text states each claim</td>
+  <td><strong>Yes</strong> (judge) + code</td>
+  <td>answer, evidence, calculations</td>
+  <td><code>citation_check</code>, <code>support_check</code>, <code>repair_count</code></td>
+</tr>
+<tr>
+  <td><code>governance_step</code></td>
+  <td>Output filter (allow/review/block), human-review triggers, unverified calculations</td>
+  <td>No</td>
+  <td>everything</td>
+  <td><code>output_filter</code>, <code>human_review</code>, final status</td>
+</tr>
+</tbody>
+</table>
 <h3>Routing decisions</h3>
 <p>Every branch is a Python function of the state. None asks the LLM.</p>
-<table><thead><tr><th>After</th><th>Function</th><th>Condition</th><th>Goes to</th></tr></thead><tbody><tr><td><code>security_step</code>, <code>plain_text_step</code></td><td><code>should_continue_after_security</code></td><td><code>final_status == &quot;refused&quot;</code></td><td><code>critic_step</code> (refusal is still recorded)</td></tr><tr><td><code>evidence_guard_step</code></td><td><code>after_evidence</code></td><td>refused, or no evidence and no retry possible</td><td><code>critic_step</code></td></tr><tr><td></td><td></td><td>a target found nothing, attempts &lt; 2, and <code>steps + 2 + tail &lt;= AGENT_MAX_STEPS</code></td><td><code>retrieve_step</code> (<strong>retry</strong>)</td></tr><tr><td></td><td></td><td>otherwise</td><td><code>answer_step</code></td></tr><tr><td><code>answer_step</code></td><td><code>after_answer</code></td><td><code>calculator</code> planned, answer contains <code>CALC[...]</code>, and <code>steps + 3 &lt;= AGENT_MAX_STEPS</code></td><td><code>calculator_step</code></td></tr><tr><td></td><td></td><td>otherwise (any leftover <code>CALC[...]</code> becomes "[not calculated]")</td><td><code>critic_step</code></td></tr><tr><td><code>critic_step</code></td><td><code>should_repair</code></td><td>citations invalid <strong>or</strong> support verdict not <code>supported</code>, no repair yet, and <code>steps + tail &lt;= AGENT_MAX_STEPS</code></td><td><code>answer_step</code> (<strong>repair</strong>, with the invalid IDs, unsupported claims and missing figures)</td></tr><tr><td></td><td></td><td>otherwise</td><td><code>governance_step</code></td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>After</th>
+  <th>Function</th>
+  <th>Condition</th>
+  <th>Goes to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>security_step</code>, <code>plain_text_step</code></td>
+  <td><code>should_continue_after_security</code></td>
+  <td><code>final_status == &quot;refused&quot;</code></td>
+  <td><code>critic_step</code> (refusal is still recorded)</td>
+</tr>
+<tr>
+  <td><code>evidence_guard_step</code></td>
+  <td><code>after_evidence</code></td>
+  <td>refused, or no evidence and no retry possible</td>
+  <td><code>critic_step</code></td>
+</tr>
+<tr>
+  <td></td>
+  <td></td>
+  <td>a target found nothing, attempts &lt; 2, and <code>steps + 2 + tail &lt;= AGENT_MAX_STEPS</code></td>
+  <td><code>retrieve_step</code> (<strong>retry</strong>)</td>
+</tr>
+<tr>
+  <td></td>
+  <td></td>
+  <td>otherwise</td>
+  <td><code>answer_step</code></td>
+</tr>
+<tr>
+  <td><code>answer_step</code></td>
+  <td><code>after_answer</code></td>
+  <td><code>calculator</code> planned, answer contains <code>CALC[...]</code>, and <code>steps + 3 &lt;= AGENT_MAX_STEPS</code></td>
+  <td><code>calculator_step</code></td>
+</tr>
+<tr>
+  <td></td>
+  <td></td>
+  <td>otherwise (any leftover <code>CALC[...]</code> becomes &quot;[not calculated]&quot;)</td>
+  <td><code>critic_step</code></td>
+</tr>
+<tr>
+  <td><code>critic_step</code></td>
+  <td><code>should_repair</code></td>
+  <td>citations invalid <strong>or</strong> support verdict not <code>supported</code>, no repair yet, and <code>steps + tail &lt;= AGENT_MAX_STEPS</code></td>
+  <td><code>answer_step</code> (<strong>repair</strong>, with the invalid IDs, unsupported claims and missing figures)</td>
+</tr>
+<tr>
+  <td></td>
+  <td></td>
+  <td>otherwise</td>
+  <td><code>governance_step</code></td>
+</tr>
+</tbody>
+</table>
 <p><code>tail</code> is what every run still needs after the decision: answer, critic, governance (3), plus the calculator when it is planned (4).</p>
 <h2>4. Tools and how the planner chooses them</h2>
-<table><thead><tr><th>Tool</th><th>Does</th><th>Runs when</th></tr></thead><tbody><tr><td><code>coverage_lookup</code></td><td>Checks the served index's company/year list (<code>ingest.sqlite3</code>) and skips targets it can't answer</td><td>The question names a company or year</td></tr><tr><td><code>text_search</code></td><td>Hybrid Qdrant search (dense MiniLM + BM25, RRF fusion, rerank) with ticker, year and sector filters</td><td>Always: every answer must cite text</td></tr><tr><td><code>visual_search</code></td><td>ColPali page search over chart, table and image pages, merged into the same ranking</td><td><code>RAG_FIN_VISUAL=1</code> (every question) or <code>auto</code> (planner or chart words); dropped when no ColPali index is served</td></tr><tr><td><code>calculator</code></td><td>Evaluates <code>CALC[...]</code> from the answer: numbers and <code>+ - * /</code> only, operands must appear in the evidence</td><td>Planner sets <code>needs_calculation</code>, or the question asks for growth, change, ratio, margin or comparison</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Tool</th>
+  <th>Does</th>
+  <th>Runs when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>coverage_lookup</code></td>
+  <td>Checks the served index's company/year list (<code>ingest.sqlite3</code>) and skips targets it can't answer</td>
+  <td>The question names a company or year</td>
+</tr>
+<tr>
+  <td><code>text_search</code></td>
+  <td>Hybrid search over the served index (dense vectors of the index's model, bge-small or MiniLM, + BM25, RRF fusion; cross-encoder rerank on Qdrant) with ticker, year and sector filters</td>
+  <td>Always: every answer must cite text</td>
+</tr>
+<tr>
+  <td><code>fund_search</code>, <code>fund_lookup</code>, <code>company_figures</code></td>
+  <td>Fund route only (section 7c): find the fund (names, then fund cards), fixed SQL over the N-PORT tables, cached verified company figures</td>
+  <td>The router chose <code>fund</code></td>
+</tr>
+<tr>
+  <td><code>visual_search</code></td>
+  <td>ColPali page search over chart, table and image pages, merged into the same ranking</td>
+  <td><code>RAG_FIN_VISUAL=1</code> (every question) or <code>auto</code> (planner or chart words); dropped when no ColPali index is served</td>
+</tr>
+<tr>
+  <td><code>calculator</code></td>
+  <td>Evaluates <code>CALC[...]</code> from the answer: numbers and <code>+ - * /</code> only, operands must appear in the evidence</td>
+  <td>Planner sets <code>needs_calculation</code>, or the question asks for growth, change, ratio, margin or comparison</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Who decides.</strong> The planner LLM proposes the tools. <code>normalize_plan</code> then:</p>
-<ul><li>keeps only known tools, mapping legacy names (<code>hybrid_financial_search</code> → <code>text_search</code>, <code>chart_lookup</code> → <code>visual_search</code>);</li><li>always keeps <code>text_search</code>;</li><li>adds tools the question clearly needs (calculator, coverage);</li><li>drops tools the deployment can't run (<code>visual_search</code> without ColPali);</li><li>builds <strong>targets</strong>: one per company × year named in the question (request <code>ticker</code>/<code>year</code> win; more than 3 years → one search per company; at most 6).</li></ul>
+<ul>
+<li>keeps only known tools, mapping legacy names (<code>hybrid_financial_search</code> → <code>text_search</code>, <code>chart_lookup</code> → <code>visual_search</code>);</li>
+<li>always keeps <code>text_search</code>;</li>
+<li>adds tools the question clearly needs (calculator, coverage);</li>
+<li>drops tools the deployment can't run (<code>visual_search</code> without ColPali);</li>
+<li>builds <strong>targets</strong>: one per company × year named in the question (request <code>ticker</code>/<code>year</code> win; more than 3 years → one search per company; at most 6).</li>
+</ul>
 <p>Each change is listed in <code>plan.adjustments</code> and <code>plan.planner</code> says whether the LLM's plan (<code>llm</code>) or the fallback (<code>fallback</code>) was used, so a weak or mock LLM can't skip a needed tool and the trace shows who decided.</p>
-<p><strong>Search depth.</strong> Each target gets <code>max(3, ceil(top_k / targets))</code> hits; a retry searches twice as deep, with the question rewritten to its content words plus the metric's synonyms and statement names (for example "net income net earnings net profit consolidated statements annual report"). The filters stay the same, so a retry never borrows another company's or year's figures.</p>
+<p><strong>Search depth.</strong> Each target gets <code>max(3, ceil(top_k / targets))</code> hits; a retry searches twice as deep, with the question rewritten to its content words plus the metric's synonyms and statement names (for example &quot;net income net earnings net profit consolidated statements annual report&quot;). The filters stay the same, so a retry never borrows another company's or year's figures.</p>
 <h2>5. Step budget and loops</h2>
 <p><code>AGENT_MAX_STEPS</code> (default 10) caps node executions; LangGraph's <code>recursion_limit</code> is set to <code>AGENT_MAX_STEPS + 1</code> as a hard stop. The routing functions check the budget before taking a loop, so with the default cap a run takes <strong>at most one loop</strong> and never ends in <code>step_limit</code>:</p>
-<table><thead><tr><th>Run</th><th>Path</th><th>Steps</th></tr></thead><tbody><tr><td>Simple question</td><td>security, plain_text, plan, retrieve, evidence_guard, answer, critic, governance</td><td>8</td></tr><tr><td>With calculator</td><td>… answer, <strong>calculator</strong>, critic, governance</td><td>9</td></tr><tr><td>Retrieval retry</td><td>… retrieve, evidence_guard, <strong>retrieve, evidence_guard</strong>, answer, critic, governance</td><td>10</td></tr><tr><td>Citation repair</td><td>… answer, critic, <strong>answer, critic</strong>, governance</td><td>10</td></tr><tr><td>Refused at input</td><td>security, critic, governance (or security, plain_text, critic, governance)</td><td>3–4</td></tr><tr><td>Retry + repair + calculator</td><td>needs 14: set <code>AGENT_MAX_STEPS=14</code> to allow every loop</td><td>14</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Run</th>
+  <th>Path</th>
+  <th>Steps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Simple question</td>
+  <td>security, plain_text, plan, retrieve, evidence_guard, answer, critic, governance</td>
+  <td>8</td>
+</tr>
+<tr>
+  <td>With calculator</td>
+  <td>… answer, <strong>calculator</strong>, critic, governance</td>
+  <td>9</td>
+</tr>
+<tr>
+  <td>Retrieval retry</td>
+  <td>… retrieve, evidence_guard, <strong>retrieve, evidence_guard</strong>, answer, critic, governance</td>
+  <td>10</td>
+</tr>
+<tr>
+  <td>Citation repair</td>
+  <td>… answer, critic, <strong>answer, critic</strong>, governance</td>
+  <td>10</td>
+</tr>
+<tr>
+  <td>Refused at input</td>
+  <td>security, critic, governance (or security, plain_text, critic, governance)</td>
+  <td>3–4</td>
+</tr>
+<tr>
+  <td>Retry + repair + calculator</td>
+  <td>needs 14: set <code>AGENT_MAX_STEPS=14</code> to allow every loop</td>
+  <td>14</td>
+</tr>
+</tbody>
+</table>
 <p>The repair loop existed before but never ran: the old check stopped after the first failed critique. It now repairs once, with the invalid and allowed chunk IDs in the prompt.</p>
 <h2>6. The critic's support check</h2>
 <p>The critic answers two questions. The first is cheap and exact; the second is what lets a hosted model's own words reach the user.</p>
-<table><thead><tr><th>Check</th><th>How</th><th>Fails when</th></tr></thead><tbody><tr><td>Citation IDs</td><td><code>validate_citations</code>: cited IDs ⊆ retrieved IDs, at least one citation</td><td>An ID wasn't retrieved, or nothing is cited</td></tr><tr><td>Figures</td><td><code>financial_tools.numeric_grounding</code> (code): every number in the answer must appear in a <strong>cited</strong> chunk or be a calculator result. Rounding is allowed only to the precision the answer prints, in any unit scale ("$254.5 billion" matches 254,453 million; "$255 billion" does not). Years and counts up to 10 are skipped</td><td>A figure is in no cited chunk</td></tr><tr><td>Claims</td><td>LLM judge (<code>SUPPORT_SYSTEM</code>/<code>SUPPORT_HUMAN</code>): splits the answer into claims and decides, for each, whether the cited text states it (company, period, figure and unit must match; no outside knowledge)</td><td>Any claim unsupported; unparseable output counts as <code>unverified</code></td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Check</th>
+  <th>How</th>
+  <th>Fails when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Citation IDs</td>
+  <td><code>validate_citations</code>: cited IDs ⊆ retrieved IDs, at least one citation</td>
+  <td>An ID wasn't retrieved, or nothing is cited</td>
+</tr>
+<tr>
+  <td>Figures</td>
+  <td><code>financial_tools.numeric_grounding</code> (code): every number in the answer must appear in a <strong>cited</strong> chunk or be a calculator result. Rounding is allowed only to the precision the answer prints, in any unit scale (&quot;$254.5 billion&quot; matches 254,453 million; &quot;$255 billion&quot; does not). Years and counts up to 10 are skipped</td>
+  <td>A figure is in no cited chunk</td>
+</tr>
+<tr>
+  <td>Claims</td>
+  <td>LLM judge (<code>SUPPORT_SYSTEM</code>/<code>SUPPORT_HUMAN</code>): splits the answer into claims and decides, for each, whether the cited text states it (company, period, figure and unit must match; no outside knowledge)</td>
+  <td>Any claim unsupported; unparseable output counts as <code>unverified</code></td>
+</tr>
+</tbody>
+</table>
 <p><strong>Verdict.</strong> <code>supported</code> only when the judge supports every claim <strong>and</strong> every figure is found. A failed figure check downgrades the judge's verdict (the judge can't overrule the code). Verdicts: <code>supported</code>, <code>partially_supported</code>, <code>unsupported</code>, <code>unverified</code>.</p>
 <p><strong>What happens next.</strong></p>
-<table><thead><tr><th>Situation</th><th>Result</th></tr></thead><tbody><tr><td>Verdict <code>supported</code></td><td>Governance as usual; with a hosted LLM the generated answer is shown (<code>grounding.method = llm_support_check</code>, <code>semantic_answer_verified = true</code>)</td></tr><tr><td>Not supported, budget allows, no repair yet</td><td><strong>Repair</strong>: the answer step gets the unsupported claims and missing figures, and is told to copy figures exactly, cite the chunk that states them and use <code>CALC[...]</code> for arithmetic</td></tr><tr><td>Still not supported after the repair (or no budget)</td><td>Governance adds <code>unsupported_claims</code> → <code>pending_human_review</code>; with a hosted LLM the response shows cited <strong>excerpts</strong> (<code>evidence_only</code>) instead of the prose</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Situation</th>
+  <th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Verdict <code>supported</code></td>
+  <td>Governance as usual; with a hosted LLM the generated answer is shown (<code>grounding.method = llm_support_check</code>, <code>semantic_answer_verified = true</code>)</td>
+</tr>
+<tr>
+  <td>Not supported, budget allows, no repair yet</td>
+  <td><strong>Repair</strong>: the answer step gets the unsupported claims and missing figures, and is told to copy figures exactly, cite the chunk that states them and use <code>CALC[...]</code> for arithmetic</td>
+</tr>
+<tr>
+  <td>Still not supported after the repair (or no budget)</td>
+  <td>Governance adds <code>unsupported_claims</code> → <code>pending_human_review</code>; with a hosted LLM the response shows cited <strong>excerpts</strong> (<code>evidence_only</code>) instead of the prose</td>
+</tr>
+</tbody>
+</table>
 <p>The judge runs inside <code>critic_step</code>, so it adds one LLM call per critique but no graph step. <code>RAG_SUPPORT_CHECK=0</code> turns it off (citation IDs only, and hosted answers fall back to excerpts again). With the mock LLM the judge is a stand-in (it passes any answer that cites retrieved chunks), so <code>semantic_answer_verified</code> stays <code>false</code> in local mock runs.</p>
 <h2>7. After the graph: final checks</h2>
-<table><thead><tr><th>Check</th><th>Where</th><th>Effect</th></tr></thead><tbody><tr><td>Coverage</td><td><code>run_technique</code> → <code>question_scope</code></td><td>Company or year not in the filings → <code>not_available</code>, the clarifier's message, no figure, no evidence</td></tr><tr><td>No evidence</td><td><code>run_technique</code></td><td><code>insufficient_evidence</code>, "No answer found in the available evidence."</td></tr><tr><td>Company scope</td><td><code>guard_checks.company_scope_check</code></td><td>An answer citing a company the question didn't ask about → <code>not_grounded</code>, answer withheld</td></tr><tr><td><strong>Hosted LLM answer rule</strong></td><td><code>run_technique</code> → <code>answer_verified</code></td><td>With <code>llm_provider != mock</code>, the generated answer is kept only for <code>agentic_graph</code> when the critic's verdict is <code>supported</code> and its citations are still in the (company-filtered) evidence. Otherwise it is <strong>replaced by cited evidence excerpts</strong> (<code>evidence_only</code>, method <code>source_excerpts</code>). Single-prompt techniques always get excerpts</td></tr><tr><td>Relevance floor</td><td><code>answer_evidence</code></td><td>With a reranker (<code>RAG_RERANKER_MODEL</code>), hits below <code>RAG_MIN_RERANK_SCORE</code> are dropped before answering</td></tr><tr><td>Grounding policy</td><td><code>api_app.apply_grounding_policy</code></td><td>Citations must match retrieved chunk IDs, or the answer is withheld (<code>not_grounded</code>). The response's <code>grounding</code> keeps <code>method</code> and <code>semantic_answer_verified</code> from the critic (true only if the citations also validate here)</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Check</th>
+  <th>Where</th>
+  <th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Coverage</td>
+  <td><code>run_technique</code> → <code>question_scope</code></td>
+  <td>Company or year not in the filings → <code>not_available</code>, the clarifier's message, no figure, no evidence</td>
+</tr>
+<tr>
+  <td>No evidence</td>
+  <td><code>run_technique</code></td>
+  <td><code>insufficient_evidence</code>, &quot;No answer found in the available evidence.&quot;</td>
+</tr>
+<tr>
+  <td>Company scope</td>
+  <td><code>guard_checks.company_scope_check</code></td>
+  <td>An answer citing a company the question didn't ask about → <code>not_grounded</code>, answer withheld</td>
+</tr>
+<tr>
+  <td><strong>Hosted LLM answer rule</strong></td>
+  <td><code>run_technique</code> → <code>answer_verified</code></td>
+  <td>With <code>llm_provider != mock</code>, the generated answer is kept only for <code>agentic_graph</code> when the critic's verdict is <code>supported</code> and its citations are still in the (company-filtered) evidence. Otherwise it is <strong>replaced by cited evidence excerpts</strong> (<code>evidence_only</code>, method <code>source_excerpts</code>). Single-prompt techniques always get excerpts</td>
+</tr>
+<tr>
+  <td>Relevance floor</td>
+  <td><code>answer_evidence</code></td>
+  <td>With a reranker (<code>RAG_RERANKER_MODEL</code>), hits below <code>RAG_MIN_RERANK_SCORE</code> are dropped before answering</td>
+</tr>
+<tr>
+  <td>Grounding policy</td>
+  <td><code>api_app.apply_grounding_policy</code></td>
+  <td>Citations must match retrieved chunk IDs, or the answer is withheld (<code>not_grounded</code>). The response's <code>grounding</code> keeps <code>method</code> and <code>semantic_answer_verified</code> from the critic (true only if the citations also validate here)</td>
+</tr>
+</tbody>
+</table>
 <h3>Final statuses</h3>
-<table><thead><tr><th><code>final_status</code></th><th>Meaning</th></tr></thead><tbody><tr><td><code>answered</code></td><td>Answer with valid citations</td></tr><tr><td><code>evidence_only</code></td><td>Hosted LLM: the answer wasn't verified (or a single-prompt technique ran), so cited excerpts are shown instead</td></tr><tr><td><code>pending_human_review</code></td><td>Governance triggers (advice language, low confidence, citation failure, unverified calculation, unsupported claims, …)</td></tr><tr><td><code>not_available</code></td><td>The filings can't answer (company, year or measure not covered)</td></tr><tr><td><code>insufficient_evidence</code></td><td>Searches found nothing usable</td></tr><tr><td><code>not_grounded</code></td><td>Citations failed validation or named the wrong company</td></tr><tr><td><code>refused</code></td><td>Input, evidence or output guard blocked it</td></tr><tr><td><code>step_limit</code></td><td>Hard cap reached (not expected with budget-aware routing)</td></tr><tr><td><code>tool_error</code></td><td>A model or search call failed or timed out (<code>RAG_REQUEST_TIMEOUT_SECONDS</code>)</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th><code>final_status</code></th>
+  <th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>answered</code></td>
+  <td>Answer with valid citations</td>
+</tr>
+<tr>
+  <td><code>evidence_only</code></td>
+  <td>Hosted LLM: the answer wasn't verified (or a single-prompt technique ran), so cited excerpts are shown instead</td>
+</tr>
+<tr>
+  <td><code>pending_human_review</code></td>
+  <td>Governance triggers (advice language, low confidence, citation failure, unverified calculation, unsupported claims, …)</td>
+</tr>
+<tr>
+  <td><code>not_available</code></td>
+  <td>The filings can't answer (company, year or measure not covered)</td>
+</tr>
+<tr>
+  <td><code>insufficient_evidence</code></td>
+  <td>Searches found nothing usable</td>
+</tr>
+<tr>
+  <td><code>not_grounded</code></td>
+  <td>Citations failed validation or named the wrong company</td>
+</tr>
+<tr>
+  <td><code>refused</code></td>
+  <td>Input, evidence or output guard blocked it; on the fund route also investment-advice wording (&quot;should I buy&quot;, &quot;best fund&quot;)</td>
+</tr>
+<tr>
+  <td><code>step_limit</code></td>
+  <td>Hard cap reached (not expected with budget-aware routing)</td>
+</tr>
+<tr>
+  <td><code>tool_error</code></td>
+  <td>A model or search call failed or timed out (<code>RAG_REQUEST_TIMEOUT_SECONDS</code>)</td>
+</tr>
+</tbody>
+</table>
 <h2>7a. Router (supervisor) and the multi-year trend agent</h2>
 <p>Code: <a href="../scripts/agents/financial_router.py">financial_router.py</a>, <a href="../scripts/agents/financial_trend.py">financial_trend.py</a>, <code>financial_graph</code> in <a href="../scripts/agents/financial_prompting_agent.py">financial_prompting_agent.py</a>. Tests: <a href="../tests/test_agent_flows.py">test_agent_flows.py</a>.</p>
 <pre class="mermaid">flowchart TD
@@ -104,21 +544,298 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
     A --&gt; CR
     CR --&gt;|repair once| A
     CR --&gt; GV[governance_step]</pre>
-<p>**Router (<code>technique=router</code>).** The router LLM returns Route JSON (<code>route</code>, <code>tools</code>, <code>needs_calculation</code>, <code>reason</code>). <code>financial_router.decide</code> validates it the same way <code>normalize_plan</code> validates the planner:</p>
-<table><thead><tr><th>Route</th><th>Goes to</th><th>Accepted when</th></tr></thead><tbody><tr><td><code>lookup</code></td><td>Q&amp;A agent (from <code>retrieve_step</code>)</td><td>Default</td></tr><tr><td><code>comparison</code></td><td>Q&amp;A agent: one filtered search per company × year</td><td>The LLM says so, or the parser finds two companies / compare words</td></tr><tr><td><code>trend</code></td><td>Trend agent</td><td>One company, one measure and at least two indexed fiscal years (<code>trend_plan.feasible</code>); otherwise answered as a lookup or comparison</td></tr><tr><td><code>report</code></td><td>Handoff (<code>final_status = report_handoff</code>, <code>handoff</code> with ticker, year, whether a report profile exists)</td><td>Only with an explicit request ("generate a full report"); the deterministic report runs after the user confirms in the chat</td></tr><tr><td><code>out_of_scope</code></td><td>Refused</td><td>Only when the question names no company, measure or known intent</td></tr></tbody></table>
-<p>Explicit signals win: a question the parser reads as a report, comparison or trend goes there even if the LLM said otherwise; the LLM decides the rest (for example "How has Costco's revenue developed?", wording the rules don't know). <code>route</code> in the response records the LLM's and the rules' choices, <code>decided_by</code> and every adjustment. The route step also plans (its tools become the Q&amp;A plan), so a routed run takes the <strong>same 8 steps</strong> as a direct one.</p>
-<p>**Trend agent (<code>technique=trend_graph</code>, or the router's <code>trend</code> route).**</p>
-<table><thead><tr><th>Step</th><th>What it does</th><th>LLM?</th></tr></thead><tbody><tr><td><code>route_step</code></td><td><code>trend_plan</code>: company, measure, years (asked years the index holds, else every indexed year, at most 5); coverage recorded as a <code>coverage_lookup</code> call. If no trend can be built, the question goes to the Q&amp;A path (<code>decided_by = technique</code>)</td><td>No</td></tr><tr><td><code>trend_fetch_step</code></td><td>One filtered <code>text_search</code> per fiscal year ("Costco revenue fiscal year 2024"); a retry searches only unverified years, broadened and twice as deep</td><td>No</td></tr><tr><td><code>trend_series_step</code></td><td>Evidence injection guard; per year, the LLM copies the figure (Series JSON: value, unit, chunk_id, quote). <code>validate_point</code> keeps it only if the chunk is in <strong>that year's</strong> search and its text contains the number (<code>ok</code>, <code>not_found</code>, <code>wrong_chunk</code>, <code>not_in_evidence</code>, <code>no_evidence</code>). Year-over-year change, % change and CAGR are <strong>computed in code</strong> and recorded as calculations</td><td><strong>Yes</strong> (one call per year)</td></tr><tr><td><code>answer_step</code></td><td>Trend prompt: the verified series with chunk IDs and the computed changes; the model describes them and may not compute new numbers. With no verified year it falls back to the Q&amp;A prompt</td><td><strong>Yes</strong></td></tr><tr><td><code>critic_step</code>, <code>governance_step</code></td><td>As in section 6. The judge now also sees the calculator results, so a correctly reported growth rate or CAGR counts as supported; <code>numeric_grounding</code> accepts them as calculations</td><td>Yes (judge)</td></tr></tbody></table>
+<p><strong>Router (<code>technique=router</code>).</strong> The router LLM returns Route JSON (<code>route</code>, <code>tools</code>, <code>needs_calculation</code>, <code>reason</code>). <code>financial_router.decide</code> validates it the same way <code>normalize_plan</code> validates the planner:</p>
+<table>
+<thead>
+<tr>
+  <th>Route</th>
+  <th>Goes to</th>
+  <th>Accepted when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>lookup</code></td>
+  <td>Q&amp;A agent (from <code>retrieve_step</code>)</td>
+  <td>Default</td>
+</tr>
+<tr>
+  <td><code>comparison</code></td>
+  <td>Q&amp;A agent: one filtered search per company × year</td>
+  <td>The LLM says so, or the parser finds two companies / compare words</td>
+</tr>
+<tr>
+  <td><code>trend</code></td>
+  <td>Trend agent</td>
+  <td>One company, one measure and at least two indexed fiscal years (<code>trend_plan.feasible</code>); otherwise answered as a lookup or comparison</td>
+</tr>
+<tr>
+  <td><code>report</code></td>
+  <td>Handoff (<code>final_status = report_handoff</code>, <code>handoff</code> with ticker, year, whether a report profile exists)</td>
+  <td>Only with an explicit request (&quot;generate a full report&quot;); the deterministic report runs after the user confirms in the chat</td>
+</tr>
+<tr>
+  <td><code>out_of_scope</code></td>
+  <td>Refused</td>
+  <td>Only when the question names no company, measure or known intent</td>
+</tr>
+</tbody>
+</table>
+<p>Explicit signals win: a question the parser reads as a report, comparison or trend goes there even if the LLM said otherwise; the LLM decides the rest (for example &quot;How has Costco's revenue developed?&quot;, wording the rules don't know). <code>route</code> in the response records the LLM's and the rules' choices, <code>decided_by</code> and every adjustment. The route step also plans (its tools become the Q&amp;A plan), so a routed run takes the <strong>same 8 steps</strong> as a direct one.</p>
+<p><strong>Trend agent (<code>technique=trend_graph</code>, or the router's <code>trend</code> route).</strong></p>
+<table>
+<thead>
+<tr>
+  <th>Step</th>
+  <th>What it does</th>
+  <th>LLM?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>route_step</code></td>
+  <td><code>trend_plan</code>: company, measure, years (asked years the index holds, else every indexed year, at most 5); coverage recorded as a <code>coverage_lookup</code> call. If no trend can be built, the question goes to the Q&amp;A path (<code>decided_by = technique</code>)</td>
+  <td>No</td>
+</tr>
+<tr>
+  <td><code>trend_fetch_step</code></td>
+  <td>One filtered <code>text_search</code> per fiscal year (&quot;Costco revenue fiscal year 2024&quot;); a retry searches only unverified years, broadened and twice as deep</td>
+  <td>No</td>
+</tr>
+<tr>
+  <td><code>trend_series_step</code></td>
+  <td>Evidence injection guard; per year, the LLM copies the figure (Series JSON: value, unit, chunk_id, quote). <code>validate_point</code> keeps it only if the chunk is in <strong>that year's</strong> search and its text contains the number (<code>ok</code>, <code>not_found</code>, <code>wrong_chunk</code>, <code>not_in_evidence</code>, <code>no_evidence</code>). Year-over-year change, % change and CAGR are <strong>computed in code</strong> and recorded as calculations</td>
+  <td><strong>Yes</strong> (one call per year)</td>
+</tr>
+<tr>
+  <td><code>answer_step</code></td>
+  <td>Trend prompt: the verified series with chunk IDs and the computed changes; the model describes them and may not compute new numbers. With no verified year it falls back to the Q&amp;A prompt</td>
+  <td><strong>Yes</strong></td>
+</tr>
+<tr>
+  <td><code>critic_step</code>, <code>governance_step</code></td>
+  <td>As in section 6. The judge now also sees the calculator results, so a correctly reported growth rate or CAGR counts as supported; <code>numeric_grounding</code> accepts them as calculations</td>
+  <td>Yes (judge)</td>
+</tr>
+</tbody>
+</table>
 <p>Budget: 8 steps; one retry of unverified years adds 2 (10). The response's <code>trend</code> holds <code>points</code>, <code>changes</code>, <code>cagr</code>, <code>missing</code> and <code>chart</code> rows; Streamlit shows a table, a line chart of the verified years and names the years it could not verify.</p>
-<p><strong>Live check (local Retail index, mock LLM, 12 November 2026).</strong> "How did Costco revenue change over the years?" → route <code>trend</code> (rules overrode the mock's <code>lookup</code>) → searches for FY2024 and FY2025 → 249,625 (p42) and 269,912 (p41), both verified → +8.13% → <code>answered</code>, <code>grounded</code>. The mock extractor takes the first figure on the page (net sales here); a hosted model picks the asked measure.</p>
+<p><strong>Live check (local Retail index, mock LLM, 12 November 2026).</strong> &quot;How did Costco revenue change over the years?&quot; → route <code>trend</code> (rules overrode the mock's <code>lookup</code>) → searches for FY2024 and FY2025 → 249,625 (p42) and 269,912 (p41), both verified → +8.13% → <code>answered</code>, <code>grounded</code>. The mock extractor takes the first figure on the page (net sales here); a hosted model picks the asked measure.</p>
+<p><strong>Sector trend agent (<code>technique=sector_trend_graph</code>, or the router's <code>sector_trend</code> route).</strong> One measure across one sector's companies, fiscal year by fiscal year: &quot;How did healthcare revenue trend from 2022 to 2025?&quot;. Code: <a href="../scripts/agents/financial_sector_trend.py">financial_sector_trend.py</a>. Tests: <a href="../tests/test_sector_trend.py">test_sector_trend.py</a>.</p>
+<pre class="mermaid">flowchart TD
+    R[route_step - sector_plan: sector, measure, years, companies] --&gt;|sector_trend| SF[sector_fetch_step - one search per company x year]
+    R --&gt;|plan not buildable| CR[critic_step]
+    SF --&gt; SS[sector_series_step - statement row in code; else broadened search + row; else LLM; fixed panel + sector table in code]
+    SS --&gt;|fewer than 2 companies verified| CR
+    SS --&gt; A[answer_step - sector prompt]
+    A --&gt; CR
+    CR --&gt;|repair once| A
+    CR --&gt; GV[governance_step]</pre>
+<table>
+<thead>
+<tr>
+  <th>Step</th>
+  <th>What it does</th>
+  <th>LLM?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>route_step</code></td>
+  <td>The clarifier's parser reads a sector name and no company plus trend words (or two years) as <code>sector_trend</code>; the sidebar's sector filter does the same for a company-less trend question. <code>sector_plan</code>: one sector, one measure, the years (asked years the sector's index holds, else its last 5), and the companies with a filing for <strong>every</strong> year (alphabetical, at most <code>RAG_SECTOR_MAX_COMPANIES</code>, default 8). The rest are listed in <code>excluded</code> with the reason. A plan that can't be built (no or several sectors, no measure, a measure banks don't report, fewer than 2 companies) ends as <code>not_available</code> with the reason</td>
+  <td>Router only</td>
+</tr>
+<tr>
+  <td><code>sector_fetch_step</code></td>
+  <td>One <code>text_search</code> filtered by ticker and year per company × year (&quot;AbbVie revenue fiscal year 2024&quot;, top 3)</td>
+  <td>No</td>
+</tr>
+<tr>
+  <td><code>sector_series_step</code></td>
+  <td>Per company-year, <strong>code first</strong>: <code>label_match</code> reads the statement row (&quot;Total revenues 36,751 33,424 28,190&quot;) in the column whose header is that year. Without one, a broadened search twice as deep, and the row again. Only then the LLM (Series JSON), whose figure must also sit on a line naming the measure (<code>on_metric_line</code>). <code>validate_point</code> applies to both. Chunks the injection guard flags are <strong>dropped</strong>, not trusted, and the rest of the sector stands. Then <code>aggregate</code>: the <strong>fixed panel</strong> (companies verified in every year), per year the sector total in USD millions, its change, the median company change and how many companies grew, plus the total's CAGR and the median company CAGR, all recorded as calculations</td>
+  <td>Only for rows code can't read</td>
+</tr>
+<tr>
+  <td><code>answer_step</code></td>
+  <td>Sector prompt: the table, the panel's figures with chunk IDs and who was left out; no new numbers</td>
+  <td><strong>Yes</strong></td>
+</tr>
+<tr>
+  <td><code>critic_step</code>, <code>governance_step</code></td>
+  <td>As in section 6. Extra human-review triggers: <code>low_sector_coverage</code> (panel under half the companies read) and <code>unusual_sector_change</code> (a company moved more than <code>RAG_SECTOR_OUTLIER_PCT</code>, default 50%, in a year)</td>
+  <td>Yes (judge)</td>
+</tr>
+</tbody>
+</table>
+<p>Budget: 8 steps, as the retry runs inside <code>sector_series_step</code> (Track B's 10-step cap holds with one repair). A sector request gets <code>RAG_SECTOR_TIMEOUT_SECONDS</code> (default 300) instead of the 60-second request deadline. The response's <code>sector_trend</code> holds <code>rows</code>, <code>panel</code>, <code>excluded</code>, <code>companies</code> (each figure with <code>method</code> <code>label</code> or <code>llm</code>, page and chunk), the CAGRs and <code>unusual_changes</code>; Streamlit shows the sector table, a chart of the total and the per-company figures.</p>
+<p><strong>Live check (local Chroma index, 180 min500 filings, mock LLM, 13 November 2026).</strong> &quot;How did healthcare revenue trend from 2022 to 2025?&quot; → <code>sector_trend</code>, 8 steps, 24 searches, 33 s. AbbVie (58,054 / 54,318 / 56,334 / 61,160) and Amgen (26,323 / 28,190 / 33,424 / 36,751) read from their statement rows; Abbott left out (no FY2023–24 statement row in the text layer, those pages were skipped at ingest); Danaher, Gilead and Intuitive Surgical left out (filings missing for some years). Sector total 84,377 → 97,911 USD m, CAGR 5.08%. &quot;How did banking net interest income change from 2022 to 2025?&quot; → no panel: bank income statements were rarely in the top hits and segment tables repeat the year header, so code read 5 of 32 figures and the line check rejected every mock guess; the answer says a sector trend needs at least 2 companies. A hosted extractor is needed for banks.</p>
 <h2>7b. Multi-agent view of the three flows</h2>
 <p>All three flows are <strong>multi-agent flows</strong>: each question passes through several agents with separate roles, prompts and outputs, which hand work to each other. A critic agent can send work back for a rewrite. In the router flow, a supervisor agent also delegates to a specialist agent.</p>
 <h3>7b.1 The agents</h3>
-<table><thead><tr><th>Agent</th><th>Node(s)</th><th>Kind</th><th>Role</th><th>Hands over to</th></tr></thead><tbody><tr><td><strong>Supervisor (router)</strong></td><td><code>route_step</code> (router flow)</td><td>LLM (Route JSON) + rules</td><td>Chooses the specialist for the question (Q&amp;A, trend, report, refusal) and plans it</td><td>Q&amp;A executor, trend executor, or the critic (report / refusal)</td></tr><tr><td><strong>Input guard</strong></td><td><code>security_step</code>, <code>plain_text_step</code></td><td>regex + LLM (classifier)</td><td>Blocks prompt injection and code or tool abuse; checks that the question is a plain finance question and cleans it</td><td>planner / supervisor, or the critic when refused</td></tr><tr><td><strong>Planner</strong></td><td><code>plan_step</code> (Q&amp;A flow); inside <code>route_step</code> (router and trend flows)</td><td>LLM (Plan JSON) + rules</td><td>Chooses tools; splits the question into one target per company × year (Q&amp;A) or per fiscal year (trend)</td><td>executor</td></tr><tr><td><strong>Retrieval executor</strong></td><td><code>retrieve_step</code> (Q&amp;A), <code>trend_fetch_step</code> (trend)</td><td>tools, no LLM</td><td>Runs <code>coverage_lookup</code>, then hybrid <code>text_search</code> (+ <code>visual_search</code>) per target; broadened retry of missing targets</td><td>evidence guard / extractor</td></tr><tr><td><strong>Evidence guard</strong></td><td><code>evidence_guard_step</code> (Q&amp;A); start of <code>trend_series_step</code> (trend)</td><td>code</td><td>Blocks injected instructions in retrieved text; lists targets with no evidence</td><td>executor (retry) or answer agent</td></tr><tr><td><strong>Figure extractor</strong></td><td><code>trend_series_step</code> (trend)</td><td>LLM (Series JSON) + code</td><td>Copies each year's figure; code keeps it only if that year's chunk states it, then computes changes and CAGR</td><td>executor (retry of unverified years) or answer agent</td></tr><tr><td><strong>Answer agent</strong></td><td><code>answer_step</code></td><td>LLM</td><td>Writes the cited answer (Q&amp;A prompt) or the trend narrative (trend prompt); on a repair, receives the critic's feedback</td><td>calculator or critic</td></tr><tr><td><strong>Calculator</strong></td><td><code>calculator_step</code> (Q&amp;A)</td><td>code</td><td>Evaluates <code>CALC[...]</code>; every operand must be in the evidence</td><td>critic</td></tr><tr><td><strong>Critic</strong></td><td><code>critic_step</code></td><td>code + LLM (support judge)</td><td>Checks every citation ID, every figure and every claim against the cited chunks</td><td>answer agent (one repair) or governance</td></tr><tr><td><strong>Governance</strong></td><td><code>governance_step</code></td><td>code</td><td>Output filter (allow / review / block) and human-review triggers</td><td>END</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Agent</th>
+  <th>Node(s)</th>
+  <th>Kind</th>
+  <th>Role</th>
+  <th>Hands over to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Supervisor (router)</strong></td>
+  <td><code>route_step</code> (router flow)</td>
+  <td>LLM (Route JSON) + rules</td>
+  <td>Chooses the specialist for the question (Q&amp;A, trend, report, refusal) and plans it</td>
+  <td>Q&amp;A executor, trend executor, or the critic (report / refusal)</td>
+</tr>
+<tr>
+  <td><strong>Input guard</strong></td>
+  <td><code>security_step</code>, <code>plain_text_step</code></td>
+  <td>regex + LLM (classifier)</td>
+  <td>Blocks prompt injection and code or tool abuse; checks that the question is a plain finance question and cleans it</td>
+  <td>planner / supervisor, or the critic when refused</td>
+</tr>
+<tr>
+  <td><strong>Planner</strong></td>
+  <td><code>plan_step</code> (Q&amp;A flow); inside <code>route_step</code> (router and trend flows)</td>
+  <td>LLM (Plan JSON) + rules</td>
+  <td>Chooses tools; splits the question into one target per company × year (Q&amp;A) or per fiscal year (trend)</td>
+  <td>executor</td>
+</tr>
+<tr>
+  <td><strong>Retrieval executor</strong></td>
+  <td><code>retrieve_step</code> (Q&amp;A), <code>trend_fetch_step</code> (trend)</td>
+  <td>tools, no LLM</td>
+  <td>Runs <code>coverage_lookup</code>, then hybrid <code>text_search</code> (+ <code>visual_search</code>) per target; broadened retry of missing targets</td>
+  <td>evidence guard / extractor</td>
+</tr>
+<tr>
+  <td><strong>Evidence guard</strong></td>
+  <td><code>evidence_guard_step</code> (Q&amp;A); start of <code>trend_series_step</code> (trend)</td>
+  <td>code</td>
+  <td>Blocks injected instructions in retrieved text; lists targets with no evidence</td>
+  <td>executor (retry) or answer agent</td>
+</tr>
+<tr>
+  <td><strong>Figure extractor</strong></td>
+  <td><code>trend_series_step</code> (trend)</td>
+  <td>LLM (Series JSON) + code</td>
+  <td>Copies each year's figure; code keeps it only if that year's chunk states it, then computes changes and CAGR</td>
+  <td>executor (retry of unverified years) or answer agent</td>
+</tr>
+<tr>
+  <td><strong>Answer agent</strong></td>
+  <td><code>answer_step</code></td>
+  <td>LLM</td>
+  <td>Writes the cited answer (Q&amp;A prompt) or the trend narrative (trend prompt); on a repair, receives the critic's feedback</td>
+  <td>calculator or critic</td>
+</tr>
+<tr>
+  <td><strong>Calculator</strong></td>
+  <td><code>calculator_step</code> (Q&amp;A)</td>
+  <td>code</td>
+  <td>Evaluates <code>CALC[...]</code>; every operand must be in the evidence</td>
+  <td>critic</td>
+</tr>
+<tr>
+  <td><strong>Critic</strong></td>
+  <td><code>critic_step</code></td>
+  <td>code + LLM (support judge)</td>
+  <td>Checks every citation ID, every figure and every claim against the cited chunks</td>
+  <td>answer agent (one repair) or governance</td>
+</tr>
+<tr>
+  <td><strong>Governance</strong></td>
+  <td><code>governance_step</code></td>
+  <td>code</td>
+  <td>Output filter (allow / review / block) and human-review triggers</td>
+  <td>END</td>
+</tr>
+</tbody>
+</table>
 <h3>7b.2 Agents in each flow</h3>
-<table><thead><tr><th>Agent</th><th><code>agentic_graph</code> (Q&amp;A)</th><th><code>trend_graph</code> (trend)</th><th><code>router</code> (supervisor)</th></tr></thead><tbody><tr><td>Supervisor</td><td>—</td><td>forced to <code>trend</code> (no LLM call); falls back to Q&amp;A when no trend can be built</td><td>✓ LLM route, validated by rules</td></tr><tr><td>Input guard</td><td>✓</td><td>✓</td><td>✓</td></tr><tr><td>Planner</td><td>✓ LLM planner</td><td>rules (<code>trend_plan</code>)</td><td>✓ the router's tools become the plan</td></tr><tr><td>Retrieval executor</td><td>✓ per company × year</td><td>✓ per fiscal year</td><td>the chosen specialist's</td></tr><tr><td>Evidence guard</td><td>✓</td><td>✓</td><td>✓</td></tr><tr><td>Figure extractor</td><td>—</td><td>✓ one LLM call per year</td><td>on the trend route</td></tr><tr><td>Answer agent</td><td>✓ Q&amp;A prompt</td><td>✓ trend prompt</td><td>the chosen specialist's</td></tr><tr><td>Calculator</td><td>when planned</td><td>changes and CAGR computed by the extractor's code</td><td>on the Q&amp;A route</td></tr><tr><td>Critic</td><td>✓</td><td>✓</td><td>✓</td></tr><tr><td>Governance</td><td>✓</td><td>✓</td><td>✓</td></tr><tr><td><strong>LLM agents per question</strong> (mock and typical runs)</td><td>4: guard, planner, answer, judge</td><td>3 + one per year: guard, extractor × years, answer, judge</td><td>4–5: guard, router, (extractor × years), answer, judge</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Agent</th>
+  <th><code>agentic_graph</code> (Q&amp;A)</th>
+  <th><code>trend_graph</code> (trend)</th>
+  <th><code>router</code> (supervisor)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Supervisor</td>
+  <td>—</td>
+  <td>forced to <code>trend</code> (no LLM call); falls back to Q&amp;A when no trend can be built</td>
+  <td>✓ LLM route, validated by rules</td>
+</tr>
+<tr>
+  <td>Input guard</td>
+  <td>✓</td>
+  <td>✓</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Planner</td>
+  <td>✓ LLM planner</td>
+  <td>rules (<code>trend_plan</code>)</td>
+  <td>✓ the router's tools become the plan</td>
+</tr>
+<tr>
+  <td>Retrieval executor</td>
+  <td>✓ per company × year</td>
+  <td>✓ per fiscal year</td>
+  <td>the chosen specialist's</td>
+</tr>
+<tr>
+  <td>Evidence guard</td>
+  <td>✓</td>
+  <td>✓</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Figure extractor</td>
+  <td>—</td>
+  <td>✓ one LLM call per year</td>
+  <td>on the trend route</td>
+</tr>
+<tr>
+  <td>Answer agent</td>
+  <td>✓ Q&amp;A prompt</td>
+  <td>✓ trend prompt</td>
+  <td>the chosen specialist's</td>
+</tr>
+<tr>
+  <td>Calculator</td>
+  <td>when planned</td>
+  <td>changes and CAGR computed by the extractor's code</td>
+  <td>on the Q&amp;A route</td>
+</tr>
+<tr>
+  <td>Critic</td>
+  <td>✓</td>
+  <td>✓</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Governance</td>
+  <td>✓</td>
+  <td>✓</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td><strong>LLM agents per question</strong> (mock and typical runs)</td>
+  <td>4: guard, planner, answer, judge</td>
+  <td>3 + one per year: guard, extractor × years, answer, judge</td>
+  <td>4–5: guard, router, (extractor × years), answer, judge</td>
+</tr>
+</tbody>
+</table>
 <h3>7b.3 Hand-offs per flow</h3>
-<p>**Q&amp;A flow (<code>agentic_graph</code>): planner → executor → answer → critic**</p>
+<p><strong>Q&amp;A flow (<code>agentic_graph</code>): planner → executor → answer → critic</strong></p>
 <pre class="mermaid">flowchart LR
     U((question)) --&gt; IG[Input guard agent]
     IG --&gt;|refused| CR
@@ -133,7 +850,7 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
     CR --&gt;|repair once| AN
     CR --&gt; GV[Governance]
     GV --&gt; R((answer))</pre>
-<p>**Trend flow (<code>trend_graph</code>): planner → per-year executor → extractor → answer → critic**</p>
+<p><strong>Trend flow (<code>trend_graph</code>): planner → per-year executor → extractor → answer → critic</strong></p>
 <pre class="mermaid">flowchart LR
     U((question)) --&gt; IG[Input guard agent]
     IG --&gt; TP[Trend planner - rules]
@@ -146,7 +863,7 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
     CR --&gt;|repair once| AN
     CR --&gt; GV[Governance]
     GV --&gt; R((answer + series))</pre>
-<p>**Router flow (<code>router</code>): the supervisor delegates to a specialist**</p>
+<p><strong>Router flow (<code>router</code>): the supervisor delegates to a specialist</strong></p>
 <pre class="mermaid">flowchart LR
     U((question)) --&gt; IG[Input guard agent]
     IG --&gt; SV[Supervisor agent - LLM route + rules]
@@ -163,15 +880,205 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
     CR --&gt; GV[Governance]
     GV --&gt; R((answer))</pre>
 <h3>7b.4 How the agents are coordinated</h3>
-<ul><li><strong>One shared state, one controller per run.</strong> The agents are nodes of one compiled LangGraph state machine per flow (<code>financial_graph</code>). They read and write one shared state (<code>AgentState</code>: plan, evidence, answer, checks, trend, route), and pass work along graph edges. They are not separate processes sending each other messages.</li><li><strong>The next step is decided in code.</strong> LLM agents propose: a route, a plan, a figure, an answer, a verdict. Each proposal is validated (<code>financial_router.decide</code>, <code>normalize_plan</code>, <code>validate_point</code>, <code>numeric_grounding</code>), and a routing function in code decides the next node. An LLM never picks the next node directly.</li><li><strong>The specialists are branches, not separate subgraphs.</strong> In the router flow, the Q&amp;A and trend specialists are branches of the supervisor's graph that share the critic and governance agents. They could be split into separately compiled subgraphs without changing the routing or the step budget.</li><li><strong>Bounded and auditable.</strong> Every loop (retrieval retry, repair) runs only if the rest of the run fits <code>AGENT_MAX_STEPS</code> (10, the Track B cap). <code>agent_run</code> records the path, every tool call and every calculation, and <code>route</code> records the supervisor's decision: the LLM's choice, the rules' choice, who decided, and any adjustments.</li></ul>
+<ul>
+<li><strong>One shared state, one controller per run.</strong> The agents are nodes of one compiled LangGraph state machine per flow (<code>financial_graph</code>). They read and write one shared state (<code>AgentState</code>: plan, evidence, answer, checks, trend, route), and pass work along graph edges. They are not separate processes sending each other messages.</li>
+<li><strong>The next step is decided in code.</strong> LLM agents propose: a route, a plan, a figure, an answer, a verdict. Each proposal is validated (<code>financial_router.decide</code>, <code>normalize_plan</code>, <code>validate_point</code>, <code>numeric_grounding</code>), and a routing function in code decides the next node. An LLM never picks the next node directly.</li>
+<li><strong>The specialists are branches, not separate subgraphs.</strong> In the router flow, the Q&amp;A and trend specialists are branches of the supervisor's graph that share the critic and governance agents. They could be split into separately compiled subgraphs without changing the routing or the step budget.</li>
+<li><strong>Bounded and auditable.</strong> Every loop (retrieval retry, repair) runs only if the rest of the run fits <code>AGENT_MAX_STEPS</code> (10, the Track B cap). <code>agent_run</code> records the path, every tool call and every calculation, and <code>route</code> records the supervisor's decision: the LLM's choice, the rules' choice, who decided, and any adjustments.</li>
+</ul>
 <p><strong>In one line:</strong> three bounded multi-agent flows. A supervisor routes questions to a planner–executor–critic Q&amp;A agent team or a verify-and-retry trend agent team, and all three share one guard, critic and governance layer.</p>
+<h2>7c. Fund agent (mutual fund holdings)</h2>
+<p>Added 14 November 2026. Code: <a href="../scripts/agents/agent_mutual_fund.py">agent_mutual_fund.py</a>, <a href="../scripts/agents/tools_mutual_fund.py">tools_mutual_fund.py</a>, <a href="../scripts/prompts/prompts_mutual_fund.py">prompts_mutual_fund.py</a>, the <code>fund_*</code> nodes in <code>financial_graph</code>. Data: <a href="annual_report_rag_structure.html">annual_report_rag_structure.md</a> §13. Design: <a href="mutual_fund_rag_design.html">mutual_fund_rag_design.md</a>. Tests: <a href="../tests/test_agent_mutual_fund.py">test_agent_mutual_fund.py</a>.</p>
+<pre class="mermaid">flowchart TD
+    S[security_step] --&gt; P[plain_text_step - LLM]
+    P --&gt; R[route_step - fund_plan: fund, holdings date, lookup kind]
+    R --&gt;|plan not possible / advice| CR
+    R --&gt;|fund| FL[fund_lookup_step - fixed SQL, each row an evidence item]
+    FL --&gt;|holdings only| A[answer_step - fund prompt]
+    FL --&gt;|about the holdings&#x27; annual reports| FC[fund_company_step - one filtered search per company, statement row in code, LLM last, cache, weighted growth in code]
+    FC --&gt; A
+    A --&gt; CR[critic_step]
+    CR --&gt;|repair once| A
+    CR --&gt; GV[governance_step]</pre>
+<p><strong>When the router picks <code>fund</code>.</strong> Only when <code>nport_mutual_fund.sqlite3</code> holds a filing <strong>and</strong> the question names a loaded fund (every distinctive word of its name, or its family plus one) or uses a fund word with a holdings word (&quot;which funds hold NVIDIA&quot;). The rule wins over the router LLM, and an LLM <code>fund</code> without those signals is overruled. Without fund data the route doesn't exist, so every other route is unchanged. The clarifier passes fund questions straight through (<code>clarifier: passthrough</code>, <code>route_hint: fund</code>); it never asks them for a company and year.</p>
+<table>
+<thead>
+<tr>
+  <th>Node</th>
+  <th>Does</th>
+  <th>LLM?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>route_step</code></td>
+  <td><code>fund_plan</code>: the fund (names first; fund cards only when the best card beats the next by 0.03), the filing (latest, or the year asked), the lookup kind and how many holdings. Not possible → <code>not_available</code> with the reason (&quot;which Vanguard fund? Loaded: ...&quot;); advice wording → <code>refused</code></td>
+  <td>Router only</td>
+</tr>
+<tr>
+  <td><code>fund_lookup_step</code></td>
+  <td><code>fund_lookup</code>: fixed, parameterised SQL. Rows become evidence with IDs <code>nport_&lt;accession digits&gt;_&lt;row&gt;</code> (<code>_fund</code>, <code>_coverage</code>, <code>_h&lt;holding&gt;</code>, <code>_sector_&lt;slug&gt;</code>, <code>_x_&lt;ticker&gt;</code>, <code>_flows</code>, <code>_returns_&lt;class&gt;</code>) and the row as text</td>
+  <td>No</td>
+</tr>
+<tr>
+  <td><code>fund_company_step</code></td>
+  <td>Only for <code>holdings_growth</code> and <code>holdings_text</code>. Per top holding with a corpus ticker: the latest <strong>indexed</strong> annual report filed by the holdings date. Growth: the measure for that fiscal year and the one before, from the same filing; statement row in code, one broadened search, then the LLM (Series JSON); a cached figure is reused when its chunk is retrieved again. Weighted growth <code>Σ weight × growth / Σ covered weight</code> in code. Text: one filtered search per company</td>
+  <td>Only for rows code can't read</td>
+</tr>
+<tr>
+  <td><code>answer_step</code></td>
+  <td>Fund prompt: facts only, figures copied from rows or the computed table, the holdings date named, every row or chunk cited</td>
+  <td><strong>Yes</strong></td>
+</tr>
+<tr>
+  <td><code>critic_step</code>, <code>governance_step</code></td>
+  <td>As in section 6; <code>nport_*</code> IDs are valid citations and their numbers count for the figure check. Extra trigger <code>low_fund_coverage</code> (companies used carry under half of the weight asked about). &quot;Hold&quot;/&quot;holdings&quot; don't trigger the investment-language review on this route; advice words do</td>
+  <td>Yes (judge)</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+  <th>Lookup kind</th>
+  <th>Example</th>
+  <th>Data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>top_holdings</code></td>
+  <td>What are the top 5 holdings of the Vanguard 500 Index Fund?</td>
+  <td>rows</td>
+</tr>
+<tr>
+  <td><code>holders</code></td>
+  <td>Which funds hold the most NVIDIA?</td>
+  <td>rows across loaded funds</td>
+</tr>
+<tr>
+  <td><code>exposure</code></td>
+  <td>How much Microsoft does the Vanguard Total Stock Market Index Fund hold?</td>
+  <td>rows</td>
+</tr>
+<tr>
+  <td><code>sector_mix</code></td>
+  <td>What is the sector allocation of the Vanguard Growth Index Fund?</td>
+  <td>rows by corpus sector</td>
+</tr>
+<tr>
+  <td><code>facts</code>, <code>flows</code>, <code>returns</code></td>
+  <td>net assets; monthly sales and redemptions; monthly total returns</td>
+  <td>rows</td>
+</tr>
+<tr>
+  <td><code>holdings_growth</code></td>
+  <td>How did revenue of the Vanguard Value Index Fund's top 10 holdings grow?</td>
+  <td>rows + annual reports</td>
+</tr>
+<tr>
+  <td><code>holdings_text</code></td>
+  <td>What risks do the fund's three largest holdings report?</td>
+  <td>rows + annual-report search</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Budget.</strong> 7 steps for holdings questions, 8 with <code>fund_company_step</code>, 10 with one repair (the retry runs inside the node). A routed fund request gets <code>RAG_SECTOR_TIMEOUT_SECONDS</code> (default 300), like the sector agent. <code>run_technique</code> skips the company-scope checks for this route, because the answer cites N-PORT rows, not one company's filings.</p>
+<p><strong>Safety rules in code.</strong> A figure the LLM copies for both years from one chunk is left out (&quot;the same figure was read for both years&quot;), not reported as 0% growth. Companies whose filings aren't indexed are listed as not used, never searched.</p>
+<p><strong>Live check (14 November 2026; local API on the Chroma index with 180 filings, real N-PORT data for four Vanguard funds, mock LLM).</strong> Top holdings, holders, exposure, sector mix, returns and net assets: <code>fund</code> route, 7 steps, valid citations, 0.2–5.5 s. Value fund top 10 revenue growth: 8 steps, ABBV +8.57% read from its statement rows, JPM left out (same figure for both years), the rest not indexed → <code>pending_human_review</code> (<code>low_fund_coverage</code>). &quot;What does the Vanguard fund hold?&quot; → asks which of the four. &quot;Should I buy the Vanguard 500 Index Fund?&quot; → refused. The Q&amp;A, trend, sector trend and report routes gave the same results as before.</p>
 <h2>8. Worked runs (local Retail index, mock LLM)</h2>
 <p>Measured on 10 Nov 2026 against the live API with the 5-filing Retail index (Costco 2024/2025, Walmart, Home Depot and Amazon 2025). Searches took 0.6–0.7 s each once the model was loaded.</p>
-<table><thead><tr><th>Question</th><th>Plan (tools, targets)</th><th>Path</th><th>Result</th></tr></thead><tbody><tr><td>Compare Costco and Walmart revenue in 2025</td><td>coverage, text, calculator; COST 2025, WMT 2025</td><td>9 steps, via calculator</td><td><code>answered</code>; one search per company; calculation grounded</td></tr><tr><td>How much did Costco net sales grow from 2024 to 2025?</td><td>coverage, text, calculator; COST 2024, COST 2025</td><td>9 steps, via calculator</td><td><code>answered</code>; one search per year</td></tr><tr><td>What was Home Depot's net earnings in fiscal 2025?</td><td>coverage, text; HD 2025</td><td>8 steps</td><td><code>answered</code>, citations valid</td></tr><tr><td>What was Apple's net income for FY2024?</td><td>coverage, text; AAPL 2024 skipped</td><td>7 steps, no search</td><td><code>not_available</code>: "I don't have filings for Apple…"</td></tr><tr><td>Compare Amazon and Target revenue in 2025</td><td>coverage, text, calculator; AMZN 2025</td><td>9 steps</td><td><code>not_available</code>: "I don't have filings for Target… I can answer for Amazon alone."</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Question</th>
+  <th>Plan (tools, targets)</th>
+  <th>Path</th>
+  <th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Compare Costco and Walmart revenue in 2025</td>
+  <td>coverage, text, calculator; COST 2025, WMT 2025</td>
+  <td>9 steps, via calculator</td>
+  <td><code>answered</code>; one search per company; calculation grounded</td>
+</tr>
+<tr>
+  <td>How much did Costco net sales grow from 2024 to 2025?</td>
+  <td>coverage, text, calculator; COST 2024, COST 2025</td>
+  <td>9 steps, via calculator</td>
+  <td><code>answered</code>; one search per year</td>
+</tr>
+<tr>
+  <td>What was Home Depot's net earnings in fiscal 2025?</td>
+  <td>coverage, text; HD 2025</td>
+  <td>8 steps</td>
+  <td><code>answered</code>, citations valid</td>
+</tr>
+<tr>
+  <td>What was Apple's net income for FY2024?</td>
+  <td>coverage, text; AAPL 2024 skipped</td>
+  <td>7 steps, no search</td>
+  <td><code>not_available</code>: &quot;I don't have filings for Apple…&quot;</td>
+</tr>
+<tr>
+  <td>Compare Amazon and Target revenue in 2025</td>
+  <td>coverage, text, calculator; AMZN 2025</td>
+  <td>9 steps</td>
+  <td><code>not_available</code>: &quot;I don't have filings for Target… I can answer for Amazon alone.&quot;</td>
+</tr>
+</tbody>
+</table>
 <p>Proven in tests (<a href="../tests/test_agent_routing.py">test_agent_routing.py</a>) with controlled search results:</p>
-<table><thead><tr><th>Scenario</th><th>What happens</th></tr></thead><tbody><tr><td>Walmart finds nothing on the first search</td><td>Retry for WMT only, broadened query, twice the depth; path has two <code>retrieve_step</code>s</td></tr><tr><td>Same, with <code>AGENT_MAX_STEPS=8</code></td><td>No retry (budget), answer from Costco alone, ≤ 8 steps, no <code>step_limit</code></td></tr><tr><td>Answer cites a chunk that wasn't retrieved</td><td>One repair with the critic's feedback; second critique valid</td></tr><tr><td>Judge finds a claim unsupported ("net sales doubled")</td><td>One repair with the claim in the feedback; the second answer is supported</td></tr><tr><td>Answer invents "300,000 million" and the judge agrees</td><td>Figure check fails anyway (<code>partially_supported</code>), one repair, still wrong → <code>pending_human_review</code> with <code>unsupported_claims</code></td></tr><tr><td>Hosted LLM, verified answer</td><td>The model's answer is returned; <code>grounding.semantic_answer_verified = true</code></td></tr><tr><td>Hosted LLM, unverified answer</td><td>Cited excerpts (<code>evidence_only</code>); <code>semantic_answer_verified = false</code></td></tr><tr><td><code>CALC[...]</code> with a number not in the evidence</td><td>Calculated, marked ungrounded; governance adds <code>unverified_calculation</code> and routes to human review</td></tr><tr><td><code>CALC[__import__(&#x27;os&#x27;)...]</code></td><td>Rejected: only numbers and <code>+ - * /</code> parse</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Scenario</th>
+  <th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Walmart finds nothing on the first search</td>
+  <td>Retry for WMT only, broadened query, twice the depth; path has two <code>retrieve_step</code>s</td>
+</tr>
+<tr>
+  <td>Same, with <code>AGENT_MAX_STEPS=8</code></td>
+  <td>No retry (budget), answer from Costco alone, ≤ 8 steps, no <code>step_limit</code></td>
+</tr>
+<tr>
+  <td>Answer cites a chunk that wasn't retrieved</td>
+  <td>One repair with the critic's feedback; second critique valid</td>
+</tr>
+<tr>
+  <td>Judge finds a claim unsupported (&quot;net sales doubled&quot;)</td>
+  <td>One repair with the claim in the feedback; the second answer is supported</td>
+</tr>
+<tr>
+  <td>Answer invents &quot;300,000 million&quot; and the judge agrees</td>
+  <td>Figure check fails anyway (<code>partially_supported</code>), one repair, still wrong → <code>pending_human_review</code> with <code>unsupported_claims</code></td>
+</tr>
+<tr>
+  <td>Hosted LLM, verified answer</td>
+  <td>The model's answer is returned; <code>grounding.semantic_answer_verified = true</code></td>
+</tr>
+<tr>
+  <td>Hosted LLM, unverified answer</td>
+  <td>Cited excerpts (<code>evidence_only</code>); <code>semantic_answer_verified = false</code></td>
+</tr>
+<tr>
+  <td><code>CALC[...]</code> with a number not in the evidence</td>
+  <td>Calculated, marked ungrounded; governance adds <code>unverified_calculation</code> and routes to human review</td>
+</tr>
+<tr>
+  <td><code>CALC[__import__('os')...]</code></td>
+  <td>Rejected: only numbers and <code>+ - * /</code> parse</td>
+</tr>
+</tbody>
+</table>
 <p>Example <code>agent_run</code> (the growth question, as returned by the API):</p>
-<pre><code>{&quot;path&quot;: [&quot;security_step&quot;, &quot;plain_text_step&quot;, &quot;plan_step&quot;, &quot;retrieve_step&quot;, &quot;evidence_guard_step&quot;,
+<pre><code class="language-json">{&quot;path&quot;: [&quot;security_step&quot;, &quot;plain_text_step&quot;, &quot;plan_step&quot;, &quot;retrieve_step&quot;, &quot;evidence_guard_step&quot;,
           &quot;answer_step&quot;, &quot;calculator_step&quot;, &quot;critic_step&quot;, &quot;governance_step&quot;],
  &quot;steps&quot;: 9, &quot;max_steps&quot;: 10, &quot;retrieval_attempts&quot;: 1, &quot;repairs&quot;: 0,
  &quot;tool_calls&quot;: [
@@ -179,17 +1086,163 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
    {&quot;tool&quot;: &quot;text_search&quot;, &quot;target&quot;: &quot;COST 2024&quot;, &quot;top_k&quot;: 3, &quot;hits&quot;: 3, &quot;ms&quot;: 660},
    {&quot;tool&quot;: &quot;text_search&quot;, &quot;target&quot;: &quot;COST 2025&quot;, &quot;top_k&quot;: 3, &quot;hits&quot;: 3, &quot;ms&quot;: 698},
    {&quot;tool&quot;: &quot;calculator&quot;, &quot;expressions&quot;: 1, &quot;grounded&quot;: true}],
- &quot;calculations&quot;: [{&quot;expression&quot;: &quot;(2,804 - 3,007) / 3,007 * 100&quot;, &quot;value&quot;: -6.7509, &quot;grounded&quot;: true}]}</code></pre>
+ &quot;calculations&quot;: [{&quot;expression&quot;: &quot;(2,804 - 3,007) / 3,007 * 100&quot;, &quot;value&quot;: -6.7509, &quot;grounded&quot;: true}]}
+</code></pre>
 <p>The first question after a restart can take longer (31 s here) when it arrives before the startup warm-up has finished loading the embedding model.</p>
 <p>The mock LLM's answer text is a placeholder: it cites the first three chunk IDs it sees and computes <code>CALC[...]</code> from the first two figures in the evidence. The routing, searches, checks and calculator are real.</p>
 <h2>9. Removed domains</h2>
 <p>The five other Track B domains (procurement, travel and expense, competitive research, incident postmortem, HR policy) and their <code>/chat/{domain}</code> and <code>/retrieve/{domain}</code> routes were removed on 10 November 2026; the copilot serves <code>financial_report_qa</code> only. Their shared graph code (<code>scripts/agents/rag_agent.py</code>), domain prompts and <code>DOMAIN_*</code> guard patterns followed on 11 November 2026; the <code>/multimodal</code> chat route now uses the financial input guard. The removed code is in git history.</p>
 <h2>10. Other flows</h2>
-<table><thead><tr><th>Flow</th><th>Steps</th></tr></thead><tbody><tr><td>Single-prompt techniques (<code>baseline_rag</code>, <code>structured_few_shot</code>, <code>decomposition</code>, <code>self_consistency</code>)</td><td>Input guards → one retrieval → one prompt (decomposition: LLM sub-questions; self-consistency: N samples) → evidence guard → governance. Used for comparison in evaluation</td></tr><tr><td><code>/retrieve/financial_report_qa</code></td><td>Search only; no relevance floor</td></tr><tr><td><code>/multimodal/{domain}/chat</code></td><td>Input guard → retrieval → <code>safe_answer</code> (<code>extractive</code>, <code>ollama</code>, <code>transformers</code> or <code>llamacpp</code>), fail-closed, at most 8 sub-questions</td></tr><tr><td>Financial report</td><td>Clarifier "Full financial report" → confirmation → <code>generate_financial_report</code> (exact-label parsing, <code>Decimal</code>, reconciliations; an LLM never supplies numbers)</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Flow</th>
+  <th>Steps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Single-prompt techniques (<code>baseline_rag</code>, <code>structured_few_shot</code>, <code>decomposition</code>, <code>self_consistency</code>)</td>
+  <td>Input guards → one retrieval → one prompt (decomposition: LLM sub-questions; self-consistency: N samples) → evidence guard → governance. Used for comparison in evaluation</td>
+</tr>
+<tr>
+  <td><code>/retrieve/financial_report_qa</code></td>
+  <td>Search only; no relevance floor</td>
+</tr>
+<tr>
+  <td><code>/multimodal/{domain}/chat</code></td>
+  <td>Input guard → retrieval → <code>safe_answer</code> (<code>extractive</code>, <code>ollama</code>, <code>transformers</code> or <code>llamacpp</code>), fail-closed, at most 8 sub-questions</td>
+</tr>
+<tr>
+  <td>Financial report</td>
+  <td>Clarifier &quot;Full financial report&quot; → confirmation → <code>generate_financial_report</code> (exact-label parsing, <code>Decimal</code>, reconciliations; an LLM never supplies numbers)</td>
+</tr>
+</tbody>
+</table>
 <h2>11. Observability</h2>
-<table><thead><tr><th>Where</th><th>What you see</th></tr></thead><tbody><tr><td>Response <code>agent_run</code></td><td>Path, steps/max, every tool call (target, hits, ms), retrieval attempts, repairs, calculations</td></tr><tr><td>Response <code>plan</code></td><td>Planner source (<code>llm</code>/<code>fallback</code>), proposed tools, final tools, targets, rule adjustments</td></tr><tr><td>Response <code>support_check</code></td><td>Verdict, each claim with the judge's reason, figures checked and any missing</td></tr><tr><td>Response <code>grounding</code></td><td>Citation status, <code>method</code> (<code>llm_support_check</code>, <code>source_excerpts</code> or <code>mock</code>), <code>semantic_answer_verified</code></td></tr><tr><td>Streamlit <strong>Agent run</strong> expander</td><td>The path, tools, attempts and a tool-call table</td></tr><tr><td>Streamlit <strong>What can I ask?</strong> and <strong>How to read an answer</strong></td><td>Clickable examples built from the indexed companies (cited answer, growth, comparison, follow-up, risks, not available, guardrails), the coverage line, and what each status means</td></tr><tr><td><code>trace</code> / <code>trace_id</code></td><td>Timed spans from <code>common/resilience.Calls</code></td></tr><tr><td>LangSmith (optional)</td><td><code>LANGSMITH_API_KEY</code> + <code>enable_langsmith</code>; each graph node is a run</td></tr><tr><td>Access log</td><td>Request ID, route, status, latency; never bodies or prompts</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Where</th>
+  <th>What you see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Response <code>agent_run</code></td>
+  <td>Path, steps/max, every tool call (target, hits, ms), retrieval attempts, repairs, calculations</td>
+</tr>
+<tr>
+  <td>Response <code>plan</code></td>
+  <td>Planner source (<code>llm</code>/<code>fallback</code>), proposed tools, final tools, targets, rule adjustments</td>
+</tr>
+<tr>
+  <td>Response <code>support_check</code></td>
+  <td>Verdict, each claim with the judge's reason, figures checked and any missing</td>
+</tr>
+<tr>
+  <td>Response <code>mutual_fund</code></td>
+  <td>Fund route: fund, holdings date, accession, lookup kind, the rows shown, corpus coverage, linked company figures, weighted growth and what was not used</td>
+</tr>
+<tr>
+  <td>Response <code>grounding</code></td>
+  <td>Citation status, <code>method</code> (<code>llm_support_check</code>, <code>source_excerpts</code> or <code>mock</code>), <code>semantic_answer_verified</code></td>
+</tr>
+<tr>
+  <td>Streamlit <strong>Agent run</strong> expander</td>
+  <td>The path, tools, attempts and a tool-call table</td>
+</tr>
+<tr>
+  <td>Streamlit <strong>What can I ask?</strong> and <strong>How to read an answer</strong></td>
+  <td>Clickable examples built from the indexed companies (cited answer, growth, comparison, follow-up, risks, not available, guardrails), the coverage line, and what each status means</td>
+</tr>
+<tr>
+  <td><code>trace</code> / <code>trace_id</code></td>
+  <td>Timed spans from <code>common/resilience.Calls</code></td>
+</tr>
+<tr>
+  <td>LangSmith (optional)</td>
+  <td><code>LANGSMITH_API_KEY</code> + <code>enable_langsmith</code>; each graph node is a run</td>
+</tr>
+<tr>
+  <td>Access log</td>
+  <td>Request ID, route, status, latency; never bodies or prompts</td>
+</tr>
+</tbody>
+</table>
 <h2>12. Configuration</h2>
-<table><thead><tr><th>Variable</th><th>Default</th><th>Effect on the flow</th></tr></thead><tbody><tr><td><code>AGENT_MAX_STEPS</code></td><td>10</td><td>Node budget; loops run only if they fit (14 allows retry + repair + calculator)</td></tr><tr><td><code>DEFAULT_LLM_PROVIDER</code></td><td><code>mock</code></td><td><code>hosted</code> uses <code>LLM_API_BASE</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code></td></tr><tr><td><code>RAG_BACKEND</code></td><td>from runtime profile</td><td><code>financial_qdrant</code>, <code>financial_vlm</code>, <code>qdrant</code> or Chroma</td></tr><tr><td><code>RAG_FIN_VISUAL</code></td><td>off</td><td><code>1</code>: ColPali for every question; <code>auto</code>: planner decides</td></tr><tr><td><code>RAG_RERANKER_MODEL</code>, <code>RAG_MIN_RERANK_SCORE</code></td><td>off, -4</td><td>Cross-encoder rerank and relevance floor</td></tr><tr><td><code>RAG_REQUEST_TIMEOUT_SECONDS</code></td><td>60</td><td>Whole-workflow deadline (<code>tool_error</code> when exceeded)</td></tr><tr><td><code>RAG_SUPPORT_CHECK</code></td><td>on</td><td><code>0</code> turns off the critic's support check (and hosted answers then fall back to excerpts)</td></tr><tr><td><code>ANSWER_CACHE_SECONDS</code></td><td>0</td><td>Reuse identical answers</td></tr><tr><td><code>CONVERSATION_DB</code></td><td>in memory</td><td>Clarifier state in SQLite</td></tr></tbody></table>
+<table>
+<thead>
+<tr>
+  <th>Variable</th>
+  <th>Default</th>
+  <th>Effect on the flow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>AGENT_MAX_STEPS</code></td>
+  <td>10</td>
+  <td>Node budget; loops run only if they fit (14 allows retry + repair + calculator)</td>
+</tr>
+<tr>
+  <td><code>DEFAULT_LLM_PROVIDER</code></td>
+  <td><code>mock</code></td>
+  <td><code>hosted</code> uses <code>LLM_API_BASE</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code></td>
+</tr>
+<tr>
+  <td><code>RAG_BACKEND</code></td>
+  <td>from runtime profile</td>
+  <td><code>financial_qdrant</code>, <code>financial_vlm</code>, <code>qdrant</code> or Chroma</td>
+</tr>
+<tr>
+  <td><code>RAG_FIN_VISUAL</code></td>
+  <td>off</td>
+  <td><code>1</code>: ColPali for every question; <code>auto</code>: planner decides</td>
+</tr>
+<tr>
+  <td><code>RAG_RERANKER_MODEL</code>, <code>RAG_MIN_RERANK_SCORE</code></td>
+  <td>off, -4</td>
+  <td>Cross-encoder rerank and relevance floor</td>
+</tr>
+<tr>
+  <td><code>RAG_REQUEST_TIMEOUT_SECONDS</code></td>
+  <td>60</td>
+  <td>Whole-workflow deadline (<code>tool_error</code> when exceeded)</td>
+</tr>
+<tr>
+  <td><code>RAG_SUPPORT_CHECK</code></td>
+  <td>on</td>
+  <td><code>0</code> turns off the critic's support check (and hosted answers then fall back to excerpts)</td>
+</tr>
+<tr>
+  <td><code>ANSWER_CACHE_SECONDS</code></td>
+  <td>0</td>
+  <td>Reuse identical answers</td>
+</tr>
+<tr>
+  <td><code>RAG_MUTUAL_FUND_DIR</code></td>
+  <td><code>&lt;RAG_HOME&gt;/indexes/mutual_fund</code></td>
+  <td>Fund database and fund cards; the <code>fund</code> route exists only when its database holds a filing</td>
+</tr>
+<tr>
+  <td><code>RAG_FUND_MAX_COMPANIES</code></td>
+  <td>10</td>
+  <td>Most holdings a fund question reads annual reports for</td>
+</tr>
+<tr>
+  <td><code>CONVERSATION_DB</code></td>
+  <td>in memory</td>
+  <td>Clarifier state in SQLite</td>
+</tr>
+</tbody>
+</table>
 <h2>13. Limits</h2>
-<ul><li>The answer text in local tests comes from the mock LLM, and the mock judge is a stand-in; answer quality and judge accuracy need a hosted model. A small (≤8B) judge can be lenient or strict; the figure check doesn't depend on it, and an unverified answer falls back to excerpts.</li><li>The support check is one extra LLM call per critique (two if repaired). It judges the cited chunks only, so an answer that is true but cites the wrong page fails and is repaired.</li><li>The retry broadens the query, not the filters; a filing that isn't indexed still ends as <code>not_available</code> or <code>insufficient_evidence</code>.</li><li>The calculator and the figure check verify that numbers appear in the evidence, not that they are the right line items; that is the judge's job.</li><li>Visual search was not exercised live (no ColPali index locally); its routing is covered by tests.</li></ul>
+<ul>
+<li>The answer text in local tests comes from the mock LLM, and the mock judge is a stand-in; answer quality and judge accuracy need a hosted model. A small (≤8B) judge can be lenient or strict; the figure check doesn't depend on it, and an unverified answer falls back to excerpts.</li>
+<li>The support check is one extra LLM call per critique (two if repaired). It judges the cited chunks only, so an answer that is true but cites the wrong page fails and is repaired.</li>
+<li>The retry broadens the query, not the filters; a filing that isn't indexed still ends as <code>not_available</code> or <code>insufficient_evidence</code>.</li>
+<li>The calculator and the figure check verify that numbers appear in the evidence, not that they are the right line items; that is the judge's job.</li>
+<li>Visual search was not exercised live (no ColPali index locally); its routing is covered by tests.</li>
+</ul>
 </body></html>

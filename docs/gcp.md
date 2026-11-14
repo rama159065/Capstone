@@ -72,7 +72,7 @@ One image serves both `api` and `ui`.
 |---|---|---|
 | `caddy` (`https` profile) | HTTPS (Let's Encrypt) and a basic-auth login in front of the UI | 80, 443 (public) |
 | `ui` | Streamlit | 8501 (localhost only) |
-| `api` | FastAPI with the three agents (router, Q&A, trend). MiniLM and the reranker run on CPU here, and Pipeline 1's Chroma index is read from disk | 8000 (localhost only) |
+| `api` | FastAPI with the agent flows (router, Q&A, trend, sector trend, and the fund agent when fund data is present). Query embeddings (bge-small through the shared API with the `gcp` profile, or local; MiniLM for MiniLM indexes) and the reranker run on CPU here; Pipeline 1's Chroma index and the optional mutual fund data (`indexes/mutual_fund/`) are read from disk | 8000 (localhost only) |
 | `qdrant` | Pipeline 2 collections (`annual_reports_text`, `annual_reports_visual`) | 6333 (internal) |
 
 ### 2.3 Outside Google Cloud
@@ -85,6 +85,8 @@ One image serves both `api` and `ui`.
 | LangSmith (optional) | Traces | free tier |
 | `sslip.io` hostname | HTTPS without buying a domain (own domain ~$10–15/year) | free |
 | Hugging Face Hub | Model downloads on first start, then cached | free |
+| Track B embedding API (`bge-small-en-v1.5`) | Query embeddings for bge-small indexes and fund cards (`RAG_EMBEDDING_PROVIDER=hosted`, the `gcp` default); falls back to the local model | team key |
+| SEC EDGAR (optional) | N-PORT filings for the mutual fund layer, fetched on the VM (`SEC_USER_AGENT` with a contact e-mail) | free |
 
 ## 3. Cost for 15 days
 
@@ -136,8 +138,15 @@ sudo mkdir -p /srv/capstone && sudo chown -R $USER /srv/capstone
 sh deploy/sync_from_gcs.sh
 docker compose --profile https up -d
 
+# optional: mutual fund data (a few MB, built on the VM in about a minute; deployment.md §7.4)
+docker compose run --rm -e SEC_USER_AGENT="capstone-research you@example.com" api python -m scripts.downloads.download_mutual_fund latest
+docker compose run --rm api python -m scripts.rag.nport_mutual_fund load --xml /app/rag_home/indexes/mutual_fund/raw_mutual_fund
+docker compose run --rm api python -m scripts.rag.cards_mutual_fund build --embedding-provider hosted   # or local
+docker compose restart api
+
 # check
 curl -fsS http://127.0.0.1:8000/health      # profile gcp, both index folders, reranker / ca_cert flags
+curl -fsS http://127.0.0.1:8000/mutual_fund/funds   # 404 until fund data is loaded
 ```
 
 **After grading:**
@@ -152,6 +161,7 @@ docker compose down
 - **Docker image:** not built yet, because Docker isn't installed on the development PC. The first build on the VM is the real check.
 - **Index copy scripts:** the `gcloud` steps (`cp.export_to_gcs`, `deploy/sync_from_gcs.sh`) haven't been run against a real bucket. Their syntax and the commands they build are tested.
 - **Qwen3-VL and ColPali at full scale:** neither has run on a Colab GPU yet, so the GPU-hour estimates are uncertain.
+- **Mutual fund data in containers:** the build commands above were run locally (14 November 2026), not yet inside the image. The shared embedding API's private CA must be in `secrets/embedding_ca.crt` for `--embedding-provider hosted`.
 - **Prices:** these are list prices. Some LLM and Colab prices change on 1 December and 1 January.
 
 **Do a dry run first.** Before the full sync, deploy 1–2 sectors end to end (about an hour) to confirm the build, the sync and the restore.

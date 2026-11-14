@@ -33,7 +33,8 @@ flowchart LR
 | FastAPI + agents | the serving machine, **1 worker** | no | Rate limit, request IDs, answer cache and the 10-step agent cap |
 | Conversation context | `indexes/state/conversations.sqlite3` | no | Survives restarts (`CONVERSATION_DB`). Stores only the clarifier slots, never answers |
 | Qdrant | container next to the API | no | Must be the server, not embedded mode: embedded mode allows one process only |
-| Query embedding, reranker | inside FastAPI, CPU | no | MiniLM; the model is cached in `indexes/hf_cache` |
+| Query embedding, reranker | inside FastAPI, CPU | no | The index's model: bge-small (Pipeline 1 by default; or the shared embedding API, `RAG_EMBEDDING_PROVIDER=hosted`) or MiniLM; cached in `indexes/hf_cache` |
+| Mutual fund data (optional) | `RAG_HOME/indexes/mutual_fund/` | no | SQLite holdings + Chroma fund cards (bge-small); read by the API's fund agent and `/mutual_fund/*` routes. A few MB per fund; build it on the serving machine (§7.4) |
 | LLM | hosted endpoint | no (yours) | `LLM_API_BASE/KEY/MODEL` |
 | ColPali, OCR on GPU, VLM | **only while building the index** | yes | Not needed to answer questions |
 
@@ -645,6 +646,7 @@ Versions are the ones locked in `uv.lock`. The container installs the `pyproject
   cache/hf/                              HF_HOME on Colab
   models/                                local model copies (cross-encoder reranker)
   page_audit/<sector>/*.csv
+  indexes/mutual_fund/                   nport_mutual_fund.sqlite3, chroma_mutual_fund/, raw_mutual_fund/  = RAG_MUTUAL_FUND_DIR
   state/conversations.sqlite3                                                                            = CONVERSATION_DB
   secrets/llm_ca.crt                     the endpoint's CA                                                = LLM_CA_CERT
 ```
@@ -733,6 +735,38 @@ GCP VM: sh deploy/sync_from_gcs.sh  (bucket ──gcloud storage rsync──► 
 - **Not changed:**
   - model paths of the separate local multimodal path (`run_local_multimodal`, `indexes/models/*`);
   - the older `colab_financial_ingest.ipynb`, which sets `RAG_INGEST_DIR` itself (still honoured).
+
+### 7.4 Mutual fund data in each environment
+
+Added 14 November 2026 ([mutual_fund_rag_design.md](mutual_fund_rag_design.md), [annual_report_rag_structure.md](annual_report_rag_structure.md) §13). The fund layer is optional: without `indexes/mutual_fund/nport_mutual_fund.sqlite3` the API serves exactly as before and `/mutual_fund/*` answers 404.
+
+| | Size | Build time (CPU) | Where |
+|---|---|---|---|
+| Four N-PORT XML filings | 4 MB | seconds (EDGAR) | `raw_mutual_fund/` |
+| `nport_mutual_fund.sqlite3` | a few MB per fund (tens of MB for 100 funds from a bulk ZIP) | ~7 s for four funds | `indexes/mutual_fund/` |
+| `chroma_mutual_fund/` (fund cards) | < 1 MB | seconds once bge-small (~130 MB) is cached | `indexes/mutual_fund/` |
+
+It is small enough to **build on the serving machine** rather than copy:
+
+```bash
+# local (PC)
+$env:SEC_USER_AGENT="capstone-research you@example.com"
+python -m scripts.downloads.download_mutual_fund latest
+python -m scripts.rag.nport_mutual_fund load --xml indexes\rag_home\indexes\mutual_fund\raw_mutual_fund
+python -m scripts.rag.cards_mutual_fund build
+
+# Docker (server / gcp): the same commands inside the api container write to RAG_HOME_DIR/indexes/mutual_fund
+docker compose run --rm -e SEC_USER_AGENT="capstone-research you@example.com" api python -m scripts.downloads.download_mutual_fund latest
+docker compose run --rm api python -m scripts.rag.nport_mutual_fund load --xml /app/rag_home/indexes/mutual_fund/raw_mutual_fund
+docker compose run --rm api python -m scripts.rag.cards_mutual_fund build      # add --embedding-provider hosted to use the shared API
+docker compose restart api
+```
+
+Notes:
+- `configs/funds_mutual_fund.json` (the funds to fetch) is in the image; the data is not.
+- Fund cards are embedded with bge-small. At serving time the API embeds a fund query with the provider `RAG_EMBEDDING_PROVIDER` picks (the server and GCP profiles prefer the shared API, which needs `EMBEDDING_API_KEY` and `secrets/embedding_ca.crt`) and falls back to the local model. Fund names resolve without the cards, so the cards matter only for questions that don't name a fund.
+- To copy instead of build: the whole `indexes/mutual_fund/` folder can be copied like `chroma_db` (Drive or the bucket), as long as no process has it open.
+- `sync_from_gcs.sh` and `restore_index.sh` don't copy it yet.
 
 ## 8. Not verified here
 

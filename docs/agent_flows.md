@@ -8,7 +8,7 @@ How a question travels from Streamlit to an answer: which agents and tools run, 
 - The financial graph routes **per request**: the planner's tools decide whether the coverage check, ColPali search and calculator run; a comparison becomes one filtered search per company and year; a company with no evidence gets **one broadened retrieval retry**; an answer whose citations fail, or whose claims or figures the cited evidence doesn't state, gets **one repair** carrying the critic's feedback.
 - The critic is two checks: citation IDs must be retrieved IDs, and a **support check** (every figure must appear in a cited chunk; an LLM judge decides claim by claim). With a hosted LLM, the generated answer is shown only when both pass; otherwise the response falls back to cited excerpts.
 - Loops are **budget-aware**: a loop runs only if the rest of the run still fits `AGENT_MAX_STEPS` (default 10), so the cap shortens a run instead of failing it.
-- **Three agent flows share these guards, critic and governance** (section 7a): `agentic_graph` (the Q&A agent), `trend_graph` (multi-year trend agent) and `router` (a supervisor that sends each question to the Q&A agent, the trend agent, a report handoff or a refusal). Streamlit uses `router` by default. Each flow is a **multi-agent flow**: input guard, supervisor/planner, executor, extractor, answer and critic agents hand work to each other inside one bounded graph (section 7b).
+- **Five agent flows share these guards, critic and governance** (sections 7a and 7c): `agentic_graph` (the Q&A agent), `trend_graph` (multi-year trend agent), `sector_trend_graph` (one measure across a sector), `fund_graph` (mutual fund holdings, linked to the holdings' annual reports) and `router` (a supervisor that sends each question to one of them, a report handoff or a refusal). The fund route exists only when fund data is loaded. Streamlit uses `router` by default. Each flow is a **multi-agent flow**: input guard, supervisor/planner, executor, extractor, answer and critic agents hand work to each other inside one bounded graph (section 7b).
 - Each response carries `agent_run`: the node path, every tool call, retrieval attempts, repairs and calculations. Streamlit shows it under **Agent run**.
 
 ---
@@ -18,7 +18,8 @@ How a question travels from Streamlit to an answer: which agents and tools run, 
 | Route | Who calls it | What runs |
 |---|---|---|
 | `POST /conversation/financial_report_qa` | Streamlit financial chat | Clarifier, then the financial agent graph (or the report pipeline) |
-| `POST /chat/financial_report_qa` | API clients, evaluation | An agent flow (`technique=agentic_graph`, `trend_graph` or `router`) or a single-prompt technique |
+| `POST /chat/financial_report_qa` | API clients, evaluation | An agent flow (`technique=agentic_graph`, `trend_graph`, `sector_trend_graph`, `fund_graph` or `router`) or a single-prompt technique |
+| `GET /mutual_fund/...` | API clients, checks | Loaded funds, holdings, holders, fund-card search: SQL and vector lookups only, no agents (section 7c) |
 | `POST /retrieve/...` | Evidence browsing | Retrieval only, no agents, no LLM |
 | `POST /multimodal/financial_report_qa/chat` | Local multimodal profile | Input guard, retrieval, fail-closed `safe_answer` (not LangGraph) |
 | `generate_financial_report` | Clarifier's "Full financial report" | Deterministic pipeline; numbers come only from the PDF |
@@ -123,7 +124,8 @@ Every branch is a Python function of the state. None asks the LLM.
 | Tool | Does | Runs when |
 |---|---|---|
 | `coverage_lookup` | Checks the served index's company/year list (`ingest.sqlite3`) and skips targets it can't answer | The question names a company or year |
-| `text_search` | Hybrid Qdrant search (dense MiniLM + BM25, RRF fusion, rerank) with ticker, year and sector filters | Always: every answer must cite text |
+| `text_search` | Hybrid search over the served index (dense vectors of the index's model, bge-small or MiniLM, + BM25, RRF fusion; cross-encoder rerank on Qdrant) with ticker, year and sector filters | Always: every answer must cite text |
+| `fund_search`, `fund_lookup`, `company_figures` | Fund route only (section 7c): find the fund (names, then fund cards), fixed SQL over the N-PORT tables, cached verified company figures | The router chose `fund` |
 | `visual_search` | ColPali page search over chart, table and image pages, merged into the same ranking | `RAG_FIN_VISUAL=1` (every question) or `auto` (planner or chart words); dropped when no ColPali index is served |
 | `calculator` | Evaluates `CALC[...]` from the answer: numbers and `+ - * /` only, operands must appear in the evidence | Planner sets `needs_calculation`, or the question asks for growth, change, ratio, margin or comparison |
 
@@ -197,7 +199,7 @@ The judge runs inside `critic_step`, so it adds one LLM call per critique but no
 | `not_available` | The filings can't answer (company, year or measure not covered) |
 | `insufficient_evidence` | Searches found nothing usable |
 | `not_grounded` | Citations failed validation or named the wrong company |
-| `refused` | Input, evidence or output guard blocked it |
+| `refused` | Input, evidence or output guard blocked it; on the fund route also investment-advice wording ("should I buy", "best fund") |
 | `step_limit` | Hard cap reached (not expected with budget-aware routing) |
 | `tool_error` | A model or search call failed or timed out (`RAG_REQUEST_TIMEOUT_SECONDS`) |
 
@@ -376,6 +378,50 @@ flowchart LR
 
 **In one line:** three bounded multi-agent flows. A supervisor routes questions to a planner–executor–critic Q&A agent team or a verify-and-retry trend agent team, and all three share one guard, critic and governance layer.
 
+## 7c. Fund agent (mutual fund holdings)
+
+Added 14 November 2026. Code: [agent_mutual_fund.py](../scripts/agents/agent_mutual_fund.py), [tools_mutual_fund.py](../scripts/agents/tools_mutual_fund.py), [prompts_mutual_fund.py](../scripts/prompts/prompts_mutual_fund.py), the `fund_*` nodes in `financial_graph`. Data: [annual_report_rag_structure.md](annual_report_rag_structure.md) §13. Design: [mutual_fund_rag_design.md](mutual_fund_rag_design.md). Tests: [test_agent_mutual_fund.py](../tests/test_agent_mutual_fund.py).
+
+```mermaid
+flowchart TD
+    S[security_step] --> P[plain_text_step - LLM]
+    P --> R[route_step - fund_plan: fund, holdings date, lookup kind]
+    R -->|plan not possible / advice| CR
+    R -->|fund| FL[fund_lookup_step - fixed SQL, each row an evidence item]
+    FL -->|holdings only| A[answer_step - fund prompt]
+    FL -->|about the holdings' annual reports| FC[fund_company_step - one filtered search per company, statement row in code, LLM last, cache, weighted growth in code]
+    FC --> A
+    A --> CR[critic_step]
+    CR -->|repair once| A
+    CR --> GV[governance_step]
+```
+
+**When the router picks `fund`.** Only when `nport_mutual_fund.sqlite3` holds a filing **and** the question names a loaded fund (every distinctive word of its name, or its family plus one) or uses a fund word with a holdings word ("which funds hold NVIDIA"). The rule wins over the router LLM, and an LLM `fund` without those signals is overruled. Without fund data the route doesn't exist, so every other route is unchanged. The clarifier passes fund questions straight through (`clarifier: passthrough`, `route_hint: fund`); it never asks them for a company and year.
+
+| Node | Does | LLM? |
+|---|---|---|
+| `route_step` | `fund_plan`: the fund (names first; fund cards only when the best card beats the next by 0.03), the filing (latest, or the year asked), the lookup kind and how many holdings. Not possible → `not_available` with the reason ("which Vanguard fund? Loaded: ..."); advice wording → `refused` | Router only |
+| `fund_lookup_step` | `fund_lookup`: fixed, parameterised SQL. Rows become evidence with IDs `nport_<accession digits>_<row>` (`_fund`, `_coverage`, `_h<holding>`, `_sector_<slug>`, `_x_<ticker>`, `_flows`, `_returns_<class>`) and the row as text | No |
+| `fund_company_step` | Only for `holdings_growth` and `holdings_text`. Per top holding with a corpus ticker: the latest **indexed** annual report filed by the holdings date. Growth: the measure for that fiscal year and the one before, from the same filing; statement row in code, one broadened search, then the LLM (Series JSON); a cached figure is reused when its chunk is retrieved again. Weighted growth `Σ weight × growth / Σ covered weight` in code. Text: one filtered search per company | Only for rows code can't read |
+| `answer_step` | Fund prompt: facts only, figures copied from rows or the computed table, the holdings date named, every row or chunk cited | **Yes** |
+| `critic_step`, `governance_step` | As in section 6; `nport_*` IDs are valid citations and their numbers count for the figure check. Extra trigger `low_fund_coverage` (companies used carry under half of the weight asked about). "Hold"/"holdings" don't trigger the investment-language review on this route; advice words do | Yes (judge) |
+
+| Lookup kind | Example | Data |
+|---|---|---|
+| `top_holdings` | What are the top 5 holdings of the Vanguard 500 Index Fund? | rows |
+| `holders` | Which funds hold the most NVIDIA? | rows across loaded funds |
+| `exposure` | How much Microsoft does the Vanguard Total Stock Market Index Fund hold? | rows |
+| `sector_mix` | What is the sector allocation of the Vanguard Growth Index Fund? | rows by corpus sector |
+| `facts`, `flows`, `returns` | net assets; monthly sales and redemptions; monthly total returns | rows |
+| `holdings_growth` | How did revenue of the Vanguard Value Index Fund's top 10 holdings grow? | rows + annual reports |
+| `holdings_text` | What risks do the fund's three largest holdings report? | rows + annual-report search |
+
+**Budget.** 7 steps for holdings questions, 8 with `fund_company_step`, 10 with one repair (the retry runs inside the node). A routed fund request gets `RAG_SECTOR_TIMEOUT_SECONDS` (default 300), like the sector agent. `run_technique` skips the company-scope checks for this route, because the answer cites N-PORT rows, not one company's filings.
+
+**Safety rules in code.** A figure the LLM copies for both years from one chunk is left out ("the same figure was read for both years"), not reported as 0% growth. Companies whose filings aren't indexed are listed as not used, never searched.
+
+**Live check (14 November 2026; local API on the Chroma index with 180 filings, real N-PORT data for four Vanguard funds, mock LLM).** Top holdings, holders, exposure, sector mix, returns and net assets: `fund` route, 7 steps, valid citations, 0.2–5.5 s. Value fund top 10 revenue growth: 8 steps, ABBV +8.57% read from its statement rows, JPM left out (same figure for both years), the rest not indexed → `pending_human_review` (`low_fund_coverage`). "What does the Vanguard fund hold?" → asks which of the four. "Should I buy the Vanguard 500 Index Fund?" → refused. The Q&A, trend, sector trend and report routes gave the same results as before.
+
 ## 8. Worked runs (local Retail index, mock LLM)
 
 Measured on 10 Nov 2026 against the live API with the 5-filing Retail index (Costco 2024/2025, Walmart, Home Depot and Amazon 2025). Searches took 0.6–0.7 s each once the model was loaded.
@@ -440,6 +486,7 @@ The five other Track B domains (procurement, travel and expense, competitive res
 | Response `agent_run` | Path, steps/max, every tool call (target, hits, ms), retrieval attempts, repairs, calculations |
 | Response `plan` | Planner source (`llm`/`fallback`), proposed tools, final tools, targets, rule adjustments |
 | Response `support_check` | Verdict, each claim with the judge's reason, figures checked and any missing |
+| Response `mutual_fund` | Fund route: fund, holdings date, accession, lookup kind, the rows shown, corpus coverage, linked company figures, weighted growth and what was not used |
 | Response `grounding` | Citation status, `method` (`llm_support_check`, `source_excerpts` or `mock`), `semantic_answer_verified` |
 | Streamlit **Agent run** expander | The path, tools, attempts and a tool-call table |
 | Streamlit **What can I ask?** and **How to read an answer** | Clickable examples built from the indexed companies (cited answer, growth, comparison, follow-up, risks, not available, guardrails), the coverage line, and what each status means |
@@ -459,6 +506,8 @@ The five other Track B domains (procurement, travel and expense, competitive res
 | `RAG_REQUEST_TIMEOUT_SECONDS` | 60 | Whole-workflow deadline (`tool_error` when exceeded) |
 | `RAG_SUPPORT_CHECK` | on | `0` turns off the critic's support check (and hosted answers then fall back to excerpts) |
 | `ANSWER_CACHE_SECONDS` | 0 | Reuse identical answers |
+| `RAG_MUTUAL_FUND_DIR` | `<RAG_HOME>/indexes/mutual_fund` | Fund database and fund cards; the `fund` route exists only when its database holds a filing |
+| `RAG_FUND_MAX_COMPANIES` | 10 | Most holdings a fund question reads annual reports for |
 | `CONVERSATION_DB` | in memory | Clarifier state in SQLite |
 
 ## 13. Limits

@@ -1,6 +1,6 @@
 # FastAPI API Reference
 
-The FastAPI backend exposes domain discovery, guarded chat, and evidence retrieval. Request validation, response schemas, and endpoint descriptions are also published in the interactive API documentation.
+The FastAPI backend exposes domain discovery, guarded chat, evidence retrieval and read-only mutual fund lookups. Request validation, response schemas, and endpoint descriptions are also published in the interactive API documentation.
 
 Streaming is not currently implemented. The proposed SSE architecture, event contract, security controls, grounding gates, and HITL workflow are described in the [FastAPI streaming design](fastapi_streaming_design.md).
 
@@ -33,6 +33,10 @@ python -m scripts.api.export_openapi --server https://your-host         # add th
 | `POST` | `/chat/financial_report_qa` | Answer a financial-report question using the selected financial technique. |
 | `POST` | `/conversation/financial_report_qa` | One chat turn: clarify a missing company, year or measure first, then run the agents or the report pipeline. Used by the Streamlit chat. |
 | `POST` | `/retrieve/financial_report_qa` | Return ranked financial-report evidence without generating an answer. |
+| `GET` | `/mutual_fund/funds` | Loaded funds and their N-PORT filings (404 until fund data is loaded). |
+| `GET` | `/mutual_fund/holdings` | Top equity holdings of one fund filing, with corpus coverage and sector mix. |
+| `GET` | `/mutual_fund/holders/{ticker}` | Loaded funds holding a corpus company, largest weight first. |
+| `GET` | `/mutual_fund/search` | Fund cards nearest a query (bge-small-en-v1.5, collection `fund_cards_mutual_fund`). |
 
 The service answers financial report questions only (`financial_report_qa`). The routes for the five other Track B domains (`/chat/{domain}`, `/retrieve/{domain}`) were removed on 10 November 2026; the local multimodal routes accept `financial_report_qa` only.
 
@@ -60,7 +64,8 @@ Financial chat additionally accepts:
 
 | Field | Type | Default | Constraints / purpose |
 |---|---|---|---|
-| `technique` | string | `agentic_graph` | One of `baseline_rag`, `structured_few_shot`, `decomposition`, `self_consistency`, `agentic_graph`, `trend_graph` (multi-year trend agent), `router` (supervisor: Q&A, trend, report handoff or refusal). The agent flows add `route`, `trend` and `handoff` to the response; a report request ends as `final_status = report_handoff`. See `agent_flows.md` §7a. |
+| `technique` | string | `agentic_graph` | One of `baseline_rag`, `structured_few_shot`, `decomposition`, `self_consistency`, `agentic_graph`, `trend_graph` (multi-year trend agent), `sector_trend_graph` (one measure across a sector), `fund_graph` (mutual fund agent; needs loaded fund data), `router` (supervisor: Q&A, trend, sector trend, fund, report handoff or refusal). The agent flows add `route`, `trend`, `sector_trend`, `mutual_fund` and `handoff` to the response; a report request ends as `final_status = report_handoff`. See `agent_flows.md` §7a and §7c. |
+| `sector` | string or null | `null` | Optional sector filter (e.g. `banking`; comma-separated for several). |
 | `retrieval_mode` | string | `hybrid` | `dense` or `hybrid`. |
 | `ticker` | string or null | `null` | Optional company ticker filter. |
 | `year` | integer or null | `null` | Optional fiscal/reporting year filter. |
@@ -237,3 +242,45 @@ Set `LANGSMITH_API_KEY` (or `LANGCHAIN_API_KEY`) and either pass `"enable_langsm
 The API logs one completion event per request with its request ID, HTTP method, path, response status, and elapsed milliseconds. Client IP addresses, request bodies, query text, authorization data, and response content are intentionally excluded from access logs. Server-side unexpected exceptions are logged with stack traces; clients receive only the sanitized `500` error.
 
 Every response includes an `X-Request-ID` header. A valid UUID from the incoming `X-Request-ID` header is reused; missing or invalid values are replaced with a generated UUID. When LangSmith tracing is enabled, that same ID is attached to the trace metadata so an API log event can be correlated with its LangSmith run. The API also logs whether LangSmith tracing was enabled and the selected project (never credentials).
+
+## Mutual fund routes
+
+Added 14 November 2026. Read-only lookups over the loaded SEC N-PORT data (`RAG_HOME/indexes/mutual_fund/`, see [annual_report_rag_structure.md](annual_report_rag_structure.md) §13). They are covered by the same API key and rate limit as every route, and answer **404** with `"No mutual fund data is loaded"` until `nport_mutual_fund load` has run. Questions about funds go through the chat routes instead (router `fund` route, [agent_flows.md](agent_flows.md) §7c).
+
+| Route | Parameters | Returns |
+|---|---|---|
+| `GET /mutual_fund/funds` | — | `count`, `funds`: series ID, name, family, registrant, CIK and each filing (accession, holdings date, net assets, filing date) |
+| `GET /mutual_fund/holdings` | `series_id` (required), `year` (holdings year, default latest), `limit` (1–500, default 25) | `filing`, `coverage` (equity share of net assets, corpus companies and their share, by mapping method), `holdings` (rank, issuer, corpus ticker, % of net assets, USD value, share classes summed, mapping method), `sector_mix` |
+| `GET /mutual_fund/holders/{ticker}` | `limit` (1–200, default 25) | `ticker`, `company`, `holders`: each loaded fund's latest weight and value; 404 for a ticker outside the corpus |
+| `GET /mutual_fund/search` | `q` (2–300 characters), `top_k` (1–10, default 3) | `hits`: fund cards with `series_id`, `series_name`, `period_end`, `accession`, `score` (cosine similarity) and the card text |
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8000/mutual_fund/funds"
+Invoke-RestMethod "http://127.0.0.1:8000/mutual_fund/holdings?series_id=S000002839&limit=5"
+Invoke-RestMethod "http://127.0.0.1:8000/mutual_fund/holders/NVDA"
+Invoke-RestMethod "http://127.0.0.1:8000/mutual_fund/search?q=Vanguard%20value%20stocks%20fund"
+```
+
+### Fund questions through chat
+
+```json
+{
+  "query": "How did revenue of the Vanguard Value Index Fund's top 10 holdings grow?",
+  "technique": "router",
+  "llm_provider": "hosted"
+}
+```
+
+The response's `route.route` is `fund` and `mutual_fund` holds the table the answer was written from:
+
+| Field | Meaning |
+|---|---|
+| `kind` | `top_holdings`, `holders`, `exposure`, `sector_mix`, `facts`, `flows`, `returns`, `holdings_growth` or `holdings_text` |
+| `fund`, `series_id`, `accession`, `period_end`, `filing_date`, `net_assets` | The filing the rows come from (`holders`: `ticker`, `company` instead) |
+| `rows`, `sector_mix` | What the UI shows as tables |
+| `coverage` | Equity share, corpus companies and their share of net assets |
+| `companies` | Linked questions: each holding's weight, annual-report fiscal year, verified figures (value, chunk, `method` label or llm) and growth |
+| `weighted_growth_pct`, `covered_weight`, `asked_weight`, `coverage_share` | Weighted growth over the covered holdings and how much of the weight asked about it covers |
+| `excluded` | Holdings not used and why (not in the corpus, no indexed report filed by the holdings date, figure not verified, same figure read for both years) |
+
+Evidence rows have IDs `nport_<accession digits>_<row>`; citations to them validate like annual-report chunk IDs. Statuses: `answered`; `pending_human_review` (for example `low_fund_coverage`); `not_available` with the reason (no fund data, fund not loaded, several funds match: "which Vanguard fund? Loaded: ..."); `refused` for advice wording. On `/conversation`, a fund question is passed straight to the agents (`clarifier: "passthrough"`).
