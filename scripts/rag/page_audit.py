@@ -54,7 +54,9 @@ LABELS = ("pdfParser", "pdfParser+colpali", "ocr", "qwen3VL", "paidVL", "none")
 MIN_TEXT_WORDS = 15          # fewer real words than this: the page has (almost) no text layer
 MIN_CHART_NUMBERS = 6        # a chart with at least this many figures in its text layer has printed data labels
 SCANNED_IMAGE_SHARE = .6     # an image covering this much of a page with no text layer looks like a scan
-OUTLINED_SHAPES = 1000       # a "chart" with this many vector shapes and no text layer is text drawn as outlines
+TEXT_PAGE_WORDS = 600       # a "chart" with this many real words is a text page whose frame/rules are vector art;
+                             # Qwen3-VL would truncate it at 1,200 tokens, so the complete text layer is kept instead
+OUTLINED_SHAPES = 1000      # a "chart" with this many vector shapes and no text layer is text drawn as outlines
                              # (Costco 2025: 2,800-3,400 shapes per page); real charts have tens to hundreds
 WORD = re.compile(r"[a-z]{2,}")
 NUMBER = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+\.\d+%?|\d+%|\$\s?\d+")
@@ -75,6 +77,8 @@ def route(page: dict) -> str:
     if kind == "table":
         return "pdfParser+colpali"
     if kind == "chart":
+        if words >= TEXT_PAGE_WORDS:
+            return "pdfParser"                 # a text page with decorative vector art (BAC 2025, TRV 2023, CME 2022)
         if words < MIN_TEXT_WORDS and page.get("shapes", 0) >= OUTLINED_SHAPES:
             return "ocr"                       # glyphs drawn as outlines, not a chart
         return "pdfParser+colpali" if numbers >= MIN_CHART_NUMBERS else "qwen3VL"

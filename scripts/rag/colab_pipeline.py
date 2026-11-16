@@ -100,6 +100,7 @@ class Settings:
     qwen_reader: str = "transformers"       # routed: Qwen3-VL in-process, or "openai" (endpoint at RAG_VISION_API_BASE)
     paid_threshold: float = 0.10            # routed: paidVL page -> paid model when > 10% of Qwen3-VL's figures fail OCR
     paid_max_pages_per_pdf: int = 0         # routed: cap paid calls per filing (0 = no cap)
+    paid_first: bool = False                # routed: paidVL pages -> paid model first, Qwen3-VL only as a fallback
     describe_visuals: bool = True           # routed: Qwen3-VL search description of chart and image pages
     vlm_model: str | None = None            # default Qwen/Qwen3-VL-4B-Instruct (or -2B / -8B)
     vlm_pages: str = "visual"               # tables, charts, images + unreadable pages
@@ -402,6 +403,7 @@ def ingest_vlm(s: Settings, sector, corpus=None):
             "--qwen-reader", s.qwen_reader, "--paid-threshold", str(s.paid_threshold),
             "--paid-max-pages-per-pdf", str(s.paid_max_pages_per_pdf)]
     argv += [] if s.describe_visuals else ["--no-describe-visuals"]
+    argv += ["--paid-first"] if s.paid_first else []
     argv += ["--vlm-model", s.vlm_model] if s.vlm_model else []
     run = vi.VlmIngest(vi.build_parser().parse_args(argv), vlm=_loaded.get("vlm"), embedder=_loaded.get("embedder"))
     _loaded["embedder"] = run.embedder
@@ -520,7 +522,8 @@ def coverage(s: Settings, show=True):
                             for slug, c in rows.items()},
               "total": {k: total[k] for k in ("planned", "downloaded", "ingested", "pending", "failed")},
               "failed": failed,
-              "not_in_plan": sorted(set(status) - set(planned))}
+              "not_in_plan": sorted(set(status) - set(planned)),
+              "by_doc": planned}
     if show:
         print(f"{'sector':26s} {'planned':>7s} {'downloaded':>10s} {'ingested':>8s} {'pending':>7s} {'failed':>6s}")
         for slug, c in report["by_sector"].items():
@@ -529,6 +532,171 @@ def coverage(s: Settings, show=True):
         print(f"{'total':26s} {t['planned']:7d} {t['downloaded']:10d} {t['ingested']:8d} {t['pending']:7d} {t['failed']:6d}")
         if failed:
             print(f"failed ({len(failed)}; rerun ingest to retry, see status for errors): {failed[:20]}")
+    return report
+
+
+def chroma_metadatas(store, batch=20000, fields=None):
+    """Every chunk's metadata, read in batches so 300k+ chunks don't need one huge response."""
+    total = store.count()
+    for offset in range(0, total, batch):
+        for meta in store.collection.get(include=["metadatas"], limit=batch, offset=offset)["metadatas"]:
+            yield {k: meta.get(k) for k in fields} if fields else meta
+
+
+def chroma_check(root):
+    """Chunks in Chroma, BM25 and the state file, and the filings (doc_ids) Chroma holds."""
+    import sqlite3
+    out = {"chroma_chunks": 0, "bm25_chunks": 0, "state_chunks": 0, "state_complete": 0, "chroma_filings": set()}
+    state = Path(root) / "vlm_ingest.sqlite3"
+    if state.exists():
+        with contextlib.closing(sqlite3.connect(f"file:{state}?mode=ro", uri=True)) as db:
+            out["state_complete"], out["state_chunks"] = db.execute(
+                "SELECT COUNT(*), COALESCE(SUM(points), 0) FROM filings WHERE status='complete'").fetchone()
+            out["embedding"] = dict(db.execute("SELECT key, value FROM settings")).get("embedding")
+    if (Path(root) / "chroma").exists():
+        store = vi.ChromaStore(root)
+        out["chroma_chunks"], out["bm25_chunks"] = store.count(), store.bm25.count()
+        out["chroma_filings"] = {m["doc_id"] for m in chroma_metadatas(store, fields=("doc_id",))}
+    return out
+
+
+def embedding_matches(s: Settings, recorded):
+    """The index's recorded embedding (e.g. local:BAAI/bge-small-en-v1.5:384) is the one this run would use:
+    the same model name, or the hashing embedder of tests and smoke runs. Local and hosted bge-small are one model."""
+    recorded = recorded or ""
+    if s.embedding_provider == "hashing":
+        return recorded.startswith("hashing")
+    return Path(s.embedding_model).name in recorded
+
+
+def verify_upload(s: Settings, expected_filings=None):
+    """Is everything the PC staged on Drive, and did restore bring the index to local disk intact?
+
+    Checks the code and fund zips, every planned PDF (present, non-empty), the Drive index copy (state file,
+    page analyses, Chroma and BM25 files), the OCR cache, and - once ``restore`` ran - the local copy: Chroma chunks =
+    BM25 chunks = the state file's chunks, and every planned filing in Chroma. Prints one line per check.
+    """
+    from scripts.common.sector_corpus import resolve_local_path
+    planned = coverage(s, show=False)
+    expected = expected_filings or planned["total"]["planned"]
+    rows = read_manifest(s.corpus) if s.corpus.exists() else []
+    pdfs = [resolve_local_path(r) for r in rows]
+    missing = [str(p) for p in pdfs if not p.exists() or p.stat().st_size == 0]
+    durable = s.backup
+    pages = len(list((durable / "pages").glob("*.json"))) if (durable / "pages").exists() else 0
+    cached = len(list(s.vlm_cache.glob("*.jsonl"))) if s.vlm_cache.exists() else 0
+    checks = [
+        ("code zip on Drive", (s.drive_root / "capstone_code.zip").exists(), str(s.drive_root / "capstone_code.zip")),
+        ("mutual fund zip on Drive", (s.drive_root / FUND_ZIP).exists(), str(s.drive_root / FUND_ZIP)),
+        ("PDFs in the manifests", len(rows) >= expected, f"{len(rows)} rows (expect {expected})"),
+        ("PDF files present and non-empty", bool(pdfs) and not missing,
+         f"{len(pdfs) - len(missing)} ok, {len(missing)} missing, {folder_gb(s.corpus)} GB"),
+        ("planned filings downloaded", planned["total"]["downloaded"] == expected,
+         f"{planned['total']['downloaded']} of {expected}"),
+        ("Drive index: state file", (durable / "vlm_ingest.sqlite3").exists(), str(durable / "vlm_ingest.sqlite3")),
+        ("Drive index: page analyses", pages >= expected, f"{pages} json (expect {expected})"),
+        ("Drive index: Chroma + BM25 files", (durable / "chroma" / "chroma.sqlite3").exists()
+         and (durable / "chroma" / "bm25.sqlite3").exists(), f"{folder_gb(durable / 'chroma')} GB"),
+        ("OCR / page reading cache", cached > 0, f"{cached} filings cached in {s.vlm_cache}"),
+    ]
+    local = chroma_check(s.root) if (s.root / "vlm_ingest.sqlite3").exists() else None
+    if local:
+        absent = sorted(set(planned["by_doc"]) - local["chroma_filings"])
+        checks += [
+            ("local copy: filings complete in state", local["state_complete"] >= expected,
+             f"{local['state_complete']} (expect {expected})"),
+            ("local copy: embedding model = this run's", embedding_matches(s, local.get("embedding")),
+             f"{local.get('embedding')} (run: {s.embedding_provider} {s.embedding_model})"),
+            ("local copy: Chroma = BM25 = state chunks",
+             local["chroma_chunks"] == local["bm25_chunks"] == local["state_chunks"] > 0,
+             f"{local['chroma_chunks']:,} / {local['bm25_chunks']:,} / {local['state_chunks']:,}"),
+            ("local copy: every planned filing in Chroma", not absent,
+             f"{len(local['chroma_filings'])} filings" + (f", missing {absent[:5]}" if absent else "")),
+        ]
+    else:
+        checks.append(("local copy restored", False, f"nothing at {s.root}: run cp.restore(s) (cell 3) first"))
+    for name, ok, detail in checks:
+        print(f"{'OK  ' if ok else 'FAIL'} {name:42s} {detail}")
+    failed = [name for name, ok, _ in checks if not ok]
+    print("\nALL CHECKS PASSED" if not failed else f"\n{len(failed)} check(s) failed: {failed}")
+    return {"ok": not failed, "failed": failed, "missing_pdfs": missing[:50], "checks": checks}
+
+
+PAGE_READERS = ("pdfParser", "ocr", "qwen3VL", "paidVL")
+READER_NAMES = {"pdfParser": "PDF text layer / native tables", "ocr": "RapidOCR", "qwen3VL": "Qwen3-VL",
+                "paidVL": "paid model (Gemini Flash)"}
+
+
+def reader_summary(s: Settings, expected_filings=None):
+    """Who read each page of the final index, and whether all planned filings are in it.
+
+    Counts distinct (filing, page) pairs per ``reader`` (pdfParser text layer, ocr, qwen3VL, paidVL = the paid model,
+    e.g. Gemini Flash) from the Chroma chunks, the paidVL escalation outcomes, the Qwen3-VL page descriptions, and the
+    filings still carrying a ``skip=`` pipeline (read on the PC without Qwen3-VL, not yet redone).
+    """
+    import sqlite3
+    planned = coverage(s, show=False)
+    expected = expected_filings or planned["total"]["planned"]
+    store = vi.ChromaStore(s.root)
+    pages, escalations, descriptions, by_route = {}, Counter(), set(), Counter()
+    filings, unverified = set(), set()
+    for m in chroma_metadatas(store, fields=("doc_id", "page", "reader", "content_type", "escalation", "page_route",
+                                               "unverified_numbers")):
+        key = (m["doc_id"], m["page"])
+        filings.add(m["doc_id"])
+        if m.get("content_type") == "page_description":
+            descriptions.add(key)
+            continue
+        if key not in pages:
+            pages[key] = m.get("reader") or "pdfParser"
+            by_route[m.get("page_route") or "?"] += 1
+            if m.get("page_route") == "paidVL":
+                escalations[m.get("escalation") or "none"] += 1
+        if m.get("unverified_numbers") not in (None, "[]"):
+            unverified.add(key)
+    readers = Counter(pages.values())
+    with contextlib.closing(sqlite3.connect(state_path(s))) as db:
+        rows = db.execute("SELECT doc_id, status, pipeline FROM filings").fetchall()
+    complete = [d for d, st, _ in rows if st == "complete"]
+    still_skipped = [d for d, st, p in rows if st == "complete" and "skip=" in (p or "")]
+    absent = sorted(set(planned["by_doc"]) - filings)
+    report = {
+        "filings": {"planned": expected, "complete_in_state": len(complete), "in_chroma": len(filings),
+                    "missing_from_chroma": absent, "failed": planned["failed"],
+                    "still_without_qwen3vl": len(still_skipped)},
+        "chunks": {"chroma": store.count(), "bm25": store.bm25.count()},
+        "pages_indexed": len(pages),
+        "pages_by_reader": {r: readers.get(r, 0) for r in (*PAGE_READERS, *sorted(set(readers) - set(PAGE_READERS)))},
+        "pages_by_route": dict(by_route.most_common()),
+        "paidVL_pages_by_outcome": dict(escalations.most_common()),
+        "qwen3vl_page_descriptions": len(descriptions),
+        "pages_with_unverified_figures": len(unverified),
+    }
+    report["all_filings_present"] = not absent and len(filings) >= expected and not planned["failed"]
+    total = len(pages) or 1
+    print(f"Filings: {len(filings)} in Chroma, {len(complete)} complete in state, planned {expected}  -> "
+          + ("ALL PRESENT" if report["all_filings_present"] else f"MISSING {absent[:10]} FAILED {planned['failed'][:10]}"))
+    chunks = report["chunks"]
+    print(f"Chunks: Chroma {chunks['chroma']:,} | BM25 {chunks['bm25']:,}  ("
+          + ("match" if chunks["chroma"] == chunks["bm25"] else "MISMATCH") + ")")
+    print(f"Filings still without Qwen3-VL (PC run, skip=): {len(still_skipped)}")
+    audit = s.drive_root / "page_audit" / "_summary.json"
+    if audit.exists():
+        usage = json.loads(audit.read_text(encoding="utf-8")).get("parser_usage", {})
+        report["page_audit_routes"] = usage
+        print(f"Page audit: {usage.get('qwen3VL', 0):,} pages routed to qwen3VL, {usage.get('paidVL', 0):,} to paidVL"
+              f" (Qwen3-VL, then Gemini when it disagrees with OCR); {usage.get('pdfParser+colpali', 0):,} chart/image"
+              " pages get a Qwen3-VL description")
+    print(f"\nPages indexed: {len(pages):,}")
+    for reader, count in report["pages_by_reader"].items():
+        print(f"  {READER_NAMES.get(reader, reader):34s} {count:8,d}  {100 * count / total:5.1f}%")
+    print(f"  {'Qwen3-VL chart/image descriptions':34s} {len(descriptions):8,d}  (extra search chunks)")
+    print("\npaidVL pages by outcome: " + (", ".join(f"{k}={v:,}" for k, v in escalations.most_common()) or "none")
+          + "\n  not_needed = Qwen3-VL matched OCR | paid = Gemini's reading kept | paid_not_better = Qwen kept"
+            "\n  paid_first = Gemini read it first and matched OCR | paid_first_qwen_better = Qwen's reading kept"
+            " | paid_first_qwen_not_better = Gemini kept after Qwen also tried"
+            "\n  no_paid_model / paid_limit = Gemini not called | models_failed_ocr_fallback = OCR kept")
+    print(f"Pages with figures not confirmed by OCR or the text layer: {len(unverified):,}")
     return report
 
 

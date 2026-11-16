@@ -176,6 +176,68 @@ def test_paid_api_reader_backs_off_on_rate_limits(monkeypatch):
     assert reader.signature == "openai:gpt-4o-mini:1200"
 
 
+def test_paid_reader_for_gemini_sends_reasoning_effort_and_own_token_limit(monkeypatch):
+    import io
+    from PIL import Image
+    monkeypatch.setenv("RAG_PAID_VISION_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai/")
+    monkeypatch.setenv("RAG_PAID_VISION_MODEL", "gemini-2.5-flash")
+    monkeypatch.setenv("RAG_PAID_VISION_API_KEY", "g-test")
+    monkeypatch.setenv("RAG_PAID_VISION_MAX_TOKENS", "4096")
+    monkeypatch.setenv("RAG_PAID_VISION_REASONING_EFFORT", "none")
+    reader = vi.paid_reader(1200)
+    sent = {}
+
+    class Response(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_urlopen(request, timeout):
+        sent.update(url=request.full_url, body=json.loads(request.data))
+        return Response(json.dumps({"choices": [{"message": {"content": "| Revenue | 391,035 |"}}]}).encode())
+
+    monkeypatch.setattr(vi.urllib.request, "urlopen", fake_urlopen)
+    assert reader.transcribe(Image.new("RGB", (8, 8)), None) == "| Revenue | 391,035 |"
+    assert sent["url"] == "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+    assert sent["body"]["reasoning_effort"] == "none" and sent["body"]["max_tokens"] == 4096
+    assert reader.signature == "openai:gemini-2.5-flash:4096:effort=none"
+    monkeypatch.delenv("RAG_PAID_VISION_REASONING_EFFORT")
+    monkeypatch.delenv("RAG_PAID_VISION_MAX_TOKENS")
+    plain = vi.paid_reader(1200)                                 # unset: the request and signature are unchanged
+    assert plain.signature == "openai:gemini-2.5-flash:1200" and plain.reasoning_effort is None
+
+
+def test_paid_reader_error_shows_the_servers_message_not_the_key(monkeypatch):
+    import email.message
+    import io
+    import urllib.error
+    from PIL import Image
+    monkeypatch.setenv("RAG_PAID_VISION_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai")
+    monkeypatch.setenv("RAG_PAID_VISION_MODEL", "gemini-0-flash")
+    monkeypatch.setenv("RAG_PAID_VISION_API_KEY", "secret-key-123")
+    body = b'[{"error": {"code": 404, "message": "models/gemini-0-flash is not found", "status": "NOT_FOUND"}}]'
+
+    def fake_urlopen(request, timeout):
+        raise urllib.error.HTTPError(request.full_url, 404, "Not Found", email.message.Message(), io.BytesIO(body))
+
+    monkeypatch.setattr(vi.urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(RuntimeError) as caught:
+        vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None)
+    message = str(caught.value)
+    assert "HTTP 404" in message and "gemini-0-flash is not found" in message and "secret-key-123" not in message
+
+
+def test_qwen_runs_in_bf16_on_big_gpus_and_4bit_on_small_ones(monkeypatch):
+    monkeypatch.delenv("RAG_VLM_QUANT", raising=False)
+    assert vi.use_4bit(15.0) and vi.use_4bit(22.5)                  # T4, L4
+    assert not vi.use_4bit(39.6) and not vi.use_4bit(79.3)          # A100 40 GB / 80 GB
+    assert vi.use_4bit(79.3, "nf4") and not vi.use_4bit(15.0, "none")
+    monkeypatch.setenv("RAG_VLM_QUANT", "nf4")
+    assert vi.use_4bit(79.3)
+
+
 def test_chroma_is_the_only_store():
     with pytest.raises(SystemExit):
         vi.build_parser().parse_args(["ingest", "--store", "qdrant"])

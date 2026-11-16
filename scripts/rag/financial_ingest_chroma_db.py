@@ -32,7 +32,8 @@ Page readers (``--vlm``):
   ocr           RapidOCR (CPU, free) plus PyMuPDF's native table extraction as Markdown. Reads printed text,
                 labels and data labels in charts and images; no understanding of chart layout.
   transformers  Qwen3-VL in-process (default Qwen/Qwen3-VL-4B-Instruct; Qwen3-VL-2B / -8B with --vlm-model;
-                4-bit on a CUDA GPU when bitsandbytes is installed; needs transformers >= 4.57). Colab T4/L4.
+                4-bit NF4 on GPUs under 30 GB (T4, L4) when bitsandbytes is installed, bf16 on A100/H100; RAG_VLM_QUANT=
+                nf4|none overrides; needs transformers >= 4.57).
   openai        any OpenAI-compatible vision endpoint (RAG_VISION_API_BASE, RAG_VISION_MODEL,
                 RAG_VISION_API_KEY): self-hosted Qwen-VL on vLLM / llama.cpp / Ollama, or a paid API
                 (OpenAI, Google Gemini's OpenAI endpoint, OpenRouter, ...). HTTP 429/503 are retried after
@@ -79,6 +80,7 @@ from pathlib import Path
 import re
 import shutil
 import sqlite3
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -166,6 +168,20 @@ def ocr_reader_signature(scale=2.0, min_confidence=.6):
     return f"ocr:{fi.ocr_signature(scale, min_confidence)}+native_tables"
 
 
+FULL_PRECISION_GPU_GB = 30     # A100 40/80 GB (and H100) run Qwen3-VL in bf16; T4 16 GB and L4 24 GB use 4-bit NF4
+
+
+def use_4bit(gpu_gb, setting=None):
+    """4-bit NF4 on small GPUs only. RAG_VLM_QUANT=nf4 or none overrides (auto: by GPU memory). bf16 reads figures a
+    little more reliably and is faster on an A100; 8B in bf16 needs about 17 GB plus the page's activations."""
+    setting = (setting or os.getenv("RAG_VLM_QUANT", "auto")).lower()
+    if setting in ("nf4", "4bit"):
+        return True
+    if setting in ("none", "bf16", "fp16"):
+        return False
+    return gpu_gb < FULL_PRECISION_GPU_GB
+
+
 class TransformersVLM:
     def __init__(self, model="Qwen/Qwen3-VL-4B-Instruct", max_new_tokens=1200):
         import torch
@@ -173,7 +189,7 @@ class TransformersVLM:
         self.torch, self.max_new_tokens = torch, max_new_tokens
         options = {"low_cpu_mem_usage": True}
         quant = "none"
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and use_4bit(torch.cuda.get_device_properties(0).total_memory / 2**30):
             try:
                 from transformers import BitsAndBytesConfig
                 import bitsandbytes  # noqa: F401
@@ -183,11 +199,15 @@ class TransformersVLM:
                 quant = "nf4"
             except ImportError:
                 options.update(dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16, device_map={"": 0})
+        elif torch.cuda.is_available():
+            options.update(dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16, device_map={"": 0})
         else:
             options.update(dtype=torch.float32)
         self.processor = AutoProcessor.from_pretrained(model)
         self.model = AutoModelForImageTextToText.from_pretrained(model, **options).eval()
         self.signature, self.quantization = f"transformers:{model}:{max_new_tokens}", quant
+        print(json.dumps({"qwen3vl_loaded": model, "precision": "4-bit nf4" if quant == "nf4" else str(self.model.dtype),
+                          "device": str(self.model.device)}), flush=True)
 
     def transcribe(self, image, page, prompt=None, max_new_tokens=None):
         messages = [{"role": "user", "content": [{"type": "image", "image": image},
@@ -202,15 +222,27 @@ class TransformersVLM:
         return self.transcribe(image, page, prompt=DESCRIBE_PROMPT, max_new_tokens=DESCRIBE_TOKENS)
 
 
+def http_error_body(exc, limit=300):
+    """The server's own error message (e.g. Gemini's "models/x is not found"), never the request or its key."""
+    try:
+        return " ".join((exc.read() or b"").decode("utf-8", "replace").split())[:limit] or exc.reason
+    except Exception:
+        return str(getattr(exc, "reason", ""))
+
+
 class OpenAIVLM:
     """Any OpenAI-compatible /chat/completions endpoint that accepts image_url parts."""
 
-    def __init__(self, base=None, model=None, max_tokens=1200, timeout=300, api_key=None):
+    def __init__(self, base=None, model=None, max_tokens=1200, timeout=300, api_key=None, reasoning_effort=None):
         self.base = (base or os.getenv("RAG_VISION_API_BASE", "http://127.0.0.1:8081/v1")).rstrip("/")
         self.model = model or os.getenv("RAG_VISION_MODEL", "local-qwen3-vl")
         self.api_key = api_key if api_key is not None else os.getenv("RAG_VISION_API_KEY", "")
         self.max_tokens, self.timeout = max_tokens, timeout
-        self.signature = f"openai:{self.model}:{max_tokens}"
+        # Thinking models (Gemini 2.5/3 Flash, o-series) spend max_tokens on reasoning too: "none"/"minimal"/"low"
+        # keeps the budget for the transcription. Sent only when set, so other endpoints see the same request.
+        self.reasoning_effort = reasoning_effort or None
+        self.signature = f"openai:{self.model}:{max_tokens}" + (f":effort={self.reasoning_effort}"
+                                                                 if self.reasoning_effort else "")
         self.delays = [float(x) for x in os.getenv("RAG_VISION_RETRY_DELAYS", "2,4,8").split(",") if x.strip()]
 
     def transcribe(self, image, page, prompt=None, max_tokens=None):
@@ -218,8 +250,11 @@ class OpenAIVLM:
         image.save(buffer, format="PNG")
         content = [{"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()}},
                    {"type": "text", "text": prompt or VLM_PROMPT}]
-        body = json.dumps({"model": self.model, "messages": [{"role": "user", "content": content}],
-                           "temperature": 0, "max_tokens": max_tokens or self.max_tokens, "stream": False}).encode()
+        payload = {"model": self.model, "messages": [{"role": "user", "content": content}],
+                   "temperature": 0, "max_tokens": max_tokens or self.max_tokens, "stream": False}
+        if self.reasoning_effort:
+            payload["reasoning_effort"] = self.reasoning_effort
+        body = json.dumps(payload).encode()
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -231,7 +266,8 @@ class OpenAIVLM:
             except urllib.error.HTTPError as exc:
                 # Rate limits and overload are explicit rejections, so a retry can't double-bill a page.
                 if exc.code not in {429, 503} or attempt >= len(self.delays):
-                    raise
+                    raise RuntimeError(f"HTTP {exc.code} from {self.base} (model {self.model}): "
+                                       f"{http_error_body(exc)}") from exc
                 try:
                     wait = max(self.delays[attempt], float(exc.headers.get("Retry-After") or 0))
                 except (TypeError, ValueError):
@@ -279,11 +315,18 @@ def qwen_signature(args):
 
 
 def paid_reader(max_tokens=1200):
-    """The paid fallback reader from RAG_PAID_VISION_API_BASE / _MODEL / _API_KEY, or None when not configured."""
+    """The paid fallback reader from RAG_PAID_VISION_API_BASE / _MODEL / _API_KEY, or None when not configured.
+
+    Optional: RAG_PAID_VISION_MAX_TOKENS (its own output limit, else ``max_tokens``) and
+    RAG_PAID_VISION_REASONING_EFFORT (e.g. Gemini: https://generativelanguage.googleapis.com/v1beta/openai,
+    gemini-3.8-flash, effort "low").
+    """
     base, model = os.getenv("RAG_PAID_VISION_API_BASE"), os.getenv("RAG_PAID_VISION_MODEL")
     if not (base and model):
         return None
-    return OpenAIVLM(base=base, model=model, max_tokens=max_tokens, api_key=os.getenv("RAG_PAID_VISION_API_KEY", ""))
+    return OpenAIVLM(base=base, model=model, max_tokens=int(os.getenv("RAG_PAID_VISION_MAX_TOKENS") or max_tokens),
+                     api_key=os.getenv("RAG_PAID_VISION_API_KEY", ""),
+                     reasoning_effort=os.getenv("RAG_PAID_VISION_REASONING_EFFORT") or None)
 
 
 def make_vlm(args):
@@ -293,7 +336,7 @@ def make_vlm(args):
         return RoutedReader(qwen_factory=lambda: make_qwen(args), qwen_signature=qwen_signature(args),
                             paid=paid_reader(args.max_new_tokens), threshold=args.paid_threshold,
                             paid_limit=args.paid_max_pages_per_pdf, describe=not getattr(args, "no_describe_visuals", False),
-                            skip_routes=skip_routes_of(args))
+                            skip_routes=skip_routes_of(args), paid_first=getattr(args, "paid_first", False))
     if args.vlm == "ocr":
         return OcrReader()
     if args.vlm == "openai":
@@ -309,7 +352,7 @@ def vlm_signature(args):
         paid = paid_reader(args.max_new_tokens)
         return routed_signature(qwen_signature(args), ocr_reader_signature(), paid.signature if paid else None,
                                 args.paid_threshold, args.paid_max_pages_per_pdf, not getattr(args, "no_describe_visuals", False),
-                                skip_routes_of(args))
+                                skip_routes_of(args), getattr(args, "paid_first", False))
     if args.vlm == "ocr":
         return ocr_reader_signature()
     if args.vlm == "openai":
@@ -364,7 +407,8 @@ def vlm_targets(pages, mode, limit=0):
     return targets[:limit] if limit else targets
 
 
-ROUTE_VERSION = 2          # v2: pdfParser+colpali tables/pictures with few text-layer figures are OCR-checked
+ROUTE_VERSION = 3          # v2: pdfParser+colpali tables/pictures with few text-layer figures are OCR-checked
+                           # v3: "chart" pages with 600+ words are text pages (page_audit.TEXT_PAGE_WORDS)
 SKIPPABLE_ROUTES = ("qwen3VL", "paidVL")
 FEW_FIGURES = 6            # a table or picture page whose text layer has fewer figures than this gets OCR'd ...
 OCR_GAIN = 6               # ... and the OCR reading replaces it when OCR finds at least this many more figures
@@ -390,16 +434,24 @@ class RoutedReader:
     """
 
     def __init__(self, qwen_factory, qwen_signature, ocr=None, paid=None, threshold=.10, paid_limit=0, describe=True,
-                 skip_routes=()):
+                 skip_routes=(), paid_first=False):
         self._qwen_factory, self._qwen, self.qwen_signature = qwen_factory, None, qwen_signature
+        self.paid_first = bool(paid_first and paid)
         self.ocr = ocr or OcrReader()
         self.paid, self.threshold, self.paid_limit, self.describe = paid, threshold, paid_limit, describe
         unknown = set(skip_routes) - set(SKIPPABLE_ROUTES)
         if unknown:
             raise ValueError(f"--skip-routes takes {', '.join(SKIPPABLE_ROUTES)}, not {', '.join(sorted(unknown))}")
         self.skip_routes = tuple(sorted(set(skip_routes)))
+        # Parallel prefetch of a filing's readings (routed_filing): GPU, paid API and OCR lanes overlap. Only speed:
+        # the readings and the per-page decisions are the same, so these settings are not in the signature.
+        self.prefetch = os.getenv("RAG_PAGE_PREFETCH", "1") != "0"
+        self.paid_workers = max(1, int(os.getenv("RAG_PAID_CONCURRENCY", "4")))
+        # >1 only for a served Qwen (vLLM batches concurrent requests); one in-process model generates one page at a time
+        served = str(qwen_signature).startswith("openai:")
+        self.qwen_workers = max(1, int(os.getenv("RAG_QWEN_CONCURRENCY", "1"))) if served else 1
         self.signature = routed_signature(qwen_signature, self.ocr.signature, paid.signature if paid else None,
-                                          threshold, paid_limit, describe, self.skip_routes)
+                                          threshold, paid_limit, describe, self.skip_routes, self.paid_first)
 
     @property
     def qwen(self):
@@ -418,11 +470,12 @@ class RoutedReader:
         return out
 
 
-def routed_signature(qwen, ocr, paid, threshold, limit, describe, skip_routes=()):
+def routed_signature(qwen, ocr, paid, threshold, limit, describe, skip_routes=(), paid_first=False):
     """Known before any model loads, so finished filings are skipped without loading them."""
     return (f"routed-v{ROUTE_VERSION}:qwen={qwen}:ocr={ocr}:paid={paid}:threshold={threshold}:limit={limit}"
             + (f":describe=v{DESCRIBE_VERSION}" if describe else "")
-            + (f":skip={','.join(sorted(skip_routes))}" if skip_routes else ""))
+            + (f":skip={','.join(sorted(skip_routes))}" if skip_routes else "")
+            + (":paid_first" if paid_first and paid else ""))
 
 
 def skip_routes_of(args):
@@ -441,6 +494,77 @@ def cross_check(markdown, reference):
     return {"unverified": unverified, "figures": len(figures), "share": len(unverified) / len(figures) if figures else 0.0}
 
 
+def prefetch_plan(reader, pages, limit=0):
+    """The readings a filing will certainly need, by lane: gpu (Qwen3-VL transcriptions and descriptions), paid (the
+    paid model, with --paid-first), ocr (CPU). Conditional readings (Qwen after a doubtful paid reading, the paid model
+    after a doubtful Qwen reading) are left to the page loop. Mirrors routed_filing's per-page rules and limits."""
+    from scripts.rag import page_audit
+    plan = {"gpu": [], "paid": [], "ocr": []}
+    routed = [(page, page_audit.route(page)) for page in pages]
+    models = [page for page, route in routed if route in ("qwen3VL", "paidVL") and route not in reader.skip_routes]
+    allowed = {page["page"] for page in (models[:limit] if limit else models)}
+    paid_allowed = [page["page"] for page, route in routed
+                    if route == "paidVL" and page["page"] in allowed and route not in reader.skip_routes]
+    if reader.paid_limit:
+        paid_allowed = paid_allowed[:reader.paid_limit]
+    for page, route in routed:
+        if reader.describe and page["page_type"] in DESCRIBE_TYPES and route in DESCRIBE_ROUTES:
+            plan["gpu"].append(("describe", page))
+        if route in reader.skip_routes or route in ("none", "pdfParser"):
+            continue
+        if route == "ocr" or (route in ("qwen3VL", "paidVL") and page["page"] not in allowed):
+            plan["ocr"].append(("ocr", page))
+        elif route == "pdfParser+colpali":
+            if lacks_figures(page):
+                plan["ocr"].append(("ocr", page))
+        elif route == "qwen3VL":
+            plan["gpu"].append(("qwen3VL", page))
+        else:                                                       # paidVL
+            plan["ocr"].append(("ocr", page))
+            if reader.paid_first and page["page"] in paid_allowed:
+                plan["paid"].append(("paidVL", page))
+            elif not reader.paid_first:
+                plan["gpu"].append(("qwen3VL", page))
+    return plan
+
+
+def prefetch_readings(reader, pages, pdf, loaded, try_read, limit=0):
+    """Run a filing's certain readings in parallel lanes before the page loop, which then finds them cached.
+
+    The GPU lane is serial (one in-process Qwen3-VL; RAG_QWEN_CONCURRENCY > 1 only for a served model), the paid lane
+    sends RAG_PAID_CONCURRENCY requests at once (default 4; 429/503 back off), OCR runs on the CPU. Each worker thread
+    opens its own copy of the PDF (PyMuPDF documents are not thread-safe). A failed reading is not cached, so the page
+    loop tries it once more.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    plan = {lane: [(name, page) for name, page in items if page["page"] not in loaded[name]]
+            for lane, items in prefetch_plan(reader, pages, limit).items()}
+    plan = {lane: items for lane, items in plan.items() if items}
+    if not plan:
+        return
+    local, opened, guard = threading.local(), [], threading.Lock()
+
+    def work(item):
+        if not hasattr(local, "document"):
+            local.document = pymupdf.open(pdf)
+            with guard:
+                opened.append(local.document)
+        name, page = item
+        try_read(name, page, local.document)
+
+    workers = {"gpu": reader.qwen_workers, "paid": reader.paid_workers, "ocr": 1}
+    pools = [ThreadPoolExecutor(max_workers=workers[lane], thread_name_prefix=f"prefetch-{lane}") for lane in plan]
+    try:
+        futures = [pool.submit(work, item) for pool, items in zip(pools, plan.values()) for item in items]
+        for future in futures:
+            future.result()
+    finally:
+        for pool in pools:
+            pool.shutdown(wait=True)
+        for document in opened:
+            document.close()
+
+
 def routed_filing(reader, cache, row, pdf, pages, limit=0):
     """Page number -> reading for --vlm routed. Raw readings are cached per reader; the routing is recomputed."""
     from scripts.rag import page_audit
@@ -450,24 +574,31 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
     getters = {name: get for name, (_, get) in reader.readers().items()}
     entries, model_pages, paid_pages, descriptions = {}, 0, 0, {}
 
+    write_lock, failed = threading.Lock(), set()
     with pymupdf.open(pdf) as document:
-        def read(name, page):
+        def read(name, page, doc=None):
             if page["page"] not in loaded[name]:
-                started, pdf_page = time.time(), document[page["page"] - 1]
+                started, pdf_page = time.time(), (doc or document)[page["page"] - 1]
                 image = None if name == "ocr" else render(pdf_page)
                 text = strip_fences(getters[name]().transcribe(image, pdf_page))
                 row_ = {"page": page["page"], "markdown": text, "reader": name, "seconds": round(time.time() - started, 1)}
-                caches[name].add(doc_id, row_)
-                loaded[name][page["page"]] = row_
+                with write_lock:
+                    caches[name].add(doc_id, row_)
+                    loaded[name][page["page"]] = row_
                 print(json.dumps({"doc_id": doc_id, "page": page["page"], "reader": name, "chars": len(text),
                                   "seconds": row_["seconds"]}), flush=True)
             return loaded[name][page["page"]]["markdown"]
 
-        def try_read(name, page):
-            """A model reading, or "" when the model fails (error not cached, so a rerun tries again)."""
+        def try_read(name, page, doc=None):
+            """A model reading, or "" when the model fails. A failure is tried once per filing run (the prefetch
+            and the page loop don't both pay for it) and never cached, so the next run tries again."""
+            if (name, page["page"]) in failed:
+                return ""
             try:
-                return read(name, page)
+                return read(name, page, doc)
             except Exception as exc:
+                with write_lock:
+                    failed.add((name, page["page"]))
                 print(json.dumps({"doc_id": doc_id, "page": page["page"], "reader": name, "error": repr(exc)[:300]}),
                       flush=True)
                 return ""
@@ -478,6 +609,8 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                     "escalation": why}
 
         signatures = {name: sig for name, (sig, _) in reader.readers().items()}
+        if getattr(reader, "prefetch", False):
+            prefetch_readings(reader, pages, pdf, loaded, try_read, limit)
         for page in pages:
             route = page_audit.route(page)
             number = page["page"]
@@ -513,6 +646,35 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                 entries[number] = {**base, "markdown": markdown, "source": "vlm", "reader": "qwen3VL",
                                    "reader_model": signatures["qwen3VL"], "unverified_numbers": check["unverified"],
                                    "number_check": "text_layer" if check["share"] is not None else "no_text_layer"}
+            elif reader.paid_first and (not reader.paid_limit or paid_pages < reader.paid_limit):
+                # paidVL, paid model first: OCR -> paid model; Qwen3-VL reads the page only when the paid reading
+                # fails or more than the threshold of its figures are not in the OCR text. Fewer unconfirmed wins.
+                model_pages += 1
+                paid_pages += 1
+                reference = read("ocr", page)
+                paid_text = try_read("paidVL", page)
+                paid_check = cross_check(paid_text, reference)
+                paid_ok = bool(paid_text.strip()) and (paid_check["share"] is None
+                                                       or paid_check["share"] <= reader.threshold)
+                chosen, check, used, escalation = paid_text, paid_check, "paidVL", "paid_first"
+                qwen_check = {"share": None, "unverified": []}
+                if not paid_ok:
+                    qwen_text = try_read("qwen3VL", page)
+                    qwen_check = cross_check(qwen_text, reference)
+                    paid_share = paid_check["share"] if paid_text.strip() and paid_check["share"] is not None else 1
+                    qwen_share = qwen_check["share"] if qwen_check["share"] is not None else 1
+                    if qwen_text.strip() and (not paid_text.strip() or qwen_share < paid_share):
+                        chosen, check, used, escalation = qwen_text, qwen_check, "qwen3VL", "paid_first_qwen_better"
+                    else:
+                        escalation = "paid_first_qwen_not_better"
+                if not chosen.strip():                              # no model produced text: keep the OCR reading
+                    entries[number] = ocr_entry(page, base, "models_failed_ocr_fallback")
+                    continue
+                entries[number] = {**base, "markdown": chosen, "source": "vlm", "reader": used,
+                                   "reader_model": signatures[used], "unverified_numbers": check["unverified"],
+                                   "number_check": "ocr" if check["share"] is not None else "no_reference",
+                                   "qwen_unverified_share": qwen_check["share"], "escalated": used == "paidVL",
+                                   "escalation": escalation}
             else:                                                   # paidVL: the fallback chain
                 model_pages += 1
                 reference = read("ocr", page)
@@ -1016,6 +1178,9 @@ def build_parser():
                         help="routed: send a paidVL page to the paid model when more than this share of Qwen3-VL's "
                              "figures is not in the page's OCR text")
     ingest.add_argument("--paid-max-pages-per-pdf", type=int, default=0, help="routed: cap paid calls per filing (0 = no cap)")
+    ingest.add_argument("--paid-first", action="store_true",
+                        help="routed: paidVL pages go to the paid model first (OCR -> paid model); Qwen3-VL reads them "
+                             "only when the paid reading fails or disagrees with OCR. Saves GPU time on paidVL pages")
     ingest.add_argument("--no-describe-visuals", action="store_true",
                         help="routed: skip the Qwen3-VL search description of chart and image pages")
     ingest.add_argument("--vlm-model", help=f"HF model for transformers (default {DEFAULT_TRANSFORMERS_MODEL}); "

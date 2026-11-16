@@ -159,3 +159,23 @@ def test_agent_answers_from_the_vlm_index_with_a_sector_filter(drive, monkeypatc
     hits = agent.retrieve_evidence(config)
     assert hits and {h["sector"] for h in hits} == {"Oil and gas"}
     assert all(h["chunk_id"].startswith("annual_report_edgar_ars_CVX_2025") and "rerank_score" in h for h in hits)
+
+
+def test_verify_upload_and_reader_summary_after_a_restore(drive):
+    write_plan(drive, [])
+    s = settings(drive, "vlm_chroma")
+    cp.prepare(s)
+    cp.ingest(s)
+    (s.drive_root / "capstone_code.zip").write_bytes(b"zip")              # no mutual fund zip: reported, not fatal
+    later = settings(drive, "vlm_chroma", work=drive / "new_session")         # the Colab VM after the Drive upload
+    first = cp.verify_upload(later)
+    assert first["failed"] == ["mutual fund zip on Drive", "local copy restored"]   # nothing restored yet
+    cp.restore(later)
+    assert cp.verify_upload(later)["failed"] == ["mutual fund zip on Drive"]
+    report = cp.reader_summary(later)
+    assert report["all_filings_present"] and report["filings"]["in_chroma"] == 2
+    assert report["chunks"]["chroma"] == report["chunks"]["bm25"] > 0
+    assert sum(report["pages_by_reader"].values()) == report["pages_indexed"] > 0
+    assert set(cp.PAGE_READERS) <= set(report["pages_by_reader"])
+    (s.drive_root / "annual_reports" / "banking" / "EDGAR_ARS_JPM_2025.pdf").unlink()   # an upload that lost a PDF
+    assert "PDF files present and non-empty" in cp.verify_upload(later)["failed"]
