@@ -179,3 +179,22 @@ def test_verify_upload_and_reader_summary_after_a_restore(drive):
     assert set(cp.PAGE_READERS) <= set(report["pages_by_reader"])
     (s.drive_root / "annual_reports" / "banking" / "EDGAR_ARS_JPM_2025.pdf").unlink()   # an upload that lost a PDF
     assert "PDF files present and non-empty" in cp.verify_upload(later)["failed"]
+
+
+def test_status_reads_chroma_metadata_in_batches(drive, monkeypatch):
+    """Colab, 317k chunks: one unbatched get() hit SQLite's 'too many SQL variables'."""
+    from chromadb.api.models.Collection import Collection
+    s = settings(drive, "vlm_chroma", sectors="banking")
+    cp.prepare(s)
+    cp.ingest(s)
+    real_get = Collection.get
+
+    def batched_only(self, *args, **kwargs):
+        if kwargs.get("where") is None and kwargs.get("ids") is None:
+            assert kwargs.get("limit"), "every full-collection read must be batched"
+        return real_get(self, *args, **kwargs)
+
+    monkeypatch.setattr(Collection, "get", batched_only)
+    monkeypatch.setattr(cp.chroma_metadatas, "__defaults__", (2, None))     # several batches even in a tiny index
+    report = cp.status(s)
+    assert report["chroma"]["by_sector"] == {"banking": report["chroma"]["chunks"]}

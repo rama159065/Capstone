@@ -243,3 +243,78 @@ def test_chroma_is_the_only_store():
         vi.build_parser().parse_args(["ingest", "--store", "qdrant"])
     with pytest.raises(ValueError, match="Chroma only"):
         vi.retrieve("revenue", store="qdrant", embedder=object())
+
+
+def test_paid_reader_retries_a_reply_cut_off_by_its_token_budget(monkeypatch):
+    """Gemini 3.x thinking counts against max_tokens: a dense table can end with finish_reason=length and no text."""
+    import io
+    from PIL import Image
+    monkeypatch.setenv("RAG_PAID_VISION_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai")
+    monkeypatch.setenv("RAG_PAID_VISION_MODEL", "gemini-3.8-flash")
+    monkeypatch.setenv("RAG_PAID_VISION_MAX_TOKENS", "4096")
+    budgets = []
+
+    class Response(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def reply(request, timeout):
+        budget = json.loads(request.data)["max_tokens"]
+        budgets.append(budget)
+        if budget < 10000:                                     # thinking used the whole budget: no content at all
+            return Response(json.dumps({"choices": [{"message": {"role": "assistant"}, "finish_reason": "length"}],
+                                        "usage": {"completion_tokens": budget}}).encode())
+        return Response(json.dumps({"choices": [{"message": {"content": "| Net income | 3,097 |"},
+                                                 "finish_reason": "stop"}]}).encode())
+
+    monkeypatch.setattr(vi.urllib.request, "urlopen", reply)
+    assert vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None) == "| Net income | 3,097 |"
+    assert budgets == [4096, 16384]
+
+    monkeypatch.setattr(vi.urllib.request, "urlopen", lambda request, timeout: Response(json.dumps(
+        {"choices": [{"message": {"role": "assistant"}, "finish_reason": "content_filter"}]}).encode()))
+    with pytest.raises(RuntimeError, match="finish_reason=content_filter"):
+        vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None)
+
+
+def test_paid_reader_asks_for_figure_rows_when_a_transcription_is_blocked_as_recitation(monkeypatch):
+    """Gemini blocks verbatim copies of published text (finish_reason 'content_filter: RECITATION', no tokens)."""
+    import io
+    from PIL import Image
+    monkeypatch.setenv("RAG_PAID_VISION_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai")
+    monkeypatch.setenv("RAG_PAID_VISION_MODEL", "gemini-3.8-flash")
+    prompts = []
+
+    class Response(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def reply(request, timeout, rows_ok=True):
+        prompt = json.loads(request.data)["messages"][0]["content"][1]["text"]
+        prompts.append(prompt.split()[0])
+        if prompt.startswith("Transcribe") or not rows_ok:
+            return Response(json.dumps({"choices": [{"message": {"role": "assistant"},
+                                                     "finish_reason": "content_filter: RECITATION"}],
+                                        "usage": {"completion_tokens": 0}}).encode())
+        return Response(json.dumps({"choices": [{"message": {"content": "Net income | 2025 | 3,097"},
+                                                 "finish_reason": "stop"}]}).encode())
+
+    monkeypatch.setattr(vi.urllib.request, "urlopen", reply)
+    assert vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None) == "Net income | 2025 | 3,097"
+    assert prompts == ["Transcribe", "List"]
+
+    prompts.clear()
+    monkeypatch.setattr(vi.urllib.request, "urlopen", lambda request, timeout: reply(request, timeout, rows_ok=False))
+    with pytest.raises(RuntimeError, match="RECITATION"):
+        vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None)
+    assert prompts == ["Transcribe", "List", "Return"]                 # every style tried once, then Qwen's turn
+    prompts.clear()
+    with pytest.raises(RuntimeError):
+        vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None, prompt="Describe this page")
+    assert prompts == ["Describe"]                                      # descriptions are not re-asked

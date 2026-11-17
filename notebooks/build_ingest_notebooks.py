@@ -156,7 +156,8 @@ the text layer and analysis ~3 CPU-hours; OCR of ~8k pages ~10 CPU-hours; Qwen3-
 (2B is faster, or serve Qwen3-VL with vLLM and set `QWEN_READER = "openai"`). The smoke test prints the measured rates.
 
 **Run order (index uploaded from the PC):** 1 -> 2 -> 3 -> **3b verify the upload** -> **3c test Gemini** -> (skip 4, PDFs are on Drive)
--> 5 with `SMOKE_TEST = True` -> set `SMOKE_TEST = False` -> 3 -> 5 -> 6 -> 6b -> **6c pages per reader + 509 check** -> 7.
+-> **5 the real run** (one cell at a time, not Run all) -> 6 -> 6b -> **6c pages per reader + 509 check** -> 7. `SMOKE_TEST = True`
+first is optional (1 filing per sector into a separate `_smoke` index). After a disconnect: 1 -> 2 -> 3 -> 5.
 
 **Before you start:** on your PC run `python -m scripts.common.colab_bundle` and upload `output/colab/capstone_code.zip`
 to `MyDrive/capstone_rag/`.
@@ -168,11 +169,12 @@ a **Colab secret** (🔑 in the left sidebar, Notebook access on): name `PAID_VI
 `PAID_VISION_MODEL = ""`) paidVL pages keep the Qwen3-VL reading, flagged. OpenAI works the same way
 (`https://api.openai.com/v1`, `gpt-4o`, `PAID_REASONING_EFFORT = ""`). `LLM_*` secrets are for serving.'''
 
-CHROMA_SETTINGS = "# @title 1. Settings\n" + COMMON_SETTINGS + r'''
+CHROMA_SETTINGS = "# @title 1. Settings\n" + COMMON_SETTINGS.replace("SMOKE_TEST = True", "SMOKE_TEST = False") + r'''
 READER = "routed"  # @param ["routed", "ocr", "transformers", "openai"]
 # routed = a reader per page (table above); ocr = OCR for every visual page (CPU only); transformers = Qwen3-VL for
 # every visual page; openai = an OpenAI-compatible endpoint for every visual page (RAG_VISION_API_BASE / _MODEL / _KEY)
-QWEN_MODEL = "Qwen/Qwen3-VL-4B-Instruct"  # @param ["Qwen/Qwen3-VL-4B-Instruct", "Qwen/Qwen3-VL-2B-Instruct", "Qwen/Qwen3-VL-8B-Instruct"]
+QWEN_MODEL = "Qwen/Qwen3-VL-8B-Instruct"  # @param ["Qwen/Qwen3-VL-8B-Instruct", "Qwen/Qwen3-VL-4B-Instruct", "Qwen/Qwen3-VL-2B-Instruct"]
+# 8B: 4-bit on T4/L4, bf16 on A100. Keep one model for the whole run: readings are cached per model
 QWEN_READER = "transformers"  # @param ["transformers", "openai"]
 # transformers = Qwen3-VL on this GPU; openai = a served Qwen3-VL (vLLM) at the secret RAG_VISION_API_BASE
 QWEN_PRECISION = "auto"  # @param ["auto", "bf16", "4bit"]
@@ -257,7 +259,7 @@ assert check["ok"] or check["failed"] == ["mutual fund zip on Drive"], \
 CHROMA_PAID_CHECK = r'''# @title 3c. Test the paid model (Gemini) on one page before the real run (a few seconds, one paid call)
 # Lists the models your key can use (pick one for PAID_VISION_MODEL in cell 1), then reads one rendered page.
 # HTTP 404 = unknown model name for this endpoint/key; 400 = bad PAID_REASONING_EFFORT; 401/403 = bad key.
-import json, urllib.request
+import json, time, urllib.request
 from scripts.rag import financial_ingest_chroma_db as vi
 base, key = os.getenv("RAG_PAID_VISION_API_BASE", "").rstrip("/"), os.getenv("RAG_PAID_VISION_API_KEY", "")
 if not (base and key):
@@ -274,21 +276,30 @@ else:
         print("PAID_VISION_MODEL is empty: set it in cell 1 and rerun cells 1 and 3")
     else:
         import pymupdf
-        from PIL import Image
-        pdf = next(s.corpus.rglob("*.pdf"))
-        pix = pymupdf.open(pdf)[0].get_pixmap(dpi=100)
-        image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-        try:
-            text = paid.transcribe(image, None)
-            print(f"OK: {paid.model} read page 1 of {pdf.name}: {len(text)} chars")
-            print(text[:400])
-        except Exception as exc:
-            print("FAILED:", exc)
-            hint = ("set PAID_REASONING_EFFORT to another value (low / none / \"\")" if "thinking" in str(exc).lower()
-                    else "pick a model from the list above for PAID_VISION_MODEL" if "404" in str(exc)
-                    else "check the Colab secret PAID_VISION_API_KEY and billing" if any(c in str(exc) for c in ("401", "403"))
-                    else "see the message above")
-            print(f"-> {hint} in cell 1, then rerun cells 1, 3 and this one")'''
+        # Two pages: a cover page, then a dense paidVL table (Citi 2025 p.109, the kind that once came back empty when
+        # thinking used up the token budget). Both must print OK before cell 5.
+        pdfs = sorted(s.corpus.rglob("*.pdf"))
+        dense = next((p for p in pdfs if p.name == "EDGAR_ARS_C_2025.pdf"), None)
+        tests = [(pdfs[0], 1)] + ([(dense, 109)] if dense else [])
+        for pdf, number in tests:
+            with pymupdf.open(pdf) as document:
+                pdf_page = document[number - 1]
+                started = time.time()
+                try:
+                    text = paid.transcribe(vi.render(pdf_page), pdf_page)
+                    print(f"OK: {paid.model} read page {number} of {pdf.name}: {len(text)} chars in "
+                          f"{time.time() - started:.0f}s")
+                    print(text[:300], "\n")
+                except Exception as exc:
+                    print(f"FAILED on page {number} of {pdf.name}:", exc)
+                    hint = ("set PAID_REASONING_EFFORT to another value (low / none / \"\")" if "thinking" in str(exc).lower()
+                            else "pick a model from the list above for PAID_VISION_MODEL" if "404" in str(exc)
+                            else "check the Colab secret PAID_VISION_API_KEY and billing" if any(c in str(exc) for c in ("401", "403"))
+                            else "try PAID_VISION_MODEL = \"gemini-3.5-flash-lite\" (no thinking)" if "finish_reason=length" in str(exc)
+                            else ("Gemini blocked this page as RECITATION even as figure rows and JSON; in the run such "
+                                  "pages keep Qwen3-VL's reading, so you can still go on with cell 5") if "recitation" in str(exc).lower()
+                            else "see the message above")
+                    print(f"-> {hint} in cell 1, then rerun cells 1, 3 and this one")'''
 
 CHROMA_READERS = r'''# @title 6c. Pages per reader (text layer, OCR, Qwen3-VL, Gemini) and the 509-filing check (~3 minutes)
 # Reads every chunk's metadata in the final Chroma index. "paid model" = PAID_VISION_MODEL (Gemini Flash).

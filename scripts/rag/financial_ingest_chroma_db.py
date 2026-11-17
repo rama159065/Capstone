@@ -102,6 +102,15 @@ VLM_PROMPT = """Transcribe this annual report page into Markdown. Copy every num
 - Charts: state the chart title, then one line per labelled value saying which series, bar or year it belongs to, using the legend. Never estimate an unlabelled point.
 - Text: copy headings and paragraphs. Ignore photographs, logos and QR codes.
 Output only the transcription."""
+RECITATION_PROMPTS = (
+    """List every figure on this annual report page, one per line, as:
+<row label> | <column header or period> | <value exactly as printed, with its sign, unit or %>
+Start with one line giving the table or chart title and its unit line (e.g. "in millions of dollars").
+Do not copy sentences or paragraphs. Output only the lines.""",
+    """Return the figures on this annual report page as JSON:
+{"title": "...", "unit": "...", "rows": [{"label": "...", "values": {"<column header or period>": "<value as printed>"}}]}
+Copy every number exactly as printed. No prose, no sentences from the page. Output only the JSON.""",
+)
 DESCRIBE_VERSION = 1
 DESCRIBE_TOKENS = 200
 DESCRIBE_PROMPT = """Describe this annual report page so it can be found by search, in at most 3 sentences.
@@ -248,10 +257,33 @@ class OpenAIVLM:
     def transcribe(self, image, page, prompt=None, max_tokens=None):
         buffer = io.BytesIO()
         image.save(buffer, format="PNG")
-        content = [{"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()}},
-                   {"type": "text", "text": prompt or VLM_PROMPT}]
+        picture = {"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()}}
+        budget = max_tokens or self.max_tokens
+        # A transcription blocked as RECITATION (Gemini won't copy published text verbatim, and SEC filings are on the
+        # web) is asked again as figure rows, then as JSON: the same figures, not a copy of the page.
+        prompts = [prompt] if prompt else [VLM_PROMPT, *RECITATION_PROMPTS]
+        for text_prompt in prompts:
+            text, finish, usage = self._read([picture, {"type": "text", "text": text_prompt}], budget)
+            if text:
+                return text
+            if "recitation" not in str(finish).lower():
+                break
+        raise RuntimeError(f"no text from {self.model}: finish_reason={finish}, usage={usage}")
+
+    def _read(self, content, budget):
+        text, finish, usage = self._complete(content, budget)
+        # finish_reason "length": the budget ran out (thinking models count their reasoning in it), so the page has no
+        # text or a cut-off table. One retry with a bigger budget; the longer reading wins.
+        retry_budget = max(budget, int(os.getenv("RAG_VISION_RETRY_TOKENS") or budget * 4))
+        if finish == "length" and retry_budget > budget:
+            longer, finish, usage = self._complete(content, retry_budget)
+            text = longer if len(longer) >= len(text) else text
+        return text, finish, usage
+
+    def _complete(self, content, budget):
+        """One request -> (text, finish_reason, usage). A reply without text is not an error here."""
         payload = {"model": self.model, "messages": [{"role": "user", "content": content}],
-                   "temperature": 0, "max_tokens": max_tokens or self.max_tokens, "stream": False}
+                   "temperature": 0, "max_tokens": budget, "stream": False}
         if self.reasoning_effort:
             payload["reasoning_effort"] = self.reasoning_effort
         body = json.dumps(payload).encode()
@@ -262,7 +294,12 @@ class OpenAIVLM:
         for attempt in range(len(self.delays) + 1):
             try:
                 with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                    return (json.load(response)["choices"][0]["message"]["content"] or "").strip()
+                    data = json.load(response)
+                choice = (data.get("choices") or [{}])[0]
+                content = (choice.get("message") or {}).get("content") or ""
+                if isinstance(content, list):                   # some servers return content parts
+                    content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
+                return str(content).strip(), choice.get("finish_reason"), data.get("usage")
             except urllib.error.HTTPError as exc:
                 # Rate limits and overload are explicit rejections, so a retry can't double-bill a page.
                 if exc.code not in {429, 503} or attempt >= len(self.delays):
@@ -407,9 +444,24 @@ def vlm_targets(pages, mode, limit=0):
     return targets[:limit] if limit else targets
 
 
-ROUTE_VERSION = 3          # v2: pdfParser+colpali tables/pictures with few text-layer figures are OCR-checked
+ROUTE_VERSION = 5          # v2: pdfParser+colpali tables/pictures with few text-layer figures are OCR-checked
                            # v3: "chart" pages with 600+ words are text pages (page_audit.TEXT_PAGE_WORDS)
+                           # v4: paid replies cut off by their token budget are retried (v3 kept Qwen for them), so
+                           #     filings finished under v3 run again; cached readings are reused
+                           # v5: a paidVL reading much shorter than the page's OCR text (a text page whose verbatim copy
+                           #     the paid model refused) keeps the OCR text, plus the reading's figures
 SKIPPABLE_ROUTES = ("qwen3VL", "paidVL")
+SHORT_READING_SHARE = .25   # a paidVL reading shorter than this share of the page's OCR text left most of the page out
+SHORT_READING_MIN_OCR = 800 # ... checked only when OCR found at least this many characters (a real page of text)
+
+
+def too_short(reading, ocr_text):
+    """A model reading that covers only a small part of what OCR read on the same page: e.g. a page of paragraphs
+    that the paid model refused to copy (RECITATION) and answered with just its few figures."""
+    ocr_chars = len((ocr_text or "").strip())
+    return ocr_chars >= SHORT_READING_MIN_OCR and len((reading or "").strip()) < SHORT_READING_SHARE * ocr_chars
+
+
 FEW_FIGURES = 6            # a table or picture page whose text layer has fewer figures than this gets OCR'd ...
 OCR_GAIN = 6               # ... and the OCR reading replaces it when OCR finds at least this many more figures
 
@@ -608,6 +660,13 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                     "reader_model": signatures["ocr"], "unverified_numbers": [], "number_check": "ocr_only",
                     "escalation": why}
 
+        def short_reading_entry(page, base, reading, used):
+            """The page's OCR text, with the short model reading appended when it holds figures."""
+            entry = ocr_entry(page, base, f"{used}_reading_short_ocr_kept")
+            if figures(reading):
+                entry["markdown"] = entry["markdown"] + "\n\n" + reading
+            return entry
+
         signatures = {name: sig for name, (sig, _) in reader.readers().items()}
         if getattr(reader, "prefetch", False):
             prefetch_readings(reader, pages, pdf, loaded, try_read, limit)
@@ -654,6 +713,9 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                 reference = read("ocr", page)
                 paid_text = try_read("paidVL", page)
                 paid_check = cross_check(paid_text, reference)
+                if paid_text.strip() and too_short(paid_text, reference):
+                    entries[number] = short_reading_entry(page, base, paid_text, "paidVL")
+                    continue                                        # a text page: OCR has it all, no Qwen needed
                 paid_ok = bool(paid_text.strip()) and (paid_check["share"] is None
                                                        or paid_check["share"] <= reader.threshold)
                 chosen, check, used, escalation = paid_text, paid_check, "paidVL", "paid_first"
@@ -669,6 +731,9 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                         escalation = "paid_first_qwen_not_better"
                 if not chosen.strip():                              # no model produced text: keep the OCR reading
                     entries[number] = ocr_entry(page, base, "models_failed_ocr_fallback")
+                    continue
+                if too_short(chosen, reference):
+                    entries[number] = short_reading_entry(page, base, chosen, used)
                     continue
                 entries[number] = {**base, "markdown": chosen, "source": "vlm", "reader": used,
                                    "reader_model": signatures[used], "unverified_numbers": check["unverified"],
@@ -693,6 +758,9 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                         chosen, check, used = paid_text, paid_check, "paidVL"
                 if not chosen.strip():                              # no model produced text: keep the OCR reading
                     entries[number] = ocr_entry(page, base, "models_failed_ocr_fallback")
+                    continue
+                if too_short(chosen, reference):
+                    entries[number] = short_reading_entry(page, base, chosen, used)
                     continue
                 entries[number] = {**base, "markdown": chosen, "source": "vlm", "reader": used,
                                    "reader_model": signatures[used], "unverified_numbers": check["unverified"],

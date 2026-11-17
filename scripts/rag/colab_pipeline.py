@@ -456,8 +456,8 @@ def status(s: Settings):
         store = vi.ChromaStore(s.root) if (s.root / "chroma").exists() else None
         report["chroma"] = {"chunks": store.count() if store else 0, "where": "disk (persistent), HNSW in RAM when queried"}
         if store and store.count():
-            metas = store.collection.get(include=["metadatas"])["metadatas"]
-            report["chroma"]["by_sector"] = dict(sorted(Counter(m.get("sector_slug") for m in metas).items()))
+            sectors = Counter(m["sector_slug"] for m in chroma_metadatas(store, fields=("sector_slug",)))
+            report["chroma"]["by_sector"] = dict(sorted(sectors.items(), key=lambda kv: str(kv[0])))
         state = s.root / "vlm_ingest.sqlite3"
         with contextlib.redirect_stdout(io.StringIO()):          # vi.status prints; keep one report
             cache = vi.status(argparse.Namespace(root=s.root, cache_dir=s.vlm_cache))
@@ -535,7 +535,7 @@ def coverage(s: Settings, show=True):
     return report
 
 
-def chroma_metadatas(store, batch=20000, fields=None):
+def chroma_metadatas(store, batch=5000, fields=None):
     """Every chunk's metadata, read in batches so 300k+ chunks don't need one huge response."""
     total = store.count()
     for offset in range(0, total, batch):
@@ -622,6 +622,19 @@ def verify_upload(s: Settings, expected_filings=None):
     return {"ok": not failed, "failed": failed, "missing_pdfs": missing[:50], "checks": checks}
 
 
+def current_routes(root):
+    """Pages per route under today's page_audit rules (and the pages that get a description), from the page analyses
+    saved in <root>/pages. The page_audit CSVs on Drive were written with older rules, so they are not used here."""
+    from scripts.rag import page_audit
+    counts = Counter()
+    for path in sorted((Path(root) / "pages").glob("*.json")):
+        for page in json.loads(path.read_text(encoding="utf-8")).get("pages", []):
+            route = page_audit.route(page)
+            counts[route] += 1
+            counts["describe"] += page["page_type"] in vi.DESCRIBE_TYPES and route in vi.DESCRIBE_ROUTES
+    return dict(counts)
+
+
 PAGE_READERS = ("pdfParser", "ocr", "qwen3VL", "paidVL")
 READER_NAMES = {"pdfParser": "PDF text layer / native tables", "ocr": "RapidOCR", "qwen3VL": "Qwen3-VL",
                 "paidVL": "paid model (Gemini Flash)"}
@@ -680,13 +693,12 @@ def reader_summary(s: Settings, expected_filings=None):
     print(f"Chunks: Chroma {chunks['chroma']:,} | BM25 {chunks['bm25']:,}  ("
           + ("match" if chunks["chroma"] == chunks["bm25"] else "MISMATCH") + ")")
     print(f"Filings still without Qwen3-VL (PC run, skip=): {len(still_skipped)}")
-    audit = s.drive_root / "page_audit" / "_summary.json"
-    if audit.exists():
-        usage = json.loads(audit.read_text(encoding="utf-8")).get("parser_usage", {})
-        report["page_audit_routes"] = usage
-        print(f"Page audit: {usage.get('qwen3VL', 0):,} pages routed to qwen3VL, {usage.get('paidVL', 0):,} to paidVL"
-              f" (Qwen3-VL, then Gemini when it disagrees with OCR); {usage.get('pdfParser+colpali', 0):,} chart/image"
-              " pages get a Qwen3-VL description")
+    planned_routes = current_routes(s.root)                  # today's routing rules over the saved page analyses
+    if planned_routes:
+        report["page_routes"] = planned_routes
+        print(f"Routing (current rules): {planned_routes.get('qwen3VL', 0):,} pages to qwen3VL, "
+              f"{planned_routes.get('paidVL', 0):,} to paidVL, {planned_routes.get('describe', 0):,} chart/image pages "
+              "to describe")
     print(f"\nPages indexed: {len(pages):,}")
     for reader, count in report["pages_by_reader"].items():
         print(f"  {READER_NAMES.get(reader, reader):34s} {count:8,d}  {100 * count / total:5.1f}%")
@@ -695,7 +707,8 @@ def reader_summary(s: Settings, expected_filings=None):
           + "\n  not_needed = Qwen3-VL matched OCR | paid = Gemini's reading kept | paid_not_better = Qwen kept"
             "\n  paid_first = Gemini read it first and matched OCR | paid_first_qwen_better = Qwen's reading kept"
             " | paid_first_qwen_not_better = Gemini kept after Qwen also tried"
-            "\n  no_paid_model / paid_limit = Gemini not called | models_failed_ocr_fallback = OCR kept")
+            "\n  no_paid_model / paid_limit = Gemini not called | models_failed_ocr_fallback = OCR kept"
+            "\n  *_reading_short_ocr_kept = a text page the model only partly read: OCR text kept (+ the reading's figures)")
     print(f"Pages with figures not confirmed by OCR or the text layer: {len(unverified):,}")
     return report
 
