@@ -691,7 +691,7 @@ def reader_summary(s: Settings, expected_filings=None):
           + ("ALL PRESENT" if report["all_filings_present"] else f"MISSING {absent[:10]} FAILED {planned['failed'][:10]}"))
     chunks = report["chunks"]
     print(f"Chunks: Chroma {chunks['chroma']:,} | BM25 {chunks['bm25']:,}  ("
-          + ("match" if chunks["chroma"] == chunks["bm25"] else "MISMATCH") + ")")
+          + ("match" if chunks["chroma"] == chunks["bm25"] else "MISMATCH: run cp.repair_index(s)") + ")")
     print(f"Filings still without Qwen3-VL (PC run, skip=): {len(still_skipped)}")
     planned_routes = current_routes(s.root)                  # today's routing rules over the saved page analyses
     if planned_routes:
@@ -711,6 +711,44 @@ def reader_summary(s: Settings, expected_filings=None):
             "\n  *_reading_short_ocr_kept = a text page the model only partly read: OCR text kept (+ the reading's figures)")
     print(f"Pages with figures not confirmed by OCR or the text layer: {len(unverified):,}")
     return report
+
+
+def index_mismatches(s: Settings):
+    """Filings whose chunk counts differ between the state file, Chroma and BM25: {doc_id: (state, chroma, bm25)}."""
+    import sqlite3
+    store = vi.ChromaStore(s.root)
+    chroma = Counter(m["doc_id"] for m in chroma_metadatas(store, fields=("doc_id",)))
+    bm25 = dict(store.bm25.db.execute("SELECT doc_id, COUNT(*) FROM chunks GROUP BY doc_id"))
+    with contextlib.closing(sqlite3.connect(state_path(s))) as db:
+        state = dict(db.execute("SELECT doc_id, points FROM filings WHERE stage='vlm' AND status='complete'"))
+    counts = {d: (state.get(d, 0), chroma.get(d, 0), bm25.get(d, 0)) for d in set(state) | set(chroma) | set(bm25)}
+    return {d: c for d, c in sorted(counts.items()) if len(set(c)) > 1}
+
+
+def repair_index(s: Settings, run=True):
+    """Re-ingest only the filings whose state, Chroma and BM25 counts disagree (from the saved readings, so no new
+    model calls), then check again and back up to Drive. ``run=False`` only lists them."""
+    import dataclasses
+    import sqlite3
+    bad = index_mismatches(s)
+    print(f"{len(bad)} filings differ between state / Chroma / BM25")
+    for doc_id, (state, chroma, bm25) in list(bad.items())[:20]:
+        print(f"  {doc_id:28s} state {state:5d}  chroma {chroma:5d}  bm25 {bm25:5d}")
+    if not bad or not run:
+        return bad
+    sectors = coverage(s, show=False)["by_doc"]
+    unplanned = sorted(d for d in bad if d not in sectors)
+    if unplanned:
+        print(f"not in the plan, left alone: {unplanned[:10]}")
+    redo = [d for d in bad if d in sectors]
+    with contextlib.closing(sqlite3.connect(state_path(s))) as db, db:
+        db.executemany("UPDATE filings SET status='pending' WHERE doc_id=? AND stage='vlm'", [(d,) for d in redo])
+    ingest(dataclasses.replace(s, sectors=",".join(sorted({sectors[d] for d in redo}))))
+    left = index_mismatches(s)
+    store = vi.ChromaStore(s.root)
+    print(f"after repair: {len(left)} filings differ; chunks Chroma {store.count():,} | BM25 {store.bm25.count():,}"
+          + ("  -> CONSISTENT" if not left else f"  -> still differ: {list(left)[:10]}"))
+    return left
 
 
 def serving_env(s: Settings):

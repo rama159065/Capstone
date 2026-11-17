@@ -198,3 +198,19 @@ def test_status_reads_chroma_metadata_in_batches(drive, monkeypatch):
     monkeypatch.setattr(cp.chroma_metadatas, "__defaults__", (2, None))     # several batches even in a tiny index
     report = cp.status(s)
     assert report["chroma"]["by_sector"] == {"banking": report["chroma"]["chunks"]}
+
+
+def test_repair_index_reingests_only_filings_whose_chroma_lost_chunks(drive):
+    """Colab: 695 chunks of 50 filings were in BM25 and the state file but not in Chroma."""
+    s = settings(drive, "vlm_chroma")
+    cp.prepare(s)
+    cp.ingest(s)
+    assert cp.index_mismatches(s) == {}
+    store = cp.vi.ChromaStore(s.root)
+    ids = store.collection.get(where={"doc_id": "edgar_ars_JPM_2025"}, include=[])["ids"]
+    store.collection.delete(ids=ids[:2])                                  # Chroma loses two chunks of one filing
+    bad = cp.index_mismatches(s)
+    assert list(bad) == ["edgar_ars_JPM_2025"] and bad["edgar_ars_JPM_2025"][1] == len(ids) - 2
+    assert cp.repair_index(s, run=False) == bad                            # listing only changes nothing
+    assert cp.repair_index(s) == {}
+    assert store.count() == store.bm25.count()

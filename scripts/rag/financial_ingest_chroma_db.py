@@ -954,12 +954,37 @@ class ChromaStore:
         return out
 
     def replace(self, doc_id, records, vectors):
+        """Swap a filing's chunks in Chroma and BM25, then check Chroma holds exactly them.
+
+        The full Colab build ended with 695 chunks of 50 filings in BM25 and the state file but not in Chroma, so a
+        write is read back: missing chunks are written once more, stale ones deleted, and a filing Chroma still
+        disagrees on fails (and is retried by the next run) instead of being marked complete.
+        """
         self.collection.delete(where={"doc_id": doc_id})
+        self._upsert(records, vectors)
+        missing, stale = self.differences(doc_id, records)
+        if missing or stale:
+            if stale:
+                self.collection.delete(ids=sorted(stale))
+            keep = [i for i, r in enumerate(records) if r[0] in missing]
+            self._upsert([records[i] for i in keep], [vectors[i] for i in keep])
+            missing, stale = self.differences(doc_id, records)
+            if missing or stale:
+                raise RuntimeError(f"Chroma holds {len(records) - len(missing)} of {len(records)} chunks of {doc_id} "
+                                   f"(+{len(stale)} stale) after a rewrite")
+        self.bm25.replace(doc_id, records)
+
+    def _upsert(self, records, vectors):
         for start in range(0, len(records), 256):
             part, vecs = records[start:start + 256], vectors[start:start + 256]
             self.collection.upsert(ids=[r[0] for r in part], embeddings=vecs, documents=[r[1]["text"] for r in part],
                                    metadatas=[self.metadata(r[1]) for r in part])
-        self.bm25.replace(doc_id, records)
+
+    def differences(self, doc_id, records):
+        """(ids of ``records`` missing from Chroma, ids Chroma holds for ``doc_id`` that aren't in ``records``)."""
+        held = set(self.collection.get(where={"doc_id": doc_id}, include=[])["ids"])
+        wanted = {r[0] for r in records}
+        return wanted - held, held - wanted
 
     def search(self, vector, query, top_k, ticker=None, year=None, sector=None, candidates=50, mode="hybrid"):
         """Dense (Chroma) + BM25 (FTS5) rankings fused by ``hybrid.rrf_fuse``: [(rrf score, payload, ranks)].

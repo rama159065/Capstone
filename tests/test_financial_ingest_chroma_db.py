@@ -318,3 +318,39 @@ def test_paid_reader_asks_for_figure_rows_when_a_transcription_is_blocked_as_rec
     with pytest.raises(RuntimeError):
         vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None, prompt="Describe this page")
     assert prompts == ["Describe"]                                      # descriptions are not re-asked
+
+
+def test_chroma_replace_rewrites_chunks_chroma_dropped_and_fails_if_it_keeps_dropping(tmp_path):
+    from scripts.rag import financial_ingest_chroma_db as vi
+    store = vi.ChromaStore(tmp_path)
+    real = store.collection
+
+    class Dropping:
+        """Chroma that silently loses the first ``drops`` chunks it is asked to write."""
+        def __init__(self, drops):
+            self.drops = drops
+
+        def upsert(self, ids, **kwargs):
+            if self.drops:
+                cut = min(self.drops, len(ids))
+                self.drops -= cut
+                ids, kwargs = ids[cut:], {k: v[cut:] for k, v in kwargs.items()}
+            if ids:
+                real.upsert(ids=ids, **kwargs)
+
+        def __getattr__(self, name):
+            return getattr(real, name)
+
+    def records(n):
+        return [(f"id-{i}", {"chunk_id": f"c{i}", "doc_id": "doc_a", "text": f"chunk {i}"}, f"chunk {i}")
+                for i in range(n)]
+
+    store.collection = Dropping(drops=3)
+    store.replace("doc_a", records(10), [[float(i), 1.0, 0.0] for i in range(10)])
+    assert real.count() == 10 == store.bm25.count()                       # the 3 lost chunks were written again
+    store.replace("doc_a", records(4), [[float(i), 1.0, 0.0] for i in range(4)])
+    assert real.count() == 4 == store.bm25.count()                        # a shorter rewrite leaves nothing stale
+
+    store.collection = Dropping(drops=10 ** 6)                             # Chroma keeps losing them: fail loudly
+    with pytest.raises(RuntimeError, match="holds 0 of 4 chunks of doc_a"):
+        store.replace("doc_a", records(4), [[float(i), 1.0, 0.0] for i in range(4)])
