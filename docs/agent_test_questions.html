@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent test questions</title>
+<style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1200px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.88rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}
+.tag{display:inline-block;padding:0 .45rem;border-radius:10px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.text{background:#e0f2fe;color:#075985}.table{background:#dcfce7;color:#166534}.chart{background:#fae8ff;color:#86198f}
+td.todo{color:#94a3b8;font-style:italic;min-width:10rem}</style>
+</head><body>
+
+<h1>Agent test questions</h1>
+<p>A test set for each agent of the Financial Report Copilot, run from the Streamlit UI. Each agent gets questions whose
+answers sit in a page's <span class="tag text">text</span>, a <span class="tag table">table</span> or a
+<span class="tag chart">chart</span>, with the expected response taken from the frozen evaluation set
+(<code>data/evaluation/financial_report_qa/eval_set_v1.jsonl</code>), the page probe
+(<code>vlm_page_probe.jsonl</code>) or the agent's design. The <em>Actual response</em> and <em>Pass</em> columns are
+filled in after a run with the hosted LLM.</p>
+<p>All questions cover filings in the 509-filing index (for example BAC, C, JPM, WFC, CVX, NVDA, KO, WMT and MSFT for
+2022–2026) and the Vanguard funds in the local N-PORT database. The same list is in
+<code>output/eval/agent_showcase/questions.json</code> for an automated run.</p>
+
+<h2>How to run in Streamlit</h2>
+<ol>
+<li>Start the API with a hosted LLM (<code>LLM_API_BASE</code>, <code>LLM_API_KEY</code>, <code>LLM_MODEL</code>, <code>DEFAULT_LLM_PROVIDER=hosted</code>), then <code>streamlit run scripts\ui\api_streamlit_app.py</code> and open <code>http://localhost:8501</code>.</li>
+<li>Sidebar → <b>Demo settings</b> → <b>Technique</b>: pick the agent named in the section heading (<code>router</code>, <code>agentic_graph</code>, <code>trend_graph</code>, <code>sector_trend_graph</code>, <code>fund_graph</code>). <b>LLM provider</b>: <code>hosted</code>.</li>
+<li>Leave <b>Company</b> and <b>Fiscal year</b> on <em>Any</em>, so the agent has to find the company and year in the question itself.</li>
+<li>Paste the question, then record the answer, the status line and the cited pages.</li>
+</ol>
+
+<h3>What a correct response looks like</h3>
+<ul>
+<li><b>Status</b> <code>answered</code> (or <code>pending_human_review</code>), with the figure stated and each claim citing a chunk such as <code>annual_report_edgar_ars_C_2025_p0041_vlm0</code>. That ID names the filing (C 2025) and page (41).</li>
+<li><b>Verification:</b> <code>support_check: supported</code> and <code>grounding: grounded</code>. The critic found every figure in a cited chunk.</li>
+<li><b>Figures:</b> the format may differ. <code>$3,097 million</code>, <code>$3.1 billion</code> and <code>3,097</code> in a millions table are all the same answer.</li>
+<li><b>Withheld answers:</b> <code>evidence_only</code> means the critic couldn't verify the answer and returned excerpts. That is a safe failure, not a wrong answer, so note whether the expected figure was in the excerpts.</li>
+<li><b>Wrong page type:</b> for chart questions, the cited chunk should come from the chart's page. Chunks read by a vision model carry <code>reader: paidVL</code> or <code>qwen3VL</code>, and chart pages also have a <code>page_description</code> chunk.</li>
+</ul>
+
+<h2>1. Q&amp;A agent: <code>agentic_graph</code></h2>
+<p>Planner → one filtered search per company × year → evidence guard → answer → calculator → critic (one repair) → governance.</p>
+<table>
+<tr><th>#</th><th>Type</th><th>Question</th><th>Expected response</th><th>What to check</th><th>Actual response</th><th>Pass</th></tr>
+<tr><td>Q1</td><td><span class="tag text">text</span></td><td>Who was Bank of America's independent auditor for fiscal year 2025?</td><td>PricewaterhouseCoopers LLP</td><td>Cites a BAC 2025 page (auditor's report)</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>Q2</td><td><span class="tag text">text</span></td><td>How does Bank of America define conduct risk and who must follow the Code of Conduct?</td><td>Conduct risk definition; employees and directors follow the Code of Conduct</td><td>Cites BAC 2025 p.88; no figures invented</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>Q3</td><td><span class="tag table">table</span></td><td>What was Citi's U.S. Personal Banking net income in 2025 compared with 2024?</td><td>$3,097 million (2025) vs $1,382 million (2024)</td><td>Cites C 2025 p.41 (segment table); the change, if given, is computed by the calculator</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>Q4</td><td><span class="tag table">table</span></td><td>What was Bank of America's average total trading positions portfolio VaR in 2025 (Table 42)?</td><td>$72 million</td><td>Cites BAC 2025 p.118</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>Q5</td><td><span class="tag table">table</span></td><td>Which company had higher net income attributable to the company in its fiscal year ending in 2025: JPMorgan Chase or Bank of America?</td><td>JPMorgan Chase: $57,048 million vs Bank of America $30,509 million</td><td>Two searches (JPM 2025, BAC 2025) in <code>agent_run.tool_calls</code>; both figures cited</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>Q6</td><td><span class="tag chart">chart</span></td><td>According to the production charts in Chevron's 2022 annual report, what was Chevron's net crude oil production in 2022?</td><td>1,440 thousand barrels per day</td><td>Cites the CVX 2022 chart page</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>Q7</td><td><span class="tag chart">chart</span></td><td>What revenue does the peer-comparison bar chart in NVIDIA's FY2026 annual report show for NVIDIA, and how does it compare with the peer median?</td><td>$113.27 billion vs peer median $54.03 billion</td><td>Both values from the chart page; comparison stated, not guessed</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>Q8</td><td><span class="tag chart">chart</span></td><td>In Bank of America's 2025 annual report, what monthly spending does the Erica Insights screen show compared with the previous month?</td><td>$750.45 vs $532.69</td><td>Cites BAC 2025 p.39 (app screenshot, read by Qwen3-VL)</td><td class="todo">to be filled</td><td></td></tr>
+</table>
+
+<h2>2. Trend agent: <code>trend_graph</code></h2>
+<p>One search per fiscal year; the LLM copies each year's figure and code keeps it only if that year's chunk states it; changes and CAGR computed in code.</p>
+<table>
+<tr><th>#</th><th>Type</th><th>Question</th><th>Expected response</th><th>What to check</th><th>Actual response</th><th>Pass</th></tr>
+<tr><td>T1</td><td><span class="tag table">table</span></td><td>How did JPMorgan Chase's net income trend from 2022 to 2025?</td><td>One net income figure for each year 2022–2025 (FY2025: $57,048 million), year-on-year changes and CAGR</td><td>Each year cites its own filing; a year without a verified figure is shown as missing, not estimated</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>T2</td><td><span class="tag table">table</span></td><td>How did NVIDIA's revenue trend from fiscal 2023 to fiscal 2026?</td><td>FY2023–FY2026 revenue series with growth and CAGR</td><td>Fiscal years labelled as NVIDIA's (ending January); CAGR computed in code</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>T3</td><td><span class="tag text">text</span></td><td>How did Walmart's total revenues trend from fiscal 2023 to fiscal 2026?</td><td>FY2023–FY2026 total revenues series</td><td>Figures from the financial highlights or MD&amp;A text, one per filing</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>T4</td><td><span class="tag chart">chart</span></td><td>How did Chevron's net crude oil production trend from 2022 to 2025?</td><td>Production per year; 2022 = 1,440 thousand barrels per day</td><td>Values from the production charts or operating tables; missing years marked, not filled</td><td class="todo">to be filled</td><td></td></tr>
+</table>
+
+<h2>3. Sector trend agent: <code>sector_trend_graph</code></h2>
+<p>One measure across a sector's companies, year by year: one search per company × year, the statement row read in code first, a fixed panel of companies verified in every year, totals, changes and CAGR in code.</p>
+<table>
+<tr><th>#</th><th>Type</th><th>Question</th><th>Expected response</th><th>What to check</th><th>Actual response</th><th>Pass</th></tr>
+<tr><td>S1</td><td><span class="tag table">table</span></td><td>How did banking sector net income trend from 2022 to 2025?</td><td>Table of banks × years with a sector total per year, changes and CAGR (JPM FY2025 $57,048 million, BAC FY2025 $30,509 million)</td><td>The panel lists which banks were verified in every year and which were dropped; totals add up</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>S2</td><td><span class="tag table">table</span></td><td>How did healthcare sector revenue trend from 2022 to 2025?</td><td>Panel of healthcare companies with revenue per year, total and CAGR (ABBV FY2025 $61,160 million)</td><td>Same companies in every year; no mixing of fiscal-year ends without a note</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>S3</td><td><span class="tag table">table</span></td><td>How did oil and gas sector revenue trend from 2022 to 2025?</td><td>Panel of oil and gas companies with revenue per year, total and CAGR</td><td>Takes a few minutes (one search per company × year); still within 8 steps</td><td class="todo">to be filled</td><td></td></tr>
+</table>
+
+<h2>4. Fund agent: <code>fund_graph</code></h2>
+<p>SEC N-PORT holdings from SQLite (fixed SQL only, rows cited as <code>nport_*</code> evidence), linked to the holdings' annual reports.</p>
+<table>
+<tr><th>#</th><th>Type</th><th>Question</th><th>Expected response</th><th>What to check</th><th>Actual response</th><th>Pass</th></tr>
+<tr><td>F1</td><td><span class="tag table">table</span></td><td>What are the top 10 holdings of the Vanguard 500 Index Fund?</td><td>Ten largest positions with value and % of net assets, from the latest N-PORT filing</td><td>Citations are <code>nport_*</code> rows; the filing date is stated</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>F2</td><td><span class="tag text">text</span></td><td>How much of the Vanguard Growth Index Fund is invested in NVIDIA, and what did NVIDIA report as revenue in its latest annual report?</td><td>NVIDIA's weight in the fund (N-PORT) plus NVIDIA's revenue from its annual report (FY2026)</td><td>Two kinds of evidence: an <code>nport_*</code> row and an NVDA annual-report chunk</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>F3</td><td><span class="tag table">table</span></td><td>Which sectors does the Vanguard Value Index Fund hold the most of?</td><td>Largest sectors by weight from the holdings</td><td>Weights add up from cited holding rows; no outside knowledge</td><td class="todo">to be filled</td><td></td></tr>
+</table>
+
+<h2>5. Router (Streamlit default): <code>router</code></h2>
+<p>The supervisor picks a route (lookup / comparison → Q&amp;A agent, trend, sector_trend, fund, report, out_of_scope) and validates it against the parser. Check the route shown in the response as well as the answer.</p>
+<table>
+<tr><th>#</th><th>Type</th><th>Question</th><th>Expected route</th><th>Expected response</th><th>Actual response</th><th>Pass</th></tr>
+<tr><td>R1</td><td><span class="tag text">text</span></td><td>Who was AbbVie's independent auditor for fiscal year 2025?</td><td>lookup</td><td>Ernst &amp; Young LLP</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>R2</td><td><span class="tag table">table</span></td><td>What was Wells Fargo's total commercial and industrial loans outstanding and total commitments at December 31, 2023?</td><td>lookup</td><td>$396,811 million outstanding and $784,854 million total commitments (WFC 2023 p.44)</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>R3</td><td><span class="tag chart">chart</span></td><td>What net natural gas production did Chevron report in its 2022 annual-report chart?</td><td>lookup</td><td>7,677 million cubic feet per day</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>R4</td><td><span class="tag table">table</span></td><td>How did Coca-Cola's net revenues trend from 2023 to 2025?</td><td>trend</td><td>FY2023–FY2025 series (FY2025 $47,941 million) with changes</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>R5</td><td><span class="tag table">table</span></td><td>How did banking sector total revenue trend from 2022 to 2025?</td><td>sector_trend</td><td>Bank panel × years with totals and CAGR</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>R6</td><td><span class="tag table">table</span></td><td>What are the top holdings of the Vanguard 500 Index Fund?</td><td>fund</td><td>Largest positions from N-PORT, cited <code>nport_*</code> rows</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>R7</td><td><span class="tag text">text</span></td><td>Generate a financial report for Microsoft for fiscal 2025.</td><td>report</td><td><code>report_handoff</code>: points to the report generator; no answer is generated</td><td class="todo">to be filled</td><td></td></tr>
+<tr><td>R8</td><td><span class="tag text">text</span></td><td>Should I buy NVIDIA stock right now?</td><td>out_of_scope</td><td><code>refused</code>: no investment advice; may offer cited facts instead</td><td class="todo">to be filled</td><td></td></tr>
+</table>
+
+<h2>Automated run</h2>
+<p>To fill the <em>Actual response</em> columns without typing each question, run every question through the API with its agent once the API is running with a hosted LLM. The full responses are saved to <code>output/eval/agent_showcase/responses.jsonl</code>, and this page is then updated from them. For scored pass rates over all 86 frozen questions, use <code>python -m scripts.evaluation.evaluate_agent_api</code> (see <code>docs/agent_api_testing.html</code>).</p>
+<blockquote>The expected figures come from the companies' XBRL filings and checked page readings. A response that gives the right figure from a different page, or rounded differently, still passes. A response that gives a figure the cited page doesn't show fails, even if the number is right.</blockquote>
+
+</body></html>
