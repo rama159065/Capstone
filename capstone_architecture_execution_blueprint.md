@@ -213,7 +213,7 @@ This is what `scripts/rag/financial_ingest_qdrant_db.py` creates. It replaces th
 
    On start, run one warm-up visual query.
 
-7. **Check.** `GET /health` must show `financial_backend=financial_qdrant`. Run the clarifier conversation and one chart question.
+7. **Check.** `GET /health` must show `financial_backend=financial_vlm`. Run the clarifier conversation and one chart question.
 
 ---
 

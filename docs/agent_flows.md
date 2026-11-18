@@ -508,7 +508,7 @@ The five other Track B domains (procurement, travel and expense, competitive res
 |---|---|---|
 | `AGENT_MAX_STEPS` | 10 | Node budget; loops run only if they fit (14 allows retry + repair + calculator) |
 | `DEFAULT_LLM_PROVIDER` | `mock` | `hosted` uses `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL` |
-| `RAG_BACKEND` | from runtime profile | `financial_qdrant`, `financial_vlm`, `qdrant` or Chroma |
+| `RAG_BACKEND` | from runtime profile (`financial_vlm` when its index exists) | `financial_vlm`, `financial_qdrant`, `financial_hybrid`, `qdrant` or Chroma |
 | `RAG_FIN_VISUAL` | off | `1`: ColPali for every question; `auto`: planner decides |
 | `RAG_RERANKER_MODEL`, `RAG_MIN_RERANK_SCORE` | off, -4 | Cross-encoder rerank and relevance floor |
 | `RAG_REQUEST_TIMEOUT_SECONDS` | 60 | Whole-workflow deadline (`tool_error` when exceeded) |

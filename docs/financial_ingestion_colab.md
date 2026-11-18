@@ -175,7 +175,7 @@ The same code runs on the PC and on Colab. [scripts/common/runtime_profile.py](.
 |---|---|---|
 | Index folder (`RAG_INGEST_DIR`) | `indexes/financial_qdrant` | `/content/rag/colpali_qdrant`, the folder `colab_pipeline` writes (this notebook sets `/content/rag` itself in cell 2). See [annual_report_rag_structure.md](annual_report_rag_structure.md) |
 | Qdrant | Embedded in the index folder (no server). `QDRANT_URL` points to a server if you run one | Server at `http://127.0.0.1:6333`, started by notebook cell 4 |
-| Financial retrieval (`RAG_BACKEND`) | `financial_qdrant` once `ingest.sqlite3` exists there, otherwise the existing Chroma index | same rule |
+| Financial retrieval (`RAG_BACKEND`) | `financial_vlm` when the pipeline 1 Chroma index exists, else `financial_qdrant` once `ingest.sqlite3` exists there, otherwise the existing Chroma index | same rule |
 | Text-model device | `cpu` | `cuda` on a GPU runtime |
 | Streamlit → API | `http://127.0.0.1:8000` | `http://127.0.0.1:8000`, same VM; you open Streamlit through the Colab port proxy |
 

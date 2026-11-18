@@ -1115,9 +1115,7 @@ def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30, se
                                               "ranks": hit.ranks}
         use_visual = os.getenv("RAG_FIN_VISUAL") == "1" if visual is None else visual
         if use_visual and client.collection_exists(VISUAL):
-            if "colpali" not in _serving:
-                _serving["colpali"] = ColPali(os.getenv("RAG_FIN_COLPALI_MODEL", "vidore/colpali-v1.3-hf"))
-            for rank, hit in enumerate(search_visual(client, _serving["colpali"], embedder, query, 20, flt), 1):
+            for rank, hit in enumerate(search_visual(client, serving_colpali(), embedder, query, 20, flt), 1):
                 entry = fused.setdefault(hit.payload["chunk_id"], {"payload": hit.payload, "rrf": 0.0, "paths": [],
                                                                     "ranks": {}})
                 entry["rrf"] += 1 / (60 + rank)
@@ -1128,6 +1126,17 @@ def retrieve_for_agent(query, top_k=5, ticker=None, year=None, candidates=30, se
                                       paths=entry["paths"], ranks=entry["ranks"]) for entry in fused.values()]
     hits.sort(key=lambda h: h["rerank_score"], reverse=True)
     return cross_encoder_rerank(query, hits, top_k) if os.getenv("RAG_RERANKER_MODEL") else hits[:top_k]
+
+
+def serving_colpali():
+    """The query-time ColPali, loaded once per process. ``RAG_FIN_COLPALI_DTYPE`` picks its precision; without CUDA
+    the default is bfloat16 (about 6 GB of RAM) rather than float32 (about 12 GB)."""
+    with _serving_lock:
+        if "colpali" not in _serving:
+            import torch
+            dtype = os.getenv("RAG_FIN_COLPALI_DTYPE") or ("auto" if torch.cuda.is_available() else "bfloat16")
+            _serving["colpali"] = ColPali(os.getenv("RAG_FIN_COLPALI_MODEL", "vidore/colpali-v1.3-hf"), dtype=dtype)
+        return _serving["colpali"]
 
 
 def cross_encoder_rerank(query, hits, top_k):

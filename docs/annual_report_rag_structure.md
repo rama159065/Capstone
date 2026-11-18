@@ -360,9 +360,9 @@ Smoke runs (`SMOKE_TEST = True`) write to `chroma_db_smoke` / `qdrant_db_smoke` 
 | `RAG_VLM_DIR` (Pipeline 1) | `<RAG_HOME>/indexes/chroma_db` | same | same |
 | `RAG_INGEST_DIR` (Pipeline 2) | `<RAG_HOME>/indexes/qdrant_db` | same | same |
 | `QDRANT_URL` | unset (embedded) | `http://127.0.0.1:6333` | `http://qdrant:6333` |
-| `RAG_BACKEND` | `financial_qdrant` if its `ingest.sqlite3` exists, else `financial_vlm` if `vlm_ingest.sqlite3` exists | same | same |
+| `RAG_BACKEND` | `financial_vlm` if `vlm_ingest.sqlite3` exists, else `financial_qdrant` if its `ingest.sqlite3` exists | same | same |
 
-**Choosing a pipeline.** When both indexes exist, the automatic choice prefers Pipeline 2. To serve Pipeline 1, set `RAG_BACKEND=financial_vlm`; the Chroma notebook's `cp.serve` does this. To serve both side by side, run one API per backend (for example ports 8000 and 8001).
+**Choosing a pipeline.** Pipeline 1 (Chroma) is the main index: when both indexes exist, the automatic choice serves it. To test Pipeline 2 set `RAG_BACKEND=financial_qdrant`; to test both together set `RAG_BACKEND=financial_hybrid` ([hybrid_retrieval.html](hybrid_retrieval.html)). On Colab, `cp.serve(s, backend=...)` takes the same names. To serve both side by side, run one API per backend (for example ports 8000 and 8001).
 
 **UI and filters.**
 - The Streamlit sidebar has a **Sectors** picker, a **Retrieval mode** (`hybrid`, or `dense` / `bm25` for comparisons) and the agent **Technique** (default `router`).

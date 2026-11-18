@@ -142,6 +142,14 @@ def test_serving_env_points_the_api_at_this_pipelines_index(drive):
     assert env["RAG_HOME"] == str(drive / "work")
     with pytest.raises(RuntimeError, match="Qdrant server"):
         cp.serve(settings(drive, "colpali_qdrant"))
+    hybrid = cp.serving_env(settings(drive, "vlm_chroma", qdrant_url="http://127.0.0.1:6333"), "financial_hybrid")
+    assert hybrid["RAG_BACKEND"] == "financial_hybrid" and hybrid["QDRANT_URL"] == "http://127.0.0.1:6333"
+    assert hybrid["RAG_VLM_DIR"] == str(drive / "work" / "indexes" / "chroma_db")
+    assert hybrid["RAG_INGEST_DIR"] == str(drive / "work" / "indexes" / "qdrant_db")
+    with pytest.raises(ValueError):
+        cp.serving_env(settings(drive, "vlm_chroma"), "qdrant")
+    with pytest.raises(RuntimeError, match="Qdrant server"):
+        cp.serve(settings(drive, "vlm_chroma"), backend="financial_hybrid")
 
 
 def test_agent_answers_from_the_vlm_index_with_a_sector_filter(drive, monkeypatch):
