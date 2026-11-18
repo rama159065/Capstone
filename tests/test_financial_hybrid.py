@@ -127,6 +127,15 @@ def test_fusion_adds_both_scores_for_a_chunk_found_both_ways():
     assert out[0]["rrf_score"] == pytest.approx(1 / 62 + 1 / 61, abs=1e-6)
 
 
+def test_a_colpali_only_page_does_not_push_text_hits_down():
+    text = [hit(payload(40 + i, 0, "text", f"text hit {i}"), rank=i + 1) for i in range(3)]
+    wrong_page = [hit(payload(25, i, "text", f"other chart {i}")) for i in range(3)]
+    pages = [{"doc_id": DOC, "page": 25, "rank": 1}]
+    out = fh.fuse(text, pages, {(DOC, 25): wrong_page}, top_k=3)
+    assert [h["chunk_id"] for h in out[:3]] == [h["chunk_id"] for h in text]          # text order kept
+    assert [h["chunk_id"] for h in out[3:]] == [h["chunk_id"] for h in wrong_page]    # ColPali pages follow
+
+
 def test_planner_enables_visual_search_for_chart_questions_with_the_hybrid(monkeypatch):
     monkeypatch.setenv("RAG_BACKEND", "financial_hybrid")
     monkeypatch.delenv("RAG_FIN_VISUAL", raising=False)

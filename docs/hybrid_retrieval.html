@@ -75,7 +75,7 @@ flowchart TB
 <li><b>Same-page expansion</b> (<code>with_page_values</code>): a retrieved <code>page_description</code> chunk without any other chunk of its page brings up to 3 of that page's reading chunks, ranked with it (<code>retrieval_paths: vlm_text, same_page</code>).</li>
 <li><b>Visual search</b>, when the plan includes <code>visual_search</code>. <code>RAG_FIN_VISUAL</code> is <code>auto</code> by default for the hybrid (the planner, or chart and figure words in the question, decide), <code>1</code> for every question, <code>0</code> to turn it off. ColPali embeds the question; Qdrant prefetches 200 pages by the mean-pooled row and column vectors and the text summary vector, then ranks them by exact MaxSim over the full on-disk multivectors. The best 3 distinct pages are kept.</li>
 <li><b>Page reading</b> (<code>page_evidence</code>): for each ColPali page, Chroma's chunks of that page (values first, description last). A page Chroma never read falls back to pipeline 2's own text of the page.</li>
-<li><b>Fusion</b> (<code>fuse</code>): reciprocal rank over Chroma's list and ColPali's pages; a chunk found both ways adds both scores. Every hit keeps the shared evidence format, so citations, the critic and the API need no change.</li>
+<li><b>Fusion</b> (<code>fuse</code>): reciprocal rank over Chroma's list and ColPali's pages. ColPali <em>adds</em> pages but does not displace text hits: a chunk found both ways adds both scores and moves up; a chunk only ColPali found ranks after Chroma's top k. Every hit keeps the shared evidence format, so citations, the critic and the API need no change.</li>
 </ol>
 
 <h3>Critic: figures only a VLM read</h3>
@@ -89,7 +89,8 @@ flowchart TB
 <tr><td><code>scripts/agents/financial_tools.py</code></td><td><code>numeric_grounding</code> returns <code>unverified</code> (<code>confirmed_numbers</code>); <code>visual_mode</code> knows the hybrid.</td></tr>
 <tr><td><code>scripts/agents/financial_prompting_agent.py</code></td><td><code>retrieve_evidence</code> dispatches <code>financial_hybrid</code>; governance trigger <code>unverified_vlm_figure</code>.</td></tr>
 <tr><td><code>scripts/api/api_app.py</code></td><td>Start-up warm-up opens both indexes and loads ColPali for the hybrid.</td></tr>
-<tr><td><code>tests/test_financial_hybrid.py</code> (new)</td><td>13 tests: same-page expansion, Chroma page reads, ColPali page to Chroma reading, fallback to pipeline 2 text, fusion scores, visual settings, planner, dispatch, unverified figures through the whole graph. Full suite: 570 passed.</td></tr>
+<tr><td><code>scripts/rag/financial_ingest_qdrant_db.py</code></td><td><code>serving_colpali()</code>: the query-time ColPali loads once per process and honours <code>RAG_FIN_COLPALI_DTYPE</code> (bfloat16 on CPU, not float32); the hybrid shares its Qdrant client, since embedded Qdrant allows one client per folder.</td></tr>
+<tr><td><code>tests/test_financial_hybrid.py</code> (new)</td><td>14 tests: same-page expansion, Chroma page reads, ColPali page to Chroma reading, fallback to pipeline 2 text, fusion scores, a wrong ColPali page not displacing text hits, visual settings, planner, dispatch, unverified figures through the whole graph.</td></tr>
 </table>
 
 <h2>4. Run it locally on one filing (Chevron 2022)</h2>
@@ -166,7 +167,41 @@ $env:API_BASE_URL = "http://127.0.0.1:8000"
 </ul>
 
 <h2>6. Results</h2>
-<p class="todo">To be filled after the test indexes are built and the questions are run with the hosted LLM.</p>
+<h3>6.1 Test indexes built (18–19 Nov 2026, this PC, CPU only)</h3>
+<table>
+<tr><th>Index</th><th>Content</th><th>Time</th></tr>
+<tr><td>Chroma <code>chroma_db_cvx_test</code></td><td>357 chunks from 116 pages: OCR 172, Qwen3-VL-2B 104, text layer 81; 27 table chunks, 12 page descriptions; 8 pages with unverified figures</td><td>about 11 h (85 pages read by the vision model on CPU)</td></tr>
+<tr><td>Qdrant text <code>qdrant_db_cvx_test</code></td><td>315 chunks (OCR for garbled pages)</td><td>4 min</td></tr>
+<tr><td>Qdrant visual</td><td>85 ColPali pages (bfloat16, CPU)</td><td>44 min</td></tr>
+</table>
+<p>Qwen3-VL's reading of page 35 holds all four chart values (net crude oil 1,440, NGLs 279, natural gas 7,677, proved reserves 11.2), each confirmed by OCR, so none is flagged as unverified. Pipeline 2's text of page 35 is the garbled text layer, with none of them.</p>
+
+<h3>6.2 Retrieval check (no LLM): does the expected value reach the evidence?</h3>
+<p>Each question searched with <code>ticker=CVX, year=2022</code> and top k = 5, as the agent's per-company search does. "#" is the rank of the first chunk holding every expected value. Script output: <code>output/hybrid_test/retrieval_check.json</code>.</p>
+<table>
+<tr><th>#</th><th>Type</th><th>Expected</th><th>Chroma only</th><th>Qdrant only (text + ColPali)</th><th>Hybrid</th></tr>
+<tr><td>H1</td><td><span class="tag chart">chart</span></td><td>1,440</td><td class="yes">p35 #2</td><td class="no">miss</td><td class="yes">p35 #2</td></tr>
+<tr><td>H2</td><td><span class="tag chart">chart</span></td><td>7,677</td><td class="yes">p35 #5</td><td class="no">miss</td><td class="yes">p35 #5</td></tr>
+<tr><td>H3</td><td><span class="tag chart">chart</span></td><td>11.2</td><td class="yes">p35 #1</td><td class="no">miss</td><td class="yes">p35 #1 (also found by ColPali)</td></tr>
+<tr><td>H4</td><td><span class="tag chart">chart</span></td><td>279</td><td class="yes">p35 #4</td><td class="no">miss</td><td class="yes">p35 #4</td></tr>
+<tr><td>H5</td><td><span class="tag table">table</span></td><td>12,296 and 8,553</td><td class="yes">p44 #1</td><td class="yes">p44 #1</td><td class="yes">p44 #1</td></tr>
+<tr><td>H6</td><td><span class="tag table">table</span></td><td>246,252</td><td class="yes">p58 #1</td><td class="no">miss</td><td class="yes">p58 #1</td></tr>
+<tr><td>H7</td><td><span class="tag table">table</span></td><td>20.3</td><td class="yes">p47 #1</td><td class="yes">p47 #1</td><td class="yes">p47 #1</td></tr>
+<tr><td>H8</td><td><span class="tag text">text</span></td><td>PricewaterhouseCoopers</td><td class="yes">p55 #2</td><td class="yes">p55 #1</td><td class="yes">p55 #2</td></tr>
+<tr><td>H9</td><td><span class="tag table">table</span></td><td>35,465</td><td class="yes">p58 #1</td><td class="yes">p47 #1</td><td class="yes">p58 #1</td></tr>
+<tr><td colspan="3"><b>Total</b></td><td class="yes">9 / 9</td><td class="no">4 / 9</td><td class="yes">9 / 9</td></tr>
+</table>
+
+<h3>6.3 What this shows</h3>
+<ul>
+<li><b>Qdrant alone fails every chart question</b> on this filing: ColPali can point at chart pages, but the text it hands the agent is the garbled text layer, so no value reaches the answer. H6 also misses, because the revenue row is in OCR text the MiniLM search ranked lower.</li>
+<li><b>Chroma alone succeeds here</b> because this test index holds one filing (357 chunks), filtered to CVX 2022, so the search space is small. The failure cases from section 1 (a values chunk outranked across many filings, rows past 512 tokens) show up at corpus scale, not on one PDF.</li>
+<li><b>CPU ColPali was weak on these questions:</b> it ranked other chart pages (25, 8, 33, 13) above page 35 for three of the four chart questions and found page 35 only for H3. With equal fusion weights those pages pushed Chroma's correct chunks from rank 2–5 down to 8–10; the fusion now lets ColPali add pages without displacing text hits, and the hybrid keeps Chroma's ranks on every question.</li>
+<li><b>Net result:</b> the hybrid is never worse than Chroma alone, and adds ColPali's pages as extra evidence when the text search misses a page. Its benefit has to be measured on the full corpus, where text search is harder.</li>
+</ul>
+
+<h3>6.4 With the hosted LLM</h3>
+<p class="todo">To be filled: run H1–H12 through Streamlit or the API with <code>RAG_BACKEND=financial_hybrid</code> and a hosted LLM, and record the status, the cited page and whether the answer states the expected value.</p>
 
 <h2>7. Limits</h2>
 <ul>

@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import threading
 from pathlib import Path
 from typing import Any
 
@@ -37,9 +36,6 @@ from scripts.rag import financial_ingest_chroma_db as chroma_db
 VISUAL_PAGES = 3          # ColPali pages used per search
 RRF_K = 60
 
-_serving: dict[str, Any] = {}
-_lock = threading.RLock()
-
 
 def visual_setting() -> str:
     """'always', 'auto' (the planner or chart words decide; the hybrid default) or 'off'."""
@@ -48,27 +44,22 @@ def visual_setting() -> str:
 
 
 def _qdrant():
-    """The pipeline 2 client, its recorded text embedder and (lazily) ColPali, opened once per process."""
+    """The pipeline 2 client and its recorded text embedder, shared with ``financial_ingest_qdrant_db``'s own serving
+    state: embedded Qdrant allows one client per folder and process, and ColPali should load once."""
     from scripts.rag import financial_ingest_qdrant_db as qdrant_db
-    with _lock:
-        if "client" not in _serving:
+    with qdrant_db._serving_lock:
+        if "client" not in qdrant_db._serving:
             root = Path(os.getenv("RAG_INGEST_DIR", qdrant_db.DEFAULT_ROOT))
             client = qdrant_db.connect(os.getenv("QDRANT_URL"), root)
-            embedder = qdrant_db.recorded_embedder(argparse.Namespace(root=root, embedding_provider="hashing",
-                                                                      embedding_model=None))
-            _serving.update(client=client, embedder=embedder, module=qdrant_db)
-        return _serving
+            qdrant_db.check_legacy(client)
+            qdrant_db._serving.update(client=client, embedder=qdrant_db.recorded_embedder(argparse.Namespace(
+                root=root, embedding_provider="hashing", embedding_model=None)))
+        return {"client": qdrant_db._serving["client"], "embedder": qdrant_db._serving["embedder"], "module": qdrant_db}
 
 
 def colpali():
-    with _lock:
-        if "colpali" not in _serving:
-            import torch
-            qdrant_db = _qdrant()["module"]
-            dtype = os.getenv("RAG_FIN_COLPALI_DTYPE") or ("auto" if torch.cuda.is_available() else "bfloat16")
-            _serving["colpali"] = qdrant_db.ColPali(os.getenv("RAG_FIN_COLPALI_MODEL", "vidore/colpali-v1.3-hf"),
-                                                    dtype=dtype)
-        return _serving["colpali"]
+    from scripts.rag import financial_ingest_qdrant_db as qdrant_db
+    return qdrant_db.serving_colpali()
 
 
 def visual_pages(query, ticker=None, year=None, sector=None, limit=VISUAL_PAGES) -> list[dict[str, Any]]:
@@ -104,16 +95,25 @@ def page_evidence(store, found: dict[str, Any], limit=chroma_db.SAME_PAGE_LIMIT)
 
 def fuse(text_hits: list[dict[str, Any]], pages: list[dict[str, Any]], page_hits: dict[tuple, list[dict[str, Any]]],
          top_k: int) -> list[dict[str, Any]]:
-    """Reciprocal-rank fusion of Chroma's list and ColPali's pages. A chunk found both ways adds both scores; a page's
-    chunks share its ColPali rank. At most ``top_k`` text hits plus each ColPali page's chunks are kept."""
+    """Reciprocal-rank fusion of Chroma's list and ColPali's pages.
+
+    ColPali adds pages; it does not displace text hits. A chunk found both ways adds both scores (so it moves up); a
+    chunk only ColPali found is ranked as if it came after Chroma's top k (rank ``top_k + page rank + its position on
+    the page``), so a wrong ColPali page can't push a correct text hit out of the answer's context. At most ``top_k``
+    text hits plus each ColPali page's chunks are kept.
+    On the Chevron 2022 test, CPU ColPali ranked other chart pages above page 35 for three of four chart questions;
+    with equal weights their chunks pushed Chroma's correct value chunks from rank 2-5 down to 8-10.
+    """
     scored: dict[str, dict[str, Any]] = {}
     for position, hit in enumerate(text_hits[:max(top_k, 1) * 2], 1):
         entry = scored.setdefault(hit["chunk_id"], {"hit": dict(hit), "score": 0.0})
         entry["score"] += 1 / (RRF_K + position)
+    text_ids = set(scored)
     for found in pages:
-        for hit in page_hits.get((found["doc_id"], found["page"]), []):
+        for position, hit in enumerate(page_hits.get((found["doc_id"], found["page"]), [])):
             entry = scored.setdefault(hit["chunk_id"], {"hit": dict(hit), "score": 0.0})
-            entry["score"] += 1 / (RRF_K + found["rank"])
+            rank = found["rank"] if hit["chunk_id"] in text_ids else top_k + found["rank"] + position
+            entry["score"] += 1 / (RRF_K + rank)
             known = entry["hit"]
             known["retrieval_paths"] = sorted(set(known.get("retrieval_paths") or []) | {"visual"})
             known["retrieval_ranks"] = {**(known.get("retrieval_ranks") or {}), "colpali": found["rank"]}
