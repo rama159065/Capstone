@@ -39,6 +39,9 @@ MAX_RETRIEVAL_ATTEMPTS = 2           # first search + one broadened retry
 
 def visual_mode() -> str:
     """'always' (RAG_FIN_VISUAL=1, every query), 'auto' (the planner decides) or 'off'."""
+    if os.getenv("RAG_BACKEND") == "financial_hybrid":       # ColPali is on by default there ('auto')
+        from scripts.rag.financial_hybrid import visual_setting
+        return visual_setting()
     if os.getenv("RAG_BACKEND") != "financial_qdrant":
         return "off"
     value = os.getenv("RAG_FIN_VISUAL", "").strip().lower()
@@ -213,9 +216,11 @@ def numeric_grounding(answer: str, cited: list[dict[str, Any]], calculations: li
     Years (1990-2049) and small counts (<= 10) are not checked. Rounding is allowed only to the precision the
     answer shows, in any unit scale (thousands, millions, billions), so "$254.5 billion" matches 254,453 million.
     """
-    known = evidence_numbers(cited) | {abs(float(c["value"])) for c in calculations if c.get("value") is not None}
+    calculated = {abs(float(c["value"])) for c in calculations if c.get("value") is not None}
+    known = evidence_numbers(cited) | calculated
+    confirmed = confirmed_numbers(cited) | calculated
     text = CHUNK_ID_TOKEN.sub(" ", CALC_TOKEN.sub(" ", answer))
-    checked, ungrounded = 0, []
+    checked, ungrounded, unverified = 0, [], []
     for raw in NUMBER.findall(text):
         value = float(raw.replace(",", ""))
         if ("," not in raw and "." not in raw and 1990 <= value <= 2049) or (value <= 10 and value == int(value)):
@@ -224,7 +229,26 @@ def numeric_grounding(answer: str, cited: list[dict[str, Any]], calculations: li
         decimals = len(raw.split(".")[1]) if "." in raw else 0
         if not _matches(value, decimals, known):
             ungrounded.append(raw)
-    return {"grounded": not ungrounded, "checked": checked, "ungrounded": ungrounded}
+        elif not _matches(value, decimals, confirmed):
+            unverified.append(raw)
+    return {"grounded": not ungrounded, "checked": checked, "ungrounded": ungrounded, "unverified": unverified}
+
+
+def confirmed_numbers(evidence: list[dict[str, Any]]) -> set[float]:
+    """Figures the cited chunks state, minus those only a VLM read: a chunk's ``unverified_numbers`` are figures its
+    page reader wrote that neither the page's text layer nor OCR prints. Such a figure still counts as confirmed when
+    another cited chunk states it without that flag (another page, or pipeline 2's text of the same page)."""
+    found = set()
+    for hit in evidence:
+        flagged = set()
+        for item in hit.get("unverified_numbers") or []:
+            for match in NUMBER.findall(str(item)):
+                try:
+                    flagged.add(float(match.replace(",", "")))
+                except ValueError:
+                    pass
+        found |= evidence_numbers([hit]) - flagged
+    return found
 
 
 def parse_support(text: str) -> dict[str, Any]:

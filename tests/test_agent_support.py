@@ -65,7 +65,7 @@ def test_figures_must_appear_in_cited_chunks_at_the_printed_precision():
     wrong = tools.numeric_grounding(f"Net sales were $255 billion [{CHUNK}].", cited, [])
     assert not wrong["grounded"] and wrong["ungrounded"] == ["255"]
     years_and_ids = tools.numeric_grounding(f"In fiscal 2025 the 3 segments grew [{CHUNK}].", cited, [])
-    assert years_and_ids == {"grounded": True, "checked": 0, "ungrounded": []}
+    assert years_and_ids == {"grounded": True, "checked": 0, "ungrounded": [], "unverified": []}
     calc = tools.numeric_grounding("Growth was 7.04%.", cited, [{"value": 7.0434, "grounded": True}])
     assert calc["grounded"]
 

@@ -564,6 +564,10 @@ def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
         from scripts.rag.financial_ingest_qdrant_db import retrieve_for_agent
         return retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
                                   sector=config.sector, visual=config.visual, mode=config.retrieval_mode)
+    if os.getenv("RAG_BACKEND") == "financial_hybrid":   # Chroma page readings + ColPali page finding (both indexes)
+        from scripts.rag import financial_hybrid
+        return financial_hybrid.retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
+                                                   sector=config.sector, visual=config.visual, mode=config.retrieval_mode)
     if os.getenv("RAG_BACKEND") == "financial_vlm":      # Chroma index built by scripts/rag/financial_ingest_chroma_db.py
         from scripts.rag import financial_ingest_chroma_db
         return financial_ingest_chroma_db.retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
@@ -1426,6 +1430,8 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
             extra.append("unverified_calculation")
         if (state.get("support_check") or {}).get("verdict") not in (None, "supported"):
             extra.append("unsupported_claims")
+        if ((state.get("support_check") or {}).get("numeric") or {}).get("unverified"):
+            extra.append("unverified_vlm_figure")          # a figure only a page reader wrote; text layer and OCR don't
         table = state.get("sector_trend") or {}
         if table and table.get("coverage_share", 1) < 0.5:
             extra.append("low_sector_coverage")            # the panel holds under half the companies planned

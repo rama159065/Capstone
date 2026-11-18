@@ -1011,6 +1011,13 @@ class ChromaStore:
         fused = [e for e in hybrid.rrf_fuse(rankings) if e["id"] in found][:top_k]
         return [(e["rrf"], found[e["id"]], e["ranks"]) for e in fused]
 
+    def page_payloads(self, doc_id, page):
+        """Every chunk of one page, in reading order."""
+        got = self.collection.get(where={"$and": [{"doc_id": doc_id}, {"page": int(page)}]},
+                                  include=["documents", "metadatas"])
+        payloads = [{**meta, "text": text} for text, meta in zip(got["documents"], got["metadatas"])]
+        return sorted(payloads, key=lambda p: (int(p.get("chunk_index") or 0), str(p["chunk_id"])))
+
     def count(self):
         return self.collection.count()
 
@@ -1180,8 +1187,44 @@ def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAUL
         raise ValueError("pipeline 1 serves from Chroma only; Qdrant is pipeline 2 (RAG_BACKEND=financial_qdrant)")
     backend = ChromaStore(root)
     vector = embedder([query])[0] if hybrid.uses(mode, "dense") else None
-    return [chunk_schema.evidence_hit(p, rrf_score=score, paths=["vlm_text"], ranks=ranks)
+    hits = [chunk_schema.evidence_hit(p, rrf_score=score, paths=["vlm_text"], ranks=ranks)
             for score, p, ranks in backend.search(vector, query, top_k, ticker, year, sector, mode=mode)]
+    return with_page_values(backend, hits)
+
+
+SAME_PAGE_LIMIT = 3     # value chunks added after one page_description hit
+
+
+def with_page_values(store, hits, limit=SAME_PAGE_LIMIT):
+    """Add a chart page's values after its description.
+
+    A ``page_description`` chunk says what a chart or picture shows (title, measure, years) but by design no values,
+    so it often matches a question's wording better than the page's own reading chunk that holds the figures. When a
+    description is retrieved without any other chunk of its page, that page's reading chunks (up to ``limit``) follow
+    it, ranked with it, so the answer step sees the values the description points to.
+    """
+    have = {hit["chunk_id"] for hit in hits}
+    out = []
+    for hit in hits:
+        out.append(hit)
+        if hit.get("content_type") != "page_description":
+            continue
+        doc_id, page = (hit.get("metadata") or {}).get("doc_id"), hit.get("page")
+        if doc_id is None or page is None or any(
+                other is not hit and (other.get("metadata") or {}).get("doc_id") == doc_id and other.get("page") == page
+                and other.get("content_type") != "page_description" for other in hits):
+            continue
+        added = 0
+        for payload in store.page_payloads(doc_id, page):
+            if payload["chunk_id"] in have or payload.get("content_type") == "page_description":
+                continue
+            out.append(chunk_schema.evidence_hit(payload, rrf_score=hit["rrf_score"], paths=["vlm_text", "same_page"],
+                                                 ranks={**(hit.get("retrieval_ranks") or {}), "same_page": added + 1}))
+            have.add(payload["chunk_id"])
+            added += 1
+            if added >= limit:
+                break
+    return out
 
 
 _serving: dict = {}

@@ -497,7 +497,8 @@ def warm_up_retrieval() -> str:
     ``API_WARMUP=false`` turns it off. Failures are logged, never raised: a request still retries the load.
     """
     backend = os.getenv("RAG_BACKEND", "")
-    if os.getenv("API_WARMUP", "true").strip().lower() in {"0", "false", "no", "off"} or backend not in {"financial_qdrant", "financial_vlm"}:
+    if os.getenv("API_WARMUP", "true").strip().lower() in {"0", "false", "no", "off"} or backend not in {
+            "financial_qdrant", "financial_vlm", "financial_hybrid"}:
         return "skipped"
     started = time.perf_counter()
     try:
@@ -506,6 +507,10 @@ def warm_up_retrieval() -> str:
         else:
             from scripts.rag.financial_ingest_chroma_db import retrieve_for_agent
         retrieve_for_agent("total revenue", top_k=1)
+        if backend == "financial_hybrid":
+            from scripts.rag import financial_hybrid
+            if financial_hybrid.visual_setting() != "off":
+                financial_hybrid.colpali()          # load ColPali now, not on the first chart question
     except Exception as exc:  # noqa: BLE001 - warm-up is best effort
         logger.warning("retrieval warm-up failed: %s", exc)
         return "failed"
