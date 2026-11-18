@@ -22,8 +22,13 @@ unset). Choose a profile with ``RAG_PROFILE``; without it, Colab is detected aut
 | ``RAG_EMBEDDING_PROVIDER`` (pipeline 1, bge-small) | unset: the provider that built the index (``local``) | same | ``hosted`` (the shared API; local model if unreachable) |
 | durable copy | ``RAG_HOME`` itself | ``MyDrive/capstone_rag`` | host folder (server), ``gs://$RAG_GCS_BUCKET`` (gcp) |
 
-``RAG_BACKEND`` for financial QA: ``financial_qdrant`` once its ingest exists, else ``financial_vlm`` once that one
-exists, else the older Chroma index. Set it yourself to choose (for example one API per pipeline).
+``RAG_BACKEND`` for financial QA (the same rule in every profile): ``financial_vlm`` (pipeline 1, Chroma: the
+capstone's main index) once its ``vlm_ingest.sqlite3`` exists, else ``financial_qdrant`` (pipeline 2) once its
+``ingest.sqlite3`` exists, else the older Chroma index. Qdrant and the hybrid are opt-in test backends:
+
+* ``RAG_BACKEND=financial_qdrant``: pipeline 2 only (Qdrant text + ColPali pages);
+* ``RAG_BACKEND=financial_hybrid``: Chroma's readings plus ColPali page finding (needs both indexes; proof of concept,
+  see ``docs/hybrid_retrieval.html``).
 """
 from __future__ import annotations
 
@@ -96,12 +101,19 @@ def apply_profile(profile=None, *, force=False):
     index_ready = (Path(os.environ["RAG_INGEST_DIR"]) / "ingest.sqlite3").exists()
     vlm_ready = (Path(os.environ["RAG_VLM_DIR"]) / "vlm_ingest.sqlite3").exists()
     if not os.getenv("RAG_BACKEND") and (index_ready or vlm_ready):
-        os.environ["RAG_BACKEND"] = "financial_qdrant" if index_ready else "financial_vlm"
+        os.environ["RAG_BACKEND"] = "financial_vlm" if vlm_ready else "financial_qdrant"   # Chroma first
     backend = os.getenv("RAG_BACKEND") or "chroma"
+    missing = [name for name, ready, needed in (("Chroma (RAG_VLM_DIR)", vlm_ready, ("financial_vlm", "financial_hybrid")),
+                                                ("Qdrant (RAG_INGEST_DIR)", index_ready, ("financial_qdrant", "financial_hybrid")))
+               if backend in needed and not ready]
+    if missing:
+        LOGGER.warning("RAG_BACKEND=%s but no %s index was found; answers will have no evidence from it",
+                       backend, " or ".join(missing))
     lay = storage.layout(profile)
     _applied = {"profile": profile, "financial_backend": backend, "index_ready": index_ready, "vlm_index_ready": vlm_ready,
                 "qdrant": os.getenv("QDRANT_URL") or "embedded", "durable": lay.durable or os.environ["RAG_HOME"],
-                "reranker": bool(os.getenv("RAG_RERANKER_MODEL")), "ca_cert": bool(os.getenv("LLM_CA_CERT")), **chosen}
+                "missing_indexes": missing, "reranker": bool(os.getenv("RAG_RERANKER_MODEL")),
+                "ca_cert": bool(os.getenv("LLM_CA_CERT")), **chosen}
     if backend == "chroma":
         LOGGER.info("runtime_profile=%s financial_backend=chroma (no ingest under %s or %s yet)",
                     profile, os.environ["RAG_INGEST_DIR"], os.environ["RAG_VLM_DIR"])

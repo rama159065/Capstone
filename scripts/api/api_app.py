@@ -175,7 +175,7 @@ class FinancialChatRequest(ChatRequest):
     year: int | None = Field(None, description="Optional fiscal/reporting year filter.")
     sector: str | None = Field(None, max_length=200, description=(
         "Optional sector filter for the annual-report corpus, e.g. 'banking' or 'Oil and gas' (comma-separated "
-        "for several). Applies to the financial_qdrant and financial_vlm backends."))
+        "for several). Applies to the financial_vlm, financial_qdrant and financial_hybrid backends."))
     self_consistency_samples: int = Field(
         3, ge=1, le=5, description="Number of answer samples for the self-consistency technique."
     )

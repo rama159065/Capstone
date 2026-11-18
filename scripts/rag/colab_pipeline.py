@@ -751,31 +751,41 @@ def repair_index(s: Settings, run=True):
     return left
 
 
-def serving_env(s: Settings):
-    """Environment for FastAPI/agents so they answer from this pipeline's index (see runtime_profile)."""
+SERVING_BACKENDS = ("financial_vlm", "financial_qdrant", "financial_hybrid")
+
+
+def serving_env(s: Settings, backend: str | None = None):
+    """Environment for FastAPI/agents so they answer from this pipeline's index (see runtime_profile).
+
+    ``backend`` overrides the pipeline's own backend for tests: ``financial_qdrant`` (pipeline 2 only) or
+    ``financial_hybrid`` (Chroma readings + ColPali pages; both indexes under ``s.work``, Qdrant via ``s.qdrant_url``).
+    """
     env = {"RAG_PROFILE": "colab" if IN_COLAB else "local", "RAG_HOME": str(s.work),
            "RAG_INGEST_DIR": str(storage.work_index(s.work, "qdrant_db", s.run_name)),
            "RAG_VLM_DIR": str(storage.work_index(s.work, "chroma_db", s.run_name))}
-    if s.pipeline == "colpali_qdrant":
-        env.update(RAG_BACKEND="financial_qdrant", RAG_INGEST_DIR=str(s.root))
-        if s.qdrant_url:
-            env["QDRANT_URL"] = s.qdrant_url
-    else:
-        env.update(RAG_BACKEND="financial_vlm", RAG_VLM_DIR=str(s.root))
+    backend = backend or ("financial_qdrant" if s.pipeline == "colpali_qdrant" else "financial_vlm")
+    if backend not in SERVING_BACKENDS:
+        raise ValueError(f"backend must be one of {', '.join(SERVING_BACKENDS)}")
+    env["RAG_BACKEND"] = backend
+    env["RAG_INGEST_DIR" if s.pipeline == "colpali_qdrant" else "RAG_VLM_DIR"] = str(s.root)
+    if backend != "financial_vlm" and s.qdrant_url:
+        env["QDRANT_URL"] = s.qdrant_url
     return env
 
 
-def serve(s: Settings, repo=ROOT, api_port=8000, ui_port=8501):
+def serve(s: Settings, repo=ROOT, api_port=8000, ui_port=8501, backend: str | None = None):
     """Start FastAPI (one worker) and Streamlit on localhost against this pipeline's index; returns both processes.
 
-    colpali_qdrant needs the Qdrant server (prepare/restore first): embedded Qdrant allows one process, and the
+    ``backend`` (see :func:`serving_env`) picks a test backend; the default serves the pipeline's own index.
+    Serving Qdrant needs the Qdrant server (prepare/restore first): embedded Qdrant allows one process, and the
     notebook's own client would hold it.
     """
-    if s.pipeline == "colpali_qdrant" and not s.qdrant_url:
-        raise RuntimeError("serving colpali_qdrant needs the Qdrant server (qdrant_url); embedded Qdrant is single-process")
+    env_for = serving_env(s, backend)
+    if env_for["RAG_BACKEND"] != "financial_vlm" and not s.qdrant_url:
+        raise RuntimeError("serving Qdrant needs the Qdrant server (qdrant_url); embedded Qdrant is single-process")
     if not state_path(s).exists():
         raise RuntimeError(f"no index under {s.root}: run ingest, or restore from Drive, first")
-    env = {**os.environ, **serving_env(s)}
+    env = {**os.environ, **env_for}
     logs = s.work / "logs"
     logs.mkdir(parents=True, exist_ok=True)
 

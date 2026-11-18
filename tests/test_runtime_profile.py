@@ -58,4 +58,20 @@ def test_vlm_index_is_served_when_it_is_the_only_one(env, tmp_path):
     env.pop("RAG_BACKEND")
     (tmp_path / "qdrant").mkdir()
     (tmp_path / "qdrant" / "ingest.sqlite3").write_bytes(b"")
-    assert rp.apply_profile(force=True)["financial_backend"] == "financial_qdrant"     # ColPali index preferred
+    assert rp.apply_profile(force=True)["financial_backend"] == "financial_vlm"     # Chroma (pipeline 1) is the default
+
+
+def test_qdrant_and_hybrid_are_explicit_choices(env, tmp_path, caplog):
+    env.update(RAG_PROFILE="local", RAG_INGEST_DIR=str(tmp_path / "qdrant"), RAG_VLM_DIR=str(tmp_path / "vlm"))
+    for folder, state in (("qdrant", "ingest.sqlite3"), ("vlm", "vlm_ingest.sqlite3")):
+        (tmp_path / folder).mkdir()
+        (tmp_path / folder / state).write_bytes(b"")
+    assert rp.apply_profile(force=True)["financial_backend"] == "financial_vlm"
+    for backend in ("financial_qdrant", "financial_hybrid"):
+        env["RAG_BACKEND"] = backend
+        info = rp.apply_profile(force=True)
+        assert info["financial_backend"] == backend and info["missing_indexes"] == []
+    (tmp_path / "qdrant" / "ingest.sqlite3").unlink()
+    with caplog.at_level("WARNING"):
+        info = rp.apply_profile(force=True)
+    assert info["missing_indexes"] == ["Qdrant (RAG_INGEST_DIR)"] and "financial_hybrid" in caplog.text

@@ -172,7 +172,7 @@ cp .env.example .env                     # LLM endpoint, API_AUTH_TOKEN, APP_UID
 docker compose run --rm --user root api sh deploy/restore_index.sh</p>
 <h1>2. Start everything</h1>
 <p>docker compose up -d --build
-curl http://127.0.0.1:8000/health        # financial_backend should be financial_qdrant</p>
+curl http://127.0.0.1:8000/health        # financial_backend should be financial_vlm (Chroma)</p>
 <h1>UI: http://127.0.0.1:8501</h1>
 <h1>3. On a VM with a domain (A record → the VM's IP): HTTPS + a login in front of the UI</h1>
 <h1>set DOMAIN, BASIC_AUTH_USER, BASIC_AUTH_HASH in .env, open ports 80 and 443</h1>
@@ -535,7 +535,7 @@ python -m scripts.downloads.download_annual_report_corpus --preset full   --outp
 <tr>
   <td><code>RAG_BACKEND</code></td>
   <td>automatic</td>
-  <td><code>financial_qdrant</code> when <code>indexes/financial_qdrant/ingest.sqlite3</code> exists, else <code>financial_vlm</code>, else Chroma</td>
+  <td><code>financial_vlm</code> (pipeline 1, Chroma) when <code>chroma_db</code> holds an index, else <code>financial_qdrant</code>, else the older Chroma index. Set <code>financial_qdrant</code> or <code>financial_hybrid</code> to test those</td>
 </tr>
 <tr>
   <td><code>QDRANT_URL</code>, <code>QDRANT_API_KEY</code></td>
@@ -1749,7 +1749,8 @@ python -m scripts.downloads.download_annual_report_corpus --preset full   --outp
 <p><strong>Defaults and backend:</strong></p>
 <ul>
 <li>Every value is a default. A variable you set yourself wins; an empty value counts as unset.</li>
-<li><code>RAG_BACKEND</code> is <code>financial_qdrant</code> when <code>qdrant_db</code> holds an index, else <code>financial_vlm</code>. Set it to choose, for example to run one API per pipeline.</li>
+<li><code>RAG_BACKEND</code> is <code>financial_vlm</code> (pipeline 1, Chroma) when <code>chroma_db</code> holds an index, else <code>financial_qdrant</code>, else the older Chroma index. This is the same in every profile (local, Colab, server, GCP).</li>
+<li>Qdrant and the hybrid are test backends you choose yourself: <code>RAG_BACKEND=financial_qdrant</code> (pipeline 2 only) or <code>RAG_BACKEND=financial_hybrid</code> (Chroma readings plus ColPali pages, needs both indexes; see <a href="hybrid_retrieval.html">hybrid_retrieval.html</a>). On Colab, <code>cp.serve(s, backend=&quot;financial_hybrid&quot;)</code> does the same. <code>/health</code> lists <code>missing_indexes</code> when the chosen backend's index isn't there.</li>
 <li><code>/health</code> shows the resolved paths: <code>RAG_HOME</code>, <code>durable</code>, both index folders, and whether a reranker and a certificate were found. It never shows their contents.</li>
 </ul>
 <p><strong>Older folder names keep working:</strong></p>
@@ -1768,9 +1769,9 @@ python -m scripts.downloads.download_annual_report_corpus --preset full   --outp
 </ul>
 <p>Example: both pipelines side by side. This was verified on 13 November 2026 with the Retail test index, whose folders still have the older names.</p>
 <pre><code class="language-powershell">$env:RAG_HOME=&quot;indexes/e2e_retail/work&quot;
-$env:RAG_BACKEND=&quot;financial_qdrant&quot;; uvicorn scripts.api.api_app:app --port 8000    # Qdrant
-$env:RAG_BACKEND=&quot;financial_vlm&quot;;    uvicorn scripts.api.api_app:app --port 8001    # Chroma (second terminal)
-$env:API_BASE_URL=&quot;http://127.0.0.1:8001&quot;; streamlit run scripts\ui\api_streamlit_app.py --server.port 8502
+$env:RAG_BACKEND=&quot;financial_vlm&quot;;    uvicorn scripts.api.api_app:app --port 8000    # Chroma (the default)
+$env:RAG_BACKEND=&quot;financial_qdrant&quot;; uvicorn scripts.api.api_app:app --port 8001    # Qdrant (second terminal)
+$env:API_BASE_URL=&quot;http://127.0.0.1:8001&quot;; streamlit run scripts\ui\api_streamlit_app.py --server.port 8502    # UI on the Qdrant API
 </code></pre>
 <p><strong>Colab:</strong> nothing to set. The profile is detected, <code>RAG_HOME=/content/rag</code>, and the durable copy is <code>MyDrive/capstone_rag</code>. The ingest notebooks (<code>colab_ingest_chroma_db.ipynb</code>, <code>colab_ingest_qdrant_db.ipynb</code>):</p>
 <ol>

@@ -284,7 +284,7 @@ def search_workers() -> int:
     except ValueError:
         workers = 4
     backend = os.getenv("RAG_BACKEND", "")
-    if backend == "qdrant" or (backend == "financial_qdrant" and not os.getenv("QDRANT_URL")):
+    if backend == "qdrant" or (backend in ("financial_qdrant", "financial_hybrid") and not os.getenv("QDRANT_URL")):
         return 1
     return max(1, min(workers, MAX_SEARCH_WORKERS))
 

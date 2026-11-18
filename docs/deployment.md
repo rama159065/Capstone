@@ -77,7 +77,7 @@ docker compose run --rm --user root api sh deploy/restore_index.sh
 
 # 2. Start everything
 docker compose up -d --build
-curl http://127.0.0.1:8000/health        # financial_backend should be financial_qdrant
+curl http://127.0.0.1:8000/health        # financial_backend should be financial_vlm (Chroma)
 # UI: http://127.0.0.1:8501
 
 # 3. On a VM with a domain (A record → the VM's IP): HTTPS + a login in front of the UI
@@ -310,7 +310,7 @@ Every setting is an environment variable. [.env.example](../.env.example) lists 
 | `AGENT_MAX_STEPS` | 10 | LangGraph node executions per question. Above the cap the run stops with `step_limit` and no answer |
 | `CONVERSATION_DB`, `CONVERSATION_TTL_SECONDS` | server profile: `indexes/state/conversations.sqlite3`; 1800 | Clarification state that survives restarts |
 | `RAG_PROFILE` | `local` (Colab detected) | `local`, `server` (Docker or VM) or `colab` |
-| `RAG_BACKEND` | automatic | `financial_qdrant` when `indexes/financial_qdrant/ingest.sqlite3` exists, else `financial_vlm`, else Chroma |
+| `RAG_BACKEND` | automatic | `financial_vlm` (pipeline 1, Chroma) when `chroma_db` holds an index, else `financial_qdrant`, else the older Chroma index. Set `financial_qdrant` or `financial_hybrid` to test those |
 | `QDRANT_URL`, `QDRANT_API_KEY` | server: `http://qdrant:6333` | Qdrant server, or Qdrant Cloud |
 | `RAG_RERANKER_MODEL`, `RAG_MIN_RERANK_SCORE` | off | Cross-encoder rerank and the "don't answer below this score" floor |
 | `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` | off | Trace dashboard for the submission |
@@ -666,7 +666,8 @@ Versions are the ones locked in `uv.lock`. The container installs the `pyproject
 
 **Defaults and backend:**
 - Every value is a default. A variable you set yourself wins; an empty value counts as unset.
-- `RAG_BACKEND` is `financial_qdrant` when `qdrant_db` holds an index, else `financial_vlm`. Set it to choose, for example to run one API per pipeline.
+- `RAG_BACKEND` is `financial_vlm` (pipeline 1, Chroma) when `chroma_db` holds an index, else `financial_qdrant`, else the older Chroma index. This is the same in every profile (local, Colab, server, GCP).
+- Qdrant and the hybrid are test backends you choose yourself: `RAG_BACKEND=financial_qdrant` (pipeline 2 only) or `RAG_BACKEND=financial_hybrid` (Chroma readings plus ColPali pages, needs both indexes; see [hybrid_retrieval.html](hybrid_retrieval.html)). On Colab, `cp.serve(s, backend="financial_hybrid")` does the same. `/health` lists `missing_indexes` when the chosen backend's index isn't there.
 - `/health` shows the resolved paths: `RAG_HOME`, `durable`, both index folders, and whether a reranker and a certificate were found. It never shows their contents.
 
 **Older folder names keep working:**
@@ -686,9 +687,9 @@ Example: both pipelines side by side. This was verified on 13 November 2026 with
 
 ```powershell
 $env:RAG_HOME="indexes/e2e_retail/work"
-$env:RAG_BACKEND="financial_qdrant"; uvicorn scripts.api.api_app:app --port 8000    # Qdrant
-$env:RAG_BACKEND="financial_vlm";    uvicorn scripts.api.api_app:app --port 8001    # Chroma (second terminal)
-$env:API_BASE_URL="http://127.0.0.1:8001"; streamlit run scripts\ui\api_streamlit_app.py --server.port 8502
+$env:RAG_BACKEND="financial_vlm";    uvicorn scripts.api.api_app:app --port 8000    # Chroma (the default)
+$env:RAG_BACKEND="financial_qdrant"; uvicorn scripts.api.api_app:app --port 8001    # Qdrant (second terminal)
+$env:API_BASE_URL="http://127.0.0.1:8001"; streamlit run scripts\ui\api_streamlit_app.py --server.port 8502    # UI on the Qdrant API
 ```
 
 **Colab:** nothing to set. The profile is detected, `RAG_HOME=/content/rag`, and the durable copy is `MyDrive/capstone_rag`. The ingest notebooks (`colab_ingest_chroma_db.ipynb`, `colab_ingest_qdrant_db.ipynb`):

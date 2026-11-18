@@ -47,7 +47,7 @@ EMBEDDING_PROVIDERS = ["hashing", "hosted"]
 DEFAULT_LLM_PROVIDER = os.getenv("DEFAULT_LLM_PROVIDER", "mock")
 DEFAULT_EMBEDDING_PROVIDER = os.getenv("DEFAULT_EMBEDDING_PROVIDER", "hashing")
 SHOW_ADVANCED = os.getenv("UI_SHOW_ADVANCED", "0").lower() in {"1", "true", "yes"}
-INDEX_BACKENDS = {"financial_qdrant", "financial_vlm"}            # sector-corpus indexes (see uses_corpus_index)
+INDEX_BACKENDS = {"financial_vlm", "financial_qdrant", "financial_hybrid"}            # sector-corpus indexes (see uses_corpus_index)
 BASELINE_TECHNIQUES = {"baseline_rag", "structured_few_shot", "decomposition", "self_consistency"}
 # Request values for settings the sidebar doesn't show (same as the API's own defaults).
 DEMO_DEFAULTS: dict[str, Any] = {

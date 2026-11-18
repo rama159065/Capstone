@@ -2,7 +2,7 @@
 
 Agentic RAG system for the Track B capstone (API-side, hosted <=8B inference APIs): a **financial report copilot over SEC annual reports**.
 
-It answers questions about company filings with every figure cited to its page, compares companies, checks growth with a calculator, and refuses advice or anything the filings don't cover. It uses hybrid retrieval, LangGraph agents with guardrails and a support-checking critic, human-in-the-loop routing, a FastAPI backend, a Streamlit UI and retrieval evaluation. The agent flow is described in [docs/agent_flows.md](docs/agent_flows.md).
+It answers questions about company filings with every figure cited to its page, compares companies, checks growth with a calculator, and refuses advice or anything the filings don't cover. It uses hybrid retrieval (dense vectors + BM25, fused by reciprocal rank), LangGraph agents with guardrails and a support-checking critic, human-in-the-loop routing, a FastAPI backend, a Streamlit UI and retrieval evaluation. The agent flow is described in [docs/agent_flows.md](docs/agent_flows.md).
 
 ## Why This Is Agentic RAG
 
@@ -22,11 +22,33 @@ The product is **financial report question answering** only (`financial_report_q
 
 The five other Track B domains (procurement, travel and expense, competitive research, incident postmortem, HR policy) were removed on 10 November 2026; they remain in git history, as does the shared domain agent (`rag_agent.py`) removed on 11 November 2026.
 
+## Serving backend: Chroma first
+
+The capstone answers from **pipeline 1, the Chroma index** (`RAG_BACKEND=financial_vlm`, folder `<RAG_HOME>/indexes/chroma_db`): 509 filings (`min500`), 335,699 chunks, with chart and table pages read by OCR, Qwen3-VL or Gemini. Each search runs bge-small dense vectors and a BM25 sidecar and fuses them by reciprocal rank. This is the default in every environment (local PC, Colab, a server or Google Cloud): `scripts/common/runtime_profile.py` picks it whenever its `vlm_ingest.sqlite3` exists, and `GET /health` reports it as `financial_backend`.
+
+Two other backends are kept for testing. Neither is chosen automatically while the Chroma index exists; set `RAG_BACKEND` before starting the API:
+
+| `RAG_BACKEND` | Index | Status |
+|---|---|---|
+| `financial_vlm` (default) | pipeline 1: Chroma `annual_reports_vlm` + BM25 | Main backend for the capstone |
+| `financial_qdrant` | pipeline 2: Qdrant `annual_reports_text` + ColPali `annual_reports_visual` | Test option; served automatically only when it is the only index |
+| `financial_hybrid` | both: Chroma's readings plus ColPali page finding | Proof of concept, tested on one filing (Chevron 2022: expected value reached the evidence for 9/9 questions with Chroma, 4/9 with Qdrant, 9/9 with the hybrid). See [docs/hybrid_retrieval.html](docs/hybrid_retrieval.html) |
+
+```powershell
+# default: nothing to set
+uvicorn scripts.api.api_app:app --port 8000
+# Qdrant only, or the hybrid (needs both indexes; RAG_FIN_VISUAL=auto, ColPali in bfloat16 on CPU)
+$env:RAG_BACKEND="financial_qdrant"; uvicorn scripts.api.api_app:app --port 8000
+$env:RAG_BACKEND="financial_hybrid"; $env:RAG_FIN_COLPALI_DTYPE="bfloat16"; uvicorn scripts.api.api_app:app --port 8000
+```
+
+On Colab, `cp.serve(s)` serves the notebook's pipeline, and `cp.serve(s, backend="financial_qdrant" | "financial_hybrid")` picks a test backend. Docker and Google Cloud take `RAG_BACKEND` from `.env`. If the chosen backend's index is missing, the API logs a warning and `/health` lists it under `missing_indexes`.
+
 ## Implementation Status
 
 | Area | Status |
 |---|---|
-| Financial PDF RAG | Implemented with PDF verification, chunking, Chroma, BM25, RRF, reranking, optional table summaries, optional chart-summary chunks, and top-k query mode. |
+| Financial PDF RAG | Implemented: pipeline 1 (Chroma + BM25, RRF, routed OCR/VLM page reading, cross-encoder rerank) is the served index; pipeline 2 (Qdrant + ColPali) and the hybrid are test backends. |
 | Agent orchestration | Implemented with LangGraph nodes for security, plain-text validation, planning, hybrid retrieval, evidence guard, answer generation, output filtering, citation criticism, and governance/HITL. |
 | Guardrails and HITL | Implemented for input filtering, evidence prompt-injection filtering, output content filtering, citation validation, and human-review routing. |
 | API backend and UI | Implemented with FastAPI backend endpoints plus Streamlit frontends, including an API-backed Streamlit app for the final architecture. |
@@ -193,7 +215,9 @@ python -m scripts.rag.colab_pipeline run --pipeline vlm_chroma --sectors banking
 python -m scripts.rag.colab_pipeline status --pipeline colpali_qdrant --qdrant-url ""
 ```
 
-## Financial RAG Index
+## Financial RAG Index (Week 1 index)
+
+This is the original single-folder index (`index_financial_report_pdfs.py`), used for offline smoke runs and the prompting baselines. The capstone serves the pipeline 1 index above; this one is used only when neither sector-corpus index exists (`RAG_BACKEND` unset, shown as `chroma`).
 
 Fast local smoke-test mode with deterministic hashing embeddings:
 
@@ -216,9 +240,9 @@ The financial indexer writes:
 - chart images: `data/processed/financial_report_qa/chart_images/`
 - Chroma index: `indexes/chroma/financial_report_qa_pdfs`
 
-## Retrieval Strategy
+## Retrieval Strategy (Week 1 index)
 
-The RAG pipeline uses:
+The Week 1 RAG pipeline uses:
 
 - PDF text extraction with page-level metadata
 - Recursive character chunking with overlap: financial defaults to `chunk_size=2000`, `chunk_overlap=250` (the Qdrant sector-corpus ingest uses 1,200 / 200)
@@ -442,7 +466,7 @@ Current coverage includes:
 
 - Hashing embeddings are for local smoke tests and deterministic CI-style checks.
 - Hosted embeddings and hosted chat APIs should be used for final capstone inference runs.
-- ChromaDB is the default vector database; local Qdrant is available for multimodal PDF RAG.
+- ChromaDB (pipeline 1, `financial_vlm`) is the served vector database; Qdrant (pipeline 2, `financial_qdrant`) and the hybrid (`financial_hybrid`) are opt-in test backends. The older local Qdrant multimodal path (`RAG_BACKEND=qdrant`) is described below.
 - Downloaded PDFs, processed chunks, Chroma indexes, outputs, and eval artifacts are generated files and are excluded from git.
 
 ## Local Qdrant multimodal RAG
