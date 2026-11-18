@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agents and their actions</title>
+<style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1200px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.88rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}
+.tag{display:inline-block;padding:0 .45rem;border-radius:10px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.text{background:#e0f2fe;color:#075985}.table{background:#dcfce7;color:#166534}.chart{background:#fae8ff;color:#86198f}
+.yes{color:#15803d;font-weight:600}.no{color:#b91c1c;font-weight:600}.part{color:#b45309;font-weight:600}
+td.todo{color:#94a3b8;font-style:italic;min-width:9rem}</style>
+<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script>
+</head><body>
+<h1>Agents and Their Actions</h1>
+<p>What the Financial Report Copilot's agents decide, what they actually do, and where the limits are. This page answers two questions: are these real agents or only tool calling, and in which behaviours do they take actions. For the node-by-node request path, see <a href="agent_flows.html">agent_flows.md</a>.</p>
+<p>Code: <a href="../scripts/agents/financial_prompting_agent.py">financial_prompting_agent.py</a>, <a href="../scripts/agents/financial_tools.py">financial_tools.py</a>, <a href="../scripts/agents/financial_router.py">financial_router.py</a>, <a href="../scripts/agents/financial_trend.py">financial_trend.py</a>, <a href="../scripts/agents/financial_sector_trend.py">financial_sector_trend.py</a>, <a href="../scripts/agents/agent_mutual_fund.py">agent_mutual_fund.py</a>, <a href="../scripts/agents/tools_mutual_fund.py">tools_mutual_fund.py</a>, <a href="../scripts/api/api_app.py">api_app.py</a>.</p>
+<p><strong>In short</strong></p>
+<ul>
+<li>They are <strong>real agents with bounded autonomy</strong>. Each is a LangGraph state machine in which an LLM makes some decisions (the route, the tools, whether an answer is supported) and code carries out every action and checks every decision.</li>
+<li>The tool use is <strong>planner–executor</strong>, not native function calling. The LLM returns a JSON plan; <code>normalize_plan</code> drops unknown tools, adds required ones and splits comparisons into one search per company × year. The LLM never calls a tool directly.</li>
+<li>The agents <strong>only read and compute</strong>. Their writes are limited to report files (after the user confirms), conversation state and the fund agent's figure cache. No web access, email or transactions.</li>
+<li>The single-prompt techniques (<code>baseline_rag</code>, <code>structured_few_shot</code>, <code>decomposition</code>, <code>self_consistency</code>) are <strong>not agents</strong>: one fixed retrieval, one answer.</li>
+<li><strong>Human review is a status, not a queue yet.</strong> The agent sets <code>pending_human_review</code> with a reviewer payload, but nothing stores it or lets a reviewer act on it.</li>
+</ul>
+<hr />
+<h2>1. Agent or tool calling?</h2>
+<pre class="mermaid">
+flowchart LR
+  subgraph LLM[&quot;LLM proposes&quot;]
+    R[route]
+    P[tool plan]
+    A[answer + CALC requests]
+    J[support verdict]
+    F[figure per year]
+  end
+  subgraph CODE[&quot;Code decides and acts&quot;]
+    V[validate route against parser]
+    N[normalize_plan: drop, add, split tools]
+    S[run searches in parallel]
+    C[calculator on evidence operands]
+    G[numeric grounding + citation check]
+    K[keep figure only if its chunk states it]
+    B[step budget, deadline, retries]
+  end
+  R --&gt; V
+  P --&gt; N --&gt; S
+  A --&gt; C
+  A --&gt; G
+  J --&gt; G
+  F --&gt; K
+  B -.limits.-&gt; S &amp; C &amp; G
+</pre>
+<p>An LLM is an agent here because its output changes what the system does next: a route sends the question to a different agent, a plan changes which searches run, a <code>CALC[...]</code> runs the calculator, and a &quot;not supported&quot; verdict sends the answer back for repair. It is bounded because code validates every one of those outputs before it has any effect, and a step budget caps the loops.</p>
+<h2>2. What each agent decides and does</h2>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>Decisions the LLM makes</th>
+<th>Actions executed (in code)</th>
+<th>Loops</th>
+<th>Writes anything?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Router</strong> (<code>router</code>, <code>route_step</code>)</td>
+<td>Picks the route: lookup, trend, sector trend, fund, report or out of scope</td>
+<td>Validates the route against the question parser, then hands off to that agent, returns a report handoff, or refuses</td>
+<td>none</td>
+<td>no</td>
+</tr>
+<tr>
+<td><strong>Q&amp;A</strong> (<code>agentic_graph</code>)</td>
+<td>Planner proposes tools; the answer requests <code>CALC[...]</code>; the judge rules on each claim</td>
+<td><code>coverage_lookup</code>; <code>text_search</code> (one filtered search per company × year, in parallel); <code>visual_search</code> (ColPali); <code>calculator</code></td>
+<td>evidence retry (once, broadened); critic → repair (once)</td>
+<td>no</td>
+</tr>
+<tr>
+<td><strong>Trend</strong> (<code>trend_graph</code>)</td>
+<td>Copies each year's figure from the evidence</td>
+<td>One search per fiscal year; a figure is kept only if that year's chunk states it; changes and CAGR computed in code</td>
+<td>retry inside the node</td>
+<td>no</td>
+</tr>
+<tr>
+<td><strong>Sector trend</strong> (<code>sector_trend_graph</code>)</td>
+<td>LLM only as a last resort for a figure</td>
+<td>One search per company × year; the statement row is read in code first; fixed company panel; totals, changes and CAGR in code</td>
+<td>retry inside the node</td>
+<td>no</td>
+</tr>
+<tr>
+<td><strong>Fund</strong> (<code>fund_graph</code>)</td>
+<td>Writes the answer</td>
+<td>Fixed read-only SQL over SEC N-PORT holdings, then annual-report lookups for the holdings</td>
+<td>none</td>
+<td>yes: caches verified company figures in SQLite</td>
+</tr>
+<tr>
+<td><strong>Critic + governance</strong> (all flows)</td>
+<td>Judge verdict</td>
+<td>Numeric grounding, citation check, output filter, human-review triggers</td>
+<td>drives the repair loop</td>
+<td>no</td>
+</tr>
+<tr>
+<td><strong>Baselines</strong> (<code>baseline_rag</code>, few-shot, decomposition, self-consistency)</td>
+<td>The answer only</td>
+<td>One fixed retrieval</td>
+<td>none</td>
+<td>no (not agents)</td>
+</tr>
+</tbody>
+</table>
+<h2>3. Behaviours where the agents take actions</h2>
+<h3>3.1 Route the question (router)</h3>
+<ul>
+<li><strong>Trigger:</strong> every question when the technique is <code>router</code> (the Streamlit default).</li>
+<li><strong>Decision:</strong> the LLM picks a route; code checks it against the question parser and overrides it when they disagree.</li>
+<li><strong>Action:</strong> hands the question to the Q&amp;A, trend, sector trend or fund agent, returns a report handoff, or refuses.</li>
+<li><strong>Example:</strong> &quot;How did banking sector net income trend from 2022 to 2025?&quot; goes to the sector trend agent. &quot;Should I buy NVIDIA stock?&quot; is refused with no retrieval.</li>
+</ul>
+<h3>3.2 Plan and choose tools (Q&amp;A agent)</h3>
+<ul>
+<li><strong>Trigger:</strong> each question that reaches the Q&amp;A agent.</li>
+<li><strong>Decision:</strong> the planner LLM proposes tools. Code drops unknown ones, always adds <code>text_search</code>, adds <code>coverage_lookup</code> when a company or year is named, <code>calculator</code> for growth, ratio or comparison questions, and <code>visual_search</code> for chart questions when ColPali is served.</li>
+<li><strong>Action:</strong> splits the question into one search per company × year (at most 6) and runs them in parallel (<code>RAG_SEARCH_WORKERS</code>, default 4).</li>
+<li><strong>Example:</strong> &quot;Which had higher net income in 2025, JPMorgan or Bank of America?&quot; runs a coverage check, two filtered searches (JPM 2025, BAC 2025) and the calculator.</li>
+</ul>
+<h3>3.3 Check coverage before searching</h3>
+<ul>
+<li><strong>Trigger:</strong> the question names a company or year.</li>
+<li><strong>Action:</strong> looks the targets up in the corpus directory. A target the filings don't cover is skipped, and the answer says it isn't available instead of guessing.</li>
+<li><strong>Example:</strong> &quot;Apple revenue 2024&quot; returns <code>not_available</code> (<code>company_not_in_filings</code>) with similar companies.</li>
+</ul>
+<h3>3.4 Retry retrieval when evidence is missing</h3>
+<ul>
+<li><strong>Trigger:</strong> the evidence guard finds a planned target with no evidence.</li>
+<li><strong>Action:</strong> one more search for the missing targets only, with a broadened query (synonyms of the measure) and twice the depth, if the rest of the run still fits the step budget.</li>
+<li><strong>Example:</strong> in a two-bank comparison where Bank of America's chunk didn't come back, a second, wider BAC search runs.</li>
+</ul>
+<h3>3.5 Refuse unsafe evidence</h3>
+<ul>
+<li><strong>Trigger:</strong> a retrieved chunk contains prompt-injection text.</li>
+<li><strong>Action:</strong> stops before answering (<code>refused</code>) and records the flagged chunks.</li>
+</ul>
+<h3>3.6 Run the calculator</h3>
+<ul>
+<li><strong>Trigger:</strong> the answer contains <code>CALC[...]</code> and the plan includes the calculator.</li>
+<li><strong>Action:</strong> code evaluates the expression and puts the result into the answer. Every operand must appear in the evidence; otherwise the calculation is marked ungrounded and the answer goes to review.</li>
+<li><strong>Example:</strong> &quot;By what percentage did AbbVie's revenue change in 2025?&quot; computes +8.6% from 61,160 and 56,334.</li>
+</ul>
+<h3>3.7 Critic and repair loop</h3>
+<ul>
+<li><strong>Trigger:</strong> every answer.</li>
+<li><strong>Decision:</strong> code checks that every figure appears in a cited chunk; an LLM judge rules on every claim.</li>
+<li><strong>Action:</strong> an unsupported answer goes back to the answer step once, with the critic's notes. With a hosted LLM, an answer that still isn't verified is replaced by cited excerpts (<code>evidence_only</code>).</li>
+<li><strong>Example:</strong> an answer stating &quot;$300,000 million&quot; is caught as a figure in no chunk, repaired once, and held for review if still wrong.</li>
+</ul>
+<h3>3.8 Send to human review</h3>
+<ul>
+<li><strong>Triggers:</strong> investment or decision language, citation failure, unsupported claims, an ungrounded calculation, a figure only a vision model read (<code>unverified_vlm_figure</code>), low sector or fund coverage, a security review.</li>
+<li><strong>Action:</strong> sets <code>final_status: pending_human_review</code> and attaches a reviewer payload (draft answer, checks, evidence IDs) and <code>allowed_actions</code> (approve, reject, request revision, mark out of scope).</li>
+<li><strong>Limit:</strong> nothing stores the payload or notifies a reviewer, and the four actions are not implemented. See section 5.</li>
+</ul>
+<h3>3.9 Build and verify a trend (trend agent)</h3>
+<ul>
+<li><strong>Trigger:</strong> a multi-year question about one company.</li>
+<li><strong>Action:</strong> one search per fiscal year. The LLM copies each year's figure; code keeps it only if that year's chunk states it. Missing years are marked, not filled. Changes and CAGR are computed in code.</li>
+<li><strong>Example:</strong> &quot;How did JPMorgan's net income trend from 2022 to 2025?&quot; returns four verified points, year-on-year changes and the CAGR.</li>
+</ul>
+<h3>3.10 Build a sector panel (sector trend agent)</h3>
+<ul>
+<li><strong>Trigger:</strong> one measure across a sector over several years.</li>
+<li><strong>Action:</strong> searches each company × year, reads the statement row in code first (LLM only as a last resort), keeps only companies verified in every year, and computes totals, changes and CAGR. Unusual jumps (<code>unusual_sector_change</code>) or a thin panel (<code>low_sector_coverage</code>) trigger review.</li>
+</ul>
+<h3>3.11 Query fund holdings (fund agent)</h3>
+<ul>
+<li><strong>Trigger:</strong> a mutual-fund question, when N-PORT data is loaded.</li>
+<li><strong>Action:</strong> runs fixed read-only SQL (top holdings, exposure, sector mix, flows, returns), then looks up the holdings' annual reports. It <strong>writes</strong> each verified company figure to a SQLite cache (<code>save_figure</code>) for reuse.</li>
+<li><strong>Example:</strong> &quot;How much of the Vanguard Growth Index Fund is in NVIDIA?&quot; returns NVIDIA's weight from N-PORT rows plus revenue from NVIDIA's annual report.</li>
+</ul>
+<h3>3.12 Generate a report (the only action that produces files)</h3>
+<ul>
+<li><strong>Trigger:</strong> asking for a full financial report. Through <code>/chat</code>, the router only <strong>hands off</strong> (<code>report_handoff</code>: a message saying how to ask). Through <code>/conversation</code>, the user confirms first.</li>
+<li><strong>Action:</strong> after confirmation, <code>run_financial_report</code> runs the deterministic report pipeline: figures parsed from the PDF by exact label, reconciliations checked, then PDF, Markdown, charts, manifest and trace written to <code>output/pdf/&lt;TICKER&gt;_&lt;YEAR&gt;/&lt;trace_id&gt;/</code>.</li>
+<li><strong>Example:</strong> &quot;Generate a full financial report for Apple FY2024&quot;, confirmed in the chat, produces the report; a company without a report profile gets a message saying it isn't available yet.</li>
+</ul>
+<h3>3.13 Remember the conversation (clarifier)</h3>
+<ul>
+<li><strong>Trigger:</strong> a <code>/conversation</code> turn with a missing or ambiguous company, year or measure.</li>
+<li><strong>Action:</strong> asks a clarifying question and saves the partial request in SQLite (<code>CONVERSATION_DB</code>), so it survives a restart (30-minute TTL).</li>
+</ul>
+<h2>4. Limits on every action</h2>
+<table>
+<thead>
+<tr>
+<th>Limit</th>
+<th>Where</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Step budget</td>
+<td><code>AGENT_MAX_STEPS</code> (default 10)</td>
+<td>Retries and repairs run only if the rest of the run fits; hitting the cap returns <code>step_limit</code> with no answer</td>
+</tr>
+<tr>
+<td>Per-request deadline</td>
+<td><code>Calls(timeout)</code>, <code>RAG_REQUEST_TIMEOUT_SECONDS</code></td>
+<td>A slow model or search call fails as <code>tool_error</code>, never hangs</td>
+</tr>
+<tr>
+<td>Capacity</td>
+<td>4-slot shared pool</td>
+<td>A full pool fails fast (<code>capacity_exceeded</code>), no queueing</td>
+</tr>
+<tr>
+<td>Retries</td>
+<td>only HTTP 429/503, with an idempotency key</td>
+<td>Ambiguous timeouts are never retried</td>
+</tr>
+<tr>
+<td>Tool validation</td>
+<td><code>normalize_plan</code></td>
+<td>Unknown tools dropped, required tools added, unavailable tools (ColPali without an index) removed</td>
+</tr>
+<tr>
+<td>Guards</td>
+<td>security, plain-text, evidence, output filter</td>
+<td>Injection, secrets, off-topic and advice requests stopped before or after the answer</td>
+</tr>
+<tr>
+<td>No external side effects</td>
+<td>design</td>
+<td>No web, email or transactions; writes limited to report files, conversation state and the fund cache</td>
+</tr>
+</tbody>
+</table>
+<h2>5. Gap: human review is not yet a workflow</h2>
+<p><code>human_review_queue</code> returns <code>pending_human_review</code>, a <code>queue_id</code>, a reviewer payload and <code>allowed_actions</code>, but:</p>
+<ul>
+<li>the payload is not stored anywhere;</li>
+<li>no reviewer is notified;</li>
+<li>approve, reject, request revision and mark out of scope are not implemented.</li>
+</ul>
+<p>The smallest working version is a SQLite review table written by governance, two API routes (list pending items; approve or reject one) and a Streamlit review page.</p>
+<h2>6. How to describe it</h2>
+<p>An agentic RAG system with bounded autonomy. A supervisor routes each question to a specialist agent. Each agent plans its own tool use, retries retrieval when evidence is missing, and repairs its answer when the critic rejects it. Code enforces every step, and a step budget caps the loops. The agents only read and compute; the one action with real output, report generation, runs only after the user confirms it.</p>
+</body></html>

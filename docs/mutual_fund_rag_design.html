@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Mutual Fund Data with the Annual Report Copilot: Data, Storage, RAG and Agents</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
+<h1>Mutual Fund Data with the Annual Report Copilot: Data, Storage, RAG and Agents</h1>
+<p>How US mutual fund data (SEC Form N-PORT holdings, N-CSR shareholder reports, 497K summary prospectuses) can sit next to the existing annual-report corpus, and how the agents would use both to answer one question. Date: 13 November 2026.</p>
+<p>Steps 1 to 6 of the plan (section 8) are built; section 10 lists the code, the commands and what was measured on real filings. Step 7 (<code>fund_reports</code>: N-CSR and 497K text) is not built. Related: <a href="mutual_fund_corpus_plan.html">mutual_fund_corpus_plan.html</a> (the 500 fund documents to download), <a href="agent_flows.html">agent_flows.md</a> (the existing agents), <a href="annual_report_rag_structure.html">annual_report_rag_structure.md</a> (the existing index).</p>
+<p><strong>In short</strong></p>
+<ul>
+<li><strong>The link between the two datasets is the company.</strong> A fund owns shares of companies; the corpus holds those companies' annual reports. Each fund holding is mapped to a corpus ticker, and each holdings date to the annual report available at that date. Every answer can then cite both the fund filing and the company's own filing.</li>
+<li><strong>The overlap is large for US equity funds.</strong> In the Vanguard 500 Index Fund's N-PORT filing for 30 June 2026, 240 of the corpus's 289 companies are holdings, worth 86.8% of the fund's $1.67 trillion of net assets, and all of its 15 largest holdings are listed in <code>companies.py</code> (12 of them with filings in the corpus plan; Apple, Meta and Eli Lilly have none).</li>
+<li><strong>Store by kind of data.</strong> Holdings and fund figures are exact numbers that are summed and ranked: they go into <strong>SQL tables</strong>, not the vector index. Fund documents (N-CSR, 497K) are text and tables: they go into a <strong>separate RAG collection</strong>. A short <strong>fund card</strong> per fund and period, written by code from the tables, is embedded so search can find the fund.</li>
+<li><strong>The agents gain one route and one tool.</strong> The router adds a <code>fund</code> route; a <code>fund_lookup</code> tool runs the SQL and returns rows as citable evidence. Questions that need company figures hand over to the existing Q&amp;A, trend and sector trend agents. The guards, critic, governance and the 10-step cap are unchanged.</li>
+<li><strong>Indian fund factsheets (AMFI) are not linked.</strong> They cover Indian schemes holding mostly Indian-listed companies, none of which is in the corpus (section 2.4).</li>
+</ul>
+<hr />
+<h2>1. What exists today: the annual-report side</h2>
+<table>
+<thead>
+<tr>
+  <th>Part</th>
+  <th>Today (13 November 2026)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Corpus</td>
+  <td>SEC annual reports to shareholders (Form ARS) of <strong>289 companies in 13 sectors</strong>. Plan: 1,004 filings; the <code>min500</code> preset: 509 filings (fiscal years 2022 to 2026)</td>
+</tr>
+<tr>
+  <td>Index</td>
+  <td>Chroma collection <code>annual_reports_vlm</code> (pipeline 1) at <code>RAG_HOME/indexes/chroma_db</code>: <strong>180 of the 509 filings, about 132,600 chunks, 2.3 GB</strong>. Text layer, native tables and OCR pages; Qwen3-VL and paid-model pages skipped for a later run</td>
+</tr>
+<tr>
+  <td>Chunk fields</td>
+  <td>One schema for both indexes (<code>rag/chunk_schema.py</code>): <code>ticker</code>, <code>company</code>, <code>year</code>, <code>sector</code>, <code>sector_slug</code>, <code>page</code>, <code>content_type</code>, <code>text_source</code>, <code>reader</code>, <code>chunk_id</code> and provenance</td>
+</tr>
+<tr>
+  <td>Company directory</td>
+  <td><code>common/companies.py</code>: name, aliases and sector for every ticker; <code>GET /companies</code> lists what the served index holds</td>
+</tr>
+<tr>
+  <td>Agents</td>
+  <td><code>router</code> (supervisor) → Q&amp;A agent (<code>agentic_graph</code>), trend agent (<code>trend_graph</code>), sector trend agent (<code>sector_trend_graph</code>), report handoff or refusal. Shared guards, critic (citations, figure check, LLM support judge, one repair) and governance (output filter, human review). At most 10 steps</td>
+</tr>
+<tr>
+  <td>Answers</td>
+  <td>Every figure cited to a chunk of a company's filing; changes, totals and CAGR computed in code</td>
+</tr>
+</tbody>
+</table>
+<p>Everything below reuses these parts. The fund side adds data and one route; it changes none of the existing flows.</p>
+<h2>2. Mutual fund sources and what each is for</h2>
+<h3>2.1 Form N-PORT: holdings (structured)</h3>
+<p>Every US registered fund and ETF except money market funds reports its full portfolio monthly on Form N-PORT, as XML. Two ways to get it:</p>
+<table>
+<thead>
+<tr>
+  <th>Way</th>
+  <th>What</th>
+  <th>When to use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>One filing from EDGAR</td>
+  <td><code>primary_doc.xml</code> of an <code>NPORT-P</code> filing, a few MB</td>
+  <td>A handful of funds</td>
+</tr>
+<tr>
+  <td>SEC bulk data sets</td>
+  <td>One ZIP per quarter, about 400 to 440 MB (2026 Q3: 441 MB), October 2019 to September 2026, at <code>https://www.sec.gov/files/dera/data/form-n-port-data-sets/2026q3_nport.zip</code></td>
+  <td>Many funds or several years</td>
+</tr>
+</tbody>
+</table>
+<p>The bulk ZIP is up to <strong>30 tab-separated UTF-8 tables</strong> joined by <code>ACCESSION_NUMBER</code> (filing) and <code>HOLDING_ID</code> (holding). Five of them cover what the copilot needs:</p>
+<table>
+<thead>
+<tr>
+  <th>Table</th>
+  <th>Fields used</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>SUBMISSION</code></td>
+  <td>accession number, filing date, form (<code>NPORT-P</code> or amendment), <strong>report period end</strong></td>
+</tr>
+<tr>
+  <td><code>FUND_REPORTED_INFO</code></td>
+  <td><strong>series name and ID</strong> (the fund), series LEI, total assets, total liabilities, <strong>net assets</strong>, monthly sales, redemptions and reinvestments</td>
+</tr>
+<tr>
+  <td><code>MONTHLY_TOTAL_RETURN</code></td>
+  <td>total return per share class for each of the 3 months</td>
+</tr>
+<tr>
+  <td><code>FUND_REPORTED_HOLDING</code></td>
+  <td><strong>issuer name</strong>, issuer LEI, title, <strong>CUSIP</strong>, balance and unit, currency, <strong>value</strong>, <strong>% of net assets</strong>, long or short, <strong>asset category</strong>, issuer type, <strong>country</strong>, fair-value level</td>
+</tr>
+<tr>
+  <td><code>IDENTIFIERS</code></td>
+  <td><strong>ISIN</strong> and <strong>ticker</strong> of each holding</td>
+</tr>
+</tbody>
+</table>
+<p>The other 25 tables describe bonds, repos, derivatives and securities lending.</p>
+<p>N-PORT does <strong>not</strong> contain expense ratios, fees, fund managers, the fund's objective, NAV per share, ratings, fund categories or sector classifications. Fees, managers and objectives come from the documents in 2.2; sectors are derived through the company link (section 4).</p>
+<p><em>Not verified:</em> which months are made public and how soon after the month ends (the SEC readme says only that filings are disseminated quarterly), and the status and compliance dates of the 2024 amendments to N-PORT reporting. Check the SEC rulemaking pages before relying on either.</p>
+<h3>2.2 N-CSR and 497K: fund documents (text)</h3>
+<p>These are already planned in <a href="mutual_fund_corpus_plan.html">mutual_fund_corpus_plan.html</a>: 500 EDGAR documents from 300 fund trusts, all <strong>HTML, not PDF</strong>.</p>
+<table>
+<thead>
+<tr>
+  <th>Form</th>
+  <th>Content</th>
+  <th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>N-CSR (annual shareholder report)</td>
+  <td>Since July 2024 it opens with a tailored shareholder report per share class (expenses, performance graph, average annual returns, holdings breakdown), then the financial statements and the full schedule of investments</td>
+  <td>Questions about a fund's costs, performance and management commentary</td>
+</tr>
+<tr>
+  <td>497K (summary prospectus)</td>
+  <td>Objective, fee table, principal risks, yearly-returns chart, average annual returns</td>
+  <td>Questions about fees, risks and objectives</td>
+</tr>
+</tbody>
+</table>
+<p>The corpus plan's rules carry over: split a trust's report into one section per fund (the inline XBRL tags name the series), read HTML tables exactly (no OCR or VLM), and send only chart images to the page reader.</p>
+<h3>2.3 Fund company PDFs and factsheets</h3>
+<p>Monthly factsheets and commentaries on fund company websites (the corpus plan found 121 confirmed PDFs from 27 families). Optional: they repeat N-PORT and N-CSR data in marketing layouts and usually list only the top 10 holdings. Use them only for commentary text; they would go through the existing PDF pipeline (page audit, OCR, routed reading).</p>
+<h3>2.4 Indian factsheets (AMFI)</h3>
+<p>AMFI's <a href="https://www.amfiindia.com/online-center/download-factsheets">factsheet page</a> indexes monthly factsheets of about 60 Indian fund houses. They cover Indian schemes regulated by SEBI, whose holdings are mostly Indian-listed companies. None of those companies is in <code>companies.py</code>, including those listed in the US (Infosys, HDFC Bank, ICICI Bank). The only overlap is the few India-based funds that invest in US stocks. Not linked in this design.</p>
+<h2>3. The measured overlap</h2>
+<p>The latest N-PORT filing of the <strong>Vanguard 500 Index Fund</strong> (EDGAR accession 0000036405-26-000473, period ending 30 June 2026), matched by ticker, then by company name and aliases (equity holdings, share classes summed):</p>
+<table>
+<thead>
+<tr>
+  <th>Measure</th>
+  <th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Net assets</td>
+  <td>$1,671.2 billion</td>
+</tr>
+<tr>
+  <td>Holdings</td>
+  <td>520</td>
+</tr>
+<tr>
+  <td>Corpus companies held</td>
+  <td><strong>240 of 289</strong></td>
+</tr>
+<tr>
+  <td>Share of net assets in corpus companies</td>
+  <td><strong>86.8%</strong></td>
+</tr>
+<tr>
+  <td>Top 15 holdings listed in <code>companies.py</code></td>
+  <td>15 of 15 (12 with filings in the plan)</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+  <th>Holding</th>
+  <th>% of net assets</th>
+  <th>Corpus ticker</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>NVIDIA</td>
+  <td>7.51</td>
+  <td>NVDA</td>
+</tr>
+<tr>
+  <td>Apple</td>
+  <td>6.59</td>
+  <td>AAPL</td>
+</tr>
+<tr>
+  <td>Microsoft</td>
+  <td>4.30</td>
+  <td>MSFT</td>
+</tr>
+<tr>
+  <td>Amazon.com</td>
+  <td>3.62</td>
+  <td>AMZN</td>
+</tr>
+<tr>
+  <td>Alphabet (two share classes)</td>
+  <td>3.25 + 2.59</td>
+  <td>GOOGL</td>
+</tr>
+<tr>
+  <td>Broadcom</td>
+  <td>2.77</td>
+  <td>AVGO</td>
+</tr>
+<tr>
+  <td>Micron Technology</td>
+  <td>2.02</td>
+  <td>MU</td>
+</tr>
+<tr>
+  <td>Meta Platforms</td>
+  <td>1.92</td>
+  <td>META</td>
+</tr>
+<tr>
+  <td>Tesla</td>
+  <td>1.84</td>
+  <td>TSLA</td>
+</tr>
+<tr>
+  <td>Eli Lilly</td>
+  <td>1.47</td>
+  <td>LLY</td>
+</tr>
+</tbody>
+</table>
+<p>Exact name matching found only 216 companies (81.4%): legal names such as &quot;Amazon.com Inc&quot;, &quot;Costco Wholesale Corp&quot; and &quot;Walt Disney Co&quot; differ from the corpus names, and loose matching then mistook Norfolk Southern for Southern Company. That is why the design matches on identifiers first (section 4.1).</p>
+<p><strong>Coverage by corpus tier</strong> (equity value of each fund held in companies of the tier):</p>
+<table>
+<thead>
+<tr>
+  <th>Corpus tier</th>
+  <th>Companies</th>
+  <th>Vanguard 500 Index</th>
+  <th>Vanguard Total Stock Market</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Indexed now (13 November 2026)</td>
+  <td>52</td>
+  <td>52 held, 14.6%</td>
+  <td>52 held, 13.0%</td>
+</tr>
+<tr>
+  <td><code>min500</code> preset</td>
+  <td>143</td>
+  <td>137 held, 62.8%</td>
+  <td>140 held, 55.4%</td>
+</tr>
+<tr>
+  <td>Full plan</td>
+  <td>281</td>
+  <td>232 held, 74.7%</td>
+  <td>267 held, 66.6%</td>
+</tr>
+<tr>
+  <td>All of <code>companies.py</code></td>
+  <td>289</td>
+  <td>240 held, 86.8%</td>
+  <td>275 held, 77.5%</td>
+</tr>
+</tbody>
+</table>
+<p>Eight companies are in <code>companies.py</code> but have no filing in the corpus plan: Apple, Meta, Eli Lilly, Exxon Mobil, UnitedHealth, Oracle, Honeywell and Nike, together 12.1% of the 500 fund. The Total Stock Market fund holds 3,454 companies; the 3,179 outside the corpus are 22.3% of it, and the next 100 largest of them would add 8.3 points. Broad US equity funds will overlap like this; international, bond and money market funds will barely overlap.</p>
+<h2>4. Linking the two datasets</h2>
+<h3>4.1 Identity: holding → company</h3>
+<p>Each holding gets a corpus ticker from the most reliable identifier available, and the method is recorded:</p>
+<table>
+<thead>
+<tr>
+  <th>Order</th>
+  <th>N-PORT field</th>
+  <th>Mapping</th>
+  <th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><code>IDENTIFIERS.IDENTIFIER_TICKER</code></td>
+  <td>Normalise (<code>BRK/B</code>, <code>BRK.B</code> → <code>BRK-B</code>), look up in <code>companies.py</code></td>
+  <td>Often present, not always</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>ISIN</code> or <code>ISSUER_CUSIP</code></td>
+  <td>A US ISIN is <code>US</code> + CUSIP + check digit. The <strong>first 6 CUSIP characters identify the issuer</strong>, so all share classes map together (Alphabet's two classes share <code>02079K</code>)</td>
+  <td><code>cusip6 → ticker</code> learned from holdings already matched by ticker: N-PORT supplies the pairs, so no licensed CUSIP file is needed</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>ISSUER_LEI</code></td>
+  <td>LEI → ticker, learned the same way</td>
+  <td>Survives renames and ticker changes</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>ISSUER_NAME</code></td>
+  <td>Cleaned name → aliases in <code>companies.py</code></td>
+  <td>Last resort; listed for review</td>
+</tr>
+</tbody>
+</table>
+<p>Rules:</p>
+<ul>
+<li><strong>Equity only by default</strong> (<code>ASSET_CAT = 'EC'</code>). A fund that holds a company's bonds is a lender, not an owner; debt holdings are kept but not counted as exposure.</li>
+<li><strong>Share classes are summed</strong> per company.</li>
+<li><strong>Unmatched holdings stay unmatched.</strong> Foreign companies, cash, futures and companies outside the corpus are reported as the &quot;not covered&quot; share of the fund, never guessed.</li>
+<li><strong>CIK</strong> comes from the corpus manifests, or from SEC's <code>company_tickers.json</code>, so the link also works by CIK.</li>
+</ul>
+<h3>4.2 Time: holdings date → annual report</h3>
+<p>Holdings are dated by the report date (<code>REPORT_DATE</code> in the bulk data, <code>repPdDate</code> in the XML; <code>REPORT_ENDING_PERIOD</code> / <code>repPdEnd</code> is the fund's fiscal year end, not the holdings date); companies close their fiscal years at different times (Apple in September, Walmart in January). Rule: <strong>use each company's latest annual report filed on or before the holdings date</strong> (<code>filing_date &lt;= period_end</code>), using <code>filing_date</code> and <code>year</code> from the manifests. That is what an investor could have read at the time, so no answer uses information from the future.</p>
+<h3>4.3 Figures: a cache of verified company numbers</h3>
+<p>Fund-level measures need company figures (revenue, net income and so on). The trend and sector trend agents already verify such figures one company-year at a time; the design keeps them:</p>
+<pre><code>company_figures(ticker, fiscal_year, metric, value, unit, chunk_id, page, method, verified_at)
+</code></pre>
+<p><code>method</code> is <code>label</code> (statement row read in code) or <code>llm</code> (copied by the model, checked against its chunk). A figure is read once and reused by every fund question, and it keeps its <code>chunk_id</code>, so answers still cite the page.</p>
+<h2>5. Storage design</h2>
+<pre class="mermaid">flowchart LR
+  subgraph Sources
+    NP[&quot;N-PORT&lt;br&gt;XML or quarterly TSV&quot;]
+    NC[&quot;N-CSR and 497K&lt;br&gt;HTML documents&quot;]
+    AR[&quot;Annual reports (ARS)&lt;br&gt;existing corpus&quot;]
+  end
+  subgraph SQL[&quot;SQL: nport_mutual_fund.sqlite3&quot;]
+    T1[&quot;funds, filings,&lt;br&gt;holdings, returns&quot;]
+    T2[&quot;security_map,&lt;br&gt;holding_link&quot;]
+    T3[&quot;fund_exposure&quot;]
+    T4[&quot;company_figures&quot;]
+  end
+  subgraph Vectors[&quot;Vector collections&quot;]
+    V1[&quot;annual_reports_vlm&lt;br&gt;(existing)&quot;]
+    V2[&quot;fund_reports&lt;br&gt;(N-CSR, 497K sections)&quot;]
+    V3[&quot;fund_cards_mutual_fund&lt;br&gt;(one per fund and period)&quot;]
+  end
+  NP --&gt; T1 --&gt; T2 --&gt; T3
+  T1 --&gt; V3
+  NC --&gt; V2
+  AR --&gt; V1
+  V1 -. &quot;verified figures&quot; .-&gt; T4</pre>
+<table>
+<thead>
+<tr>
+  <th>Store</th>
+  <th>Location (<code>RAG_HOME</code> layout)</th>
+  <th>Content</th>
+  <th>Built by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>nport_mutual_fund.sqlite3</code></td>
+  <td><code>indexes/mutual_fund/nport_mutual_fund.sqlite3</code></td>
+  <td>The tables in 5.1</td>
+  <td>New loader: parse XML or TSV, filter to the chosen funds, map holdings</td>
+</tr>
+<tr>
+  <td><code>fund_cards_mutual_fund</code></td>
+  <td>Chroma collection in its own folder, <code>indexes/mutual_fund/chroma_mutual_fund</code> (bge-small-en-v1.5), so the annual-report index is never opened</td>
+  <td>One text card per fund and period</td>
+  <td>Written by code from the tables, then embedded</td>
+</tr>
+<tr>
+  <td><code>fund_reports</code></td>
+  <td>New collection beside <code>annual_reports_vlm</code></td>
+  <td>N-CSR and 497K chunks, one section per fund</td>
+  <td>Ingest of the corpus plan's 500 documents</td>
+</tr>
+<tr>
+  <td><code>annual_reports_vlm</code></td>
+  <td>Unchanged</td>
+  <td>Company annual reports</td>
+  <td>Existing pipeline 1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Separate collections, not new fields in <code>annual_reports_vlm</code>.</strong> The two annual-report indexes share one chunk schema pinned by <code>tests/test_chunk_schema.py</code>. Fund cards and fund documents describe a fund and a share class, not a company page, so they get their own schema and collections, and the existing index and its tests are untouched.</p>
+<h3>5.1 Tables</h3>
+<pre><code class="language-sql">funds(series_id PRIMARY KEY, series_name, registrant, cik, series_lei, family)
+filings(accession PRIMARY KEY, series_id, period_end, filing_date, net_assets, total_assets, total_liabilities)
+monthly_returns(accession, class_id, month, total_return)
+holdings(accession, holding_id, issuer_name, title, cusip, isin, ticker_raw, lei,
+         value_usd, pct_of_net_assets, asset_cat, issuer_type, country, PRIMARY KEY (accession, holding_id))
+security_map(cusip6, isin, lei, ticker_raw, corpus_ticker, cik, method, confidence)
+holding_link(accession, holding_id, corpus_ticker, method)
+fund_exposure(series_id, period_end, corpus_ticker, pct_of_net_assets, value_usd, report_doc_id)  -- view
+company_figures(ticker, fiscal_year, metric, value, unit, chunk_id, page, method, verified_at)
+</code></pre>
+<p><code>fund_exposure</code> sums share classes per company and picks <code>report_doc_id</code> (for example <code>edgar_ars_NVDA_2025</code>) by the rule in 4.2. Filtered to the 100 largest equity funds and ETFs, the database stays in the tens of MB even when loaded from the 440 MB quarterly ZIP.</p>
+<h3>5.2 Fund cards</h3>
+<p>One card per fund and period, written entirely by code so every number on it is exact:</p>
+<blockquote>
+<p>Vanguard 500 Index Fund, Form N-PORT for the period ended 30 June 2026 (accession 0000036405-26-000473). Net assets $1,671.2 billion; 520 holdings. Top 10 holdings: NVIDIA 7.51%, Apple 6.59%, Microsoft 4.30%, Amazon.com 3.62%, Alphabet 5.84% (two share classes), Broadcom 2.77%, Micron Technology 2.02%, Meta Platforms 1.92%, Tesla 1.84%, Eli Lilly 1.47%. Sector mix by corpus sector: (percentages computed by the loader). 86.8% of net assets is in companies listed in the corpus.</p>
+</blockquote>
+<p>Card metadata: <code>series_id</code>, <code>series_name</code>, <code>family</code>, <code>period_end</code>, <code>accession</code>, <code>chunk_id = nport_&lt;accession&gt;_card</code>. Cards let the agent find a fund from the way users name it (&quot;Vanguard's S&amp;P 500 fund&quot;); the numbers are then read from the tables, not from the card.</p>
+<h3>5.3 Why holdings are not embedded</h3>
+<p>A fund has hundreds of holding rows, and vector search returns the top few chunks. &quot;What share of this fund is technology?&quot; needs every row summed; &quot;which funds hold the most NVIDIA?&quot; needs a ranking across funds. Both are exact in SQL and partial or wrong in top-k retrieval. Embeddings are used only to find the fund.</p>
+<h2>6. Agent design</h2>
+<h3>6.1 New route and tools</h3>
+<table>
+<thead>
+<tr>
+  <th>Addition</th>
+  <th>What it does</th>
+  <th>LLM?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Router route <code>fund</code></td>
+  <td>Chosen when the question names a fund, a fund family with a fund word, or a fund ticker. The clarifier asks for the fund when only the family is named, and for the period when it is ambiguous</td>
+  <td>Router only</td>
+</tr>
+<tr>
+  <td>Tool <code>fund_search</code></td>
+  <td>Searches <code>fund_cards</code> (and <code>fund_reports</code> for fee, risk or commentary questions)</td>
+  <td>No</td>
+</tr>
+<tr>
+  <td>Tool <code>fund_lookup</code></td>
+  <td>Runs fixed, parameterised SQL: top holdings, sector mix, exposure to a company, funds holding a company, net assets and flows, monthly returns. Never free-form SQL written by the LLM</td>
+  <td>No</td>
+</tr>
+<tr>
+  <td>Tool <code>company_figures</code></td>
+  <td>Reads cached verified figures; for a missing one, calls the trend agent's reading step (statement row in code, LLM last) and caches the result</td>
+  <td>Only for rows code can't read</td>
+</tr>
+</tbody>
+</table>
+<p><code>fund_lookup</code> returns rows as evidence items with IDs (<code>nport_&lt;accession&gt;_&lt;holding_id&gt;</code>, <code>nport_&lt;accession&gt;_fund</code>) and the text of the row, so the critic's citation check, figure check and support judge work on them unchanged.</p>
+<h3>6.2 Fund flow</h3>
+<pre class="mermaid">flowchart TD
+  S[&quot;security_step&quot;] --&gt; P[&quot;plain_text_step - LLM&quot;]
+  P --&gt; R[&quot;route_step - router LLM + rules&lt;br&gt;(fund plan: fund, period, what to look up)&quot;]
+  R --&gt;|&quot;fund&quot;| FL[&quot;fund_lookup_step&lt;br&gt;fund_search + fund_lookup (SQL)&quot;]
+  R --&gt;|&quot;lookup / comparison / trend / sector_trend&quot;| EX[&quot;existing agents&quot;]
+  FL --&gt;|&quot;needs company figures&quot;| CF[&quot;company_step&lt;br&gt;company_figures (cache, else read statement row)&lt;br&gt;+ filtered search of annual_reports_vlm&quot;]
+  FL --&gt;|&quot;holdings only&quot;| A[&quot;answer_step - fund prompt&quot;]
+  CF --&gt; A
+  A --&gt; CR[&quot;critic_step&lt;br&gt;citations, figure check, support judge&quot;]
+  CR --&gt;|&quot;repair once&quot;| A
+  CR --&gt; G[&quot;governance_step&lt;br&gt;output filter, human review&quot;]</pre>
+<p>Path: security → plain_text → route → fund_lookup → company (when needed) → answer → critic → governance: <strong>8 steps</strong>, or 10 with one repair, inside the Track B cap. As in the sector trend agent, retries happen inside a node, not as graph loops.</p>
+<h3>6.3 How existing agents are reused</h3>
+<table>
+<thead>
+<tr>
+  <th>Need</th>
+  <th>Reused part</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Revenue or income of a holding over years</td>
+  <td>Trend agent's reading step: <code>label_match</code>, broadened search, LLM last, <code>validate_point</code></td>
+</tr>
+<tr>
+  <td>A sector's trend for a fund's main sector</td>
+  <td>Sector trend agent (<code>financial_sector_trend</code>) unchanged</td>
+</tr>
+<tr>
+  <td>Risks or strategy a holding reports</td>
+  <td>Q&amp;A agent's filtered search: one search per (ticker, report year)</td>
+</tr>
+<tr>
+  <td>Arithmetic (weighted growth, shares, differences)</td>
+  <td>Code, recorded as calculations so the critic accepts the results</td>
+</tr>
+<tr>
+  <td>Not answerable</td>
+  <td><code>not_available</code> with the reason, as the clarifier and sector agent already do</td>
+</tr>
+</tbody>
+</table>
+<h3>6.4 Example questions</h3>
+<table>
+<thead>
+<tr>
+  <th>Question</th>
+  <th>Flow</th>
+  <th>Data used</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>What are the top holdings of the Vanguard 500 Index Fund?</td>
+  <td><code>fund</code>: <code>fund_search</code> → <code>fund_lookup</code> top holdings → answer</td>
+  <td>N-PORT tables</td>
+</tr>
+<tr>
+  <td>Which funds hold the most NVIDIA?</td>
+  <td><code>fund</code>: <code>fund_lookup</code> ranking across funds</td>
+  <td>N-PORT tables</td>
+</tr>
+<tr>
+  <td>How much of this fund is in technology, and how did tech revenue trend?</td>
+  <td><code>fund</code>: sector mix → sector trend agent for Technology and IT</td>
+  <td>N-PORT + annual reports</td>
+</tr>
+<tr>
+  <td>How did the revenue of this fund's top 5 holdings grow last year?</td>
+  <td><code>fund</code>: top 5 → <code>company_figures</code> per company → weighted growth in code</td>
+  <td>N-PORT + annual reports</td>
+</tr>
+<tr>
+  <td>What risks do this fund's three largest holdings report?</td>
+  <td><code>fund</code>: top 3 → filtered search per company in <code>annual_reports_vlm</code></td>
+  <td>N-PORT + annual reports</td>
+</tr>
+<tr>
+  <td>What is this fund's expense ratio?</td>
+  <td><code>fund</code>: <code>fund_search</code> over <code>fund_reports</code> (497K fee table)</td>
+  <td>497K</td>
+</tr>
+<tr>
+  <td>What did the manager say about performance?</td>
+  <td><code>fund</code>: <code>fund_search</code> over <code>fund_reports</code> (N-CSR)</td>
+  <td>N-CSR</td>
+</tr>
+<tr>
+  <td>Should I buy this fund?</td>
+  <td>Refused by the existing input guard (investment advice)</td>
+  <td>None</td>
+</tr>
+</tbody>
+</table>
+<h3>6.5 Example: weighted growth</h3>
+<p>&quot;How did the revenue of the Vanguard 500 fund's top 10 holdings grow last year?&quot;</p>
+<ol>
+<li><code>fund_search</code> finds the series; <code>fund_lookup</code> reads the filing for the period ending 30 June 2026 and its 10 largest equity holdings, share classes summed.</li>
+<li><code>fund_exposure</code> gives the tickers and, for each, the latest annual report filed by 30 June 2026.</li>
+<li><code>company_figures</code> returns each company's revenue for that fiscal year and the year before; missing ones are read and cached.</li>
+<li>Code computes each company's growth and the weighted average, <code>Σ (weight × growth) / Σ covered weight</code>, and records the calculations.</li>
+<li>The answer cites the N-PORT rows for the weights and each company's filing page for its revenue, and states coverage (&quot;these 10 holdings are 38% of the fund&quot;; illustrative figure).</li>
+</ol>
+<h3>6.6 Guardrails and governance</h3>
+<table>
+<thead>
+<tr>
+  <th>Risk</th>
+  <th>Control</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Investment advice (&quot;should I buy&quot;, &quot;which fund is best&quot;)</td>
+  <td>Existing input guard refuses it; the fund prompt states facts only</td>
+</tr>
+<tr>
+  <td>A number not in the data</td>
+  <td>Figure check: every number must be in a cited row or chunk, or a recorded calculation</td>
+</tr>
+<tr>
+  <td>Low coverage</td>
+  <td>Human review when the companies used cover under half of the fund weight asked about (same rule as <code>low_sector_coverage</code>)</td>
+</tr>
+<tr>
+  <td>Stale holdings</td>
+  <td>The answer names the holdings date and the filing; holdings are never presented as current</td>
+</tr>
+<tr>
+  <td>Look-ahead</td>
+  <td>The date rule in 4.2</td>
+</tr>
+<tr>
+  <td>Wrong company match</td>
+  <td>Identifier-first matching; name matches flagged <code>method = name</code> and listed for review</td>
+</tr>
+<tr>
+  <td>Prompt injection in fund documents</td>
+  <td>Existing evidence guard; flagged chunks dropped as in the sector agent</td>
+</tr>
+</tbody>
+</table>
+<h2>7. Evaluation</h2>
+<table>
+<thead>
+<tr>
+  <th>What</th>
+  <th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Holdings answers</td>
+  <td>Exact: compare with the N-PORT rows (gold answers generated from the tables)</td>
+</tr>
+<tr>
+  <td>Mapping quality</td>
+  <td>Share of fund value matched, by method; a hand-checked sample of name matches</td>
+</tr>
+<tr>
+  <td>Fund document answers</td>
+  <td>Expense ratios and returns are inline XBRL in N-CSR and 497K, so gold values can be read exactly (as the corpus plan notes)</td>
+</tr>
+<tr>
+  <td>Linked answers</td>
+  <td>Each company figure checked against its cited page; weighted results recomputed from the tables</td>
+</tr>
+<tr>
+  <td>Agents</td>
+  <td>Route accuracy for fund questions; steps, tool calls and repairs from <code>agent_run</code></td>
+</tr>
+</tbody>
+</table>
+<h2>8. Implementation plan</h2>
+<table>
+<thead>
+<tr>
+  <th>Step</th>
+  <th>Work</th>
+  <th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>N-PORT loader: XML for selected funds, TSV for bulk; the tables in 5.1; holding mapping with method; tests on a saved filing</td>
+  <td>1 day</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>fund_lookup</code> tool with fixed queries; evidence rows with IDs</td>
+  <td>0.5 day</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>company_figures</code> cache, filled by the trend and sector agents' reading step</td>
+  <td>0.5 day</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Router <code>fund</code> route, clarifier fund slot, fund flow nodes, fund answer prompt; tests with the mock LLM</td>
+  <td>1 to 1.5 days</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Fund cards: writer and <code>fund_cards</code> collection</td>
+  <td>0.5 day</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>Streamlit: holdings table, sector mix, coverage line</td>
+  <td>0.5 day</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>(Optional) <code>fund_reports</code> ingest of N-CSR and 497K from the corpus plan</td>
+  <td>2 days</td>
+</tr>
+</tbody>
+</table>
+<p>Steps 1 to 6 are about 4 to 5 days and give holdings questions plus their link to company figures. Step 7 adds fee, risk and commentary questions.</p>
+<h2>9. Open questions</h2>
+<ul>
+<li>N-PORT public disclosure: which months are public, how soon, and the status of the 2024 amendments (section 2.1).</li>
+<li>Which funds to load: the largest equity funds and ETFs by net assets (best overlap) or a sample across categories (wider but thinner overlap).</li>
+<li>Whether bond holdings should link to the issuer's annual report (credit questions) or stay out of scope.</li>
+<li>Hosted LLM cost for <code>company_figures</code> reads that code can't do; cached once, but the first run over many holdings could take many calls.</li>
+</ul>
+<h2>10. Implementation (14 November 2026)</h2>
+<p>Every file of the layer has <code>_mutual_fund</code> in its name.</p>
+<table>
+<thead>
+<tr>
+  <th>Layer</th>
+  <th>File</th>
+  <th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Download</td>
+  <td><code>scripts/downloads/download_mutual_fund.py</code>, <code>configs/funds_mutual_fund.json</code></td>
+  <td><code>latest</code>: the newest <code>NPORT-P</code> XML of each configured fund from EDGAR (<code>nport_&lt;accession&gt;_mutual_fund.xml</code> + <code>manifest_mutual_fund.jsonl</code> with filing dates). <code>bulk --quarter 2026q3</code>: the quarterly ZIP (<code>2026q3_nport_mutual_fund.zip</code>). SEC contact from <code>SEC_USER_AGENT</code></td>
+</tr>
+<tr>
+  <td>Load and map</td>
+  <td><code>scripts/rag/nport_mutual_fund.py</code></td>
+  <td>XML or bulk ZIP (streamed: the 950 MB holdings table is never held in memory) into the tables of 5.1; holdings mapped ticker, CUSIP-6, ISIN, LEI, then name; <code>fund_exposure</code> view; <code>coverage</code>, <code>sector_mix</code></td>
+</tr>
+<tr>
+  <td>Cards</td>
+  <td><code>scripts/rag/cards_mutual_fund.py</code></td>
+  <td>One card per filing, written by code, embedded with <code>BAAI/bge-small-en-v1.5</code> (local, or the shared API with <code>hosted</code>: the same vectors) into Chroma <code>fund_cards_mutual_fund</code>. The signature is recorded; another model is refused unless <code>--reset</code></td>
+</tr>
+<tr>
+  <td>Tools</td>
+  <td><code>scripts/agents/tools_mutual_fund.py</code></td>
+  <td><code>FundStore</code>: fixed, parameterised SQL only; rows become evidence with IDs <code>nport_&lt;accession digits&gt;_&lt;row&gt;</code>; <code>company_figures</code> cache; <code>report_for</code> (the date rule of 4.2)</td>
+</tr>
+<tr>
+  <td>Agent</td>
+  <td><code>scripts/agents/agent_mutual_fund.py</code>, <code>scripts/prompts/prompts_mutual_fund.py</code></td>
+  <td>Fund plan (<code>top_holdings</code>, <code>sector_mix</code>, <code>exposure</code>, <code>holders</code>, <code>facts</code>, <code>flows</code>, <code>returns</code>, <code>holdings_growth</code>, <code>holdings_text</code>), weighted growth in code, fund answer prompt</td>
+</tr>
+<tr>
+  <td>Graph</td>
+  <td><code>financial_prompting_agent.py</code> (edited)</td>
+  <td><code>fund_graph</code> flow and the router's <code>fund</code> route: route -&gt; <code>fund_lookup_step</code> -&gt; <code>fund_company_step</code> (only for the holdings' annual reports) -&gt; answer -&gt; critic -&gt; governance</td>
+</tr>
+<tr>
+  <td>API</td>
+  <td><code>scripts/api/routes_mutual_fund.py</code></td>
+  <td><code>GET /mutual_fund/funds</code>, <code>/holdings</code>, <code>/holders/{ticker}</code>, <code>/search</code>; chat responses carry <code>mutual_fund</code></td>
+</tr>
+<tr>
+  <td>UI</td>
+  <td><code>scripts/ui/ui_mutual_fund.py</code></td>
+  <td>Holdings table, sector mix chart, exposure or holders, growth table, coverage line</td>
+</tr>
+<tr>
+  <td>Tests</td>
+  <td><code>tests/test_*_mutual_fund.py</code>, <code>tests/data_mutual_fund.py</code></td>
+  <td>Synthetic N-PORT filings with the real structure; no network or models</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-powershell">$env:SEC_USER_AGENT = &quot;capstone-research you@example.com&quot;
+python -m scripts.downloads.download_mutual_fund latest
+python -m scripts.rag.nport_mutual_fund load --xml indexes\rag_home\indexes\mutual_fund\raw_mutual_fund
+python -m scripts.rag.cards_mutual_fund build            # bge-small-en-v1.5, local; --embedding-provider hosted for the shared API
+python -m scripts.rag.nport_mutual_fund status
+</code></pre>
+<p><strong>No change without fund data.</strong> The <code>fund</code> route exists only when <code>nport_mutual_fund.sqlite3</code> holds a filing and the question names a loaded fund or asks about fund holdings. Without it the router, the clarifier and every other flow behave exactly as before; a router LLM that proposes <code>fund</code> is overruled by the rules. With fund data, the clarifier passes fund questions straight to the agent. The annual-report Chroma index is never opened by the fund code.</p>
+<p><strong>Measured on real filings</strong> (four Vanguard index funds, holdings as of 30 June 2026, filed 28 August 2026):</p>
+<table>
+<thead>
+<tr>
+  <th>Fund</th>
+  <th>Accession</th>
+  <th>Corpus companies held</th>
+  <th>Share of net assets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Vanguard 500 Index Fund</td>
+  <td>0000036405-26-000473</td>
+  <td>240</td>
+  <td>86.7%</td>
+</tr>
+<tr>
+  <td>Vanguard Growth Index Fund</td>
+  <td>0000036405-26-000474</td>
+  <td>73</td>
+  <td>90.1%</td>
+</tr>
+<tr>
+  <td>Vanguard Value Index Fund</td>
+  <td>0000036405-26-000475</td>
+  <td>176</td>
+  <td>82.6%</td>
+</tr>
+<tr>
+  <td>Vanguard Total Stock Market Index Fund</td>
+  <td>0000036405-26-000480</td>
+  <td>274</td>
+  <td>77.3%</td>
+</tr>
+</tbody>
+</table>
+<p>Name matching refuses a match when the holding's name has a distinguishing word the company's name lacks: Apple Hospitality REIT is not Apple, Portland General Electric is not GE, Coca-Cola Consolidated is not Coca-Cola, Hilton Grand Vacations is not Hilton. A filer's <code>N/A</code> in the LEI or ISIN field is treated as missing.</p>
+<p><strong>Decisions made while building:</strong></p>
+<ul>
+<li>The holdings date is <code>REPORT_DATE</code> / <code>repPdDate</code> (checked against the 2026 Q3 bulk ZIP's column headers and the XML).</li>
+<li>Fund cards of similar index funds score close together (top-two gaps of 0.005 to 0.03 for the four Vanguard funds), so a card counts as a match only when it beats the next card by 0.03; otherwise the agent asks which fund. Fund names in the question resolve first.</li>
+<li>Advice wording (&quot;should I buy&quot;, &quot;best fund&quot;) is refused by the fund plan. &quot;Hold&quot; and &quot;holdings&quot; describe the data in a fund question, so they do not trigger the investment-language review there.</li>
+<li>A figure the LLM copies for both years from one chunk is left out (&quot;the same figure was read for both years&quot;) instead of becoming 0% growth.</li>
+<li>Linked questions use only companies whose annual report is indexed. With 52 companies indexed today, most of the largest holdings of these funds are not yet covered: they are listed as not used, and the answer goes to human review (<code>low_fund_coverage</code>) when the companies used carry under half of the weight asked about.</li>
+</ul>
+</body></html>

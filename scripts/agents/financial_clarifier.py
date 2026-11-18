@@ -21,6 +21,7 @@ questions about them.
 | figure | company, year, metric | "What was Apple's revenue in FY2024?" |
 | comparison | two or more companies, year, metric | "Compare Visa and Mastercard net income 2025" |
 | trend | company, metric (years default to all available) | "How has NVIDIA's revenue changed?" |
+| sector_trend | one sector, metric (years default to the sector's indexed years) | "How did healthcare revenue trend from 2022 to 2025?" |
 | explain | company (year defaults to the latest, stated as an assumption) | "Why did Chevron's earnings fall?" |
 | report | company, year, then a yes/no confirmation | "Generate a financial report for Apple 2024" |
 | overview | the user picks one of the above | "Tell me about Microsoft" |
@@ -115,6 +116,7 @@ NOT_A_NAME = frozenset("""a about according all also an and annual api april are
     may me net non-gaap note november october of on operating or page please profit report reports revenue revenues roa
     roe sales sec segment september show statement statements table tell the their total us usa u.s. usd vs was we were
     what when where which who why with xbrl year years""".split())
+SECTOR_TREND_YEARS = 5     # same as financial_trend.MAX_TREND_YEARS
 INTENT_CHOICES = {"Key figures": "figure", "Explain performance": "explain",
                   "Trend over the years": "trend", "Full financial report": "report"}
 
@@ -140,7 +142,8 @@ def indexed_filings(path):
     try:
         with closing(sqlite3.connect(f"file:{Path(path).as_posix()}?mode=ro", uri=True)) as db:
             columns = {row[1] for row in db.execute("PRAGMA table_info(filings)")}
-            where = "status='complete'" + (" AND stage='text'" if "stage" in columns else "")
+            # text stage of pipeline 2 (Qdrant); pipeline 1 (Chroma) records its one stage as "vlm"
+            where = "status='complete'" + (" AND stage IN ('text', 'vlm')" if "stage" in columns else "")
             doc_ids = [row[0] for row in db.execute(f"SELECT DISTINCT doc_id FROM filings WHERE {where}")]
     except sqlite3.Error:
         return []
@@ -195,6 +198,7 @@ class Slots:
     all_years: bool = False
     metric: str | None = None
     confirmed: bool | None = None
+    sectors: list[str] = field(default_factory=list)     # sector_trend: the sectors named (one is needed)
 
 
 @dataclass
@@ -262,10 +266,18 @@ class Clarifier:
                     best = (metric, len(phrase))
         return best[0] if best else None
 
+    @staticmethod
+    def sectors_in(text):
+        from scripts.agents.financial_sector_trend import sectors_in
+        return sectors_in(text)
+
     def intent_in(self, text, companies, years):
         cleaned = re.sub(r"\bannual reports?\b|\bform (ars|10-?k)\b", " ", text, flags=re.I)
         if REPORT.search(cleaned):
             return "report"
+        # A sector and no company: the sector's trend (one measure across its companies, year by year).
+        if not companies and self.sectors_in(cleaned) and (TREND.search(cleaned) or len(years) >= 2):
+            return "sector_trend"
         # One company compared with a benchmark (peers, median, prior year) is a question about that company;
         # "compare X" with no benchmark still needs a second company, so it stays a comparison.
         explicit = re.search(r"\b(compare|versus|vs\.?)\b", cleaned, re.I) and not BENCHMARK.search(cleaned)
@@ -284,7 +296,9 @@ class Clarifier:
     @staticmethod
     def unknown_names(text):
         """Company-like names we have no alias for ("Intel's revenue", "revenue of Reliance Industries")."""
-        for alias in sorted({a for aliases in ALIASES.values() for a in aliases}, key=len, reverse=True):
+        from scripts.agents.financial_sector_trend import SECTOR_ALIASES
+        words = {a for aliases in ALIASES.values() for a in aliases} | {p for ps in SECTOR_ALIASES.values() for p in ps}
+        for alias in sorted(words, key=len, reverse=True):
             text = re.sub(rf"(?<![A-Za-z]){re.escape(alias)}(?:'s|')?(?![A-Za-z])", " ", text, flags=re.I)
         found = []
         for match in UNKNOWN_NAME.finditer(text):
@@ -303,7 +317,7 @@ class Clarifier:
         years = self.years_in(text)
         return Slots(intent=self.intent_in(text, companies, years), companies=companies, years=years,
                      latest=bool(LATEST.search(text)), all_years=bool(ALL_YEARS.search(text)),
-                     metric=self.metric_in(text))
+                     metric=self.metric_in(text), sectors=self.sectors_in(text))
 
     # ------------------------------------------------------------------ dialogue
     def step(self, conversation: Conversation, message: str, *, ticker=None, year=None) -> dict[str, Any]:
@@ -314,6 +328,12 @@ class Clarifier:
             conversation.pending = []
             return self.result(conversation, "passthrough", action="answer", resolved_query=text,
                                ticker=None, year=None, original=text)
+        if self.fund_question(text):
+            # A fund question needs a fund, not a company and year: the fund agent resolves the fund and period itself
+            # and says which fund it needs when the question is ambiguous. Only when fund data is loaded.
+            conversation.pending = []
+            return self.result(conversation, "passthrough", action="answer", resolved_query=text,
+                               ticker=None, year=None, original=text, route_hint="fund")
         if RESET.match(text):
             self.restart(conversation, "")
             return self.ask(conversation, "Sure, what would you like to know?", [])
@@ -346,7 +366,9 @@ class Clarifier:
             parsed.years = parsed.years or ([int(year)] if year else [])
         # Merge: what the user just said fills or replaces the matching slot; other slots carry over,
         # so a follow-up such as "and for 2023?" keeps the company and the measure.
-        slots.intent = choice or parsed.intent or slots.intent
+        # A short answer to our question ("Revenue" when asked for the measure) fills a slot; it is not a new intent.
+        answering = bool(conversation.pending) and follow_up and not parsed.companies and slots.intent is not None
+        slots.intent = choice or (slots.intent if answering else parsed.intent) or slots.intent
         if parsed.companies:
             slots.companies = (list(dict.fromkeys(slots.companies + parsed.companies))
                                if slots.intent == "comparison" else parsed.companies)
@@ -355,6 +377,7 @@ class Clarifier:
         slots.latest = (slots.latest or parsed.latest) and not parsed.years
         slots.all_years = slots.all_years or parsed.all_years
         slots.metric = parsed.metric or slots.metric
+        slots.sectors = parsed.sectors or slots.sectors
         covered = [c for c in slots.companies if c in self.directory]
         if len(covered) == 1 and "companies" in conversation.pending and ALONE.search(text):
             slots.intent, slots.companies = "figure", covered
@@ -365,13 +388,19 @@ class Clarifier:
         conversation.turns += 1
         return self.ask(conversation, None, missing)
 
+    @staticmethod
+    def fund_question(text):
+        from scripts.agents.financial_router import fund_question
+        return fund_question(text)
+
     def restart(self, conversation, text):
         conversation.__dict__.update(Conversation(conversation.conversation_id, original_query=text).__dict__)
 
     def uncovered(self, slots, query):
         """Names of the companies the question asks about that we hold no filings for."""
-        covered = [c for c in slots.companies if c in self.directory]
-        names = [name(c) for c in slots.companies if c not in self.directory]
+        directory = self.known(slots)
+        covered = [c for c in slots.companies if c in directory]
+        names = [name(c) for c in slots.companies if c not in directory]
         if len(covered) < (2 if slots.intent == "comparison" else 1):
             names += [n for n in self.unknown_names(query) if n not in names]
         return names
@@ -384,15 +413,23 @@ class Clarifier:
 
     def missing(self, conversation):
         slots, missing = conversation.slots, []
+        if slots.intent == "sector_trend":
+            conversation.unknown_companies, conversation.banks_without_metric = [], []
+            if len(slots.sectors) != 1:
+                missing.append("sector")
+            if not slots.metric or self.bank_sector_without(slots):
+                missing.append("metric")
+            return missing
         if slots.intent is None:
             missing.append("intent")
-        covered = [c for c in slots.companies if c in self.directory]
+        directory = self.known(slots)
+        covered = [c for c in slots.companies if c in directory]
         conversation.unknown_companies = self.uncovered(slots, conversation.original_query)
         conversation.banks_without_metric = self.banks_without(slots)
         if len(covered) < (2 if slots.intent == "comparison" else 1):
             missing.append("companies" if slots.intent == "comparison" else "company")
         elif slots.intent in {"figure", "comparison", "report"}:
-            available = self.common_years(covered)
+            available = self.common_years(covered, directory)
             if slots.latest and available:
                 slots.years, slots.latest = [available[-1]], False
             if not slots.years or any(y not in available for y in slots.years):
@@ -403,8 +440,20 @@ class Clarifier:
             missing.append("confirm")
         return missing
 
-    def common_years(self, companies):
-        sets = [set(self.directory.get(c, [])) for c in companies]
+    @staticmethod
+    def bank_sector_without(slots):
+        """A banking sector trend asked for a measure banks don't report."""
+        return slots.sectors == [BANKING] and slots.metric in NOT_REPORTED_BY_BANKS
+
+    def sector_members(self, sector):
+        return sorted(t for t in self.directory if SECTOR_OF.get(t) == sector)
+
+    def sector_years(self, sector):
+        return sorted({y for t in self.sector_members(sector) for y in self.directory.get(t, [])})
+
+    def common_years(self, companies, directory=None):
+        directory = self.directory if directory is None else directory
+        sets = [set(directory.get(c, [])) for c in companies]
         return sorted(set.intersection(*sets)) if sets else []
 
     def similar_companies(self, slots, limit=3):
@@ -445,6 +494,10 @@ class Clarifier:
         if not self.directory:
             return {"expected": [], "coverage": None}
         slots = self.parse(query)
+        if slots.intent == "sector_trend" and not ticker:
+            # Citations must come from the sector's companies; the sector agent says what it can't cover.
+            return {"expected": self.sector_members(slots.sectors[0]) if len(slots.sectors) == 1 else [],
+                    "coverage": None}
         if not slots.companies and ticker:
             slots.companies = [ticker.upper()]
         covered = [c for c in slots.companies if c in self.directory]
@@ -466,7 +519,8 @@ class Clarifier:
     def ask(self, conversation, message, missing):
         conversation.pending = missing
         slots, questions, coverage = conversation.slots, [], None
-        covered = [c for c in slots.companies if c in self.directory]
+        directory = self.known(slots)
+        covered = [c for c in slots.companies if c in directory]
         for slot in missing:
             if slot == "intent":
                 subject = name(covered[0]) if covered else "the company"
@@ -486,7 +540,7 @@ class Clarifier:
                 questions.append({"slot": slot, "question": prefix + ask,
                                   "options": alone + [f"{name(t)} ({t})" for t in first + others]})
             elif slot == "year":
-                available = self.common_years(covered)
+                available = self.common_years(covered, directory)
                 outside = [y for y in slots.years if y not in available]
                 prefix = ""
                 if outside:
@@ -497,6 +551,14 @@ class Clarifier:
                 who = " and ".join(name(c) for c in covered)
                 questions.append({"slot": "year", "question": f"{prefix}Which fiscal year for {who}?",
                                   "options": [f"FY{y}" for y in reversed(available)] + ["Latest"]})
+            elif slot == "sector":
+                named = slots.sectors
+                ask = f"One sector at a time: which of {join_names(named)}?" if len(named) > 1 else "Which sector?"
+                options = [s for s in (named if len(named) > 1 else SECTOR_NAMES) if len(self.sector_members(s)) >= 2]
+                questions.append({"slot": "sector", "question": ask, "options": options})
+            elif slot == "metric" and slots.intent == "sector_trend" and self.bank_sector_without(slots):
+                questions.append({"slot": "metric", "question": f"Banks don't report {slots.metric}. Which measure?",
+                                  "options": list(BANK_MEASURES)})
             elif slot == "metric" and conversation.banks_without_metric:
                 coverage = self.metric_not_applicable(slots, conversation.banks_without_metric)
                 questions.append({"slot": "metric", "question": coverage["message"] + " Which measure?",
@@ -518,8 +580,19 @@ class Clarifier:
         """Fill stated defaults and hand over to the agent (answer) or the report generator (report)."""
         conversation.pending = []
         slots = conversation.slots
-        covered = [c for c in slots.companies if c in self.directory]
-        available = self.common_years(covered) if covered else []
+        if slots.intent == "sector_trend" and len(slots.sectors) == 1:
+            available = self.sector_years(slots.sectors[0])
+            if not slots.years and available:
+                slots.years = available[-SECTOR_TREND_YEARS:]
+                conversation.assumptions.append(
+                    f"Using the sector's indexed fiscal years: FY{slots.years[0]}–FY{slots.years[-1]}.")
+            if forced:
+                conversation.assumptions.append("Some details were not given; answering the question as asked.")
+            return self.result(conversation, "ready", action="answer", resolved_query=self.compose(conversation),
+                               ticker=None, year=None, sector=slots.sectors[0], original=conversation.original_query)
+        directory = self.known(slots)
+        covered = [c for c in slots.companies if c in directory]
+        available = self.common_years(covered, directory) if covered else []
         if not slots.years and available:
             if slots.intent == "trend" or slots.all_years:
                 slots.years = available
@@ -541,7 +614,8 @@ class Clarifier:
         """The user's own question when it already said everything; otherwise one built from the slots."""
         slots, original = conversation.slots, conversation.original_query
         said = self.parse(original)
-        if (said.intent, said.companies, said.years, said.metric) == (slots.intent, slots.companies, slots.years, slots.metric):
+        if ((said.intent, said.companies, said.years, said.metric, said.sectors)
+                == (slots.intent, slots.companies, slots.years, slots.metric, slots.sectors)):
             return original
         names = [name(c) for c in slots.companies if c in self.directory]
         span = slots.years if len(slots.years) < 2 else [slots.years[0], slots.years[-1]]
@@ -549,6 +623,8 @@ class Clarifier:
         metric = slots.metric or "key financial results"
         if slots.intent == "comparison":
             return f"Compare {metric} for {' and '.join(names)} in {years}."
+        if slots.intent == "sector_trend":
+            return f"How did the {slots.sectors[0]} sector's {metric} trend across {years}?"
         if slots.intent == "trend":
             return f"How did {names[0]}'s {metric} change across {years}?"
         if slots.intent == "figure":
@@ -557,7 +633,8 @@ class Clarifier:
 
     def report_spec(self, conversation):
         slots = conversation.slots
-        ticker = next((c for c in slots.companies if c in self.directory), None)
+        directory = self.known(slots)
+        ticker = next((c for c in slots.companies if c in directory), None)
         year = slots.years[-1] if slots.years else None
         return {"ticker": ticker, "year": year, "profile": self.profile_for(ticker, year)}
 
@@ -570,6 +647,26 @@ class Clarifier:
             if data.get("ticker") == ticker and int(data.get("year", 0)) == year:
                 return str(path)
         return None
+
+    def report_directory(self):
+        """Ticker -> fiscal years with a report profile. A report reads its own source PDF, not the index."""
+        out = {}
+        for path in sorted(self.profiles_dir.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                out.setdefault(data["ticker"], set()).add(int(data["year"]))
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
+        return {ticker: sorted(years) for ticker, years in out.items()}
+
+    def known(self, slots):
+        """The companies and years a request can use: the indexed filings, plus the report profiles for a report."""
+        if slots.intent != "report":
+            return self.directory
+        merged = {ticker: list(years) for ticker, years in self.directory.items()}
+        for ticker, years in self.report_directory().items():
+            merged[ticker] = sorted(set(merged.get(ticker, [])) | set(years))
+        return merged
 
     def available_reports(self):
         out = []

@@ -5,34 +5,43 @@ import os
 import base64
 import json
 import hashlib
+import threading
 import urllib.request
+
+# One model load at a time per process. transformers builds a model on the "meta" device and patches torch globally
+# while it does; two loads in parallel threads (the API's warm-up and a first request) can leave that patch in place,
+# and every later load in the process then fails with "Cannot copy out of meta tensor".
+LOAD_LOCK = threading.RLock()
 
 
 @lru_cache(maxsize=2)
 def text_model(name):
     import torch
     from sentence_transformers import SentenceTransformer
-    torch.set_num_threads(int(os.getenv("RAG_CPU_THREADS", "4")))
-    return SentenceTransformer(name, device=os.getenv("RAG_DEVICE", "cpu"))
+    with LOAD_LOCK:
+        torch.set_num_threads(int(os.getenv("RAG_CPU_THREADS", "4")))
+        return SentenceTransformer(name, device=os.getenv("RAG_DEVICE", "cpu"))
 
 
 @lru_cache(maxsize=1)
 def reranker(name):
     import torch
     from sentence_transformers import CrossEncoder
-    torch.set_num_threads(int(os.getenv("RAG_CPU_THREADS", "4")))
-    return CrossEncoder(name, device=os.getenv("RAG_DEVICE", "cpu"))
+    with LOAD_LOCK:
+        torch.set_num_threads(int(os.getenv("RAG_CPU_THREADS", "4")))
+        return CrossEncoder(name, device=os.getenv("RAG_DEVICE", "cpu"))
 
 
 @lru_cache(maxsize=1)
 def vision_model(name):
     import torch
     from transformers import AutoModelForImageTextToText, AutoProcessor
-    torch.set_num_threads(int(os.getenv("RAG_CPU_THREADS", "4")))
-    processor = AutoProcessor.from_pretrained(name)
-    model = AutoModelForImageTextToText.from_pretrained(
-        name, dtype=torch.bfloat16, attn_implementation="eager", low_cpu_mem_usage=True)
-    model.to(os.getenv("RAG_DEVICE", "cpu")).eval()
+    with LOAD_LOCK:
+        torch.set_num_threads(int(os.getenv("RAG_CPU_THREADS", "4")))
+        processor = AutoProcessor.from_pretrained(name)
+        model = AutoModelForImageTextToText.from_pretrained(
+            name, dtype=torch.bfloat16, attn_implementation="eager", low_cpu_mem_usage=True)
+        model.to(os.getenv("RAG_DEVICE", "cpu")).eval()
     return processor, model
 
 

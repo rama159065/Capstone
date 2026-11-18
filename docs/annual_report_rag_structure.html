@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Pipeline 2: Qdrant text + ColPali index</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Annual-report RAG: structure for the 1,004-filing corpus</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
+<h1>Annual-report RAG: structure for the 1,004-filing corpus</h1>
+<p>Updated 13 November 2026. How the plan in <a href="annual_report_corpus_plan.html">annual_report_corpus_plan.html</a> becomes a searchable index that the financial agents and the API answer from. The plan is 1,004 Form ARS PDFs from 281 companies in 13 sectors (11.3 GB), or the 509-filing <code>min500</code> preset.</p>
+<p>This page covers the stages, both pipelines' flows (ingestion and query), the collections and their metadata, the models, the evaluation metrics, where everything lives, serving and commands. Section 13 adds the mutual fund data (SEC N-PORT holdings) that sits beside this index and links to it by company; section 14 the switch of Pipeline 1 to bge-small-en-v1.5 embeddings.</p>
+<p>Updated 14 November 2026: mutual fund stores (§13), Pipeline 1 embeddings (§14), collections table (§5.1) and models (§6).</p>
+<p>There are <strong>two pipelines over the same corpus</strong>:</p>
+<ul>
+<li><strong>Pipeline 1, Chroma (text index):</strong> every page becomes text, so the text-only Track B model (Qwen3-8B) can read all of it. This is the main index. Code: <a href="../scripts/rag/financial_ingest_chroma_db.py">financial_ingest_chroma_db.py</a>. Notebook: <a href="../notebooks/colab_ingest_chroma_db.ipynb">colab_ingest_chroma_db.ipynb</a>.</li>
+<li><strong>Pipeline 2, Qdrant (text + ColPali index):</strong> text and OCR chunks, plus ColPali page vectors that find table, chart and image pages from their pixels. Ready for a vision chat model. Code: <a href="../scripts/rag/financial_ingest_qdrant_db.py">financial_ingest_qdrant_db.py</a>. Notebook: <a href="../notebooks/colab_ingest_qdrant_db.ipynb">colab_ingest_qdrant_db.ipynb</a>.</li>
+</ul>
+<p>Both are driven by <a href="../scripts/rag/colab_pipeline.py">scripts/rag/colab_pipeline.py</a>, where the pipelines are named <code>vlm_chroma</code> and <code>colpali_qdrant</code>. Both write into the storage layout of <a href="deployment.html">deployment.md</a> §7.</p>
+<pre><code>corpus_plan.jsonl ──download──▶ Drive: annual_reports/&lt;sector&gt;/ ──stage──▶ local disk ──analyse pages──┬──▶ Pipeline 1 ──▶ Chroma text index ──┐
+   (1,004 rows)                  PDFs + one manifest per sector        (per sector)    (+ page audit)   └──▶ Pipeline 2 ──▶ Qdrant text + ColPali ┴──▶ API / agents / UI
+                                                                                                                                              (ticker, year, sector filters)
+</code></pre>
+<h2>1. Stages</h2>
+<table>
+<thead>
+<tr>
+  <th>Stage</th>
+  <th>Code</th>
+  <th>What it does</th>
+  <th>Resumable by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Plan</td>
+  <td><code>data/raw/financial_report_qa/annual_reports/corpus_plan.jsonl</code></td>
+  <td>1,004 rows: sector, ticker, year, EDGAR URL, bytes. Every company is in <code>scripts/common/companies.py</code></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>Download</td>
+  <td><code>scripts/downloads/download_annual_report_corpus.py</code> (<code>cp.download</code>)</td>
+  <td>Fetches each PDF from EDGAR at ≤8 requests/s with a contact e-mail, checks the <code>%PDF-</code> header and size, and records SHA-256 and pages in the sector manifest</td>
+  <td>skipping PDFs already listed with the right size</td>
+</tr>
+<tr>
+  <td>Page audit (optional)</td>
+  <td><code>scripts/rag/page_audit.py</code> (<code>cp.page_audit</code>, <a href="../notebooks/colab_page_audit.ipynb">colab_page_audit.ipynb</a>)</td>
+  <td>One CSV per PDF (<code>pageNumber,parserUsage</code>): which reader each page needs. CPU only, about 0.22 s per page per core</td>
+  <td>filings that already have a CSV are skipped</td>
+</tr>
+<tr>
+  <td>Stage</td>
+  <td><code>cp.stage</code></td>
+  <td>Copies one sector's PDFs and manifest from Drive to the VM's local disk before ingesting</td>
+  <td>skipping files with the same size</td>
+</tr>
+<tr>
+  <td>Ingest</td>
+  <td><code>cp.ingest</code> → <strong>Pipeline 1</strong> <code>financial_ingest_chroma_db.VlmIngest</code> or <strong>Pipeline 2</strong> <code>financial_ingest_qdrant_db.Ingest</code></td>
+  <td>One sector at a time; models loaded once for all sectors</td>
+  <td>per-filing state in SQLite; finished filings are skipped</td>
+</tr>
+<tr>
+  <td>Back up</td>
+  <td>Chroma folder copy (Pipeline 1) or Qdrant snapshot (Pipeline 2) to Drive</td>
+  <td>After each sector</td>
+  <td><code>cp.restore</code> at the start of the next session</td>
+</tr>
+<tr>
+  <td>Check</td>
+  <td><code>cp.status</code>, <code>cp.coverage</code></td>
+  <td>Chunks or points per sector, and failures; every planned filing shown as planned → downloaded → ingested / pending / failed</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>Serve</td>
+  <td><code>cp.serve</code></td>
+  <td>FastAPI (one worker) + Streamlit on localhost, with <code>cp.serving_env(s)</code> pointing them at this index</td>
+  <td>—</td>
+</tr>
+</tbody>
+</table>
+<p>The plan is complete when <code>cp.coverage(s)[&quot;total&quot;][&quot;ingested&quot;]</code> equals the preset's count (509 for <code>min500</code>, 1,004 for <code>full</code>).</p>
+<h2>2. Two pipelines, same corpus</h2>
+<p>Both pipelines:</p>
+<ul>
+<li>read the same sector manifests;</li>
+<li>run the same page analysis (<code>financial_ingest_qdrant_db.analyse_page</code>);</li>
+<li>store <strong>one chunk schema</strong> (section 5).</li>
+</ul>
+<table>
+<thead>
+<tr>
+  <th></th>
+  <th><strong>Pipeline 1: Chroma</strong> (<code>vlm_chroma</code>)</th>
+  <th><strong>Pipeline 2: Qdrant</strong> (<code>colpali_qdrant</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Purpose</td>
+  <td>Every page as text, for the text-only Qwen3-8B; the main index</td>
+  <td>Text plus page-image search; ready for a vision chat model</td>
+</tr>
+<tr>
+  <td>Plain text pages</td>
+  <td>PDF text layer</td>
+  <td>PDF text layer</td>
+</tr>
+<tr>
+  <td>Tables with a text layer</td>
+  <td>Text layer + native tables (<code>find_tables</code>) as Markdown</td>
+  <td>Text layer + native tables as Markdown, and ColPali page vectors</td>
+</tr>
+<tr>
+  <td>Garbled text, glyphs drawn as outlines, scans</td>
+  <td>RapidOCR</td>
+  <td>RapidOCR (every one by default: <code>ocr_max_pages_per_filing=0</code>)</td>
+</tr>
+<tr>
+  <td>Charts without printed values, infographics</td>
+  <td><strong>Qwen3-VL</strong> (default 4B; 2B or 8B), figures checked against the text layer</td>
+  <td>ColPali page vectors; text from the text layer or OCR</td>
+</tr>
+<tr>
+  <td>Tables, charts or pictures with an unusable text layer (<code>paidVL</code>)</td>
+  <td>OCR → Qwen3-VL, every figure checked against the OCR text → a <strong>paid vision model</strong> only when more than 10% are unconfirmed</td>
+  <td>ColPali page vectors; text from OCR</td>
+</tr>
+<tr>
+  <td>Model failure</td>
+  <td>A failed or empty Qwen3-VL or paid reading falls back to OCR; the filing still completes</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>Blank pages, photos and logos</td>
+  <td>Skipped (<code>none</code>)</td>
+  <td>Not indexed when they have no text</td>
+</tr>
+<tr>
+  <td>Finding chart and image pages</td>
+  <td>A Qwen3-VL <strong>search description</strong> chunk per chart or image page (kind, title, measures, series, years; no values)</td>
+  <td>ColPali page vectors (MaxSim)</td>
+</tr>
+<tr>
+  <td>Chunking</td>
+  <td>1,200-character windows with 200 overlap; tables split up to 3,000 characters, keeping their title and header</td>
+  <td>the same</td>
+</tr>
+<tr>
+  <td>Retrieval</td>
+  <td>Dense + BM25, fused by RRF</td>
+  <td>Dense + BM25, fused by RRF; with <code>RAG_FIN_VISUAL=1</code>, also ColPali (pooled prefetch → full MaxSim)</td>
+</tr>
+<tr>
+  <td>Rerank</td>
+  <td><strong>None yet</strong>: RRF order (section 6.2)</td>
+  <td>Cross-encoder when <code>RAG_RERANKER_MODEL</code> is set, plus the relevance floor</td>
+</tr>
+<tr>
+  <td>Agent backend</td>
+  <td><code>RAG_BACKEND=financial_vlm</code> (<code>RAG_VLM_DIR</code>)</td>
+  <td><code>RAG_BACKEND=financial_qdrant</code> (<code>RAG_INGEST_DIR</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Page audit routing.</strong> On 20 EDGAR filings (3,316 pages), the audit routed pages as follows:</p>
+<table>
+<thead>
+<tr>
+  <th>Route</th>
+  <th>Share of pages</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>pdfParser</code></td>
+  <td>79.9%</td>
+</tr>
+<tr>
+  <td><code>pdfParser+colpali</code></td>
+  <td>8.6%</td>
+</tr>
+<tr>
+  <td><code>ocr</code></td>
+  <td>8.6%</td>
+</tr>
+<tr>
+  <td><code>qwen3VL</code></td>
+  <td>0.8%</td>
+</tr>
+<tr>
+  <td><code>paidVL</code></td>
+  <td>2.2%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Unreadable pages</strong> are found by two checks in <code>analyse_page</code>, plus outlined text:</p>
+<ul>
+<li><strong>Garbled English:</strong> fewer than 5% stopwords among 40+ words, or <code>�</code> characters.</li>
+<li><strong>Font-encoding garbage</strong> (<code>non_ascii_garbage</code>): more than 30% non-ASCII among 40+ letters and symbols, such as Costco 2024's <code>èçé ´±½¿¬</code>.</li>
+<li><strong>Text drawn as vector outlines:</strong> about 3,000 shapes per page with no text layer, as in Costco 2025. These pages go to OCR too.</li>
+</ul>
+<p>A garbled text layer is never indexed.</p>
+<h2>3. Ingestion flows</h2>
+<h3>3.1 Pipeline 1: Chroma (<code>financial_ingest_chroma_db</code>, <code>--vlm routed</code>)</h3>
+<pre class="mermaid">flowchart TD
+    M[Sector manifest + PDF] --&gt; A[analyse_pdf: page_type, garbled, visual, section, scale]
+    A --&gt; R{page_audit.route}
+    R --&gt;|none| SK[skip]
+    R --&gt;|pdfParser| TL[PDF text layer]
+    R --&gt;|pdfParser+colpali| TT[text layer + native tables as Markdown]
+    R --&gt;|ocr| OC[RapidOCR]
+    R --&gt;|qwen3VL| QV[Qwen3-VL transcription; figures checked vs text layer]
+    QV --&gt;|failed / empty| OC
+    R --&gt;|paidVL| P1[RapidOCR] --&gt; P2[Qwen3-VL] --&gt; P3{more than 10% of figures unconfirmed by OCR?}
+    P3 --&gt;|no| KQ[keep Qwen3-VL]
+    P3 --&gt;|yes, paid model set| PM[paid vision model; keep the reading with fewer unconfirmed figures]
+    TT --&gt; D[Qwen3-VL search description for chart / image pages]
+    QV --&gt; D
+    P2 --&gt; D
+    TL --&gt; C[chunk: 1,200 chars, 200 overlap; tables up to 3,000 with header]
+    TT --&gt; C
+    OC --&gt; C
+    KQ --&gt; C
+    PM --&gt; C
+    D --&gt; C
+    C --&gt; E[MiniLM embeddings, 384-d]
+    E --&gt; CH[(Chroma annual_reports_vlm)]
+    C --&gt; B[(BM25 sidecar: chroma/bm25.sqlite3, FTS5)]
+    C --&gt; S[(vlm_ingest.sqlite3: filing state)]</pre>
+<p>Every reading is cached per page and per reader (<code>cache/vlm_pages/</code>), so a rerun never pays twice. Changing the paid model or the threshold reuses the OCR and Qwen3-VL readings.</p>
+<p><strong>Search descriptions.</strong> Chart and image pages routed <code>pdfParser+colpali</code>, <code>qwen3VL</code> or <code>paidVL</code> get an extra <code>page_description</code> chunk from Qwen3-VL (<code>DESCRIBE_PROMPT</code>).</p>
+<ul>
+<li><strong>What it contains:</strong> the kind of visual, its title, what it measures, the series and the years. It contains no values.</li>
+<li><strong>Example:</strong> <em>&quot;Chart on page 2 (page description): Bar chart titled Revenue by segment…&quot;</em></li>
+<li><strong>Not described:</strong> pages routed to OCR (outlined text, scans) and skipped pages. A failed description is skipped, and <code>--no-describe-visuals</code> turns them off.</li>
+<li><strong>Number check:</strong> any figure in a description that the page doesn't print is flagged in <code>unverified_numbers</code>.</li>
+<li><strong>Measured:</strong> about 54 s per page with Qwen3-VL-2B on CPU (llama.cpp).</li>
+</ul>
+<h3>3.2 Pipeline 2: Qdrant (<code>financial_ingest_qdrant_db</code>, stages <code>text,visual</code>)</h3>
+<pre class="mermaid">flowchart TD
+    M[Sector manifest + PDF] --&gt; A[analyse_pdf in worker processes]
+    A --&gt; T{text stage}
+    T --&gt;|readable| TL[text layer + native tables as Markdown]
+    T --&gt;|garbled / outlined / scanned| OC[RapidOCR full page]
+    TL --&gt; C[chunk: 1,200 / 200; tables up to 3,000]
+    OC --&gt; C
+    C --&gt; DV[MiniLM dense, 384-d]
+    C --&gt; SV[BM25 sparse: number-aware terms, hashed term ids, IDF in Qdrant]
+    DV --&gt; QT[(annual_reports_text)]
+    SV --&gt; QT
+    A --&gt; V{visual stage: table, chart or image page?}
+    V --&gt;|yes| IMG[render page at 1.5x] --&gt; CP[ColPali v1.3: 1,030 x 128 multivector]
+    CP --&gt; FULL[full multivector, fp16, on disk]
+    CP --&gt; POOL[mean of 32 rows + 32 columns + 6 special tokens: 38 x 128 each, fp16, RAM]
+    A --&gt; SUM[page text up to 4,000 chars → MiniLM summary vector]
+    FULL --&gt; QV[(annual_reports_visual)]
+    POOL --&gt; QV
+    SUM --&gt; QV
+    QT --&gt; ST[(ingest.sqlite3: per-filing, per-stage state)]
+    QV --&gt; ST</pre>
+<p>Run <code>STAGES=&quot;text&quot;</code> on a CPU runtime first, then <code>STAGES=&quot;visual&quot;</code> on a GPU. Each stage is recorded separately, so neither repeats.</p>
+<h2>4. Query flows</h2>
+<p>Both backends return the same evidence keys (<code>chunk_schema.EVIDENCE_KEYS</code>), so the agents, the critic and the API work unchanged on either one.</p>
+<pre class="mermaid">flowchart LR
+    Q[question + ticker / year / sector filters] --&gt; E[MiniLM query vector]
+    Q --&gt; K[number-aware query terms]
+    subgraph P1[Pipeline 1: Chroma]
+      E --&gt; CD[Chroma dense, cosine HNSW: top 50]
+      K --&gt; CB[FTS5 BM25: top 50]
+      CD --&gt; RR1[RRF k=60]
+      CB --&gt; RR1
+      RR1 --&gt; O1[top k]
+    end
+    subgraph P2[Pipeline 2: Qdrant]
+      E --&gt; QD[dense: top 50]
+      K --&gt; QS[BM25 sparse with IDF: top 50]
+      QD --&gt; RR2[RRF k=60 → 30 candidates]
+      QS --&gt; RR2
+      RR2 --&gt; CE[cross-encoder rerank]
+      E -.RAG_FIN_VISUAL.-&gt; VP[ColPali query: prefetch 200 each on mean_rows, mean_cols, summary]
+      VP --&gt; MS[exact MaxSim on full vectors: top 20]
+      MS --&gt; CE
+      CE --&gt; O2[top k; the best visual page keeps one slot]
+    end
+    O1 --&gt; F[relevance floor for reranked hits] --&gt; G[agents: Q&amp;A / trend / router]
+    O2 --&gt; F</pre>
+<p>What happens at each step:</p>
+<ul>
+<li><strong>Filters.</strong> <code>ticker</code>, <code>fiscal_year</code> and <code>sector_slug</code> are applied inside both databases, before ranking.</li>
+<li><strong>Fusion.</strong> The agent sees how each hit matched, for example <code>matched_by: bm25 #1, dense #8</code>.</li>
+<li><strong>Agents.</strong> Each company × year or fiscal-year target runs as its own filtered search (see <a href="agent_flows.html">agent_flows.md</a>).</li>
+<li><strong>Relevance floor.</strong> With the reranker on, a question whose best cross-encoder score is below <code>RAG_MIN_RERANK_SCORE</code> (default −4) gets no answer.</li>
+<li><strong><code>/retrieve</code>.</strong> This endpoint returns the ranked hits with no floor.</li>
+</ul>
+<h2>5. Collections and metadata</h2>
+<h3>5.1 Collections</h3>
+<table>
+<thead>
+<tr>
+  <th>Store</th>
+  <th>Collection / file</th>
+  <th>Vectors and index</th>
+  <th>Where it lives</th>
+  <th>What one record is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Chroma (Pipeline 1)</td>
+  <td><code>annual_reports_vlm</code></td>
+  <td>384-d, cosine, HNSW (<code>hnsw:space=cosine</code>). New indexes: <code>bge-small-en-v1.5</code> (local or the shared API, §14); the index built so far: MiniLM (a bge copy is in <code>chroma_db_bge</code>)</td>
+  <td><code>&lt;RAG_HOME&gt;/indexes/chroma_db/chroma/</code></td>
+  <td>one chunk: text, table piece or page description</td>
+</tr>
+<tr>
+  <td>Chroma (mutual funds)</td>
+  <td><code>fund_cards_mutual_fund</code></td>
+  <td><code>bge-small-en-v1.5</code> 384-d, cosine</td>
+  <td><code>&lt;RAG_HOME&gt;/indexes/mutual_fund/chroma_mutual_fund/</code> (its own folder)</td>
+  <td>one card per fund and N-PORT filing (§13)</td>
+</tr>
+<tr>
+  <td>SQLite (mutual funds)</td>
+  <td><code>nport_mutual_fund.sqlite3</code>: <code>funds</code>, <code>filings</code>, <code>flows</code>, <code>monthly_returns</code>, <code>holdings</code>, <code>security_map</code>, <code>holding_link</code>, view <code>fund_exposure</code>, <code>company_figures</code></td>
+  <td>— (exact SQL, not vectors)</td>
+  <td><code>&lt;RAG_HOME&gt;/indexes/mutual_fund/</code></td>
+  <td>one fund, filing, holding, mapping or cached company figure (§13)</td>
+</tr>
+<tr>
+  <td>SQLite FTS5 (Pipeline 1)</td>
+  <td><code>chroma/bm25.sqlite3</code>, table <code>chunks(terms, chunk_id, doc_id, ticker, fiscal_year, sector_slug)</code> (only <code>terms</code> is indexed)</td>
+  <td>BM25 over number-aware terms (<code>tokenchars '$,.%'</code>)</td>
+  <td>next to Chroma</td>
+  <td>one chunk's terms</td>
+</tr>
+<tr>
+  <td>Qdrant (Pipeline 2)</td>
+  <td><code>annual_reports_text</code></td>
+  <td><code>dense</code>: MiniLM 384-d, cosine, HNSW m=16 / ef_construct=100, in RAM. <code>bm25</code>: sparse, <code>Modifier.IDF</code>; term ids are the first 4 bytes of each term's SHA-256 (<code>hashing.term_id</code>)</td>
+  <td>Qdrant storage; payloads on disk</td>
+  <td>one chunk</td>
+</tr>
+<tr>
+  <td>Qdrant (Pipeline 2)</td>
+  <td><code>annual_reports_visual</code></td>
+  <td><code>colpali</code>: 1,030 × 128 fp16 multivector, MaxSim, on disk, no HNSW (m=0). <code>mean_rows</code> and <code>mean_cols</code>: 38 × 128 fp16 multivectors, MaxSim, HNSW in RAM. <code>summary</code>: MiniLM 384-d of the page text</td>
+  <td>Qdrant storage; payloads on disk</td>
+  <td>one table, chart or image page</td>
+</tr>
+<tr>
+  <td>SQLite (both)</td>
+  <td><code>vlm_ingest.sqlite3</code> / <code>ingest.sqlite3</code></td>
+  <td>—</td>
+  <td>index root</td>
+  <td>per-filing (and, in Pipeline 2, per-stage) state; the API's company and year list</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Names.</strong> The collection names are this corpus's own, so <code>LocalRAG</code> (<code>multimodal_rag.py</code>, with its <code>docs_text</code> / <code>visual_pages</code>) can share a Qdrant server. Snapshots from before the rename are restored into the new names.</p>
+<p><strong>Embedding signatures.</strong> Each index records the embedding model and chunk settings it was built with. Ingesting with a different model raises an error instead of mixing vectors.</p>
+<h3>5.2 Chunk metadata: one schema for both stores</h3>
+<p><a href="../scripts/rag/chunk_schema.py">chunk_schema.py</a> (<code>FIELDS</code>) builds every stored chunk in both pipelines, and <code>tests/test_chunk_schema.py</code> pins it.</p>
+<ul>
+<li><strong>Chroma encoding:</strong> Chroma metadata only accepts scalars, so list fields are stored as JSON strings and <code>None</code> values are left out. <code>normalize</code> turns them back.</li>
+<li><strong>Visual pages</strong> carry the same filing and page fields, plus the page text (up to 4,000 characters) in their payload.</li>
+</ul>
+<table>
+<thead>
+<tr>
+  <th>Group</th>
+  <th>Fields</th>
+  <th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Filing</td>
+  <td><code>domain</code>, <code>doc_id</code> (<code>edgar_ars_&lt;TICKER&gt;_&lt;YEAR&gt;</code>), <code>filing_id</code>, <code>doc_kind</code>, <code>ticker</code>, <code>company</code>, <code>cik</code>, <code>sector</code>, <code>sector_slug</code>, <code>sic</code>, <code>year</code>, <code>fiscal_year</code>, <code>accession_number</code>, <code>filing_date</code>, <code>source_url</code>, <code>source_type</code>, <code>content_sha256</code>, <code>pdf_name</code>, <code>title</code>, <code>doc_title</code></td>
+  <td>Which filing; the filters use <code>ticker</code>, <code>fiscal_year</code> and <code>sector_slug</code></td>
+</tr>
+<tr>
+  <td>Page</td>
+  <td><code>page</code>, <code>section</code>, <code>page_type</code> (text, table, chart, image, outlined_text, blank), <code>scale</code> (e.g. &quot;in millions&quot;), <code>garbled</code>, <code>visual_rich</code>, <code>page_route</code> (the page audit label)</td>
+  <td>Where in the filing, and how the page was read</td>
+</tr>
+<tr>
+  <td>Chunk</td>
+  <td><code>chunk_id</code> (citable, e.g. <code>annual_report_edgar_ars_COST_2025_p0041_…</code>), <code>point_id</code>, <code>chunk_index</code>, <code>content_type</code> (<code>text</code>, <code>table</code>, <code>page_description</code>), <code>text</code>, <code>table_markdown</code> (list)</td>
+  <td>The evidence the agent cites</td>
+</tr>
+<tr>
+  <td>Provenance</td>
+  <td><code>pipeline</code> (<code>chroma_db</code> / <code>qdrant_db</code>), <code>text_source</code> (<code>native_pdf</code>, <code>ocr</code>, <code>vlm</code>), <code>reader</code> (<code>pdfParser</code>, <code>ocr</code>, <code>qwen3VL</code>, <code>paidVL</code>, <code>openaiVL</code>, <code>mock</code>), <code>reader_model</code>, <code>escalation</code>, <code>number_check</code> (<code>text_layer</code>, <code>ocr</code>, <code>ocr_only</code>, <code>no_text_layer</code>, <code>no_reference</code>), <code>unverified_numbers</code> (the page's), <code>unverified_in_chunk</code> (this chunk's)</td>
+  <td>How trustworthy the text is; figures a model wrote that the page doesn't print are listed, never silently trusted</td>
+</tr>
+</tbody>
+</table>
+<p>The agent receives these as evidence keys (<code>EVIDENCE_KEYS</code>):</p>
+<ul>
+<li><code>chunk_id</code>, <code>text</code>, <code>preview</code>, <code>title</code>, <code>company</code>, <code>ticker</code>, <code>year</code>, <code>sector</code>, <code>page</code>, <code>section</code>, <code>scale</code>;</li>
+<li><code>source_url</code>, <code>content_type</code>, <code>text_source</code>, <code>reader</code>, <code>unverified_numbers</code>, <code>table_markdown</code>;</li>
+<li>the scores <code>score</code>, <code>rrf_score</code> and <code>rerank_score</code>;</li>
+<li><code>retrieval_paths</code>, <code>retrieval_ranks</code> and <code>metadata</code>.</li>
+</ul>
+<h2>6. Models</h2>
+<h3>6.1 Ingestion</h3>
+<table>
+<thead>
+<tr>
+  <th>Task</th>
+  <th>Model</th>
+  <th>Where it runs</th>
+  <th>Used by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Text embeddings (chunks, page summaries)</td>
+  <td>Pipeline 1: <code>BAAI/bge-small-en-v1.5</code> (384-d, default since 14 November 2026; locally or through the shared Track B embedding API, same vectors). Pipeline 2: <code>sentence-transformers/all-MiniLM-L6-v2</code> (384-d)</td>
+  <td>CPU or GPU, or the shared API</td>
+  <td>both pipelines</td>
+</tr>
+<tr>
+  <td>Fund cards</td>
+  <td><code>BAAI/bge-small-en-v1.5</code> (local or shared API)</td>
+  <td>CPU</td>
+  <td>mutual funds (§13)</td>
+</tr>
+<tr>
+  <td>Page images → visual vectors</td>
+  <td><code>vidore/colpali-v1.3-hf</code> through <code>transformers</code> (128-d multivectors, 1,030 per page)</td>
+  <td>GPU (T4 or better); very slow on CPU</td>
+  <td>Pipeline 2, visual stage</td>
+</tr>
+<tr>
+  <td>Page transcription and search descriptions</td>
+  <td><code>Qwen/Qwen3-VL-4B-Instruct</code> (default; <code>-2B</code> for speed, <code>-8B</code> on L4/A100), in-process with <code>transformers</code> (4-bit with bitsandbytes on CUDA), or any OpenAI-compatible endpoint (<code>--qwen-reader openai</code>: vLLM, llama.cpp, Ollama)</td>
+  <td>GPU; about 50–100 s per page on CPU (measured with 2B)</td>
+  <td>Pipeline 1, <code>qwen3VL</code> / <code>paidVL</code> pages and descriptions</td>
+</tr>
+<tr>
+  <td>Paid fallback reader</td>
+  <td>any OpenAI-compatible vision model (<code>RAG_PAID_VISION_API_BASE</code> / <code>_MODEL</code> / <code>_API_KEY</code>)</td>
+  <td>hosted API</td>
+  <td>Pipeline 1, <code>paidVL</code> pages with more than 10% unconfirmed figures; off unless configured, and pending mentor approval (<a href="chart_reading.html">chart_reading.md</a>)</td>
+</tr>
+<tr>
+  <td>OCR</td>
+  <td>RapidOCR (PP-OCR detection and recognition models, ONNX Runtime)</td>
+  <td>CPU</td>
+  <td>both pipelines</td>
+</tr>
+<tr>
+  <td>Tables</td>
+  <td>PyMuPDF <code>find_tables</code> (rule-based, not a model)</td>
+  <td>CPU</td>
+  <td>both pipelines</td>
+</tr>
+<tr>
+  <td>Offline / tests</td>
+  <td><code>hashing</code> embeddings (<code>scripts/rag/hashing.py</code>: log-scaled term counts folded into 384 dimensions)</td>
+  <td>CPU</td>
+  <td>smoke runs and tests only</td>
+</tr>
+</tbody>
+</table>
+<h3>6.2 Retrieval and ranking</h3>
+<table>
+<thead>
+<tr>
+  <th>Step</th>
+  <th>Model or method</th>
+  <th>Pipeline 1 (Chroma)</th>
+  <th>Pipeline 2 (Qdrant)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Query embedding</td>
+  <td>the index's recorded model (must match): bge-small (Pipeline 1, new) or MiniLM (Pipeline 2, and the Chroma index built so far)</td>
+  <td>✓</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Lexical search</td>
+  <td>BM25 over number-aware terms (<code>391,035</code>, <code>391035</code> and <code>$6.08</code> kept whole)</td>
+  <td>SQLite FTS5 <code>bm25()</code></td>
+  <td>Qdrant sparse vectors with IDF</td>
+</tr>
+<tr>
+  <td>Fusion</td>
+  <td>Reciprocal Rank Fusion, k = 60 (<code>scripts/rag/hybrid.py</code>)</td>
+  <td>✓</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Visual search</td>
+  <td>ColPali v1.3 query encoder; pooled prefetch, then exact MaxSim</td>
+  <td>—</td>
+  <td>with <code>RAG_FIN_VISUAL=1</code> (or <code>auto</code>)</td>
+</tr>
+<tr>
+  <td>Rerank</td>
+  <td>Cross-encoder <code>cross-encoder/ms-marco-MiniLM-L-6-v2</code> (<code>RAG_RERANKER_MODEL</code>; turned on automatically when a local copy exists)</td>
+  <td><strong>not applied</strong></td>
+  <td>✓ (30 candidates → top k)</td>
+</tr>
+<tr>
+  <td>Relevance floor</td>
+  <td><code>RAG_MIN_RERANK_SCORE</code> (default −4) on reranked hits</td>
+  <td>— (nothing is reranked)</td>
+  <td>✓</td>
+</tr>
+</tbody>
+</table>
+<h3>6.3 Answering and checking (not ingestion, listed for completeness)</h3>
+<table>
+<thead>
+<tr>
+  <th>Task</th>
+  <th>Model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Plain-text check, planner, router, figure extraction (trend), answer</td>
+  <td>Track B hosted <strong>Qwen/Qwen3-8B</strong> (<code>LLM_MODEL</code>; thinking off, ≤1,024 output tokens, one request at a time); <code>mock</code> offline</td>
+</tr>
+<tr>
+  <td>Critic support judge</td>
+  <td>the same Qwen3-8B, in its own call</td>
+</tr>
+<tr>
+  <td>Figure, citation and calculator checks</td>
+  <td>code, no model</td>
+</tr>
+</tbody>
+</table>
+<h2>7. Evaluation metrics</h2>
+<h3>7.1 Retrieval</h3>
+<p>The code is <a href="../scripts/rag/retrieval_metrics.py">retrieval_metrics.py</a>, driven by <code>scripts/evaluation/evaluate_financial_rag.py</code>. The API's <code>response_metrics</code> scores the evidence any workflow returns.</p>
+<table>
+<thead>
+<tr>
+  <th>Metric</th>
+  <th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Recall@k</strong> (k = 1, 5, 10)</td>
+  <td>Relevant chunks (or pages) in the top k ÷ all relevant ones</td>
+</tr>
+<tr>
+  <td><strong>nDCG@5</strong></td>
+  <td>DCG of the top 5 with linear relevance gains (ViDoRe / trec_eval convention) ÷ the ideal DCG; duplicates earn gain once</td>
+</tr>
+<tr>
+  <td><strong>MRR</strong></td>
+  <td>1 ÷ rank of the first relevant hit, averaged over questions</td>
+</tr>
+<tr>
+  <td><strong>Gold page retrieved</strong></td>
+  <td>The share of questions whose gold page is among the retrieved pages (architecture notebooks)</td>
+</tr>
+<tr>
+  <td>ColPali pooling (<a href="../scripts/evaluation/colab_colpali_pooling_eval.py">colab_colpali_pooling_eval.py</a>)</td>
+  <td>Recall@1/5/10 and MRR per pooling variant; <code>keeps_full_top5@N</code> (the share of exact full-ColPali top-5 pages kept by an N-page pooled prefetch, N = 20…200); agreement of the top 20 with full MaxSim</td>
+</tr>
+</tbody>
+</table>
+<h3>7.2 Answers: the frozen evaluation set</h3>
+<p><strong>The set.</strong> <code>data/evaluation/financial_report_qa/eval_set_v1.jsonl</code> holds <strong>86 items</strong>, frozen and reviewed. Gold values come from XBRL facts and the filings.</p>
+<table>
+<thead>
+<tr>
+  <th>Category</th>
+  <th>Items</th>
+  <th>Scored as correct when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>single_figure</code></td>
+  <td>40</td>
+  <td>A figure in the answer matches the gold value at the printed precision and unit scale</td>
+</tr>
+<tr>
+  <td><code>computed_metric</code></td>
+  <td>10</td>
+  <td>The same rule, for growth, margins and ratios</td>
+</tr>
+<tr>
+  <td><code>text_fact</code></td>
+  <td>10</td>
+  <td>The key words (auditor) or the number (employees, within tolerance) appear</td>
+</tr>
+<tr>
+  <td><code>refusal</code></td>
+  <td>8</td>
+  <td>The agent declines (advice, prediction, prompt injection)</td>
+</tr>
+<tr>
+  <td><code>comparison</code></td>
+  <td>6</td>
+  <td>The right company is named first, and the agent doesn't decline</td>
+</tr>
+<tr>
+  <td><code>chart_value</code></td>
+  <td>6</td>
+  <td>Every chart value is in the answer (FIN-067–072)</td>
+</tr>
+<tr>
+  <td><code>not_disclosed</code></td>
+  <td>6</td>
+  <td>The agent says the filings don't disclose it, with no figure</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Per-item checks</strong> (<code>prompt_baselines.score</code>):</p>
+<ul>
+<li>whether the gold value appears anywhere in the retrieved evidence (<code>gold_in_evidence</code>), which separates retrieval misses from reading misses;</li>
+<li>the declined flag;</li>
+<li>the strategy used.</li>
+</ul>
+<p><strong>Architecture comparison.</strong> The notebooks in <code>notebooks/rag_architectures/</code> use the same scoring code on <strong>66 gold questions</strong> from Chevron's 2024 report:</p>
+<table>
+<thead>
+<tr>
+  <th>Metric</th>
+  <th>Definition</th>
+  <th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Numeric number-match rate</td>
+  <td>Numeric questions answered with the gold figure (exact, or correctly rounded with ≥3 significant digits), split by tables / narrative / charts</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>Text-fact accuracy</td>
+  <td>Text questions with every gold key word</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td><strong>Faithfulness</strong></td>
+  <td>RAGAS-style: supported claims ÷ claims, judged by Qwen in a separate call; an unreadable verdict counts as unsupported</td>
+  <td>&gt; 0.98</td>
+</tr>
+<tr>
+  <td><strong>Negative refusal accuracy</strong></td>
+  <td>Unanswerable questions correctly declined</td>
+  <td>&gt; 0.95</td>
+</tr>
+<tr>
+  <td>False refusal rate</td>
+  <td>Answerable questions declined</td>
+  <td>lower is better</td>
+</tr>
+<tr>
+  <td>Fallback rate</td>
+  <td>Answers that fell back to excerpts instead of the model's text</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>Latency</td>
+  <td>Median retrieval and total seconds per question</td>
+  <td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Latest scoreboard in the repo</strong> (<code>results/rag_arch/architecture_scoreboard.csv</code>, 66 questions, Chevron 2024). <code>04_vlm_chroma</code> is the predecessor of Pipeline 1.</p>
+<table>
+<thead>
+<tr>
+  <th>Architecture</th>
+  <th>Number match (tables / narrative / charts)</th>
+  <th>Text facts</th>
+  <th>Faithfulness</th>
+  <th>Negative refusal</th>
+  <th>False refusal</th>
+  <th>Gold page retrieved</th>
+  <th>Median total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>04_vlm_chroma</code></td>
+  <td>0.50 (0.62 / 0.50 / 0.13)</td>
+  <td>0.83</td>
+  <td>0.82 ✗</td>
+  <td>1.00 ✓</td>
+  <td>0.28</td>
+  <td>0.67</td>
+  <td>4.4 s</td>
+</tr>
+<tr>
+  <td><code>05_clip_chroma</code></td>
+  <td>0.23 (0.27 / 0.33 / 0.00)</td>
+  <td>0.00</td>
+  <td>0.86 ✗</td>
+  <td>1.00 ✓</td>
+  <td>0.70</td>
+  <td>0.30</td>
+  <td>7.0 s</td>
+</tr>
+</tbody>
+</table>
+<p>These numbers show chart values as the weakest kind of question, which <a href="chart_reading.html">chart_reading.md</a> addresses. Neither pipeline has been scored yet on the full <code>min500</code> index.</p>
+<h3>7.3 Checks on every live answer</h3>
+<p>These are reported in each API response; they are not offline metrics.</p>
+<table>
+<thead>
+<tr>
+  <th>Check</th>
+  <th>Where</th>
+  <th>Result field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Citation validity: every cited chunk ID was retrieved</td>
+  <td>critic, <code>apply_grounding_policy</code></td>
+  <td><code>citation_check</code>, <code>grounding.status</code></td>
+</tr>
+<tr>
+  <td>Numeric grounding: every figure appears in a cited chunk or the calculator's results</td>
+  <td><code>financial_tools.numeric_grounding</code></td>
+  <td><code>support_check.numeric</code></td>
+</tr>
+<tr>
+  <td>Claim support: an LLM judge, claim by claim</td>
+  <td>critic</td>
+  <td><code>support_check.verdict</code> (<code>supported</code>, <code>partially_supported</code>, <code>unsupported</code>, <code>unverified</code>)</td>
+</tr>
+<tr>
+  <td>Company scope: no citation from a company the question didn't ask about</td>
+  <td><code>company_scope_check</code></td>
+  <td><code>company_check</code></td>
+</tr>
+<tr>
+  <td>Trend series: each year's figure verified in that year's evidence</td>
+  <td>trend agent</td>
+  <td><code>trend.points[].status</code></td>
+</tr>
+</tbody>
+</table>
+<h2>8. Where everything lives</h2>
+<p>All environments use one layout under <code>RAG_HOME</code> (<a href="deployment.html">deployment.md</a> §7). Folders built before this layout (<code>colpali_qdrant</code>, <code>vlm_chroma</code>, <code>financial_qdrant</code>, <code>financial_vlm</code>, <code>snapshots/colpali_qdrant</code>, <code>indexes/vlm_chroma</code>, <code>vlm_pages/</code>) are still found.</p>
+<p><strong>Google Drive</strong> (<code>MyDrive/capstone_rag/</code>; durable, paid storage):</p>
+<pre><code>capstone_code.zip                     code (python -m scripts.common.colab_bundle)
+annual_reports/
+    corpus_plan.jsonl                 copied from the repo
+    pdf_manifest.jsonl                all sectors (local_path = &lt;sector&gt;/&lt;file&gt;.pdf)
+    banking/pdf_manifest.jsonl        this sector (local_path = &lt;file&gt;.pdf)
+    banking/EDGAR_ARS_JPM_2025.pdf
+    ... 13 sector folders
+indexes/chroma_db/                    Pipeline 1: chroma/ (+ bm25.sqlite3), vlm_ingest.sqlite3, pages/
+cache/vlm_pages/                      Pipeline 1 readings (OCR, Qwen3-VL, paid), one JSONL per filing (append-only)
+snapshots/qdrant_db/                  Pipeline 2: annual_reports_text-*.snapshot, annual_reports_visual-*.snapshot, ingest.sqlite3, pages/
+page_audit/&lt;sector&gt;/&lt;pdf&gt;.csv         page audit (pageNumber,parserUsage) + _summary.csv / _summary.json
+</code></pre>
+<p><strong>Colab local disk</strong> (<code>/content/rag/</code> = <code>RAG_HOME</code>; fast, lost at disconnect):</p>
+<pre><code>annual_reports/&lt;sector&gt;/              the staged PDFs being ingested
+indexes/chroma_db/                    Pipeline 1: chroma/, vlm_ingest.sqlite3, pages/
+indexes/qdrant_db/                    Pipeline 2: ingest.sqlite3, pages/, qdrant_storage/, snapshots/
+cache/hf/                             HF_HOME (MiniLM, ColPali, Qwen3-VL)
+bin/qdrant, qdrant.log, logs/         Qdrant server binary; API and Streamlit logs
+</code></pre>
+<p>Smoke runs (<code>SMOKE_TEST = True</code>) write to <code>chroma_db_smoke</code> / <code>qdrant_db_smoke</code> (with embedded Qdrant) and never touch the real index.</p>
+<p><strong>On your PC:</strong> <code>indexes/rag_home/indexes/chroma_db</code> and <code>indexes/rag_home/indexes/qdrant_db</code> (embedded Qdrant), plus <code>indexes/rag_home/indexes/mutual_fund/</code> (fund database, fund cards and the downloaded N-PORT XML, §13). <strong>GCP:</strong> the same layout on the VM's persistent disk, copied from <code>gs://$RAG_GCS_BUCKET</code>.</p>
+<h2>9. Serving</h2>
+<p><a href="../scripts/common/runtime_profile.py">scripts/common/runtime_profile.py</a> fills the defaults from the layout; anything you set yourself wins. Deployment steps per environment are in <a href="deployment.html">deployment.md</a> §7.2.</p>
+<table>
+<thead>
+<tr>
+  <th></th>
+  <th>local</th>
+  <th>colab</th>
+  <th>server / gcp</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>RAG_VLM_DIR</code> (Pipeline 1)</td>
+  <td><code>&lt;RAG_HOME&gt;/indexes/chroma_db</code></td>
+  <td>same</td>
+  <td>same</td>
+</tr>
+<tr>
+  <td><code>RAG_INGEST_DIR</code> (Pipeline 2)</td>
+  <td><code>&lt;RAG_HOME&gt;/indexes/qdrant_db</code></td>
+  <td>same</td>
+  <td>same</td>
+</tr>
+<tr>
+  <td><code>QDRANT_URL</code></td>
+  <td>unset (embedded)</td>
+  <td><code>http://127.0.0.1:6333</code></td>
+  <td><code>http://qdrant:6333</code></td>
+</tr>
+<tr>
+  <td><code>RAG_BACKEND</code></td>
+  <td><code>financial_qdrant</code> if its <code>ingest.sqlite3</code> exists, else <code>financial_vlm</code> if <code>vlm_ingest.sqlite3</code> exists</td>
+  <td>same</td>
+  <td>same</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Choosing a pipeline.</strong> When both indexes exist, the automatic choice prefers Pipeline 2. To serve Pipeline 1, set <code>RAG_BACKEND=financial_vlm</code>; the Chroma notebook's <code>cp.serve</code> does this. To serve both side by side, run one API per backend (for example ports 8000 and 8001).</p>
+<p><strong>UI and filters.</strong></p>
+<ul>
+<li>The Streamlit sidebar has a <strong>Sectors</strong> picker, a <strong>Retrieval mode</strong> (<code>hybrid</code>, or <code>dense</code> / <code>bm25</code> for comparisons) and the agent <strong>Technique</strong> (default <code>router</code>).</li>
+<li><code>/chat</code>, <code>/conversation</code> and <code>/retrieve</code> accept <code>ticker</code>, <code>year</code> and <code>sector</code>; the filters apply to both pipelines.</li>
+</ul>
+<h2>10. Commands</h2>
+<pre><code class="language-bash"># Pipeline 1: Chroma text index (routed readers; the paid model needs RAG_PAID_VISION_API_BASE / _MODEL / _API_KEY)
+python -m scripts.rag.colab_pipeline run --pipeline vlm_chroma --corpus-preset min500 --max-per-sector 0
+python -m scripts.rag.financial_ingest_chroma_db ingest --manifest data/raw/financial_report_qa/annual_reports --sectors banking --vlm routed
+python -m scripts.rag.financial_ingest_chroma_db query &quot;net interest income&quot; --sector banking
+
+<h1>Pipeline 2: Qdrant text + ColPali index</h1>
+<p>python -m scripts.rag.colab_pipeline run --pipeline colpali_qdrant --corpus-preset min500 --max-per-sector 0
+python -m scripts.rag.colab_pipeline query --pipeline colpali_qdrant &quot;net interest income&quot; --sector banking</p>
+<h1>Both</h1>
+<p>python -m scripts.rag.colab_pipeline coverage --pipeline vlm_chroma
+python -m scripts.rag.page_audit --manifest data/raw/financial_report_qa/annual_reports --corpus-preset min500
+python -m scripts.rag.colab_pipeline export --pipeline vlm_chroma --bucket gs://capstone-rag-&lt;name&gt;   # for GCP</p>
+<h1>locally, embedded Qdrant and offline vectors:</h1>
+<p>python -m scripts.rag.colab_pipeline run --pipeline colpali_qdrant --qdrant-url &quot;&quot; --embedding-provider hashing --sectors banking --max-per-sector 2</p>
+<h1>Evaluation</h1>
+<p>python scripts/evaluation/evaluate_financial_rag.py --embedding-provider hashing --generate-silver   # retrieval smoke test
+</code></pre></p>
+<h2>11. Sizes</h2>
+<p>The page mix was measured on 100 local filings and scaled to about 147,600 pages.</p>
+<table>
+<thead>
+<tr>
+  <th>Item</th>
+  <th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>PDFs</td>
+  <td>11.3 GB full, 5.4 GB min500 (on Drive, and staged per sector on local disk)</td>
+</tr>
+<tr>
+  <td>Page mix (measured: 14,701 pages)</td>
+  <td>text or blank 68.9%, table 10.4%, chart or image 7.7%, unreadable 13.1%</td>
+</tr>
+<tr>
+  <td>Pipeline 1 model pages</td>
+  <td>about 3% of pages need Qwen3-VL or the paid model, and about 10% need OCR (page audit, 20 filings)</td>
+</tr>
+<tr>
+  <td>Pipeline 2 ColPali full vectors</td>
+  <td>~264 KB per selected page: <strong>~7 GB</strong> for the table, chart and image pages (18.0%, ~26,600 pages)</td>
+</tr>
+<tr>
+  <td>Pipeline 2 pooled vectors (RAM)</td>
+  <td>~19 KB per selected page: <strong>~0.5 GB</strong></td>
+</tr>
+<tr>
+  <td>Snapshot rotation</td>
+  <td>The new snapshot is written before the old one is deleted, so it can take up to 2× on Drive, plus a local copy on the VM</td>
+</tr>
+<tr>
+  <td>Measured locally (Retail test, 5 filings, <code>--vlm ocr</code>, CPU)</td>
+  <td>Pipeline 1: 82 s for Walmart 2025 (97 pages, 11 OCR'd, 421 chunks)</td>
+</tr>
+</tbody>
+</table>
+<h2>12. Known limits</h2>
+<ul>
+<li><strong>Qwen3-VL and the paid model haven't run on a GPU yet.</strong> Routing, OCR, cross-checks and fallbacks are tested with real OCR and stand-in models, so the first Colab run is the real test. Reading one page at a time with <code>transformers</code> is slow at full scale; serve Qwen3-VL with vLLM and use <code>--qwen-reader openai</code>.</li>
+<li><strong>Pipeline 1 has no cross-encoder rerank</strong> and therefore no relevance floor. Its order is RRF over dense + BM25. Adding the cross-encoder there is small (the same <code>cross_encoder_rerank</code> call), but it isn't done yet.</li>
+<li><strong>Mixed pages:</strong> a text page with a small embedded chart is read through its text layer only, so values that exist only as pixels are missed.</li>
+<li><strong>Evaluation coverage:</strong> the scoreboard above is from one filing (Chevron 2024). The frozen 86-item set hasn't been run against the <code>min500</code> indexes yet.</li>
+<li><strong>Not implemented</strong> from <a href="financial_rag_final_design.html">financial_rag_final_design.md</a>: the 10-K HTML/iXBRL text source and the facts DB. Numbers come from the ARS PDFs only.</li>
+</ul>
+<h2>13. Mutual fund data beside the annual-report index</h2>
+<p>Added 14 November 2026. Design and measurements: <a href="mutual_fund_rag_design.html">mutual_fund_rag_design.md</a>. Every file of this layer has <code>_mutual_fund</code> in its name.</p>
+<p><strong>What it is.</strong> US mutual funds and ETFs report their full portfolio on SEC Form N-PORT. A fund's holdings are mapped to the corpus companies, so a question can go from a fund to the annual reports of the companies it holds. The data is exact numbers that are summed and ranked, so it is stored in <strong>SQLite</strong>, not embedded; only a short <strong>fund card</strong> per fund and filing is embedded, so search can find a fund by the way people name it.</p>
+<pre><code>EDGAR NPORT-P XML ──download_mutual_fund──▶ raw_mutual_fund/ ──nport_mutual_fund load──▶ nport_mutual_fund.sqlite3 ──cards_mutual_fund build──▶ Chroma fund_cards_mutual_fund
+(or the quarterly bulk ZIP, 440 MB)          + manifest_mutual_fund.jsonl                     holdings → corpus tickers               (bge-small-en-v1.5)
+                                                                                                │
+                                                       fund agent (router `fund` route) ◀───────┴──── links each holding to its company's annual report in annual_reports_vlm
+</code></pre>
+<table>
+<thead>
+<tr>
+  <th>Stage</th>
+  <th>Code</th>
+  <th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Download</td>
+  <td><code>scripts/downloads/download_mutual_fund.py</code> (<code>latest</code>, <code>bulk</code>)</td>
+  <td>The newest <code>NPORT-P</code> of each fund in <code>configs/funds_mutual_fund.json</code> (EDGAR, <code>SEC_USER_AGENT</code> contact), or one quarterly ZIP</td>
+</tr>
+<tr>
+  <td>Load</td>
+  <td><code>scripts/rag/nport_mutual_fund.py load</code></td>
+  <td>XML or ZIP (streamed) into the tables; re-loading a filing replaces it</td>
+</tr>
+<tr>
+  <td>Map</td>
+  <td>same, <code>map_holdings</code></td>
+  <td>Holding → corpus ticker by reported ticker, issuer CUSIP-6, ISIN, LEI, then cleaned name (equity of corporate issuers only). Identifiers matched once are learned. Unmatched holdings stay unmatched</td>
+</tr>
+<tr>
+  <td>Cards</td>
+  <td><code>scripts/rag/cards_mutual_fund.py build</code></td>
+  <td>One card per filing (fund, date, net assets, top 10, sector mix, corpus coverage), embedded with bge-small into <code>fund_cards_mutual_fund</code></td>
+</tr>
+<tr>
+  <td>Check</td>
+  <td><code>nport_mutual_fund status</code>, <code>cards_mutual_fund search &quot;...&quot;</code></td>
+  <td>Funds, periods, coverage by mapping method; nearest cards</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Holdings date.</strong> <code>filings.period_end</code> is the date the holdings are reported for (<code>REPORT_DATE</code> in the bulk data, <code>repPdDate</code> in the XML). <code>REPORT_ENDING_PERIOD</code> / <code>repPdEnd</code> is the fund's fiscal year end, kept as <code>fiscal_year_end</code>.</p>
+<p><strong>Link to the annual reports.</strong> A question about the holdings' companies uses, for each company, its latest annual report filed on or before the holdings date (manifest <code>filing_date</code>) that is indexed: no look-ahead, and never a filing the index doesn't hold. Figures are read from that filing (statement row in code, LLM last) and cached in <code>company_figures</code> with their chunk ID.</p>
+<p><strong>Loaded now</strong> (holdings as of 30 June 2026):</p>
+<table>
+<thead>
+<tr>
+  <th>Fund</th>
+  <th>Corpus companies held</th>
+  <th>Share of net assets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Vanguard 500 Index</td>
+  <td>240</td>
+  <td>86.7%</td>
+</tr>
+<tr>
+  <td>Vanguard Growth Index</td>
+  <td>73</td>
+  <td>90.1%</td>
+</tr>
+<tr>
+  <td>Vanguard Value Index</td>
+  <td>176</td>
+  <td>82.6%</td>
+</tr>
+<tr>
+  <td>Vanguard Total Stock Market Index</td>
+  <td>274</td>
+  <td>77.3%</td>
+</tr>
+</tbody>
+</table>
+<p>With 52 companies indexed today, most of the largest holdings' annual reports are not yet searchable; questions about them list those companies as not used.</p>
+<pre><code class="language-bash">export SEC_USER_AGENT=&quot;capstone-research you@example.com&quot;
+python -m scripts.downloads.download_mutual_fund latest                        # configs/funds_mutual_fund.json
+python -m scripts.rag.nport_mutual_fund load --xml indexes/rag_home/indexes/mutual_fund/raw_mutual_fund
+python -m scripts.rag.cards_mutual_fund build                                   # bge-small, local; --embedding-provider hosted for the shared API
+python -m scripts.rag.nport_mutual_fund status
+# many funds: the quarterly ZIP
+python -m scripts.downloads.download_mutual_fund bulk --quarter 2026q3
+python -m scripts.rag.nport_mutual_fund load --tsv-zip indexes/rag_home/indexes/mutual_fund/raw_mutual_fund/2026q3_nport_mutual_fund.zip --top 50
+</code></pre>
+<p><strong>Colab and GCP.</strong> <code>python -m scripts.rag.colab_pipeline pack-funds</code> zips the folder to <code>output/colab/mutual_fund_data.zip</code>; uploaded to <code>MyDrive/capstone_rag/</code>, it is restored by <code>cp.restore</code> on Colab, exported by <code>cp.export_to_gcs</code> to <code>gs://&lt;bucket&gt;/indexes/mutual_fund</code>, and pulled by <code>deploy/sync_from_gcs.sh</code> / <code>restore_index.sh</code> on the VM (<a href="deployment.html">deployment.md</a> §7.4).</p>
+<p><strong>Isolation.</strong> The fund code never opens <code>chroma_db</code>; the annual-report collections, their chunk schema and <code>tests/test_chunk_schema.py</code> are unchanged. Without <code>nport_mutual_fund.sqlite3</code> the API and agents behave exactly as before.</p>
+<h2>14. Pipeline 1 embeddings: bge-small-en-v1.5</h2>
+<p>Since 14 November 2026 Pipeline 1 embeds with <code>BAAI/bge-small-en-v1.5</code> by default: locally (<code>--embedding-provider local</code>) or through the shared Track B embedding API (<code>hosted</code>, needs <code>EMBEDDING_API_KEY</code> and the API's CA; see <a href="embedding_key.html">embedding_key.md</a>). The API serves the same model and returns the same vectors (cosine 1.0), so an index built one way is continued or served the other way without redoing filings. <code>RAG_EMBEDDING_PROVIDER</code> picks the provider at serving time (the server and GCP profiles prefer <code>hosted</code>), with a fallback to the other if it can't start.</p>
+<p>The 180 filings indexed before the switch were embedded with MiniLM and keep that model: resume them with <code>--embedding-model sentence-transformers/all-MiniLM-L6-v2</code>. <code>financial_ingest_chroma_db reembed --from-root &lt;minilm index&gt; --root &lt;new index&gt;</code> copies the chunks, text, metadata and BM25 index and re-embeds only the vectors (resumable, one filing at a time); a bge copy is being built at <code>indexes/rag_home/indexes/chroma_db_bge</code>. To serve it, point <code>RAG_VLM_DIR</code> at that folder (or swap the folder names) and restart the API. Pipeline 2 still defaults to MiniLM.</p>
+</body></html>
+
+</body></html>

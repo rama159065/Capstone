@@ -1,0 +1,9 @@
+{
+  "description": "Funds whose latest NPORT-P download_mutual_fund fetches: registrant (trust) CIK and a fragment of the series name. Large US equity index funds overlap most with the annual-report corpus (docs/mutual_fund_rag_design.md section 3).",
+  "funds": [
+    {"cik": 36405, "series": "VANGUARD 500 INDEX FUND", "note": "Vanguard 500 Index Fund (Vanguard Index Funds)"},
+    {"cik": 36405, "series": "VANGUARD TOTAL STOCK MARKET INDEX FUND", "note": "Vanguard Total Stock Market Index Fund"},
+    {"cik": 36405, "series": "VANGUARD GROWTH INDEX FUND", "note": "Vanguard Growth Index Fund"},
+    {"cik": 36405, "series": "VANGUARD VALUE INDEX FUND", "note": "Vanguard Value Index Fund"}
+  ]
+}

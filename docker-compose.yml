@@ -4,10 +4,12 @@
 #   docker compose up -d --build    # http://localhost:8501 (UI), http://localhost:8000/docs (API)
 #   docker compose --profile https up -d   # on a server with a domain name: https://$DOMAIN
 #
-# Restore the Colab index once (snapshots copied from Drive into ./snapshots):
-#   docker compose run --rm api python -m scripts.rag.financial_ingest_qdrant_db restore \
-#       --root /app/indexes/financial_qdrant --qdrant-url http://qdrant:6333 --snapshot-dir /snapshots
-# See docs/deployment.md.
+# Indexes live in RAG_HOME_DIR on the host (the storage layout of scripts/common/storage.py), mounted at /app/rag_home.
+# Get them there once, then restore Qdrant and copy Chroma:
+#   GCP VM:   sh deploy/sync_from_gcs.sh                       (bucket -> RAG_HOME_DIR, then restore, then up)
+#   any host: copy the Drive folders into ./snapshots (qdrant_db/*.snapshot, chroma_db/), then
+#             docker compose run --rm --user root api sh deploy/restore_index.sh
+# RAG_PROFILE=gcp in .env on a Google Cloud VM (server otherwise). See docs/deployment.md section 7.
 name: annual-report-copilot
 
 x-app: &app
@@ -17,11 +19,14 @@ x-app: &app
   env_file: .env
   user: "${APP_UID:-1000}:${APP_GID:-1000}"
   environment:
-    RAG_PROFILE: server
+    RAG_PROFILE: ${RAG_PROFILE:-server}            # gcp on a Google Cloud VM
+    RAG_HOME: /app/rag_home
     QDRANT_URL: http://qdrant:6333
     API_BASE_URL: http://api:8000
   volumes:
-    - ./indexes:/app/indexes                       # financial_qdrant/ (ingest state), chroma/, state/, hf_cache/
+    - ${RAG_HOME_DIR:-./indexes/rag_home}:/app/rag_home   # indexes/{qdrant_db,chroma_db}, snapshots/, state/, models/
+    - ${SECRETS_DIR:-./secrets}:/app/rag_home/secrets:ro  # llm_ca.crt (LLM_CA_CERT is set when it exists)
+    - ./indexes:/app/indexes                       # hf_cache/ (HF_HOME) and indexes built before the layout
     - ./data/processed:/app/data/processed:ro      # BM25 chunks of the Chroma domains
     - ${SNAPSHOT_DIR:-./snapshots}:/snapshots:ro   # Qdrant snapshots from Drive, for restore
     - qdrant_snapshots:/qdrant/snapshots           # same path as in the Qdrant container (restore hands it a file:// URI)

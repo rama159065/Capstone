@@ -188,7 +188,7 @@ Qdrant evaluates nested prefetches in one request, so this is a single `query_po
 [`scripts/evaluation/colab_colpali_pooling_eval.py`](../scripts/evaluation/colab_colpali_pooling_eval.py) is standalone: copy it to Colab along with `data/raw/financial_report_qa/edgar/pdf_manifest.jsonl`. It downloads the PDFs from SEC using the manifest URLs, renders the pages at the ingest scale (1.5×), encodes them once on the GPU, and derives all 8 variants from the same vectors.
 
 ```bash
-!pip -q install "transformers>=4.57,<5" "qdrant-client>=1.12,<2" pymupdf sentence-transformers scikit-learn
+!pip -q install "transformers>=4.57,<6" "qdrant-client>=1.12,<2" pymupdf sentence-transformers scikit-learn
 !mkdir -p /content/qdrant && cd /content/qdrant && \
   curl -sL https://github.com/qdrant/qdrant/releases/latest/download/qdrant-x86_64-unknown-linux-gnu.tar.gz | tar xz
 !cd /content/qdrant && nohup ./qdrant > qdrant.log 2>&1 &

@@ -231,7 +231,7 @@ Details are in [deployment.md](deployment.md); the tests are in `tests/test_depl
 
 - **How:**
   - ColPali finds the page (`RAG_FIN_VISUAL=1`).
-  - Values come from the VLM transcription (pipeline 2) or the closed-model pass (see [deployment.md](deployment.md) §5.3).
+  - Values come from the VLM transcription (pipeline 1) or the closed-model pass (see [deployment.md](deployment.md) §5.3).
   - Values not printed on the page stay marked "approximate" and are never used in calculations.
 - **Eval:** the 6 `chart_value` questions in the eval set.
 

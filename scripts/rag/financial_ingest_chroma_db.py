@@ -1,13 +1,13 @@
-"""Pipeline 2 (Chroma only): table, chart and picture pages are read by OCR or a VLM, then chunks go to Chroma.
+"""Pipeline 1 (Chroma only): table, chart and picture pages are read by OCR or a VLM, then chunks go to Chroma.
 
 The two financial ingestion pipelines over the same manifests (one PDF file, or the
 sector corpus folder of scripts/downloads/download_annual_report_corpus.py):
 
-* Pipeline 1, ``scripts.rag.financial_ingest_qdrant_db``: ColPali page vectors in Qdrant
+* Pipeline 2, ``scripts.rag.financial_ingest_qdrant_db``: ColPali page vectors in Qdrant
   ``visual_pages``. Mean-pooled rows and columns are kept in RAM for the first stage,
   and the full 1030 x 128 multivectors are kept on disk for the MaxSim rerank.
   Pages are found from their pixels.
-* Pipeline 2 (this module), **Chroma only**: pages are turned into text first. Pages with a
+* Pipeline 1 (this module), **Chroma only**: pages are turned into text first. Pages with a
   table, chart or picture (or every page, with ``--vlm-pages all``) are rendered and read by
   the page reader chosen with ``--vlm`` (OCR, a local Qwen VLM, or an OpenAI-compatible API,
   self-hosted or paid): tables become Markdown tables, and charts become one line per
@@ -17,7 +17,7 @@ sector corpus folder of scripts/downloads/download_annual_report_corpus.py):
   number-aware terms, ``<root>/chroma/bm25.sqlite3``) is fused with the dense results by RRF,
   so exact figures such as ``391,035`` or ``$6.08`` are matched as whole terms.
 
-Every chunk carries the filing payload of pipeline 1 (ticker, fiscal year, sector,
+Every chunk carries the filing payload of pipeline 2 (ticker, fiscal year, sector,
 page, citable ``chunk_id``), ``text_source`` = vlm / native_pdf / ocr, and
 ````unverified_numbers``: figures the VLM wrote that the page's own text layer does
 not print. A VLM can misread digits, so these are flagged, never trusted silently.
@@ -32,7 +32,8 @@ Page readers (``--vlm``):
   ocr           RapidOCR (CPU, free) plus PyMuPDF's native table extraction as Markdown. Reads printed text,
                 labels and data labels in charts and images; no understanding of chart layout.
   transformers  Qwen3-VL in-process (default Qwen/Qwen3-VL-4B-Instruct; Qwen3-VL-2B / -8B with --vlm-model;
-                4-bit on a CUDA GPU when bitsandbytes is installed; needs transformers >= 4.57). Colab T4/L4.
+                4-bit NF4 on GPUs under 30 GB (T4, L4) when bitsandbytes is installed, bf16 on A100/H100; RAG_VLM_QUANT=
+                nf4|none overrides; needs transformers >= 4.57).
   openai        any OpenAI-compatible vision endpoint (RAG_VISION_API_BASE, RAG_VISION_MODEL,
                 RAG_VISION_API_KEY): self-hosted Qwen-VL on vLLM / llama.cpp / Ollama, or a paid API
                 (OpenAI, Google Gemini's OpenAI endpoint, OpenRouter, ...). HTTP 429/503 are retried after
@@ -48,6 +49,9 @@ Page readers (``--vlm``):
                   page go to the paid model (RAG_PAID_VISION_API_BASE / _MODEL / _API_KEY). The reading with fewer
                   unconfirmed figures is kept; its unconfirmed figures stay in unverified_numbers. Without a paid
                   model configured the Qwen3-VL reading is kept, flagged.
+                Chart and image pages (routed pdfParser+colpali, qwen3VL or paidVL) also get a Qwen3-VL search
+                description: a page_description chunk naming the kind of visual, its title, what it measures, the
+                series and the years, with no values (--no-describe-visuals turns it off).
 Every reader's output is cached per page (routed: per reader), so switching readers re-reads pages but a rerun
 never does, and changing the paid model or the threshold reuses the OCR and Qwen3-VL readings.
 
@@ -74,7 +78,9 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import sqlite3
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -82,12 +88,13 @@ import urllib.request
 import pymupdf
 
 from scripts.common.companies import normalize_ticker
+from scripts.common import storage
 from scripts.common.paths import ROOT
 from scripts.common.sector_corpus import parse_sectors
 from scripts.rag import financial_ingest_qdrant_db as fi
 from scripts.rag import chunk_schema, hybrid
 
-DEFAULT_ROOT = Path(os.getenv("RAG_VLM_DIR", ROOT / "indexes/financial_vlm"))
+DEFAULT_ROOT = Path(os.getenv("RAG_VLM_DIR") or storage.layout().chroma_db)      # <RAG_HOME>/indexes/chroma_db
 CHROMA_COLLECTION = "annual_reports_vlm"
 PROMPT_VERSION = 1
 VLM_PROMPT = """Transcribe this annual report page into Markdown. Copy every number exactly as printed.
@@ -95,6 +102,23 @@ VLM_PROMPT = """Transcribe this annual report page into Markdown. Copy every num
 - Charts: state the chart title, then one line per labelled value saying which series, bar or year it belongs to, using the legend. Never estimate an unlabelled point.
 - Text: copy headings and paragraphs. Ignore photographs, logos and QR codes.
 Output only the transcription."""
+RECITATION_PROMPTS = (
+    """List every figure on this annual report page, one per line, as:
+<row label> | <column header or period> | <value exactly as printed, with its sign, unit or %>
+Start with one line giving the table or chart title and its unit line (e.g. "in millions of dollars").
+Do not copy sentences or paragraphs. Output only the lines.""",
+    """Return the figures on this annual report page as JSON:
+{"title": "...", "unit": "...", "rows": [{"label": "...", "values": {"<column header or period>": "<value as printed>"}}]}
+Copy every number exactly as printed. No prose, no sentences from the page. Output only the JSON.""",
+)
+DESCRIBE_VERSION = 1
+DESCRIBE_TOKENS = 200
+DESCRIBE_PROMPT = """Describe this annual report page so it can be found by search, in at most 3 sentences.
+Say what kind of visual it is (bar chart, line chart, pie chart, table, map, infographic or photo), its title, what it
+measures, the series or categories, and the years or periods shown. Do not state any values other than years.
+Output only the description."""
+DESCRIBE_TYPES = {"chart", "image"}                          # page types worth a search description
+DESCRIBE_ROUTES = {"pdfParser+colpali", "qwen3VL", "paidVL"}   # not ocr (outlined text, scans) or none (photos, blank)
 MAX_PIXELS = 1280 * 28 * 28            # ~1.0 MP per page: ~980 visual tokens for Qwen3-VL (32 x 32 px each)
 RENDER_DPI = 150
 NUMBER = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+\.\d+|\d{3,}")   # 1,234 / 6.08 / 2025; not "31,"
@@ -153,6 +177,20 @@ def ocr_reader_signature(scale=2.0, min_confidence=.6):
     return f"ocr:{fi.ocr_signature(scale, min_confidence)}+native_tables"
 
 
+FULL_PRECISION_GPU_GB = 30     # A100 40/80 GB (and H100) run Qwen3-VL in bf16; T4 16 GB and L4 24 GB use 4-bit NF4
+
+
+def use_4bit(gpu_gb, setting=None):
+    """4-bit NF4 on small GPUs only. RAG_VLM_QUANT=nf4 or none overrides (auto: by GPU memory). bf16 reads figures a
+    little more reliably and is faster on an A100; 8B in bf16 needs about 17 GB plus the page's activations."""
+    setting = (setting or os.getenv("RAG_VLM_QUANT", "auto")).lower()
+    if setting in ("nf4", "4bit"):
+        return True
+    if setting in ("none", "bf16", "fp16"):
+        return False
+    return gpu_gb < FULL_PRECISION_GPU_GB
+
+
 class TransformersVLM:
     def __init__(self, model="Qwen/Qwen3-VL-4B-Instruct", max_new_tokens=1200):
         import torch
@@ -160,7 +198,7 @@ class TransformersVLM:
         self.torch, self.max_new_tokens = torch, max_new_tokens
         options = {"low_cpu_mem_usage": True}
         quant = "none"
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and use_4bit(torch.cuda.get_device_properties(0).total_memory / 2**30):
             try:
                 from transformers import BitsAndBytesConfig
                 import bitsandbytes  # noqa: F401
@@ -170,39 +208,85 @@ class TransformersVLM:
                 quant = "nf4"
             except ImportError:
                 options.update(dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16, device_map={"": 0})
+        elif torch.cuda.is_available():
+            options.update(dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16, device_map={"": 0})
         else:
             options.update(dtype=torch.float32)
         self.processor = AutoProcessor.from_pretrained(model)
         self.model = AutoModelForImageTextToText.from_pretrained(model, **options).eval()
         self.signature, self.quantization = f"transformers:{model}:{max_new_tokens}", quant
+        print(json.dumps({"qwen3vl_loaded": model, "precision": "4-bit nf4" if quant == "nf4" else str(self.model.dtype),
+                          "device": str(self.model.device)}), flush=True)
 
-    def transcribe(self, image, page):
-        messages = [{"role": "user", "content": [{"type": "image", "image": image}, {"type": "text", "text": VLM_PROMPT}]}]
+    def transcribe(self, image, page, prompt=None, max_new_tokens=None):
+        messages = [{"role": "user", "content": [{"type": "image", "image": image},
+                                                 {"type": "text", "text": prompt or VLM_PROMPT}]}]
         inputs = self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=True,
                                                     return_dict=True, return_tensors="pt").to(self.model.device)
         with self.torch.inference_mode():
-            output = self.model.generate(**inputs, max_new_tokens=self.max_new_tokens, do_sample=False)
+            output = self.model.generate(**inputs, max_new_tokens=max_new_tokens or self.max_new_tokens, do_sample=False)
         return self.processor.batch_decode(output[:, inputs["input_ids"].shape[1]:], skip_special_tokens=True)[0].strip()
+
+    def describe(self, image, page):
+        return self.transcribe(image, page, prompt=DESCRIBE_PROMPT, max_new_tokens=DESCRIBE_TOKENS)
+
+
+def http_error_body(exc, limit=300):
+    """The server's own error message (e.g. Gemini's "models/x is not found"), never the request or its key."""
+    try:
+        return " ".join((exc.read() or b"").decode("utf-8", "replace").split())[:limit] or exc.reason
+    except Exception:
+        return str(getattr(exc, "reason", ""))
 
 
 class OpenAIVLM:
     """Any OpenAI-compatible /chat/completions endpoint that accepts image_url parts."""
 
-    def __init__(self, base=None, model=None, max_tokens=1200, timeout=300, api_key=None):
+    def __init__(self, base=None, model=None, max_tokens=1200, timeout=300, api_key=None, reasoning_effort=None):
         self.base = (base or os.getenv("RAG_VISION_API_BASE", "http://127.0.0.1:8081/v1")).rstrip("/")
         self.model = model or os.getenv("RAG_VISION_MODEL", "local-qwen3-vl")
         self.api_key = api_key if api_key is not None else os.getenv("RAG_VISION_API_KEY", "")
         self.max_tokens, self.timeout = max_tokens, timeout
-        self.signature = f"openai:{self.model}:{max_tokens}"
+        # Thinking models (Gemini 2.5/3 Flash, o-series) spend max_tokens on reasoning too: "none"/"minimal"/"low"
+        # keeps the budget for the transcription. Sent only when set, so other endpoints see the same request.
+        self.reasoning_effort = reasoning_effort or None
+        self.signature = f"openai:{self.model}:{max_tokens}" + (f":effort={self.reasoning_effort}"
+                                                                 if self.reasoning_effort else "")
         self.delays = [float(x) for x in os.getenv("RAG_VISION_RETRY_DELAYS", "2,4,8").split(",") if x.strip()]
 
-    def transcribe(self, image, page):
+    def transcribe(self, image, page, prompt=None, max_tokens=None):
         buffer = io.BytesIO()
         image.save(buffer, format="PNG")
-        content = [{"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()}},
-                   {"type": "text", "text": VLM_PROMPT}]
-        body = json.dumps({"model": self.model, "messages": [{"role": "user", "content": content}],
-                           "temperature": 0, "max_tokens": self.max_tokens, "stream": False}).encode()
+        picture = {"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()}}
+        budget = max_tokens or self.max_tokens
+        # A transcription blocked as RECITATION (Gemini won't copy published text verbatim, and SEC filings are on the
+        # web) is asked again as figure rows, then as JSON: the same figures, not a copy of the page.
+        prompts = [prompt] if prompt else [VLM_PROMPT, *RECITATION_PROMPTS]
+        for text_prompt in prompts:
+            text, finish, usage = self._read([picture, {"type": "text", "text": text_prompt}], budget)
+            if text:
+                return text
+            if "recitation" not in str(finish).lower():
+                break
+        raise RuntimeError(f"no text from {self.model}: finish_reason={finish}, usage={usage}")
+
+    def _read(self, content, budget):
+        text, finish, usage = self._complete(content, budget)
+        # finish_reason "length": the budget ran out (thinking models count their reasoning in it), so the page has no
+        # text or a cut-off table. One retry with a bigger budget; the longer reading wins.
+        retry_budget = max(budget, int(os.getenv("RAG_VISION_RETRY_TOKENS") or budget * 4))
+        if finish == "length" and retry_budget > budget:
+            longer, finish, usage = self._complete(content, retry_budget)
+            text = longer if len(longer) >= len(text) else text
+        return text, finish, usage
+
+    def _complete(self, content, budget):
+        """One request -> (text, finish_reason, usage). A reply without text is not an error here."""
+        payload = {"model": self.model, "messages": [{"role": "user", "content": content}],
+                   "temperature": 0, "max_tokens": budget, "stream": False}
+        if self.reasoning_effort:
+            payload["reasoning_effort"] = self.reasoning_effort
+        body = json.dumps(payload).encode()
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -210,16 +294,39 @@ class OpenAIVLM:
         for attempt in range(len(self.delays) + 1):
             try:
                 with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                    return (json.load(response)["choices"][0]["message"]["content"] or "").strip()
+                    data = json.load(response)
+                choice = (data.get("choices") or [{}])[0]
+                content = (choice.get("message") or {}).get("content") or ""
+                if isinstance(content, list):                   # some servers return content parts
+                    content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
+                return str(content).strip(), choice.get("finish_reason"), data.get("usage")
             except urllib.error.HTTPError as exc:
                 # Rate limits and overload are explicit rejections, so a retry can't double-bill a page.
                 if exc.code not in {429, 503} or attempt >= len(self.delays):
-                    raise
+                    raise RuntimeError(f"HTTP {exc.code} from {self.base} (model {self.model}): "
+                                       f"{http_error_body(exc)}") from exc
                 try:
                     wait = max(self.delays[attempt], float(exc.headers.get("Retry-After") or 0))
                 except (TypeError, ValueError):
                     wait = self.delays[attempt]
                 time.sleep(wait)
+
+    def describe(self, image, page):
+        return self.transcribe(image, page, prompt=DESCRIBE_PROMPT, max_tokens=DESCRIBE_TOKENS)
+
+
+class PageDescriber:
+    """Adapter so a page description is read, cached and logged like any other reading.
+
+    A reader without ``describe`` (the mock, the OCR reader) gives no description, so nothing invented is indexed.
+    """
+
+    def __init__(self, model, signature):
+        self.model, self.signature = model, f"describe-v{DESCRIBE_VERSION}:{signature}"
+
+    def transcribe(self, image, page):
+        describe = getattr(self.model, "describe", None)
+        return describe(image, page) if describe else ""
 
 
 DEFAULT_TRANSFORMERS_MODEL = "Qwen/Qwen3-VL-4B-Instruct"   # 2B (fast, T4) / 4B (T4 in 4-bit) / 8B (L4, A100)
@@ -245,11 +352,18 @@ def qwen_signature(args):
 
 
 def paid_reader(max_tokens=1200):
-    """The paid fallback reader from RAG_PAID_VISION_API_BASE / _MODEL / _API_KEY, or None when not configured."""
+    """The paid fallback reader from RAG_PAID_VISION_API_BASE / _MODEL / _API_KEY, or None when not configured.
+
+    Optional: RAG_PAID_VISION_MAX_TOKENS (its own output limit, else ``max_tokens``) and
+    RAG_PAID_VISION_REASONING_EFFORT (e.g. Gemini: https://generativelanguage.googleapis.com/v1beta/openai,
+    gemini-3.8-flash, effort "low").
+    """
     base, model = os.getenv("RAG_PAID_VISION_API_BASE"), os.getenv("RAG_PAID_VISION_MODEL")
     if not (base and model):
         return None
-    return OpenAIVLM(base=base, model=model, max_tokens=max_tokens, api_key=os.getenv("RAG_PAID_VISION_API_KEY", ""))
+    return OpenAIVLM(base=base, model=model, max_tokens=int(os.getenv("RAG_PAID_VISION_MAX_TOKENS") or max_tokens),
+                     api_key=os.getenv("RAG_PAID_VISION_API_KEY", ""),
+                     reasoning_effort=os.getenv("RAG_PAID_VISION_REASONING_EFFORT") or None)
 
 
 def make_vlm(args):
@@ -258,7 +372,8 @@ def make_vlm(args):
     if args.vlm == "routed":
         return RoutedReader(qwen_factory=lambda: make_qwen(args), qwen_signature=qwen_signature(args),
                             paid=paid_reader(args.max_new_tokens), threshold=args.paid_threshold,
-                            paid_limit=args.paid_max_pages_per_pdf)
+                            paid_limit=args.paid_max_pages_per_pdf, describe=not getattr(args, "no_describe_visuals", False),
+                            skip_routes=skip_routes_of(args), paid_first=getattr(args, "paid_first", False))
     if args.vlm == "ocr":
         return OcrReader()
     if args.vlm == "openai":
@@ -272,8 +387,9 @@ def vlm_signature(args):
         return MockVLM.signature
     if args.vlm == "routed":
         paid = paid_reader(args.max_new_tokens)
-        return (f"routed-v{ROUTE_VERSION}:qwen={qwen_signature(args)}:ocr={ocr_reader_signature()}:"
-                f"paid={paid.signature if paid else None}:threshold={args.paid_threshold}:limit={args.paid_max_pages_per_pdf}")
+        return routed_signature(qwen_signature(args), ocr_reader_signature(), paid.signature if paid else None,
+                                args.paid_threshold, args.paid_max_pages_per_pdf, not getattr(args, "no_describe_visuals", False),
+                                skip_routes_of(args), getattr(args, "paid_first", False))
     if args.vlm == "ocr":
         return ocr_reader_signature()
     if args.vlm == "openai":
@@ -324,25 +440,70 @@ class TranscriptCache:
 
 
 def vlm_targets(pages, mode, limit=0):
-    targets = fi.visual_targets(pages, mode)               # the same page selection as ColPali in pipeline 1
+    targets = fi.visual_targets(pages, mode)               # the same page selection as ColPali in pipeline 2
     return targets[:limit] if limit else targets
 
 
-ROUTE_VERSION = 1
+ROUTE_VERSION = 5          # v2: pdfParser+colpali tables/pictures with few text-layer figures are OCR-checked
+                           # v3: "chart" pages with 600+ words are text pages (page_audit.TEXT_PAGE_WORDS)
+                           # v4: paid replies cut off by their token budget are retried (v3 kept Qwen for them), so
+                           #     filings finished under v3 run again; cached readings are reused
+                           # v5: a paidVL reading much shorter than the page's OCR text (a text page whose verbatim copy
+                           #     the paid model refused) keeps the OCR text, plus the reading's figures
+SKIPPABLE_ROUTES = ("qwen3VL", "paidVL")
+SHORT_READING_SHARE = .25   # a paidVL reading shorter than this share of the page's OCR text left most of the page out
+SHORT_READING_MIN_OCR = 800 # ... checked only when OCR found at least this many characters (a real page of text)
+
+
+def too_short(reading, ocr_text):
+    """A model reading that covers only a small part of what OCR read on the same page: e.g. a page of paragraphs
+    that the paid model refused to copy (RECITATION) and answered with just its few figures."""
+    ocr_chars = len((ocr_text or "").strip())
+    return ocr_chars >= SHORT_READING_MIN_OCR and len((reading or "").strip()) < SHORT_READING_SHARE * ocr_chars
+
+
+FEW_FIGURES = 6            # a table or picture page whose text layer has fewer figures than this gets OCR'd ...
+OCR_GAIN = 6               # ... and the OCR reading replaces it when OCR finds at least this many more figures
+
+
+def figures(text):
+    return {n.replace(",", "") for n in NUMBER.findall(text or "")}
+
+
+def lacks_figures(page):
+    """A pdfParser+colpali table or picture whose text layer has (almost) no figures: the numbers may be drawn as
+    images or outlines. In a 195-page sample of the min500 corpus, 10 such pages held about 49 figures each that only
+    OCR could read (RTX 2022 p131: 5 in the text layer, 90 on the page)."""
+    return page["page_type"] in {"table", "image"} and len(figures(page.get("text"))) < FEW_FIGURES
 
 
 class RoutedReader:
     """One reader per page (page_audit.route), with the paidVL fallback: OCR -> Qwen3-VL -> paid model.
 
     The Qwen3-VL model loads only when the first page needs it. ``paid`` is None when no paid model is configured.
+    ``skip_routes`` (qwen3VL, paidVL) leaves those pages to a later run: they keep their text layer if it is usable,
+    so a CPU-only machine can index everything OCR can read and Qwen3-VL fills in the rest later (cached OCR reused).
     """
 
-    def __init__(self, qwen_factory, qwen_signature, ocr=None, paid=None, threshold=.10, paid_limit=0):
+    def __init__(self, qwen_factory, qwen_signature, ocr=None, paid=None, threshold=.10, paid_limit=0, describe=True,
+                 skip_routes=(), paid_first=False):
         self._qwen_factory, self._qwen, self.qwen_signature = qwen_factory, None, qwen_signature
+        self.paid_first = bool(paid_first and paid)
         self.ocr = ocr or OcrReader()
-        self.paid, self.threshold, self.paid_limit = paid, threshold, paid_limit
-        self.signature = (f"routed-v{ROUTE_VERSION}:qwen={qwen_signature}:ocr={self.ocr.signature}:"
-                          f"paid={paid.signature if paid else None}:threshold={threshold}:limit={paid_limit}")
+        self.paid, self.threshold, self.paid_limit, self.describe = paid, threshold, paid_limit, describe
+        unknown = set(skip_routes) - set(SKIPPABLE_ROUTES)
+        if unknown:
+            raise ValueError(f"--skip-routes takes {', '.join(SKIPPABLE_ROUTES)}, not {', '.join(sorted(unknown))}")
+        self.skip_routes = tuple(sorted(set(skip_routes)))
+        # Parallel prefetch of a filing's readings (routed_filing): GPU, paid API and OCR lanes overlap. Only speed:
+        # the readings and the per-page decisions are the same, so these settings are not in the signature.
+        self.prefetch = os.getenv("RAG_PAGE_PREFETCH", "1") != "0"
+        self.paid_workers = max(1, int(os.getenv("RAG_PAID_CONCURRENCY", "4")))
+        # >1 only for a served Qwen (vLLM batches concurrent requests); one in-process model generates one page at a time
+        served = str(qwen_signature).startswith("openai:")
+        self.qwen_workers = max(1, int(os.getenv("RAG_QWEN_CONCURRENCY", "1"))) if served else 1
+        self.signature = routed_signature(qwen_signature, self.ocr.signature, paid.signature if paid else None,
+                                          threshold, paid_limit, describe, self.skip_routes, self.paid_first)
 
     @property
     def qwen(self):
@@ -355,7 +516,22 @@ class RoutedReader:
         out = {"ocr": (self.ocr.signature, lambda: self.ocr), "qwen3VL": (self.qwen_signature, lambda: self.qwen)}
         if self.paid:
             out["paidVL"] = (self.paid.signature, lambda: self.paid)
+        if self.describe:
+            describer = PageDescriber(None, self.qwen_signature)
+            out["describe"] = (describer.signature, lambda: PageDescriber(self.qwen, self.qwen_signature))
         return out
+
+
+def routed_signature(qwen, ocr, paid, threshold, limit, describe, skip_routes=(), paid_first=False):
+    """Known before any model loads, so finished filings are skipped without loading them."""
+    return (f"routed-v{ROUTE_VERSION}:qwen={qwen}:ocr={ocr}:paid={paid}:threshold={threshold}:limit={limit}"
+            + (f":describe=v{DESCRIBE_VERSION}" if describe else "")
+            + (f":skip={','.join(sorted(skip_routes))}" if skip_routes else "")
+            + (":paid_first" if paid_first and paid else ""))
+
+
+def skip_routes_of(args):
+    return tuple(r.strip() for r in (getattr(args, "skip_routes", None) or "").split(",") if r.strip())
 
 
 def cross_check(markdown, reference):
@@ -370,6 +546,77 @@ def cross_check(markdown, reference):
     return {"unverified": unverified, "figures": len(figures), "share": len(unverified) / len(figures) if figures else 0.0}
 
 
+def prefetch_plan(reader, pages, limit=0):
+    """The readings a filing will certainly need, by lane: gpu (Qwen3-VL transcriptions and descriptions), paid (the
+    paid model, with --paid-first), ocr (CPU). Conditional readings (Qwen after a doubtful paid reading, the paid model
+    after a doubtful Qwen reading) are left to the page loop. Mirrors routed_filing's per-page rules and limits."""
+    from scripts.rag import page_audit
+    plan = {"gpu": [], "paid": [], "ocr": []}
+    routed = [(page, page_audit.route(page)) for page in pages]
+    models = [page for page, route in routed if route in ("qwen3VL", "paidVL") and route not in reader.skip_routes]
+    allowed = {page["page"] for page in (models[:limit] if limit else models)}
+    paid_allowed = [page["page"] for page, route in routed
+                    if route == "paidVL" and page["page"] in allowed and route not in reader.skip_routes]
+    if reader.paid_limit:
+        paid_allowed = paid_allowed[:reader.paid_limit]
+    for page, route in routed:
+        if reader.describe and page["page_type"] in DESCRIBE_TYPES and route in DESCRIBE_ROUTES:
+            plan["gpu"].append(("describe", page))
+        if route in reader.skip_routes or route in ("none", "pdfParser"):
+            continue
+        if route == "ocr" or (route in ("qwen3VL", "paidVL") and page["page"] not in allowed):
+            plan["ocr"].append(("ocr", page))
+        elif route == "pdfParser+colpali":
+            if lacks_figures(page):
+                plan["ocr"].append(("ocr", page))
+        elif route == "qwen3VL":
+            plan["gpu"].append(("qwen3VL", page))
+        else:                                                       # paidVL
+            plan["ocr"].append(("ocr", page))
+            if reader.paid_first and page["page"] in paid_allowed:
+                plan["paid"].append(("paidVL", page))
+            elif not reader.paid_first:
+                plan["gpu"].append(("qwen3VL", page))
+    return plan
+
+
+def prefetch_readings(reader, pages, pdf, loaded, try_read, limit=0):
+    """Run a filing's certain readings in parallel lanes before the page loop, which then finds them cached.
+
+    The GPU lane is serial (one in-process Qwen3-VL; RAG_QWEN_CONCURRENCY > 1 only for a served model), the paid lane
+    sends RAG_PAID_CONCURRENCY requests at once (default 4; 429/503 back off), OCR runs on the CPU. Each worker thread
+    opens its own copy of the PDF (PyMuPDF documents are not thread-safe). A failed reading is not cached, so the page
+    loop tries it once more.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    plan = {lane: [(name, page) for name, page in items if page["page"] not in loaded[name]]
+            for lane, items in prefetch_plan(reader, pages, limit).items()}
+    plan = {lane: items for lane, items in plan.items() if items}
+    if not plan:
+        return
+    local, opened, guard = threading.local(), [], threading.Lock()
+
+    def work(item):
+        if not hasattr(local, "document"):
+            local.document = pymupdf.open(pdf)
+            with guard:
+                opened.append(local.document)
+        name, page = item
+        try_read(name, page, local.document)
+
+    workers = {"gpu": reader.qwen_workers, "paid": reader.paid_workers, "ocr": 1}
+    pools = [ThreadPoolExecutor(max_workers=workers[lane], thread_name_prefix=f"prefetch-{lane}") for lane in plan]
+    try:
+        futures = [pool.submit(work, item) for pool, items in zip(pools, plan.values()) for item in items]
+        for future in futures:
+            future.result()
+    finally:
+        for pool in pools:
+            pool.shutdown(wait=True)
+        for document in opened:
+            document.close()
+
+
 def routed_filing(reader, cache, row, pdf, pages, limit=0):
     """Page number -> reading for --vlm routed. Raw readings are cached per reader; the routing is recomputed."""
     from scripts.rag import page_audit
@@ -377,26 +624,33 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
     caches = {name: TranscriptCache(cache.dir, sig) for name, (sig, _) in reader.readers().items()}
     loaded = {name: c.load(doc_id) for name, c in caches.items()}
     getters = {name: get for name, (_, get) in reader.readers().items()}
-    entries, model_pages, paid_pages = {}, 0, 0
+    entries, model_pages, paid_pages, descriptions = {}, 0, 0, {}
 
+    write_lock, failed = threading.Lock(), set()
     with pymupdf.open(pdf) as document:
-        def read(name, page):
+        def read(name, page, doc=None):
             if page["page"] not in loaded[name]:
-                started, pdf_page = time.time(), document[page["page"] - 1]
+                started, pdf_page = time.time(), (doc or document)[page["page"] - 1]
                 image = None if name == "ocr" else render(pdf_page)
                 text = strip_fences(getters[name]().transcribe(image, pdf_page))
                 row_ = {"page": page["page"], "markdown": text, "reader": name, "seconds": round(time.time() - started, 1)}
-                caches[name].add(doc_id, row_)
-                loaded[name][page["page"]] = row_
+                with write_lock:
+                    caches[name].add(doc_id, row_)
+                    loaded[name][page["page"]] = row_
                 print(json.dumps({"doc_id": doc_id, "page": page["page"], "reader": name, "chars": len(text),
                                   "seconds": row_["seconds"]}), flush=True)
             return loaded[name][page["page"]]["markdown"]
 
-        def try_read(name, page):
-            """A model reading, or "" when the model fails (error not cached, so a rerun tries again)."""
+        def try_read(name, page, doc=None):
+            """A model reading, or "" when the model fails. A failure is tried once per filing run (the prefetch
+            and the page loop don't both pay for it) and never cached, so the next run tries again."""
+            if (name, page["page"]) in failed:
+                return ""
             try:
-                return read(name, page)
+                return read(name, page, doc)
             except Exception as exc:
+                with write_lock:
+                    failed.add((name, page["page"]))
                 print(json.dumps({"doc_id": doc_id, "page": page["page"], "reader": name, "error": repr(exc)[:300]}),
                       flush=True)
                 return ""
@@ -406,20 +660,38 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                     "reader_model": signatures["ocr"], "unverified_numbers": [], "number_check": "ocr_only",
                     "escalation": why}
 
+        def short_reading_entry(page, base, reading, used):
+            """The page's OCR text, with the short model reading appended when it holds figures."""
+            entry = ocr_entry(page, base, f"{used}_reading_short_ocr_kept")
+            if figures(reading):
+                entry["markdown"] = entry["markdown"] + "\n\n" + reading
+            return entry
+
         signatures = {name: sig for name, (sig, _) in reader.readers().items()}
+        if getattr(reader, "prefetch", False):
+            prefetch_readings(reader, pages, pdf, loaded, try_read, limit)
         for page in pages:
             route = page_audit.route(page)
             number = page["page"]
             base = {"page": number, "route": route}
+            if reader.describe and page["page_type"] in DESCRIBE_TYPES and route in DESCRIBE_ROUTES:
+                text = try_read("describe", page).strip()
+                if text:
+                    descriptions[number] = {"text": text, "route": route, "reader_model": signatures["describe"],
+                                            "page": page}
             if route == "none":
                 entries[number] = {**base, "skip": True}
-            elif route == "pdfParser":
-                continue                                            # native text, chunked by vlm_records
+            elif route == "pdfParser" or route in reader.skip_routes:
+                continue                                            # native text (if usable), chunked by vlm_records
             elif route == "pdfParser+colpali":
                 tables = ["\n".join(lines) for lines in page.get("tables") or []]
                 body = "\n\n".join([*tables, fi.readable_text(page)[0]])
                 entries[number] = {**base, "markdown": body, "source": "native_pdf", "reader": "pdfParser",
                                    "unverified_numbers": [], "number_check": "text_layer"}
+                if lacks_figures(page):                             # figures drawn as images or outlines?
+                    ocr_text = read("ocr", page)
+                    if len(figures(ocr_text) - figures(page["text"])) >= OCR_GAIN:
+                        entries[number] = ocr_entry(page, base, "text_layer_lacks_figures")
             elif route == "ocr" or (limit and model_pages >= limit):
                 entries[number] = {**base, "markdown": read("ocr", page), "source": "ocr", "reader": "ocr",
                                    "reader_model": signatures["ocr"], "unverified_numbers": [], "number_check": "ocr_only"}
@@ -433,6 +705,41 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                 entries[number] = {**base, "markdown": markdown, "source": "vlm", "reader": "qwen3VL",
                                    "reader_model": signatures["qwen3VL"], "unverified_numbers": check["unverified"],
                                    "number_check": "text_layer" if check["share"] is not None else "no_text_layer"}
+            elif reader.paid_first and (not reader.paid_limit or paid_pages < reader.paid_limit):
+                # paidVL, paid model first: OCR -> paid model; Qwen3-VL reads the page only when the paid reading
+                # fails or more than the threshold of its figures are not in the OCR text. Fewer unconfirmed wins.
+                model_pages += 1
+                paid_pages += 1
+                reference = read("ocr", page)
+                paid_text = try_read("paidVL", page)
+                paid_check = cross_check(paid_text, reference)
+                if paid_text.strip() and too_short(paid_text, reference):
+                    entries[number] = short_reading_entry(page, base, paid_text, "paidVL")
+                    continue                                        # a text page: OCR has it all, no Qwen needed
+                paid_ok = bool(paid_text.strip()) and (paid_check["share"] is None
+                                                       or paid_check["share"] <= reader.threshold)
+                chosen, check, used, escalation = paid_text, paid_check, "paidVL", "paid_first"
+                qwen_check = {"share": None, "unverified": []}
+                if not paid_ok:
+                    qwen_text = try_read("qwen3VL", page)
+                    qwen_check = cross_check(qwen_text, reference)
+                    paid_share = paid_check["share"] if paid_text.strip() and paid_check["share"] is not None else 1
+                    qwen_share = qwen_check["share"] if qwen_check["share"] is not None else 1
+                    if qwen_text.strip() and (not paid_text.strip() or qwen_share < paid_share):
+                        chosen, check, used, escalation = qwen_text, qwen_check, "qwen3VL", "paid_first_qwen_better"
+                    else:
+                        escalation = "paid_first_qwen_not_better"
+                if not chosen.strip():                              # no model produced text: keep the OCR reading
+                    entries[number] = ocr_entry(page, base, "models_failed_ocr_fallback")
+                    continue
+                if too_short(chosen, reference):
+                    entries[number] = short_reading_entry(page, base, chosen, used)
+                    continue
+                entries[number] = {**base, "markdown": chosen, "source": "vlm", "reader": used,
+                                   "reader_model": signatures[used], "unverified_numbers": check["unverified"],
+                                   "number_check": "ocr" if check["share"] is not None else "no_reference",
+                                   "qwen_unverified_share": qwen_check["share"], "escalated": used == "paidVL",
+                                   "escalation": escalation}
             else:                                                   # paidVL: the fallback chain
                 model_pages += 1
                 reference = read("ocr", page)
@@ -452,6 +759,9 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                 if not chosen.strip():                              # no model produced text: keep the OCR reading
                     entries[number] = ocr_entry(page, base, "models_failed_ocr_fallback")
                     continue
+                if too_short(chosen, reference):
+                    entries[number] = short_reading_entry(page, base, chosen, used)
+                    continue
                 entries[number] = {**base, "markdown": chosen, "source": "vlm", "reader": used,
                                    "reader_model": signatures[used], "unverified_numbers": check["unverified"],
                                    "number_check": "ocr" if check["share"] is not None else "no_reference",
@@ -460,7 +770,19 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                                    "escalation": ("not_needed" if not needs_more else "paid" if used == "paidVL"
                                                   else "paid_not_better" if needs_more and can_pay
                                                   else "no_paid_model" if reader.paid is None else "paid_limit")}
+    for number, description in descriptions.items():               # figures in a description must be on the page too
+        page = description.pop("page")
+        reference = loaded["ocr"].get(number, {}).get("markdown", "") if page["garbled"] else page["text"]
+        check = cross_check(description["text"], reference)
+        # Descriptions are asked for no values but years: with nothing to check against, flag every other figure.
+        description["unverified_numbers"] = check["unverified"] if check["share"] is not None else sorted(
+            {n for n in NUMBER.findall(description["text"]) if not re.fullmatch(r"(19|20)\d\d", n)})
+    if descriptions:
+        entries[DESCRIPTIONS] = descriptions
     return entries
+
+
+DESCRIPTIONS = "_descriptions"          # key in routed_filing's result: page -> Qwen3-VL search description
 
 
 def transcribe_filing(vlm, cache, row, pdf, pages, mode, limit=0):
@@ -522,8 +844,11 @@ def vlm_records(row, pages, transcripts, vlm_signature):
     ran, else the text layer."""
     from scripts.rag import page_audit
     base, records = fi.filing_payload(row), []
+    descriptions = transcripts.get(DESCRIPTIONS) or {}
     for page in pages:
         entry = transcripts.get(page["page"])
+        if page["page"] in descriptions:                            # a search description of a chart or image page
+            records.append(description_record(row, base, page, descriptions[page["page"]]))
         if entry and entry.get("skip"):
             continue                                                # routed: nothing to read on this page
         if entry:
@@ -555,12 +880,25 @@ def vlm_records(row, pages, transcripts, vlm_signature):
     return records
 
 
+def description_record(row, base, page, description):
+    """The page_description chunk: '<visual> on page N: <Qwen3-VL description>', searchable like any other chunk."""
+    kind = {"chart": "Chart", "image": "Figure"}.get(page["page_type"], "Visual")
+    text = f"{kind} on page {page['page']} (page description): {description['text']}"
+    identifier = fi.point_id(row["document_id"], page["page"], "describe", 0)
+    payload = chunk_schema.chunk_payload(
+        base, page, chunk_id=fi.chunk_name(row["document_id"], page["page"], "desc0"), point_id=identifier,
+        chunk_index=0, content_type="page_description", text=text, pipeline="chroma_db", text_source="vlm",
+        reader="qwen3VL", reader_model=description["reader_model"], page_route=description["route"],
+        number_check="text_layer", unverified_numbers=description["unverified_numbers"])
+    return identifier, payload, fi.context_line(payload) + "\n" + text
+
+
 # ----------------------------------------------------------------------------- vector stores
 
 class Bm25Index:
     """BM25 over the same chunks as the Chroma collection: SQLite FTS5 on number-aware terms.
 
-    Chroma's local store has dense search only. Terms come from ``financial_ingest_qdrant_db.terms`` (pipeline 1's
+    Chroma's local store has dense search only. Terms come from ``financial_ingest_qdrant_db.terms`` (pipeline 2's
     sparse vectors), so ``$93,736`` is indexed as ``$93,736``, ``93,736`` and ``93736``. The file sits in the
     Chroma folder, so backups and restores of that folder carry it.
     """
@@ -616,12 +954,37 @@ class ChromaStore:
         return out
 
     def replace(self, doc_id, records, vectors):
+        """Swap a filing's chunks in Chroma and BM25, then check Chroma holds exactly them.
+
+        The full Colab build ended with 695 chunks of 50 filings in BM25 and the state file but not in Chroma, so a
+        write is read back: missing chunks are written once more, stale ones deleted, and a filing Chroma still
+        disagrees on fails (and is retried by the next run) instead of being marked complete.
+        """
         self.collection.delete(where={"doc_id": doc_id})
+        self._upsert(records, vectors)
+        missing, stale = self.differences(doc_id, records)
+        if missing or stale:
+            if stale:
+                self.collection.delete(ids=sorted(stale))
+            keep = [i for i, r in enumerate(records) if r[0] in missing]
+            self._upsert([records[i] for i in keep], [vectors[i] for i in keep])
+            missing, stale = self.differences(doc_id, records)
+            if missing or stale:
+                raise RuntimeError(f"Chroma holds {len(records) - len(missing)} of {len(records)} chunks of {doc_id} "
+                                   f"(+{len(stale)} stale) after a rewrite")
+        self.bm25.replace(doc_id, records)
+
+    def _upsert(self, records, vectors):
         for start in range(0, len(records), 256):
             part, vecs = records[start:start + 256], vectors[start:start + 256]
             self.collection.upsert(ids=[r[0] for r in part], embeddings=vecs, documents=[r[1]["text"] for r in part],
                                    metadatas=[self.metadata(r[1]) for r in part])
-        self.bm25.replace(doc_id, records)
+
+    def differences(self, doc_id, records):
+        """(ids of ``records`` missing from Chroma, ids Chroma holds for ``doc_id`` that aren't in ``records``)."""
+        held = set(self.collection.get(where={"doc_id": doc_id}, include=[])["ids"])
+        wanted = {r[0] for r in records}
+        return wanted - held, held - wanted
 
     def search(self, vector, query, top_k, ticker=None, year=None, sector=None, candidates=50, mode="hybrid"):
         """Dense (Chroma) + BM25 (FTS5) rankings fused by ``hybrid.rrf_fuse``: [(rrf score, payload, ranks)].
@@ -648,12 +1011,19 @@ class ChromaStore:
         fused = [e for e in hybrid.rrf_fuse(rankings) if e["id"] in found][:top_k]
         return [(e["rrf"], found[e["id"]], e["ranks"]) for e in fused]
 
+    def page_payloads(self, doc_id, page):
+        """Every chunk of one page, in reading order."""
+        got = self.collection.get(where={"$and": [{"doc_id": doc_id}, {"page": int(page)}]},
+                                  include=["documents", "metadatas"])
+        payloads = [{**meta, "text": text} for text, meta in zip(got["documents"], got["metadatas"])]
+        return sorted(payloads, key=lambda p: (int(p.get("chunk_index") or 0), str(p["chunk_id"])))
+
     def count(self):
         return self.collection.count()
 
 
 def open_store(args, dim):
-    """Pipeline 2 writes to Chroma only; Qdrant is pipeline 1's database (scripts/rag/financial_ingest_qdrant_db.py)."""
+    """Pipeline 1 writes to Chroma only; Qdrant is pipeline 2's database (scripts/rag/financial_ingest_qdrant_db.py)."""
     return ChromaStore(args.root)
 
 
@@ -666,14 +1036,14 @@ class VlmIngest:
             reset(args)
         self.state = fi.State(self.root / "vlm_ingest.sqlite3")
         self.embedder = embedder or fi.Embedder(args.embedding_provider, args.embedding_model)
-        self.state.check("embedding", self.embedder.signature)
+        fi.check_embedding(self.state, self.embedder)     # bge-small local and hosted count as one model
         self.state.check("store", args.store)
         self._vlm = vlm
         self.vlm_signature = vlm.signature if vlm else vlm_signature(args)
         self.cache = TranscriptCache(args.cache_dir or self.root / "vlm_pages", self.vlm_signature)
         self.store = open_store(args, self.embedder.dim)
         self.pipeline = json.dumps({"analysis": fi.ANALYSIS_VERSION, "max_pages": args.max_pages_per_pdf,
-                                    "embedding": self.embedder.signature, "vlm": self.vlm_signature,
+                                    "embedding": self.embedder.portable, "vlm": self.vlm_signature,
                                     "prompt": PROMPT_VERSION, "pages": args.vlm_pages, "limit": args.vlm_max_pages_per_pdf,
                                     "chunks": [fi.CHUNK_CHARS, fi.OVERLAP_CHARS, fi.TABLE_CHARS]}, sort_keys=True)
 
@@ -691,36 +1061,103 @@ class VlmIngest:
         rows = fi.in_preset(rows, getattr(self.args, "corpus_preset", "full"))
         rows = rows[:self.args.limit_filings] if self.args.limit_filings else rows
         todo = [r for r in rows if self.args.force or not self.state.done(r["document_id"], "vlm", self.pipeline)]
-        print(f"{len(rows)} filings selected, {len(todo)} to ingest with {self.vlm_signature} -> {self.args.store}", flush=True)
-        summary = Counter()
-        for row in todo:
-            summary[self.ingest(row)] += 1
+        workers = max(1, getattr(self.args, "workers", 1) or 1)
+        print(f"{len(rows)} filings selected, {len(todo)} to ingest with {self.vlm_signature} -> {self.args.store}"
+              + (f" ({workers} workers)" if workers > 1 else ""), flush=True)
+        summary, started = Counter(), time.time()
+        if workers == 1 or len(todo) < 2:
+            for row in todo:
+                summary[self.ingest(row)] += 1
+            return dict(summary)
+        # Workers read the filings (page analysis, OCR, chunking); this process embeds and is the only Chroma writer.
+        from concurrent.futures import ProcessPoolExecutor, as_completed
+        with ProcessPoolExecutor(workers, initializer=_init_worker, initargs=(self.args,)) as pool:
+            futures = {}
+            for row in todo:
+                self.state.mark(row["document_id"], "vlm", "processing", self.pipeline)
+                futures[pool.submit(_prepare_in_worker, row)] = row
+            for done, future in enumerate(as_completed(futures), 1):
+                row = futures[future]
+                try:
+                    prepared = future.result()
+                except Exception as exc:
+                    summary[self._failed(row, exc, 0.0)] += 1
+                    continue
+                summary[self.write(row, *prepared)] += 1
+                elapsed = time.time() - started
+                print(json.dumps({"progress": f"{done}/{len(todo)}", "elapsed_min": round(elapsed / 60, 1),
+                                  "eta_min": round(elapsed / done * (len(todo) - done) / 60, 1)}), flush=True)
         return dict(summary)
 
     def ingest(self, row):
-        doc_id, started = row["document_id"], time.time()
-        self.state.mark(doc_id, "vlm", "processing", self.pipeline)
+        started = time.time()
+        self.state.mark(row["document_id"], "vlm", "processing", self.pipeline)
         try:
-            pdf = fi.resolve_pdf(row, self.args.pdf_dir, self.args.download_missing, self.args.user_agent)
-            pages = fi.load_pages(self.root, row, pdf, self.args.max_pages_per_pdf)
-            transcripts = transcribe_filing(self.vlm, self.cache, row, pdf, pages, self.args.vlm_pages,
-                                            self.args.vlm_max_pages_per_pdf)
-            records = vlm_records(row, pages, transcripts, self.vlm_signature)
+            prepared = prepare_filing(self.args, self.vlm, self.cache, self.root, self.vlm_signature, row)
+        except BaseException as exc:
+            return self._failed(row, exc, time.time() - started)
+        return self.write(row, *prepared)
+
+    def write(self, row, records, stats, seconds):
+        """Embed and store one prepared filing (this process only: one Chroma writer)."""
+        doc_id, started = row["document_id"], time.time()
+        try:
             vectors = self.embedder([text for _, _, text in records]) if records else []
             self.store.replace(doc_id, records, vectors)
-        except Exception as exc:
-            self.state.mark(doc_id, "vlm", "failed", self.pipeline, seconds=time.time() - started, error=repr(exc))
-            print(json.dumps({"doc_id": doc_id, "status": "failed", "error": repr(exc)}), flush=True)
-            if isinstance(exc, KeyboardInterrupt):
-                raise
-            return "failed"
-        seconds = time.time() - started
+        except BaseException as exc:
+            return self._failed(row, exc, seconds + time.time() - started)
+        seconds += time.time() - started
         self.state.mark(doc_id, "vlm", "complete", self.pipeline, len(records), seconds)
-        flagged = sum(1 for e in transcripts.values() if e.get("unverified_numbers"))
-        print(json.dumps({"doc_id": doc_id, "sector": row.get("sector"), "status": "complete", "pages": len(pages),
-                          "vlm_pages": len(transcripts), "pages_with_unverified_numbers": flagged,
+        print(json.dumps({"doc_id": doc_id, "sector": row.get("sector"), "status": "complete", **stats,
                           "chunks": len(records), "seconds": round(seconds, 1)}), flush=True)
         return "complete"
+
+    def _failed(self, row, exc, seconds):
+        self.state.mark(row["document_id"], "vlm", "failed", self.pipeline, seconds=seconds, error=repr(exc))
+        print(json.dumps({"doc_id": row["document_id"], "status": "failed", "error": repr(exc)}), flush=True)
+        if isinstance(exc, KeyboardInterrupt):
+            raise exc
+        return "failed"
+
+
+def prepare_filing(args, vlm, cache, root, signature, row):
+    """Read one filing into chunk records: (records, stats, seconds). Runs in a worker process with --workers."""
+    started = time.time()
+    pdf = fi.resolve_pdf(row, args.pdf_dir, args.download_missing, args.user_agent)
+    pages = fi.load_pages(Path(root), row, pdf, args.max_pages_per_pdf)
+    transcripts = transcribe_filing(vlm, cache, row, pdf, pages, args.vlm_pages, args.vlm_max_pages_per_pdf)
+    records = vlm_records(row, pages, transcripts, signature)
+    readings = {k: v for k, v in transcripts.items() if k != DESCRIPTIONS}
+    stats = {"pages": len(pages), "vlm_pages": len(readings),
+             "ocr_pages": sum(1 for e in readings.values() if e.get("reader") == "ocr"),
+             "described_pages": len(transcripts.get(DESCRIPTIONS) or {}),
+             "pages_with_unverified_numbers": sum(1 for e in readings.values() if e.get("unverified_numbers"))}
+    return records, stats, time.time() - started
+
+
+def lower_priority():
+    """Below-normal CPU priority for this process (and the processes it starts), so the machine stays usable."""
+    try:
+        import psutil
+        psutil.Process().nice(psutil.BELOW_NORMAL_PRIORITY_CLASS if os.name == "nt" else 10)
+    except Exception:
+        pass
+
+
+_WORKER = {}
+
+
+def _init_worker(args):
+    if getattr(args, "low_priority", False):
+        lower_priority()
+    signature = vlm_signature(args)
+    _WORKER.update(args=args, vlm=make_vlm(args), signature=signature,
+                   cache=TranscriptCache(args.cache_dir or Path(args.root) / "vlm_pages", signature))
+
+
+def _prepare_in_worker(row):
+    w = _WORKER
+    return prepare_filing(w["args"], w["vlm"], w["cache"], w["args"].root, w["signature"], row)
 
 
 def reset(args):
@@ -747,11 +1184,47 @@ def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAUL
         embedder = fi.recorded_embedder(argparse.Namespace(root=root, embedding_provider="hashing", embedding_model=None),
                                         state_name="vlm_ingest.sqlite3")
     if store != "chroma":
-        raise ValueError("pipeline 2 serves from Chroma only; Qdrant is pipeline 1 (RAG_BACKEND=financial_qdrant)")
+        raise ValueError("pipeline 1 serves from Chroma only; Qdrant is pipeline 2 (RAG_BACKEND=financial_qdrant)")
     backend = ChromaStore(root)
     vector = embedder([query])[0] if hybrid.uses(mode, "dense") else None
-    return [chunk_schema.evidence_hit(p, rrf_score=score, paths=["vlm_text"], ranks=ranks)
+    hits = [chunk_schema.evidence_hit(p, rrf_score=score, paths=["vlm_text"], ranks=ranks)
             for score, p, ranks in backend.search(vector, query, top_k, ticker, year, sector, mode=mode)]
+    return with_page_values(backend, hits)
+
+
+SAME_PAGE_LIMIT = 3     # value chunks added after one page_description hit
+
+
+def with_page_values(store, hits, limit=SAME_PAGE_LIMIT):
+    """Add a chart page's values after its description.
+
+    A ``page_description`` chunk says what a chart or picture shows (title, measure, years) but by design no values,
+    so it often matches a question's wording better than the page's own reading chunk that holds the figures. When a
+    description is retrieved without any other chunk of its page, that page's reading chunks (up to ``limit``) follow
+    it, ranked with it, so the answer step sees the values the description points to.
+    """
+    have = {hit["chunk_id"] for hit in hits}
+    out = []
+    for hit in hits:
+        out.append(hit)
+        if hit.get("content_type") != "page_description":
+            continue
+        doc_id, page = (hit.get("metadata") or {}).get("doc_id"), hit.get("page")
+        if doc_id is None or page is None or any(
+                other is not hit and (other.get("metadata") or {}).get("doc_id") == doc_id and other.get("page") == page
+                and other.get("content_type") != "page_description" for other in hits):
+            continue
+        added = 0
+        for payload in store.page_payloads(doc_id, page):
+            if payload["chunk_id"] in have or payload.get("content_type") == "page_description":
+                continue
+            out.append(chunk_schema.evidence_hit(payload, rrf_score=hit["rrf_score"], paths=["vlm_text", "same_page"],
+                                                 ranks={**(hit.get("retrieval_ranks") or {}), "same_page": added + 1}))
+            have.add(payload["chunk_id"])
+            added += 1
+            if added >= limit:
+                break
+    return out
 
 
 _serving: dict = {}
@@ -814,7 +1287,7 @@ def build_parser():
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="state, page analysis cache and the Chroma index")
     common.add_argument("--store", choices=["chroma"], default="chroma",
-                        help="Chroma only; Qdrant is pipeline 1 (scripts.rag.financial_ingest_qdrant_db)")
+                        help="Chroma only; Qdrant is pipeline 2 (scripts.rag.financial_ingest_qdrant_db)")
     common.add_argument("--cache-dir", type=Path, help="VLM transcriptions (default <root>/vlm_pages); put it on Drive")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -841,17 +1314,45 @@ def build_parser():
                         help="routed: send a paidVL page to the paid model when more than this share of Qwen3-VL's "
                              "figures is not in the page's OCR text")
     ingest.add_argument("--paid-max-pages-per-pdf", type=int, default=0, help="routed: cap paid calls per filing (0 = no cap)")
+    ingest.add_argument("--paid-first", action="store_true",
+                        help="routed: paidVL pages go to the paid model first (OCR -> paid model); Qwen3-VL reads them "
+                             "only when the paid reading fails or disagrees with OCR. Saves GPU time on paidVL pages")
+    ingest.add_argument("--no-describe-visuals", action="store_true",
+                        help="routed: skip the Qwen3-VL search description of chart and image pages")
     ingest.add_argument("--vlm-model", help=f"HF model for transformers (default {DEFAULT_TRANSFORMERS_MODEL}); "
                                             "served model name for openai (default RAG_VISION_MODEL)")
     ingest.add_argument("--vlm-pages", choices=["visual", "tables_charts_images", "tables_charts", "all"], default="visual",
                         help="visual: tables, charts, pictures and unreadable pages (default); "
                              "tables_charts_images: no unreadable pages; tables_charts: the cheapest with a paid API")
     ingest.add_argument("--vlm-max-pages-per-pdf", type=int, default=0, help="0 = every target page")
+    ingest.add_argument("--skip-routes", default="",
+                        help="routed: comma-separated routes (qwen3VL, paidVL) to leave for a later run; their pages "
+                             "keep a usable text layer. For a CPU-only first pass without Qwen3-VL")
+    ingest.add_argument("--workers", type=int, default=1,
+                        help="filings read in parallel worker processes (page analysis, OCR); this process embeds "
+                             "and writes. Set RAG_OCR_THREADS to cap OCR threads per worker")
+    ingest.add_argument("--low-priority", action="store_true",
+                        help="below-normal CPU priority for this process and its workers")
     ingest.add_argument("--max-new-tokens", type=int, default=1200)
-    ingest.add_argument("--embedding-provider", choices=["local", "hosted", "hashing"], default="local")
-    ingest.add_argument("--embedding-model", default="sentence-transformers/all-MiniLM-L6-v2")
+    ingest.add_argument("--embedding-provider", choices=["local", "hosted", "hashing"],
+                        default=os.getenv("RAG_EMBEDDING_PROVIDER") or "local",
+                        help="local = --embedding-model on this machine; hosted = the shared embedding API "
+                             "(docs/embedding_key.md: EMBEDDING_API_KEY, EMBEDDING_CA_CERT); both default to "
+                             "bge-small-en-v1.5 and give the same vectors, so an index built one way is served either way")
+    ingest.add_argument("--embedding-model", default=fi.LOCAL_BGE_SMALL,
+                        help="local model (default BAAI/bge-small-en-v1.5). An index keeps the model it was built "
+                             "with: to continue an older all-MiniLM-L6-v2 index pass sentence-transformers/all-MiniLM-L6-v2")
     ingest.add_argument("--force", action="store_true", help="redo finished filings (transcriptions stay cached)")
     ingest.add_argument("--reset", action="store_true", help="drop the collection and state first")
+
+    again = sub.add_parser("reembed", parents=[common],
+                           help="copy an index under --root with new vectors (same chunks, text, metadata and BM25)")
+    again.add_argument("--from-root", type=Path, required=True, help="the existing pipeline 1 index to copy")
+    again.add_argument("--embedding-provider", choices=["local", "hosted", "hashing"],
+                       default=os.getenv("RAG_EMBEDDING_PROVIDER") or "local")
+    again.add_argument("--embedding-model", default=fi.LOCAL_BGE_SMALL)
+    again.add_argument("--threads", type=int, default=4, help="torch CPU threads (keep the machine usable)")
+    again.add_argument("--low-priority", action="store_true", help="below-normal CPU priority")
 
     sub.add_parser("status", parents=[common])
     search = sub.add_parser("query", parents=[common])
@@ -863,10 +1364,86 @@ def build_parser():
     return parser
 
 
+def embed_input(text, metadata):
+    """What a chunk's vector was made from at ingest: the context line, then the chunk (``text_records``)."""
+    return fi.context_line(metadata) + "\n" + text
+
+
+def reembed(args, embedder=None):
+    """A copy of the index at ``--from-root`` under ``--root`` with new vectors: same chunk IDs, text, metadata, BM25
+    sidecar and page analysis; only the embeddings change. Resumable filing by filing. The ingest state comes along
+    with the new embedding recorded, so ``ingest --root <new>`` later adds the filings still missing."""
+    source, target = Path(args.from_root), Path(args.root)
+    if source.resolve() == target.resolve():
+        raise SystemExit("--root must be a new folder, not --from-root")
+    old_state = source / "vlm_ingest.sqlite3"
+    if not old_state.exists():
+        raise SystemExit(f"no pipeline 1 index at {source} (vlm_ingest.sqlite3 missing)")
+    embedder = embedder or fi.Embedder(args.embedding_provider, args.embedding_model)
+    with sqlite3.connect(old_state) as db:
+        settings = dict(db.execute("SELECT key, value FROM settings"))
+        done = db.execute("SELECT doc_id, stage, pipeline, points, seconds FROM filings WHERE status='complete' "
+                          "ORDER BY doc_id").fetchall()
+    state = fi.State(target / "vlm_ingest.sqlite3")
+    fi.check_embedding(state, embedder)
+    for key, value in settings.items():
+        if key != "embedding":
+            state.check(key, value)
+    target.mkdir(parents=True, exist_ok=True)
+    if (source / "pages").exists():
+        shutil.copytree(source / "pages", target / "pages", dirs_exist_ok=True)     # page analysis cache
+    (target / "chroma").mkdir(parents=True, exist_ok=True)
+    if not (target / "chroma" / "bm25.sqlite3").exists():
+        shutil.copy2(source / "chroma" / "bm25.sqlite3", target / "chroma" / "bm25.sqlite3")   # text only: unchanged
+    old = ChromaStore(source).collection
+    new = ChromaStore(target)
+    todo = [row for row in done if not state.done(row[0], row[1], reembedded(row[2], embedder))]
+    print(json.dumps({"filings": len(done), "to_reembed": len(todo), "from": str(source), "to": str(target),
+                      "embedding": embedder.signature}), flush=True)
+    started, chunks = time.time(), 0
+    for number, (doc_id, stage, pipeline, points, seconds) in enumerate(todo, 1):
+        t = time.time()
+        got = old.get(where={"doc_id": doc_id}, include=["documents", "metadatas"])
+        vectors = embedder([embed_input(text, meta) for text, meta in zip(got["documents"], got["metadatas"])])
+        new.collection.delete(where={"doc_id": doc_id})
+        for start in range(0, len(got["ids"]), 256):
+            end = start + 256
+            new.collection.upsert(ids=got["ids"][start:end], embeddings=vectors[start:end],
+                                  documents=got["documents"][start:end], metadatas=got["metadatas"][start:end])
+        state.mark(doc_id, stage, "complete", reembedded(pipeline, embedder), len(got["ids"]), seconds)
+        chunks += len(got["ids"])
+        elapsed = time.time() - started
+        print(json.dumps({"doc_id": doc_id, "chunks": len(got["ids"]), "seconds": round(time.time() - t, 1),
+                          "progress": f"{number}/{len(todo)}", "elapsed_min": round(elapsed / 60, 1),
+                          "eta_min": round(elapsed / number * (len(todo) - number) / 60, 1)}), flush=True)
+    summary = {"reembedded_filings": len(todo), "chunks": chunks, "minutes": round((time.time() - started) / 60, 1),
+               "old_count": old.count(), "new_count": new.count(), "bm25": new.bm25.count(),
+               "embedding": embedder.signature}
+    summary["counts_match"] = summary["old_count"] == summary["new_count"] == summary["bm25"]
+    print(json.dumps(summary), flush=True)
+    return summary
+
+
+def reembedded(pipeline, embedder):
+    """The filing's pipeline marker with the new embedding, as ``VlmIngest`` writes it for the same settings."""
+    marker = json.loads(pipeline)
+    marker["embedding"] = embedder.portable
+    return json.dumps(marker, sort_keys=True)
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
     if args.command == "ingest":
-        VlmIngest(args).run()
+        if args.low_priority:
+            lower_priority()
+        print(json.dumps(VlmIngest(args).run()), flush=True)
+    elif args.command == "reembed":
+        if args.low_priority:
+            lower_priority()
+        if args.threads:
+            import torch
+            torch.set_num_threads(args.threads)
+        reembed(args)
     elif args.command == "status":
         status(args)
     else:

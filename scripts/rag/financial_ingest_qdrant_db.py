@@ -72,10 +72,11 @@ from scripts.common.sector_corpus import parse_sectors, read_manifest as read_co
 from scripts.rag import chunk_schema, hybrid
 from scripts.rag.hashing import dense, term_id
 
+from scripts.common import storage
 from scripts.common.paths import ROOT  # noqa: E402 - repo root
 DOMAIN = "financial_report_qa"
 MANIFEST = ROOT / "data/raw/financial_report_qa/edgar/pdf_manifest.jsonl"
-DEFAULT_ROOT = Path(os.getenv("RAG_INGEST_DIR", ROOT / "indexes/financial_qdrant"))
+DEFAULT_ROOT = Path(os.getenv("RAG_INGEST_DIR") or storage.layout().qdrant_db)   # <RAG_HOME>/indexes/qdrant_db
 TEXT, VISUAL = "annual_reports_text", "annual_reports_visual"
 LEGACY = {TEXT: "docs_text", VISUAL: "visual_pages"}      # names before the rename (shared with LocalRAG)
 GRID = 32                          # ColPali v1.3: 32 x 32 image patches + special tokens
@@ -222,7 +223,7 @@ VISUAL_PAGE_MODES = ("tables_charts_images", "tables_charts", "rule", "visual", 
 
 
 def visual_targets(pages, mode):
-    """Pages that go to ColPali (pipeline 1) or the VLM (pipeline 2).
+    """Pages that go to ColPali (pipeline 2) or the VLM (pipeline 1).
 
     tables_charts_images: pages classified table, chart or image
     tables_charts:        table and chart pages only
@@ -272,8 +273,42 @@ def readable_text(page):
 
 # ----------------------------------------------------------------------------- models
 
+SHARED_EMBEDDING_API = "https://103.42.50.41:1035/v1"     # Track B shared embedding API (docs/embedding_key.md)
+SHARED_EMBEDDING_MODEL = "bge-small-en-v1.5"
+LOCAL_BGE_SMALL = "BAAI/bge-small-en-v1.5"                  # the same model, run locally (Hugging Face cache)
+# Model names that give the same vectors whether run locally or by the hosted API (checked 14 Nov 2026: cosine 1.0
+# on real chunks and a query, identical ranking). Only these are interchangeable; any other model keeps its exact
+# signature, so existing indexes (all-MiniLM-L6-v2) behave as before.
+EQUIVALENT_MODELS = {LOCAL_BGE_SMALL: SHARED_EMBEDDING_MODEL, SHARED_EMBEDDING_MODEL: SHARED_EMBEDDING_MODEL}
+LOCAL_NAME = {SHARED_EMBEDDING_MODEL: LOCAL_BGE_SMALL}       # portable model -> its local model id
+
+
+def portable_signature(signature: str) -> str:
+    """'local:BAAI/bge-small-en-v1.5:384' and 'hosted:bge-small-en-v1.5:384' -> 'bge-small-en-v1.5:384' (one model,
+    run in two places); any other signature is returned unchanged."""
+    provider, _, rest = str(signature).partition(":")
+    model, _, dim = rest.rpartition(":")
+    portable = EQUIVALENT_MODELS.get(model) if provider in ("local", "hosted") else None
+    return f"{portable}:{dim}" if portable else str(signature)
+
+
+def check_embedding(state, embedder):
+    """The index's embedding must match: the same signature, or the same model run locally instead of hosted (or the
+    reverse). The first builder's signature stays recorded."""
+    row = state.db.execute("SELECT value FROM settings WHERE key='embedding'").fetchone()
+    if row and portable_signature(row[0]) != embedder.portable:
+        raise ValueError(f"embedding differs from the existing index ({row[0]} != {embedder.signature}). "
+                         "Use a new --root with fresh collections, or --reset.")
+    if not row:
+        state.check("embedding", embedder.signature)
+
+
 class Embedder:
     """Dense text vectors: hashing (offline), local sentence-transformers, or a hosted OpenAI-compatible endpoint."""
+
+    @property
+    def portable(self) -> str:
+        return portable_signature(self.signature)
 
     def __init__(self, provider="local", model="sentence-transformers/all-MiniLM-L6-v2", batch=64):
         self.provider, self.batch = provider, batch
@@ -282,14 +317,21 @@ class Embedder:
         elif provider == "local":
             import torch
             from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer(model, device="cuda" if torch.cuda.is_available() else "cpu")
+            from scripts.common.local_models import LOAD_LOCK      # loads in parallel threads break each other
+            with LOAD_LOCK:
+                self.model = SentenceTransformer(model, device="cuda" if torch.cuda.is_available() else "cpu")
             self.dim = self.model.get_sentence_embedding_dimension()
             self.signature = f"local:{model}:{self.dim}"
         elif provider == "hosted":
-            missing = [k for k in ("EMBEDDING_API_BASE", "EMBEDDING_API_KEY", "EMBEDDING_MODEL") if not os.getenv(k)]
-            if missing:
-                raise RuntimeError(f"Missing hosted embedding env var(s): {', '.join(missing)}")
-            self.base, self.key, self.model = (os.environ[k] for k in ("EMBEDDING_API_BASE", "EMBEDDING_API_KEY", "EMBEDDING_MODEL"))
+            # Defaults: the Track B shared embedding API (docs/embedding_key.md); the key is always required.
+            if not os.getenv("EMBEDDING_API_KEY"):
+                raise RuntimeError("Missing hosted embedding env var(s): EMBEDDING_API_KEY")
+            self.base = os.getenv("EMBEDDING_API_BASE") or SHARED_EMBEDDING_API
+            self.key = os.environ["EMBEDDING_API_KEY"]
+            self.model = os.getenv("EMBEDDING_MODEL") or SHARED_EMBEDDING_MODEL
+            self.batch = min(batch, hosted_max_batch())          # the server's per-request limit (default 16)
+            self.context = embedding_ssl_context()               # EMBEDDING_CA_CERT: the endpoint's private CA
+            self.trimmer = TokenTrimmer(self.model)              # each text within the model's 512 tokens
             self.dim = len(self._hosted(["dimension probe"])[0])
             self.signature = f"hosted:{self.model}:{self.dim}"
         else:
@@ -306,18 +348,84 @@ class Embedder:
         return out
 
     def _hosted(self, texts):
-        body = json.dumps({"model": self.model, "input": [t[:8000] for t in texts]}).encode()
+        if len(texts) > self.batch:
+            raise ValueError(f"{len(texts)} texts in one embedding request; the limit is {self.batch}")
+        body = json.dumps({"model": self.model, "input": [self.trimmer.trim(t) for t in texts]}).encode()
         for attempt in range(4):
             request = urllib.request.Request(self.base.rstrip("/") + "/embeddings", data=body, headers={
                 "Content-Type": "application/json", "Authorization": f"Bearer {self.key}"})
             try:
-                with urllib.request.urlopen(request, timeout=120) as response:
+                with urllib.request.urlopen(request, timeout=120, context=self.context) as response:
                     data = json.load(response)["data"]
+                if len(data) != len(texts):
+                    raise RuntimeError(f"embedding API returned {len(data)} vectors for {len(texts)} texts")
                 return [d["embedding"] for d in sorted(data, key=lambda d: d["index"])]
             except urllib.error.HTTPError as exc:   # retry only explicit overload, as in resilience.py
                 if exc.code not in (429, 503) or attempt == 3:
                     raise
                 time.sleep(2 ** attempt * 2)
+
+
+def hosted_max_batch() -> int:
+    """Texts per hosted embedding request: EMBEDDING_MAX_BATCH (default 16, the Track B embedding API's limit)."""
+    try:
+        return max(1, int(os.getenv("EMBEDDING_MAX_BATCH", "16")))
+    except ValueError:
+        return 16
+
+
+def embedding_ssl_context():
+    """TLS context trusting EMBEDDING_CA_CERT (the CA that signed a private endpoint's certificate), or None."""
+    import ssl
+    cafile = os.getenv("EMBEDDING_CA_CERT", "").strip()
+    if not cafile:
+        return None
+    path = Path(os.path.expandvars(cafile)).expanduser()
+    if not path.is_file():
+        raise RuntimeError(f"EMBEDDING_CA_CERT not found: {path}")
+    return ssl.create_default_context(cafile=str(path))
+
+
+# Hosted model name -> tokenizer that counts its tokens (the served model's own, from the Hugging Face cache).
+TOKENIZERS = {"bge-small-en-v1.5": "BAAI/bge-small-en-v1.5", "bge-base-en-v1.5": "BAAI/bge-base-en-v1.5",
+              "bge-large-en-v1.5": "BAAI/bge-large-en-v1.5"}
+
+
+class TokenTrimmer:
+    """Cuts a text so the model sees at most EMBEDDING_MAX_TOKENS tokens (default 512, special tokens included).
+
+    The cut is made in the original text at a token boundary, so nothing is reworded. Without the tokenizer
+    (offline and not cached) it falls back to EMBEDDING_FALLBACK_CHARS characters (default 1200: about 300 tokens
+    of prose, still under 512 for the figure-dense tables of annual reports)."""
+
+    def __init__(self, model: str):
+        self.limit = max(8, int(os.getenv("EMBEDDING_MAX_TOKENS", "512")))
+        self.fallback_chars = int(os.getenv("EMBEDDING_FALLBACK_CHARS", "1200"))
+        name = os.getenv("EMBEDDING_TOKENIZER") or TOKENIZERS.get(model.split("/")[-1]) or (model if "/" in model else None)
+        self.tokenizer, self.name = None, None
+        if name:
+            try:
+                from transformers import AutoTokenizer
+                self.tokenizer, self.name = AutoTokenizer.from_pretrained(name), name
+            except Exception as exc:  # noqa: BLE001 - offline or unknown model: character fallback
+                print(json.dumps({"warning": "embedding tokenizer unavailable, trimming by characters",
+                                  "tokenizer": name, "error": str(exc)[:200]}))
+        self.trimmed = 0
+
+    def trim(self, text: str) -> str:
+        if self.tokenizer is None:
+            if len(text) > self.fallback_chars:
+                self.trimmed += 1
+                return text[:self.fallback_chars]
+            return text
+        room = self.limit - self.tokenizer.num_special_tokens_to_add()
+        encoded = self.tokenizer(text, add_special_tokens=False, return_offsets_mapping=True, truncation=False,
+                                 verbose=False)
+        offsets = encoded["offset_mapping"]
+        if len(offsets) <= room:
+            return text
+        self.trimmed += 1
+        return text[:offsets[room - 1][1]]
 
 
 def colpali_signature(model_name):
@@ -382,7 +490,11 @@ def pool_rows_cols(vectors, is_image):
 class PageOCR:
     def __init__(self, cuda=False, scale=2.0, min_confidence=.6):
         from rapidocr import RapidOCR
-        self.engine = RapidOCR(params={"Global.log_level": "warning", "EngineConfig.onnxruntime.use_cuda": cuda})
+        params = {"Global.log_level": "warning", "EngineConfig.onnxruntime.use_cuda": cuda}
+        threads = int(os.getenv("RAG_OCR_THREADS") or 0)        # 0: onnxruntime's default (every core)
+        if threads > 0:                                          # cap per process when several OCR workers run
+            params["EngineConfig.onnxruntime.intra_op_num_threads"] = threads
+        self.engine = RapidOCR(params=params)
         self.scale, self.min_confidence = scale, min_confidence
         self.signature = ocr_signature(scale, min_confidence)
 
@@ -1084,10 +1196,35 @@ def recorded_embedder(args, state_name="ingest.sqlite3"):
             provider, _, rest = row[0].partition(":")
             if provider.startswith("hashing"):
                 return Embedder("hashing")
+            portable = portable_signature(row[0])
+            if portable != row[0]:
+                return equivalent_embedder(provider, portable.rsplit(":", 1)[0])
             if provider == "local":
                 return Embedder("local", rest.rsplit(":", 1)[0])
             return Embedder("hosted")
     return Embedder(args.embedding_provider, args.embedding_model)
+
+
+def equivalent_embedder(recorded_provider: str, portable_model: str):
+    """An index of a model that runs both locally and hosted: RAG_EMBEDDING_PROVIDER (local|hosted) is tried first,
+    else the provider that built it; if that one can't start (no key, API unreachable, model not cached), the other."""
+    preferred = (os.getenv("RAG_EMBEDDING_PROVIDER") or recorded_provider).strip().lower()
+    order = [preferred, "hosted" if preferred == "local" else "local"]
+    errors = []
+    for provider in order:
+        try:
+            embedder = (Embedder("local", LOCAL_NAME.get(portable_model, portable_model)) if provider == "local"
+                        else Embedder("hosted"))
+        except Exception as exc:  # noqa: BLE001 - try the equivalent provider
+            errors.append(f"{provider}: {str(exc)[:160]}")
+            continue
+        if embedder.portable.rsplit(":", 1)[0] != portable_model:
+            errors.append(f"{provider}: serves {embedder.signature}, not {portable_model}")
+            continue
+        if errors:
+            print(json.dumps({"warning": "embedding provider fallback", "using": embedder.signature, "failed": errors}))
+        return embedder
+    raise RuntimeError(f"no embedder for {portable_model}: " + "; ".join(errors))
 
 
 def query(args):

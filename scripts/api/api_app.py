@@ -154,7 +154,19 @@ class FinancialChatRequest(ChatRequest):
         "decomposition",
         "self_consistency",
         "agentic_graph",
-    ] = Field("agentic_graph", description="Financial QA workflow to execute.")
+        "trend_graph",
+        "sector_trend_graph",
+        "fund_graph",
+        "router",
+    ] = Field("agentic_graph", description=(
+        "Financial QA workflow to execute. agentic_graph: the Q&A agent (planner, per-company searches, calculator, "
+        "critic). trend_graph: the multi-year trend agent (one search per fiscal year, verified series, changes and "
+        "CAGR computed in code). sector_trend_graph: the sector trend agent (one measure across one sector's "
+        "companies, year by year, over a fixed panel; totals, changes and CAGR computed in code). fund_graph: the "
+        "fund agent (a mutual fund's SEC N-PORT holdings as cited rows, linked to the holdings' annual reports; needs "
+        "loaded fund data). router: a supervisor that sends each question to the Q&A agent, the trend agent, the "
+        "sector trend agent, the fund agent (when fund data is loaded), a report handoff or a refusal. The others are "
+        "single-prompt baselines."))
     retrieval_mode: Literal["hybrid", "dense", "bm25"] = Field(
         "hybrid", description="hybrid (default): dense + BM25 fused by RRF, on Qdrant or Chroma; "
                               "dense or bm25: one retriever only (for ablations)."
@@ -312,13 +324,40 @@ class FinancialChatResponse(ChatResponse):
     evidence_preview: list[EvidenceResponse] | None = None
     support_check: dict[str, Any] | None = Field(
         default=None,
-        description="agentic_graph only: the critic's support check. `verdict` is supported, partially_supported, "
+        description="agentic_graph, trend_graph and router: the critic's support check. `verdict` is supported, partially_supported, "
                     "unsupported or unverified; `claims` are the judge's per-claim decisions; `numeric` lists figures "
                     "missing from the cited chunks. A hosted-LLM answer is shown only when the verdict is supported.",
     )
+    route: dict[str, Any] | None = Field(
+        default=None,
+        description="router and trend_graph: the chosen route (lookup, comparison, trend, report, out_of_scope), the "
+                    "LLM's and the rules' choices, who decided and any rule adjustments.",
+    )
+    trend: dict[str, Any] | None = Field(
+        default=None,
+        description="Trend route: the per-year series (each figure verified in that year's evidence), year-over-year "
+                    "changes, CAGR, missing years and chart rows.",
+    )
+    sector_trend: dict[str, Any] | None = Field(
+        default=None,
+        description="Sector trend route: the sector, measure and years; the panel (companies verified in every "
+                    "year) and the ones left out with the reason; per year the sector total in USD millions, its "
+                    "change, the median company change and how many companies grew; the CAGRs; every company's "
+                    "verified figures with their chunks.",
+    )
+    mutual_fund: dict[str, Any] | None = Field(
+        default=None,
+        description="Fund route: the fund, holdings date and accession; the lookup kind; the rows shown (top holdings, "
+                    "sector mix, exposure or holders); corpus coverage; for questions about the holdings' annual "
+                    "reports, each company's verified figures, growth and the weighted growth with its coverage.",
+    )
+    handoff: dict[str, Any] | None = Field(
+        default=None,
+        description="Report route: the company and year a full report would cover and whether a report profile exists.",
+    )
     agent_run: dict[str, Any] | None = Field(
         default=None,
-        description="agentic_graph only: the node path, step budget, every tool call (coverage_lookup, text_search, "
+        description="agentic_graph, trend_graph and router: the node path, step budget, every tool call (coverage_lookup, text_search, "
                     "visual_search, calculator), retrieval attempts, repairs and calculations.",
     )
 
@@ -404,6 +443,8 @@ app = FastAPI(
         {"name": "System", "description": "Service health and available-domain discovery."},
         {"name": "Chat", "description": "Run a guarded, citation-grounded answer workflow."},
         {"name": "Retrieval", "description": "Retrieve and return evidence without generating an answer."},
+        {"name": "Mutual funds", "description": "Loaded SEC N-PORT fund data: funds, holdings, holders and fund-card "
+                                                "search (read-only; questions go through the chat routes)."},
         {"name": "Multimodal RAG", "description": "Local multimodal profile: Qdrant text + ColPali page search "
                                                   "and local vision-model answers (`run_local_multimodal`)."},
     ],
@@ -456,7 +497,8 @@ def warm_up_retrieval() -> str:
     ``API_WARMUP=false`` turns it off. Failures are logged, never raised: a request still retries the load.
     """
     backend = os.getenv("RAG_BACKEND", "")
-    if os.getenv("API_WARMUP", "true").strip().lower() in {"0", "false", "no", "off"} or backend not in {"financial_qdrant", "financial_vlm"}:
+    if os.getenv("API_WARMUP", "true").strip().lower() in {"0", "false", "no", "off"} or backend not in {
+            "financial_qdrant", "financial_vlm", "financial_hybrid"}:
         return "skipped"
     started = time.perf_counter()
     try:
@@ -465,6 +507,10 @@ def warm_up_retrieval() -> str:
         else:
             from scripts.rag.financial_ingest_chroma_db import retrieve_for_agent
         retrieve_for_agent("total revenue", top_k=1)
+        if backend == "financial_hybrid":
+            from scripts.rag import financial_hybrid
+            if financial_hybrid.visual_setting() != "off":
+                financial_hybrid.colpali()          # load ColPali now, not on the first chart question
     except Exception as exc:  # noqa: BLE001 - warm-up is best effort
         logger.warning("retrieval warm-up failed: %s", exc)
         return "failed"
@@ -712,6 +758,8 @@ def explain_chat_result(result: dict[str, Any]) -> str:
     grounding = result.get("grounding") or {}
     if status == "not_available":
         return str(grounding.get("reason") or "The filings can't answer this question.")
+    if status == "report_handoff":
+        return str(grounding.get("reason") or "The request was handed to the report pipeline.")
     if grounding.get("status") == "not_grounded":
         return str(grounding["reason"])
     security = result.get("security") or {}
@@ -788,6 +836,22 @@ def _citation_grounding(result: dict[str, Any]) -> dict[str, Any]:
             "reason": "The request was refused before an answer was provided.",
         }
         return result
+    if result.get("final_status") == "report_handoff":
+        result["grounding"] = {
+            "status": "not_applicable",
+            "evidence_count": 0,
+            "cited_chunk_ids": [],
+            "reason": "The router handed a report request to the report pipeline, which runs after confirmation.",
+        }
+        return result
+    if result.get("final_status") == "not_available" and (result.get("route") or {}).get("route") == "fund":
+        result["grounding"] = {
+            "status": "not_applicable",
+            "evidence_count": 0,
+            "cited_chunk_ids": [],
+            "reason": "The fund agent could not answer from the loaded N-PORT data; the answer says why.",
+        }
+        return result
     if result.get("final_status") == "not_available":
         coverage = result.get("coverage") or {}
         result["grounding"] = {
@@ -795,6 +859,16 @@ def _citation_grounding(result: dict[str, Any]) -> dict[str, Any]:
             "evidence_count": 0,
             "cited_chunk_ids": [],
             "reason": f"No figure was given because the filings can't answer this ({coverage.get('reason', 'not available')}).",
+        }
+        return result
+    if result.get("final_status") == "insufficient_evidence" and result.get("sector_trend"):
+        # The sector agent stopped before answering (too few companies verified in every year): its message
+        # states only what could not be verified, so it stays; the per-company table shows what was found.
+        result["grounding"] = {
+            "status": "not_applicable",
+            "evidence_count": 0,
+            "cited_chunk_ids": [],
+            "reason": "No sector trend was computed: too few companies had a verified figure for every year.",
         }
         return result
 
@@ -1203,3 +1277,9 @@ def retrieve_visual_multimodal(domain: str, request: MultimodalRequest) -> dict[
                 "trace_id": calls.trace_id, "trace": calls.events}
     except (ValueError, OSError, CallFailure) as exc:
         raise HTTPException(status_code=503, detail="ColPali retrieval unavailable; check model configuration and visual index.") from exc
+
+
+# Mutual fund endpoints (read-only; 404 until fund data is loaded). Kept in their own module.
+from scripts.api.routes_mutual_fund import router as mutual_fund_router  # noqa: E402 - after the app is built
+
+app.include_router(mutual_fund_router)

@@ -8,6 +8,7 @@ How a question travels from Streamlit to an answer: which agents and tools run, 
 - The financial graph routes **per request**: the planner's tools decide whether the coverage check, ColPali search and calculator run; a comparison becomes one filtered search per company and year; a company with no evidence gets **one broadened retrieval retry**; an answer whose citations fail, or whose claims or figures the cited evidence doesn't state, gets **one repair** carrying the critic's feedback.
 - The critic is two checks: citation IDs must be retrieved IDs, and a **support check** (every figure must appear in a cited chunk; an LLM judge decides claim by claim). With a hosted LLM, the generated answer is shown only when both pass; otherwise the response falls back to cited excerpts.
 - Loops are **budget-aware**: a loop runs only if the rest of the run still fits `AGENT_MAX_STEPS` (default 10), so the cap shortens a run instead of failing it.
+- **Five agent flows share these guards, critic and governance** (sections 7a and 7c): `agentic_graph` (the Q&A agent), `trend_graph` (multi-year trend agent), `sector_trend_graph` (one measure across a sector), `fund_graph` (mutual fund holdings, linked to the holdings' annual reports) and `router` (a supervisor that sends each question to one of them, a report handoff or a refusal). The fund route exists only when fund data is loaded. Streamlit uses `router` by default. Each flow is a **multi-agent flow**: input guard, supervisor/planner, executor, extractor, answer and critic agents hand work to each other inside one bounded graph (section 7b).
 - Each response carries `agent_run`: the node path, every tool call, retrieval attempts, repairs and calculations. Streamlit shows it under **Agent run**.
 
 ---
@@ -17,7 +18,8 @@ How a question travels from Streamlit to an answer: which agents and tools run, 
 | Route | Who calls it | What runs |
 |---|---|---|
 | `POST /conversation/financial_report_qa` | Streamlit financial chat | Clarifier, then the financial agent graph (or the report pipeline) |
-| `POST /chat/financial_report_qa` | API clients, evaluation | The financial agent graph (`technique=agentic_graph`) or a single-prompt technique |
+| `POST /chat/financial_report_qa` | API clients, evaluation | An agent flow (`technique=agentic_graph`, `trend_graph`, `sector_trend_graph`, `fund_graph` or `router`) or a single-prompt technique |
+| `GET /mutual_fund/...` | API clients, checks | Loaded funds, holdings, holders, fund-card search: SQL and vector lookups only, no agents (section 7c) |
 | `POST /retrieve/...` | Evidence browsing | Retrieval only, no agents, no LLM |
 | `POST /multimodal/financial_report_qa/chat` | Local multimodal profile | Input guard, retrieval, fail-closed `safe_answer` (not LangGraph) |
 | `generate_financial_report` | Clarifier's "Full financial report" | Deterministic pipeline; numbers come only from the PDF |
@@ -122,7 +124,8 @@ Every branch is a Python function of the state. None asks the LLM.
 | Tool | Does | Runs when |
 |---|---|---|
 | `coverage_lookup` | Checks the served index's company/year list (`ingest.sqlite3`) and skips targets it can't answer | The question names a company or year |
-| `text_search` | Hybrid Qdrant search (dense MiniLM + BM25, RRF fusion, rerank) with ticker, year and sector filters | Always: every answer must cite text |
+| `text_search` | Hybrid search over the served index (dense vectors of the index's model, bge-small or MiniLM, + BM25, RRF fusion; cross-encoder rerank on Qdrant) with ticker, year and sector filters | Always: every answer must cite text |
+| `fund_search`, `fund_lookup`, `company_figures` | Fund route only (section 7c): find the fund (names, then fund cards), fixed SQL over the N-PORT tables, cached verified company figures | The router chose `fund` |
 | `visual_search` | ColPali page search over chart, table and image pages, merged into the same ranking | `RAG_FIN_VISUAL=1` (every question) or `auto` (planner or chart words); dropped when no ColPali index is served |
 | `calculator` | Evaluates `CALC[...]` from the answer: numbers and `+ - * /` only, operands must appear in the evidence | Planner sets `needs_calculation`, or the question asks for growth, change, ratio, margin or comparison |
 
@@ -137,6 +140,14 @@ Every branch is a Python function of the state. None asks the LLM.
 Each change is listed in `plan.adjustments` and `plan.planner` says whether the LLM's plan (`llm`) or the fallback (`fallback`) was used, so a weak or mock LLM can't skip a needed tool and the trace shows who decided.
 
 **Search depth.** Each target gets `max(3, ceil(top_k / targets))` hits; a retry searches twice as deep, with the question rewritten to its content words plus the metric's synonyms and statement names (for example "net income net earnings net profit consolidated statements annual report"). The filters stay the same, so a retry never borrows another company's or year's figures.
+
+## 4a. Parallel searches
+
+Added 14 November 2026. Every step that runs several filtered searches runs them **in parallel**, up to `RAG_SEARCH_WORKERS` (default 4) at a time: the Q&A executor (one search per company × year), the trend fetch (one per year), the sector fetch and its broadened retries (one per company × year), and the fund agent's company searches. The first search of a step runs alone, so the query embedder and other lazily loaded models are created once; then the rest run side by side. Results are taken **in target order** and de-duplicated afterwards, so the evidence, its order and `tool_calls` are exactly what a one-by-one loop gives (`tests/test_search_fan_out.py` compares 1 and 4 workers). Each parallel round is listed in `agent_run.search_fan_out` (searches, workers, wall time).
+
+The sector and fund nodes work in rounds: all first searches in parallel → statement rows read in code → all broadened searches for what is still missing in parallel → the LLM, one call at a time, only for figures code couldn't read. **LLM calls are never parallel**: the hosted Track B client sends one request at a time. The fan-out uses its own threads, not the 4-slot `Calls` pool, and embedded Qdrant (one in-process client) stays sequential. The step count is unchanged.
+
+Measured on the local API (bge index, 180 filings, mock LLM, an ingest running beside it): "How did healthcare revenue trend from 2022 to 2025?" (24 searches) 97 s with 1 worker → 33 s with 4; a three-bank comparison 6.9 s → 5.9 s. Answers, figures and CAGR were identical.
 
 ## 5. Step budget and loops
 
@@ -196,9 +207,228 @@ The judge runs inside `critic_step`, so it adds one LLM call per critique but no
 | `not_available` | The filings can't answer (company, year or measure not covered) |
 | `insufficient_evidence` | Searches found nothing usable |
 | `not_grounded` | Citations failed validation or named the wrong company |
-| `refused` | Input, evidence or output guard blocked it |
+| `refused` | Input, evidence or output guard blocked it; on the fund route also investment-advice wording ("should I buy", "best fund") |
 | `step_limit` | Hard cap reached (not expected with budget-aware routing) |
 | `tool_error` | A model or search call failed or timed out (`RAG_REQUEST_TIMEOUT_SECONDS`) |
+
+## 7a. Router (supervisor) and the multi-year trend agent
+
+Code: [financial_router.py](../scripts/agents/financial_router.py), [financial_trend.py](../scripts/agents/financial_trend.py), `financial_graph` in [financial_prompting_agent.py](../scripts/agents/financial_prompting_agent.py). Tests: [test_agent_flows.py](../tests/test_agent_flows.py).
+
+```mermaid
+flowchart TD
+    S[security_step] --> P[plain_text_step - LLM]
+    P --> R[route_step - router LLM + rules]
+    R -->|lookup / comparison| RT[retrieve_step ... Q&A agent, section 3]
+    R -->|trend| TF[trend_fetch_step - one search per fiscal year]
+    TF --> TS[trend_series_step - LLM copies each figure, code verifies, computes changes + CAGR]
+    TS -->|a year unverified and budget allows| TF
+    TS --> A[answer_step - trend prompt]
+    R -->|report| CR[critic_step]
+    R -->|out_of_scope| CR
+    RT --> A
+    A --> CR
+    CR -->|repair once| A
+    CR --> GV[governance_step]
+```
+
+**Router (`technique=router`).** The router LLM returns Route JSON (`route`, `tools`, `needs_calculation`, `reason`). `financial_router.decide` validates it the same way `normalize_plan` validates the planner:
+
+| Route | Goes to | Accepted when |
+|---|---|---|
+| `lookup` | Q&A agent (from `retrieve_step`) | Default |
+| `comparison` | Q&A agent: one filtered search per company × year | The LLM says so, or the parser finds two companies / compare words |
+| `trend` | Trend agent | One company, one measure and at least two indexed fiscal years (`trend_plan.feasible`); otherwise answered as a lookup or comparison |
+| `report` | Handoff (`final_status = report_handoff`, `handoff` with ticker, year, whether a report profile exists) | Only with an explicit request ("generate a full report"); the deterministic report runs after the user confirms in the chat |
+| `out_of_scope` | Refused | Only when the question names no company, measure or known intent |
+
+Explicit signals win: a question the parser reads as a report, comparison or trend goes there even if the LLM said otherwise; the LLM decides the rest (for example "How has Costco's revenue developed?", wording the rules don't know). `route` in the response records the LLM's and the rules' choices, `decided_by` and every adjustment. The route step also plans (its tools become the Q&A plan), so a routed run takes the **same 8 steps** as a direct one.
+
+**Trend agent (`technique=trend_graph`, or the router's `trend` route).**
+
+| Step | What it does | LLM? |
+|---|---|---|
+| `route_step` | `trend_plan`: company, measure, years (asked years the index holds, else every indexed year, at most 5); coverage recorded as a `coverage_lookup` call. If no trend can be built, the question goes to the Q&A path (`decided_by = technique`) | No |
+| `trend_fetch_step` | One filtered `text_search` per fiscal year ("Costco revenue fiscal year 2024"); a retry searches only unverified years, broadened and twice as deep | No |
+| `trend_series_step` | Evidence injection guard; per year, the LLM copies the figure (Series JSON: value, unit, chunk_id, quote). `validate_point` keeps it only if the chunk is in **that year's** search and its text contains the number (`ok`, `not_found`, `wrong_chunk`, `not_in_evidence`, `no_evidence`). Year-over-year change, % change and CAGR are **computed in code** and recorded as calculations | **Yes** (one call per year) |
+| `answer_step` | Trend prompt: the verified series with chunk IDs and the computed changes; the model describes them and may not compute new numbers. With no verified year it falls back to the Q&A prompt | **Yes** |
+| `critic_step`, `governance_step` | As in section 6. The judge now also sees the calculator results, so a correctly reported growth rate or CAGR counts as supported; `numeric_grounding` accepts them as calculations | Yes (judge) |
+
+Budget: 8 steps; one retry of unverified years adds 2 (10). The response's `trend` holds `points`, `changes`, `cagr`, `missing` and `chart` rows; Streamlit shows a table, a line chart of the verified years and names the years it could not verify.
+
+**Live check (local Retail index, mock LLM, 12 November 2026).** "How did Costco revenue change over the years?" → route `trend` (rules overrode the mock's `lookup`) → searches for FY2024 and FY2025 → 249,625 (p42) and 269,912 (p41), both verified → +8.13% → `answered`, `grounded`. The mock extractor takes the first figure on the page (net sales here); a hosted model picks the asked measure.
+
+**Sector trend agent (`technique=sector_trend_graph`, or the router's `sector_trend` route).** One measure across one sector's companies, fiscal year by fiscal year: "How did healthcare revenue trend from 2022 to 2025?". Code: [financial_sector_trend.py](../scripts/agents/financial_sector_trend.py). Tests: [test_sector_trend.py](../tests/test_sector_trend.py).
+
+```mermaid
+flowchart TD
+    R[route_step - sector_plan: sector, measure, years, companies] -->|sector_trend| SF[sector_fetch_step - one search per company x year]
+    R -->|plan not buildable| CR[critic_step]
+    SF --> SS[sector_series_step - statement row in code; else broadened search + row; else LLM; fixed panel + sector table in code]
+    SS -->|fewer than 2 companies verified| CR
+    SS --> A[answer_step - sector prompt]
+    A --> CR
+    CR -->|repair once| A
+    CR --> GV[governance_step]
+```
+
+| Step | What it does | LLM? |
+|---|---|---|
+| `route_step` | The clarifier's parser reads a sector name and no company plus trend words (or two years) as `sector_trend`; the sidebar's sector filter does the same for a company-less trend question. `sector_plan`: one sector, one measure, the years (asked years the sector's index holds, else its last 5), and the companies with a filing for **every** year (alphabetical, at most `RAG_SECTOR_MAX_COMPANIES`, default 8). The rest are listed in `excluded` with the reason. A plan that can't be built (no or several sectors, no measure, a measure banks don't report, fewer than 2 companies) ends as `not_available` with the reason | Router only |
+| `sector_fetch_step` | One `text_search` filtered by ticker and year per company × year ("AbbVie revenue fiscal year 2024", top 3) | No |
+| `sector_series_step` | Per company-year, **code first**: `label_match` reads the statement row ("Total revenues 36,751 33,424 28,190") in the column whose header is that year. Without one, a broadened search twice as deep, and the row again. Only then the LLM (Series JSON), whose figure must also sit on a line naming the measure (`on_metric_line`). `validate_point` applies to both. Chunks the injection guard flags are **dropped**, not trusted, and the rest of the sector stands. Then `aggregate`: the **fixed panel** (companies verified in every year), per year the sector total in USD millions, its change, the median company change and how many companies grew, plus the total's CAGR and the median company CAGR, all recorded as calculations | Only for rows code can't read |
+| `answer_step` | Sector prompt: the table, the panel's figures with chunk IDs and who was left out; no new numbers | **Yes** |
+| `critic_step`, `governance_step` | As in section 6. Extra human-review triggers: `low_sector_coverage` (panel under half the companies read) and `unusual_sector_change` (a company moved more than `RAG_SECTOR_OUTLIER_PCT`, default 50%, in a year) | Yes (judge) |
+
+Budget: 8 steps, as the retry runs inside `sector_series_step` (Track B's 10-step cap holds with one repair). A sector request gets `RAG_SECTOR_TIMEOUT_SECONDS` (default 300) instead of the 60-second request deadline. The response's `sector_trend` holds `rows`, `panel`, `excluded`, `companies` (each figure with `method` `label` or `llm`, page and chunk), the CAGRs and `unusual_changes`; Streamlit shows the sector table, a chart of the total and the per-company figures.
+
+**Live check (local Chroma index, 180 min500 filings, mock LLM, 13 November 2026).** "How did healthcare revenue trend from 2022 to 2025?" → `sector_trend`, 8 steps, 24 searches, 33 s. AbbVie (58,054 / 54,318 / 56,334 / 61,160) and Amgen (26,323 / 28,190 / 33,424 / 36,751) read from their statement rows; Abbott left out (no FY2023–24 statement row in the text layer, those pages were skipped at ingest); Danaher, Gilead and Intuitive Surgical left out (filings missing for some years). Sector total 84,377 → 97,911 USD m, CAGR 5.08%. "How did banking net interest income change from 2022 to 2025?" → no panel: bank income statements were rarely in the top hits and segment tables repeat the year header, so code read 5 of 32 figures and the line check rejected every mock guess; the answer says a sector trend needs at least 2 companies. A hosted extractor is needed for banks.
+
+## 7b. Multi-agent view of the three flows
+
+All three flows are **multi-agent flows**: each question passes through several agents with separate roles, prompts and outputs, which hand work to each other. A critic agent can send work back for a rewrite. In the router flow, a supervisor agent also delegates to a specialist agent.
+
+### 7b.1 The agents
+
+| Agent | Node(s) | Kind | Role | Hands over to |
+|---|---|---|---|---|
+| **Supervisor (router)** | `route_step` (router flow) | LLM (Route JSON) + rules | Chooses the specialist for the question (Q&A, trend, report, refusal) and plans it | Q&A executor, trend executor, or the critic (report / refusal) |
+| **Input guard** | `security_step`, `plain_text_step` | regex + LLM (classifier) | Blocks prompt injection and code or tool abuse; checks that the question is a plain finance question and cleans it | planner / supervisor, or the critic when refused |
+| **Planner** | `plan_step` (Q&A flow); inside `route_step` (router and trend flows) | LLM (Plan JSON) + rules | Chooses tools; splits the question into one target per company × year (Q&A) or per fiscal year (trend) | executor |
+| **Retrieval executor** | `retrieve_step` (Q&A), `trend_fetch_step` (trend) | tools, no LLM | Runs `coverage_lookup`, then hybrid `text_search` (+ `visual_search`) per target; broadened retry of missing targets | evidence guard / extractor |
+| **Evidence guard** | `evidence_guard_step` (Q&A); start of `trend_series_step` (trend) | code | Blocks injected instructions in retrieved text; lists targets with no evidence | executor (retry) or answer agent |
+| **Figure extractor** | `trend_series_step` (trend) | LLM (Series JSON) + code | Copies each year's figure; code keeps it only if that year's chunk states it, then computes changes and CAGR | executor (retry of unverified years) or answer agent |
+| **Answer agent** | `answer_step` | LLM | Writes the cited answer (Q&A prompt) or the trend narrative (trend prompt); on a repair, receives the critic's feedback | calculator or critic |
+| **Calculator** | `calculator_step` (Q&A) | code | Evaluates `CALC[...]`; every operand must be in the evidence | critic |
+| **Critic** | `critic_step` | code + LLM (support judge) | Checks every citation ID, every figure and every claim against the cited chunks | answer agent (one repair) or governance |
+| **Governance** | `governance_step` | code | Output filter (allow / review / block) and human-review triggers | END |
+
+### 7b.2 Agents in each flow
+
+| Agent | `agentic_graph` (Q&A) | `trend_graph` (trend) | `router` (supervisor) |
+|---|---|---|---|
+| Supervisor | — | forced to `trend` (no LLM call); falls back to Q&A when no trend can be built | ✓ LLM route, validated by rules |
+| Input guard | ✓ | ✓ | ✓ |
+| Planner | ✓ LLM planner | rules (`trend_plan`) | ✓ the router's tools become the plan |
+| Retrieval executor | ✓ per company × year | ✓ per fiscal year | the chosen specialist's |
+| Evidence guard | ✓ | ✓ | ✓ |
+| Figure extractor | — | ✓ one LLM call per year | on the trend route |
+| Answer agent | ✓ Q&A prompt | ✓ trend prompt | the chosen specialist's |
+| Calculator | when planned | changes and CAGR computed by the extractor's code | on the Q&A route |
+| Critic | ✓ | ✓ | ✓ |
+| Governance | ✓ | ✓ | ✓ |
+| **LLM agents per question** (mock and typical runs) | 4: guard, planner, answer, judge | 3 + one per year: guard, extractor × years, answer, judge | 4–5: guard, router, (extractor × years), answer, judge |
+
+### 7b.3 Hand-offs per flow
+
+**Q&A flow (`agentic_graph`): planner → executor → answer → critic**
+
+```mermaid
+flowchart LR
+    U((question)) --> IG[Input guard agent]
+    IG -->|refused| CR
+    IG --> PL[Planner agent - LLM]
+    PL --> EX[Retrieval executor - tools]
+    EX --> EG[Evidence guard]
+    EG -->|company or year missing| EX
+    EG --> AN[Answer agent - LLM]
+    AN -->|CALC| CA[Calculator]
+    CA --> CR[Critic agent - judge]
+    AN --> CR
+    CR -->|repair once| AN
+    CR --> GV[Governance]
+    GV --> R((answer))
+```
+
+**Trend flow (`trend_graph`): planner → per-year executor → extractor → answer → critic**
+
+```mermaid
+flowchart LR
+    U((question)) --> IG[Input guard agent]
+    IG --> TP[Trend planner - rules]
+    TP -->|no trend possible| QA[Q&A agents]
+    TP --> TF[Executor - one search per year]
+    TF --> FX[Figure extractor agent - LLM per year + code check]
+    FX -->|year unverified| TF
+    FX --> AN[Answer agent - trend prompt]
+    AN --> CR[Critic agent - judge]
+    CR -->|repair once| AN
+    CR --> GV[Governance]
+    GV --> R((answer + series))
+```
+
+**Router flow (`router`): the supervisor delegates to a specialist**
+
+```mermaid
+flowchart LR
+    U((question)) --> IG[Input guard agent]
+    IG --> SV[Supervisor agent - LLM route + rules]
+    SV -->|lookup / comparison| QA[Q&A specialist: executor, evidence guard, answer, calculator]
+    SV -->|trend| TR[Trend specialist: per-year executor, extractor, answer]
+    SV -->|report| HO[Report hand-off]
+    SV -->|out of scope| RF[Refusal]
+    QA --> CR[Critic agent - judge]
+    TR --> CR
+    HO --> CR
+    RF --> CR
+    CR -->|repair once| QA
+    CR -->|repair once| TR
+    CR --> GV[Governance]
+    GV --> R((answer))
+```
+
+### 7b.4 How the agents are coordinated
+
+- **One shared state, one controller per run.** The agents are nodes of one compiled LangGraph state machine per flow (`financial_graph`). They read and write one shared state (`AgentState`: plan, evidence, answer, checks, trend, route), and pass work along graph edges. They are not separate processes sending each other messages.
+- **The next step is decided in code.** LLM agents propose: a route, a plan, a figure, an answer, a verdict. Each proposal is validated (`financial_router.decide`, `normalize_plan`, `validate_point`, `numeric_grounding`), and a routing function in code decides the next node. An LLM never picks the next node directly.
+- **The specialists are branches, not separate subgraphs.** In the router flow, the Q&A and trend specialists are branches of the supervisor's graph that share the critic and governance agents. They could be split into separately compiled subgraphs without changing the routing or the step budget.
+- **Bounded and auditable.** Every loop (retrieval retry, repair) runs only if the rest of the run fits `AGENT_MAX_STEPS` (10, the Track B cap). `agent_run` records the path, every tool call and every calculation, and `route` records the supervisor's decision: the LLM's choice, the rules' choice, who decided, and any adjustments.
+
+**In one line:** three bounded multi-agent flows. A supervisor routes questions to a planner–executor–critic Q&A agent team or a verify-and-retry trend agent team, and all three share one guard, critic and governance layer.
+
+## 7c. Fund agent (mutual fund holdings)
+
+Added 14 November 2026. Code: [agent_mutual_fund.py](../scripts/agents/agent_mutual_fund.py), [tools_mutual_fund.py](../scripts/agents/tools_mutual_fund.py), [prompts_mutual_fund.py](../scripts/prompts/prompts_mutual_fund.py), the `fund_*` nodes in `financial_graph`. Data: [annual_report_rag_structure.md](annual_report_rag_structure.md) §13. Design: [mutual_fund_rag_design.md](mutual_fund_rag_design.md). Tests: [test_agent_mutual_fund.py](../tests/test_agent_mutual_fund.py).
+
+```mermaid
+flowchart TD
+    S[security_step] --> P[plain_text_step - LLM]
+    P --> R[route_step - fund_plan: fund, holdings date, lookup kind]
+    R -->|plan not possible / advice| CR
+    R -->|fund| FL[fund_lookup_step - fixed SQL, each row an evidence item]
+    FL -->|holdings only| A[answer_step - fund prompt]
+    FL -->|about the holdings' annual reports| FC[fund_company_step - one filtered search per company, statement row in code, LLM last, cache, weighted growth in code]
+    FC --> A
+    A --> CR[critic_step]
+    CR -->|repair once| A
+    CR --> GV[governance_step]
+```
+
+**When the router picks `fund`.** Only when `nport_mutual_fund.sqlite3` holds a filing **and** the question names a loaded fund (every distinctive word of its name, or its family plus one) or uses a fund word with a holdings word ("which funds hold NVIDIA"). The rule wins over the router LLM, and an LLM `fund` without those signals is overruled. Without fund data the route doesn't exist, so every other route is unchanged. The clarifier passes fund questions straight through (`clarifier: passthrough`, `route_hint: fund`); it never asks them for a company and year.
+
+| Node | Does | LLM? |
+|---|---|---|
+| `route_step` | `fund_plan`: the fund (names first; fund cards only when the best card beats the next by 0.03), the filing (latest, or the year asked), the lookup kind and how many holdings. Not possible → `not_available` with the reason ("which Vanguard fund? Loaded: ..."); advice wording → `refused` | Router only |
+| `fund_lookup_step` | `fund_lookup`: fixed, parameterised SQL. Rows become evidence with IDs `nport_<accession digits>_<row>` (`_fund`, `_coverage`, `_h<holding>`, `_sector_<slug>`, `_x_<ticker>`, `_flows`, `_returns_<class>`) and the row as text | No |
+| `fund_company_step` | Only for `holdings_growth` and `holdings_text`. Per top holding with a corpus ticker: the latest **indexed** annual report filed by the holdings date. Growth: the measure for that fiscal year and the one before, from the same filing; statement row in code, one broadened search, then the LLM (Series JSON); a cached figure is reused when its chunk is retrieved again. Weighted growth `Σ weight × growth / Σ covered weight` in code. Text: one filtered search per company | Only for rows code can't read |
+| `answer_step` | Fund prompt: facts only, figures copied from rows or the computed table, the holdings date named, every row or chunk cited | **Yes** |
+| `critic_step`, `governance_step` | As in section 6; `nport_*` IDs are valid citations and their numbers count for the figure check. Extra trigger `low_fund_coverage` (companies used carry under half of the weight asked about). "Hold"/"holdings" don't trigger the investment-language review on this route; advice words do | Yes (judge) |
+
+| Lookup kind | Example | Data |
+|---|---|---|
+| `top_holdings` | What are the top 5 holdings of the Vanguard 500 Index Fund? | rows |
+| `holders` | Which funds hold the most NVIDIA? | rows across loaded funds |
+| `exposure` | How much Microsoft does the Vanguard Total Stock Market Index Fund hold? | rows |
+| `sector_mix` | What is the sector allocation of the Vanguard Growth Index Fund? | rows by corpus sector |
+| `facts`, `flows`, `returns` | net assets; monthly sales and redemptions; monthly total returns | rows |
+| `holdings_growth` | How did revenue of the Vanguard Value Index Fund's top 10 holdings grow? | rows + annual reports |
+| `holdings_text` | What risks do the fund's three largest holdings report? | rows + annual-report search |
+
+**Budget.** 7 steps for holdings questions, 8 with `fund_company_step`, 10 with one repair (the retry runs inside the node). A routed fund request gets `RAG_SECTOR_TIMEOUT_SECONDS` (default 300), like the sector agent. `run_technique` skips the company-scope checks for this route, because the answer cites N-PORT rows, not one company's filings.
+
+**Safety rules in code.** A figure the LLM copies for both years from one chunk is left out ("the same figure was read for both years"), not reported as 0% growth. Companies whose filings aren't indexed are listed as not used, never searched.
+
+**Live check (14 November 2026; local API on the Chroma index with 180 filings, real N-PORT data for four Vanguard funds, mock LLM).** Top holdings, holders, exposure, sector mix, returns and net assets: `fund` route, 7 steps, valid citations, 0.2–5.5 s. Value fund top 10 revenue growth: 8 steps, ABBV +8.57% read from its statement rows, JPM left out (same figure for both years), the rest not indexed → `pending_human_review` (`low_fund_coverage`). "What does the Vanguard fund hold?" → asks which of the four. "Should I buy the Vanguard 500 Index Fund?" → refused. The Q&A, trend, sector trend and report routes gave the same results as before.
 
 ## 8. Worked runs (local Retail index, mock LLM)
 
@@ -264,6 +494,7 @@ The five other Track B domains (procurement, travel and expense, competitive res
 | Response `agent_run` | Path, steps/max, every tool call (target, hits, ms), retrieval attempts, repairs, calculations |
 | Response `plan` | Planner source (`llm`/`fallback`), proposed tools, final tools, targets, rule adjustments |
 | Response `support_check` | Verdict, each claim with the judge's reason, figures checked and any missing |
+| Response `mutual_fund` | Fund route: fund, holdings date, accession, lookup kind, the rows shown, corpus coverage, linked company figures, weighted growth and what was not used |
 | Response `grounding` | Citation status, `method` (`llm_support_check`, `source_excerpts` or `mock`), `semantic_answer_verified` |
 | Streamlit **Agent run** expander | The path, tools, attempts and a tool-call table |
 | Streamlit **What can I ask?** and **How to read an answer** | Clickable examples built from the indexed companies (cited answer, growth, comparison, follow-up, risks, not available, guardrails), the coverage line, and what each status means |
@@ -283,6 +514,9 @@ The five other Track B domains (procurement, travel and expense, competitive res
 | `RAG_REQUEST_TIMEOUT_SECONDS` | 60 | Whole-workflow deadline (`tool_error` when exceeded) |
 | `RAG_SUPPORT_CHECK` | on | `0` turns off the critic's support check (and hosted answers then fall back to excerpts) |
 | `ANSWER_CACHE_SECONDS` | 0 | Reuse identical answers |
+| `RAG_MUTUAL_FUND_DIR` | `<RAG_HOME>/indexes/mutual_fund` | Fund database and fund cards; the `fund` route exists only when its database holds a filing |
+| `RAG_FUND_MAX_COMPANIES` | 10 | Most holdings a fund question reads annual reports for |
+| `RAG_SEARCH_WORKERS` | 4 | Searches a step runs at once (`financial_tools.fan_out`); `1` = one by one. Embedded Qdrant always runs them one by one. LLM calls are never run in parallel |
 | `CONVERSATION_DB` | in memory | Clarifier state in SQLite |
 
 ## 13. Limits

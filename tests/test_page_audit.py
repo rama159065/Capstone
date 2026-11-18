@@ -21,6 +21,7 @@ PROSE = "the company reported results for the year and the board approved the pl
     (page("table", "Revenue 391,035 383,285"), "pdfParser+colpali"),
     (page("chart", "Net sales 2023 2024 2025 391,035 383,285 365,817 $6.08 2.1% 10%"), "pdfParser+colpali"),
     (page("chart", "Net sales by year"), "qwen3VL"),
+    (page("chart", "the board reviewed risk management policies " * 120), "pdfParser"),   # decorated text page (BAC 2025)
     ({**page("chart"), "shapes": 3371}, "ocr"),                              # text drawn as outlines (Costco 2025)
     (page("blank", "Ñ«® ¿ª»®¿¹» ©¿®»¸±«­» ­°¿½» ·­ ¿°°®±¨·³¿¬»´§ ïìéôððð", garbled=True), "ocr"),   # Costco 2024
     (page("image", PROSE), "pdfParser+colpali"),

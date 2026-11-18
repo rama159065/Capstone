@@ -85,7 +85,12 @@ def test_directory_includes_filings_the_index_holds(tmp_path, monkeypatch):
         ("edgar_ars_XOM_2023", "text", "failed"),          # not searchable
         ("edgar_ars_XOM_2024", "visual", "complete"),      # images only: text stage decides
     ])
-    make_state(tmp_path / "vlm" / "vlm_ingest.sqlite3", [("edgar_ars_COST_2024", "complete")], with_stage=False)
+    make_state(tmp_path / "vlm" / "vlm_ingest.sqlite3", [          # pipeline 1 records its one stage as "vlm"
+        ("edgar_ars_COST_2024", "vlm", "complete"),
+        ("edgar_ars_MSFT_2024", "vlm", "processing"),     # interrupted run: not searchable
+    ])
+    make_state(tmp_path / "old" / "vlm_ingest.sqlite3", [("edgar_ars_COST_2024", "complete")], with_stage=False)
+    assert fc.indexed_filings(tmp_path / "old" / "vlm_ingest.sqlite3") == [("COST", 2024)]
     monkeypatch.setattr(fc, "MANIFESTS", ())
     monkeypatch.setenv("RAG_INGEST_DIR", str(tmp_path / "fq"))
     monkeypatch.setenv("RAG_VLM_DIR", str(tmp_path / "vlm"))
@@ -214,7 +219,7 @@ def test_compose_wires_the_services():
     services = compose["services"]
     assert {"qdrant", "api", "ui", "caddy"} <= set(services)
     assert "--workers" in services["api"]["command"] and "1" in services["api"]["command"]
-    assert services["api"]["environment"]["RAG_PROFILE"] == "server"
+    assert services["api"]["environment"]["RAG_PROFILE"] == "${RAG_PROFILE:-server}"     # gcp via .env
     assert "qdrant_snapshots:/qdrant/snapshots" in services["qdrant"]["volumes"]
     assert "qdrant_snapshots:/qdrant/snapshots" in services["api"]["volumes"]
     keys = {line.split("=")[0] for line in (ROOT / ".env.example").read_text(encoding="utf-8").splitlines()
@@ -253,3 +258,16 @@ def test_warm_up_is_skipped_off_the_ingest_backends(monkeypatch):
     monkeypatch.setenv("API_WARMUP", "false")
     assert api_app.warm_up_retrieval() == "skipped"
 
+
+
+def test_chroma_version_is_the_same_where_the_index_is_built_and_served():
+    """Colab builds the Chroma index and the Docker image serves it: both must install the same chromadb."""
+    import re
+    pins = set(re.findall(r'"chromadb==([\d.]+)"', (ROOT / "pyproject.toml").read_text(encoding="utf-8")))
+    assert len(pins) == 1, "pyproject.toml must pin chromadb exactly"
+    pin = pins.pop()
+    for name in ("build_ingest_notebooks.py", "colab_ingest_chroma_db.ipynb", "colab_rag_pipelines.ipynb",
+                 "colab_financial_ingest.ipynb"):
+        text = (ROOT / "notebooks" / name).read_text(encoding="utf-8")
+        found = re.findall(r'chromadb([=<>!~][^\s"\\]*)', text)       # stops at a quote or a JSON escape
+        assert found and all(spec == f"=={pin}" for spec in found), (name, found)

@@ -92,6 +92,28 @@ def test_page_choice_and_signature_without_loading_a_model(tmp_path, corpus):
     assert vi.vlm_signature(args) == "transformers:Qwen/Qwen3-VL-8B-Instruct:1200"
 
 
+def test_parallel_workers_give_the_same_index(tmp_path, corpus):
+    """--workers: filings are read in worker processes, embedded and written here; the index is the same."""
+    folder = corpus / "banking"
+    first = json.loads((folder / "pdf_manifest.jsonl").read_text(encoding="utf-8"))
+    second = {**first, "document_id": "edgar_ars_TEST_2024", "year": 2024, "local_path": "EDGAR_ARS_TEST_2024.pdf"}
+    (folder / second["local_path"]).write_bytes((folder / first["local_path"]).read_bytes())
+    (folder / "pdf_manifest.jsonl").write_text(json.dumps(first) + "\n" + json.dumps(second) + "\n", encoding="utf-8")
+
+    serial = vi.VlmIngest(args_for(tmp_path / "serial", corpus, "chroma", "--vlm", "mock"))
+    assert serial.run() == {"complete": 2}
+    parallel = vi.VlmIngest(args_for(tmp_path / "parallel", corpus, "chroma", "--vlm", "mock", "--workers", "2",
+                                     "--low-priority"))
+    assert parallel.run() == {"complete": 2}
+
+    def chunks(run):
+        got = run.store.collection.get(include=["documents"])
+        return sorted(zip(got["ids"], got["documents"]))
+    assert chunks(parallel) == chunks(serial) and parallel.store.bm25.count() == serial.store.bm25.count()
+    assert parallel.state.done("edgar_ars_TEST_2024", "vlm", parallel.pipeline)
+    assert vi.VlmIngest(args_for(tmp_path / "parallel", corpus, "chroma", "--vlm", "mock", "--workers", "2")).run() == {}
+
+
 class FakeOCR:
     signature = "fake-ocr"
 
@@ -154,8 +176,181 @@ def test_paid_api_reader_backs_off_on_rate_limits(monkeypatch):
     assert reader.signature == "openai:gpt-4o-mini:1200"
 
 
+def test_paid_reader_for_gemini_sends_reasoning_effort_and_own_token_limit(monkeypatch):
+    import io
+    from PIL import Image
+    monkeypatch.setenv("RAG_PAID_VISION_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai/")
+    monkeypatch.setenv("RAG_PAID_VISION_MODEL", "gemini-2.5-flash")
+    monkeypatch.setenv("RAG_PAID_VISION_API_KEY", "g-test")
+    monkeypatch.setenv("RAG_PAID_VISION_MAX_TOKENS", "4096")
+    monkeypatch.setenv("RAG_PAID_VISION_REASONING_EFFORT", "none")
+    reader = vi.paid_reader(1200)
+    sent = {}
+
+    class Response(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_urlopen(request, timeout):
+        sent.update(url=request.full_url, body=json.loads(request.data))
+        return Response(json.dumps({"choices": [{"message": {"content": "| Revenue | 391,035 |"}}]}).encode())
+
+    monkeypatch.setattr(vi.urllib.request, "urlopen", fake_urlopen)
+    assert reader.transcribe(Image.new("RGB", (8, 8)), None) == "| Revenue | 391,035 |"
+    assert sent["url"] == "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+    assert sent["body"]["reasoning_effort"] == "none" and sent["body"]["max_tokens"] == 4096
+    assert reader.signature == "openai:gemini-2.5-flash:4096:effort=none"
+    monkeypatch.delenv("RAG_PAID_VISION_REASONING_EFFORT")
+    monkeypatch.delenv("RAG_PAID_VISION_MAX_TOKENS")
+    plain = vi.paid_reader(1200)                                 # unset: the request and signature are unchanged
+    assert plain.signature == "openai:gemini-2.5-flash:1200" and plain.reasoning_effort is None
+
+
+def test_paid_reader_error_shows_the_servers_message_not_the_key(monkeypatch):
+    import email.message
+    import io
+    import urllib.error
+    from PIL import Image
+    monkeypatch.setenv("RAG_PAID_VISION_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai")
+    monkeypatch.setenv("RAG_PAID_VISION_MODEL", "gemini-0-flash")
+    monkeypatch.setenv("RAG_PAID_VISION_API_KEY", "secret-key-123")
+    body = b'[{"error": {"code": 404, "message": "models/gemini-0-flash is not found", "status": "NOT_FOUND"}}]'
+
+    def fake_urlopen(request, timeout):
+        raise urllib.error.HTTPError(request.full_url, 404, "Not Found", email.message.Message(), io.BytesIO(body))
+
+    monkeypatch.setattr(vi.urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(RuntimeError) as caught:
+        vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None)
+    message = str(caught.value)
+    assert "HTTP 404" in message and "gemini-0-flash is not found" in message and "secret-key-123" not in message
+
+
+def test_qwen_runs_in_bf16_on_big_gpus_and_4bit_on_small_ones(monkeypatch):
+    monkeypatch.delenv("RAG_VLM_QUANT", raising=False)
+    assert vi.use_4bit(15.0) and vi.use_4bit(22.5)                  # T4, L4
+    assert not vi.use_4bit(39.6) and not vi.use_4bit(79.3)          # A100 40 GB / 80 GB
+    assert vi.use_4bit(79.3, "nf4") and not vi.use_4bit(15.0, "none")
+    monkeypatch.setenv("RAG_VLM_QUANT", "nf4")
+    assert vi.use_4bit(79.3)
+
+
 def test_chroma_is_the_only_store():
     with pytest.raises(SystemExit):
         vi.build_parser().parse_args(["ingest", "--store", "qdrant"])
     with pytest.raises(ValueError, match="Chroma only"):
         vi.retrieve("revenue", store="qdrant", embedder=object())
+
+
+def test_paid_reader_retries_a_reply_cut_off_by_its_token_budget(monkeypatch):
+    """Gemini 3.x thinking counts against max_tokens: a dense table can end with finish_reason=length and no text."""
+    import io
+    from PIL import Image
+    monkeypatch.setenv("RAG_PAID_VISION_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai")
+    monkeypatch.setenv("RAG_PAID_VISION_MODEL", "gemini-3.8-flash")
+    monkeypatch.setenv("RAG_PAID_VISION_MAX_TOKENS", "4096")
+    budgets = []
+
+    class Response(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def reply(request, timeout):
+        budget = json.loads(request.data)["max_tokens"]
+        budgets.append(budget)
+        if budget < 10000:                                     # thinking used the whole budget: no content at all
+            return Response(json.dumps({"choices": [{"message": {"role": "assistant"}, "finish_reason": "length"}],
+                                        "usage": {"completion_tokens": budget}}).encode())
+        return Response(json.dumps({"choices": [{"message": {"content": "| Net income | 3,097 |"},
+                                                 "finish_reason": "stop"}]}).encode())
+
+    monkeypatch.setattr(vi.urllib.request, "urlopen", reply)
+    assert vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None) == "| Net income | 3,097 |"
+    assert budgets == [4096, 16384]
+
+    monkeypatch.setattr(vi.urllib.request, "urlopen", lambda request, timeout: Response(json.dumps(
+        {"choices": [{"message": {"role": "assistant"}, "finish_reason": "content_filter"}]}).encode()))
+    with pytest.raises(RuntimeError, match="finish_reason=content_filter"):
+        vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None)
+
+
+def test_paid_reader_asks_for_figure_rows_when_a_transcription_is_blocked_as_recitation(monkeypatch):
+    """Gemini blocks verbatim copies of published text (finish_reason 'content_filter: RECITATION', no tokens)."""
+    import io
+    from PIL import Image
+    monkeypatch.setenv("RAG_PAID_VISION_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai")
+    monkeypatch.setenv("RAG_PAID_VISION_MODEL", "gemini-3.8-flash")
+    prompts = []
+
+    class Response(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def reply(request, timeout, rows_ok=True):
+        prompt = json.loads(request.data)["messages"][0]["content"][1]["text"]
+        prompts.append(prompt.split()[0])
+        if prompt.startswith("Transcribe") or not rows_ok:
+            return Response(json.dumps({"choices": [{"message": {"role": "assistant"},
+                                                     "finish_reason": "content_filter: RECITATION"}],
+                                        "usage": {"completion_tokens": 0}}).encode())
+        return Response(json.dumps({"choices": [{"message": {"content": "Net income | 2025 | 3,097"},
+                                                 "finish_reason": "stop"}]}).encode())
+
+    monkeypatch.setattr(vi.urllib.request, "urlopen", reply)
+    assert vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None) == "Net income | 2025 | 3,097"
+    assert prompts == ["Transcribe", "List"]
+
+    prompts.clear()
+    monkeypatch.setattr(vi.urllib.request, "urlopen", lambda request, timeout: reply(request, timeout, rows_ok=False))
+    with pytest.raises(RuntimeError, match="RECITATION"):
+        vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None)
+    assert prompts == ["Transcribe", "List", "Return"]                 # every style tried once, then Qwen's turn
+    prompts.clear()
+    with pytest.raises(RuntimeError):
+        vi.paid_reader().transcribe(Image.new("RGB", (8, 8)), None, prompt="Describe this page")
+    assert prompts == ["Describe"]                                      # descriptions are not re-asked
+
+
+def test_chroma_replace_rewrites_chunks_chroma_dropped_and_fails_if_it_keeps_dropping(tmp_path):
+    from scripts.rag import financial_ingest_chroma_db as vi
+    store = vi.ChromaStore(tmp_path)
+    real = store.collection
+
+    class Dropping:
+        """Chroma that silently loses the first ``drops`` chunks it is asked to write."""
+        def __init__(self, drops):
+            self.drops = drops
+
+        def upsert(self, ids, **kwargs):
+            if self.drops:
+                cut = min(self.drops, len(ids))
+                self.drops -= cut
+                ids, kwargs = ids[cut:], {k: v[cut:] for k, v in kwargs.items()}
+            if ids:
+                real.upsert(ids=ids, **kwargs)
+
+        def __getattr__(self, name):
+            return getattr(real, name)
+
+    def records(n):
+        return [(f"id-{i}", {"chunk_id": f"c{i}", "doc_id": "doc_a", "text": f"chunk {i}"}, f"chunk {i}")
+                for i in range(n)]
+
+    store.collection = Dropping(drops=3)
+    store.replace("doc_a", records(10), [[float(i), 1.0, 0.0] for i in range(10)])
+    assert real.count() == 10 == store.bm25.count()                       # the 3 lost chunks were written again
+    store.replace("doc_a", records(4), [[float(i), 1.0, 0.0] for i in range(4)])
+    assert real.count() == 4 == store.bm25.count()                        # a shorter rewrite leaves nothing stale
+
+    store.collection = Dropping(drops=10 ** 6)                             # Chroma keeps losing them: fail loudly
+    with pytest.raises(RuntimeError, match="holds 0 of 4 chunks of doc_a"):
+        store.replace("doc_a", records(4), [[float(i), 1.0, 0.0] for i in range(4)])

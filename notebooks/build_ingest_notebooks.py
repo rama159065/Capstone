@@ -143,32 +143,64 @@ Drive PDFs (by sector) -> copy one sector to local disk -> analyse every page ->
 | table / chart / picture with figures in the text layer | text layer + native tables as Markdown | no model |
 | garbled text layer, glyphs drawn as outlines, scanned page | RapidOCR (CPU) | |
 | chart without printed values, infographic | **Qwen3-VL** (GPU) | figures checked against the text layer |
-| table / chart / picture with an unusable text layer (`paidVL`) | OCR -> **Qwen3-VL**, figures checked against the OCR text -> **paid model** only when more than `PAID_THRESHOLD` of them are unconfirmed | without a paid model: Qwen3-VL kept, unconfirmed figures flagged |
+| table / chart / picture with an unusable text layer (`paidVL`) | OCR -> **Qwen3-VL**, figures checked against the OCR text -> **paid model** only when more than `PAID_THRESHOLD` of them are unconfirmed; `PAID_FIRST = True` flips the order: OCR -> **paid model** -> Qwen3-VL only if the paid reading fails or disagrees | without a paid model: Qwen3-VL kept, unconfirmed figures flagged |
 | blank page, photo or logo | skipped | |
+| chart and image pages (not OCR-routed) | also a **Qwen3-VL search description**: kind of visual, title, measures, series, years, no values | a `page_description` chunk, so chart pages are found by what they show |
 
 Every chunk records `reader`, `text_source`, `escalation` and `unverified_numbers`. Readings are cached on Drive per page
-and reader (`vlm_pages/`), so a rerun never pays twice, and the Chroma folder is copied to Drive after every sector.
+and reader (`cache/vlm_pages/`), so a rerun never pays twice, and the Chroma folder is copied to Drive after every sector.
 
 **Runtime:** GPU (T4 runs Qwen3-VL-4B in 4-bit; L4/A100 for 8B). Only about 3% of pages need Qwen3-VL and about 10% need OCR
 (page audit of 20 filings). Rough cost for min500 (~80k pages), **estimates**:
 the text layer and analysis ~3 CPU-hours; OCR of ~8k pages ~10 CPU-hours; Qwen3-VL on ~2.5k pages ~10-28 GPU-hours on a T4
 (2B is faster, or serve Qwen3-VL with vLLM and set `QWEN_READER = "openai"`). The smoke test prints the measured rates.
 
-**Before you start:** on your PC run `python -m scripts.common.colab_bundle` and upload `output/colab/capstone_code.zip`
-to `MyDrive/capstone_rag/`. Optional Colab secrets: `PAID_VISION_API_BASE`, `PAID_VISION_MODEL`, `PAID_VISION_API_KEY`
-(the paid fallback model, e.g. `https://api.openai.com/v1`, `gpt-4o`), and `LLM_*` for serving.'''
+**Run order (index uploaded from the PC):** 1 -> 2 -> 3 -> **3b verify the upload** -> **3c test Gemini** -> (skip 4, PDFs are on Drive)
+-> **5 the real run** (one cell at a time, not Run all) -> 6 -> 6b -> **6c pages per reader + 509 check** -> 7. `SMOKE_TEST = True`
+first is optional (1 filing per sector into a separate `_smoke` index). After a disconnect: 1 -> 2 -> 3 -> 5.
 
-CHROMA_SETTINGS = "# @title 1. Settings\n" + COMMON_SETTINGS + r'''
+**Before you start:** on your PC run `python -m scripts.common.colab_bundle` and upload `output/colab/capstone_code.zip`
+to `MyDrive/capstone_rag/`.
+
+**Paid model for paidVL pages (Gemini Flash):** cell 1 already has `PAID_VISION_API_BASE` =
+`https://generativelanguage.googleapis.com/v1beta/openai` and `PAID_VISION_MODEL` = `gemini-3.8-flash` (2.5 Flash returns 404 for new keys). Only the key is
+a **Colab secret** (🔑 in the left sidebar, Notebook access on): name `PAID_VISION_API_KEY`, value your Google AI Studio key
+(aistudio.google.com -> Get API key). The key never goes into the notebook. Without the key (or with
+`PAID_VISION_MODEL = ""`) paidVL pages keep the Qwen3-VL reading, flagged. OpenAI works the same way
+(`https://api.openai.com/v1`, `gpt-4o`, `PAID_REASONING_EFFORT = ""`). `LLM_*` secrets are for serving.'''
+
+CHROMA_SETTINGS = "# @title 1. Settings\n" + COMMON_SETTINGS.replace("SMOKE_TEST = True", "SMOKE_TEST = False") + r'''
 READER = "routed"  # @param ["routed", "ocr", "transformers", "openai"]
 # routed = a reader per page (table above); ocr = OCR for every visual page (CPU only); transformers = Qwen3-VL for
 # every visual page; openai = an OpenAI-compatible endpoint for every visual page (RAG_VISION_API_BASE / _MODEL / _KEY)
-QWEN_MODEL = "Qwen/Qwen3-VL-4B-Instruct"  # @param ["Qwen/Qwen3-VL-4B-Instruct", "Qwen/Qwen3-VL-2B-Instruct", "Qwen/Qwen3-VL-8B-Instruct"]
+QWEN_MODEL = "Qwen/Qwen3-VL-8B-Instruct"  # @param ["Qwen/Qwen3-VL-8B-Instruct", "Qwen/Qwen3-VL-4B-Instruct", "Qwen/Qwen3-VL-2B-Instruct"]
+# 8B: 4-bit on T4/L4, bf16 on A100. Keep one model for the whole run: readings are cached per model
 QWEN_READER = "transformers"  # @param ["transformers", "openai"]
 # transformers = Qwen3-VL on this GPU; openai = a served Qwen3-VL (vLLM) at the secret RAG_VISION_API_BASE
+QWEN_PRECISION = "auto"  # @param ["auto", "bf16", "4bit"]
+# auto = bf16 on A100/H100 (8B needs ~17 GB), 4-bit NF4 on T4/L4; the load prints the precision it used
+PAID_VISION_API_BASE = "https://generativelanguage.googleapis.com/v1beta/openai"  # @param ["https://generativelanguage.googleapis.com/v1beta/openai", "https://api.openai.com/v1", ""] {allow-input: true}
+# paid model for paidVL pages: any OpenAI-compatible endpoint; Gemini's is the default ("" = no paid model)
+PAID_VISION_MODEL = "gemini-3.8-flash"  # @param ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gpt-4o", ""] {allow-input: true}
+# 3.8 Flash: best on dense tables (~$0.0045 a page at the intro price); 3.5 Flash-Lite: cheapest (~$0.003); cell 3c lists what your key can use
+# the API key is NOT set here: add the Colab secret PAID_VISION_API_KEY (key icon in the left sidebar)
 PAID_THRESHOLD = 0.10  # @param {type:"number"}
 # paidVL pages go to the paid model when more than this share of Qwen3-VL's figures is not in the page's OCR text
+PAID_FIRST = True  # @param {type:"boolean"}
+# True: paidVL pages go to Gemini first; Qwen3-VL reads them only if Gemini fails or disagrees with OCR (~35 GPU
+# hours less on an L4). False: Qwen3-VL first, Gemini only when Qwen's figures disagree with OCR (fewer Gemini calls)
 PAID_MAX_PAGES_PER_PDF = 0  # @param {type:"integer"}
 # cap on paid calls per filing (0 = no cap)
+PAID_MAX_TOKENS = 4096  # @param {type:"integer"}
+# output limit for the paid model (dense tables need more than Qwen's 1,200)
+PAID_REASONING_EFFORT = "low"  # @param ["low", "minimal", "none", ""]
+# Gemini 3.8 Flash: "low" (it rejects "minimal"; thinking is billed as output); other models may take "minimal" or "none"; "" = not sent (gpt-4o)
+PAID_CONCURRENCY = 4  # @param {type:"integer"}
+# Gemini calls in flight at once, overlapping the Qwen3-VL work on the GPU (1 = one at a time)
+PAID_RETRY_DELAYS = "5,15,30,60"  # @param {type:"string"}
+# seconds to wait after a 429/503 before retrying (free-tier Gemini keys hit the per-minute limit)
+DESCRIBE_VISUALS = True  # @param {type:"boolean"}
+# routed: Qwen3-VL writes a short search description of each chart and image page (no values), so they can be found
 VLM_PAGES = "visual"  # @param ["visual", "tables_charts_images", "tables_charts", "all"]
 # pages for the non-routed readers (routed chooses per page)'''
 
@@ -179,7 +211,8 @@ s = cp.Settings(
     pipeline="vlm_chroma", corpus_preset=CORPUS, drive_root=DRIVE_ROOT, sectors=SECTORS, user_agent=SEC_USER_AGENT,
     max_per_sector=2 if SMOKE_TEST else (MAX_PER_SECTOR or None),
     vlm=READER, vlm_model=QWEN_MODEL, qwen_reader=QWEN_READER, vlm_pages=VLM_PAGES,
-    paid_threshold=float(PAID_THRESHOLD), paid_max_pages_per_pdf=PAID_MAX_PAGES_PER_PDF,
+    paid_threshold=float(PAID_THRESHOLD), paid_max_pages_per_pdf=PAID_MAX_PAGES_PER_PDF, describe_visuals=DESCRIBE_VISUALS,
+    paid_first=PAID_FIRST,
     run_name="_smoke" if SMOKE_TEST else "",
     limit_filings=1 if SMOKE_TEST else None,
     max_pages_per_pdf=30 if SMOKE_TEST else None,
@@ -192,20 +225,100 @@ for key in ("PAID_VISION_API_BASE", "PAID_VISION_MODEL", "PAID_VISION_API_KEY",
             os.environ["RAG_" + key] = userdata.get(key)
     except Exception:
         pass
-print("paid fallback model:", os.getenv("RAG_PAID_VISION_MODEL") or "none (paidVL pages keep the Qwen3-VL reading, flagged)")
+for key, value in (("RAG_PAID_VISION_API_BASE", PAID_VISION_API_BASE), ("RAG_PAID_VISION_MODEL", PAID_VISION_MODEL)):
+    if value.strip():
+        os.environ[key] = value.strip()          # cell 1 wins over a secret of the same name
+    else:
+        os.environ.pop(key, None)                # "" in cell 1 = no paid model
+os.environ["RAG_VLM_QUANT"] = {"auto": "auto", "bf16": "none", "4bit": "nf4"}[QWEN_PRECISION]
+os.environ["RAG_PAID_VISION_MAX_TOKENS"] = str(PAID_MAX_TOKENS)
+os.environ["RAG_PAID_VISION_REASONING_EFFORT"] = PAID_REASONING_EFFORT
+os.environ["RAG_VISION_RETRY_DELAYS"] = PAID_RETRY_DELAYS
+os.environ["RAG_PAID_CONCURRENCY"] = str(PAID_CONCURRENCY)
+if os.getenv("RAG_PAID_VISION_MODEL") and not os.getenv("RAG_PAID_VISION_API_KEY"):
+    os.environ.pop("RAG_PAID_VISION_MODEL")      # no key: don't send requests that can only fail
+    print("WARNING: no Colab secret PAID_VISION_API_KEY -> paid model OFF (paidVL pages keep the Qwen3-VL reading)")
+print("paid fallback model:", os.getenv("RAG_PAID_VISION_MODEL") or "none (paidVL pages keep the Qwen3-VL reading, flagged)",
+      "| endpoint:", os.getenv("RAG_PAID_VISION_API_BASE") or "-",
+      "| key:", "set" if os.getenv("RAG_PAID_VISION_API_KEY") else "missing")
 cp.prepare(s)
 cp.restore(s)          # first session: nothing to restore; later sessions: the Chroma copy on Drive'''
 
+CHROMA_VERIFY = r'''# @title 3b. Verify the Drive upload and the restored index (run once after uploading; takes ~3-5 minutes)
+# Checks: code + fund zips, all 509 PDFs present and non-empty, the Drive index copy (state, page analyses, Chroma,
+# BM25), the OCR cache, then the local copy: 509 filings complete, bge-small embeddings, Chroma = BM25 = state chunks,
+# every planned filing in Chroma. Always checks the full index, also when SMOKE_TEST is on.
+import dataclasses
+full = dataclasses.replace(s, run_name="", max_per_sector=None, limit_filings=None, max_pages_per_pdf=None,
+                           vlm_max_pages_per_pdf=0)
+cp.restore(full)                      # no-op when this runtime already has it
+check = cp.verify_upload(full)
+assert check["ok"] or check["failed"] == ["mutual fund zip on Drive"], \
+    f"fix the upload before ingesting: {check['failed']} (missing PDFs: {check['missing_pdfs'][:5]})"'''
+
+CHROMA_PAID_CHECK = r'''# @title 3c. Test the paid model (Gemini) on one page before the real run (a few seconds, one paid call)
+# Lists the models your key can use (pick one for PAID_VISION_MODEL in cell 1), then reads one rendered page.
+# HTTP 404 = unknown model name for this endpoint/key; 400 = bad PAID_REASONING_EFFORT; 401/403 = bad key.
+import json, time, urllib.request
+from scripts.rag import financial_ingest_chroma_db as vi
+base, key = os.getenv("RAG_PAID_VISION_API_BASE", "").rstrip("/"), os.getenv("RAG_PAID_VISION_API_KEY", "")
+if not (base and key):
+    print("no paid model configured (cell 1 endpoint/model + Colab secret PAID_VISION_API_KEY)")
+else:
+    try:
+        listing = urllib.request.Request(base + "/models", headers={"Authorization": f"Bearer {key}"})
+        names = sorted(m["id"].removeprefix("models/") for m in json.load(urllib.request.urlopen(listing, timeout=60))["data"])
+        print("vision-capable Flash/Pro models for this key:", [n for n in names if "flash" in n or "pro" in n][:40])
+    except Exception as exc:
+        print("could not list models:", exc)
+    paid = vi.paid_reader()
+    if paid is None:
+        print("PAID_VISION_MODEL is empty: set it in cell 1 and rerun cells 1 and 3")
+    else:
+        import pymupdf
+        # Two pages: a cover page, then a dense paidVL table (Citi 2025 p.109, the kind that once came back empty when
+        # thinking used up the token budget). Both must print OK before cell 5.
+        pdfs = sorted(s.corpus.rglob("*.pdf"))
+        dense = next((p for p in pdfs if p.name == "EDGAR_ARS_C_2025.pdf"), None)
+        tests = [(pdfs[0], 1)] + ([(dense, 109)] if dense else [])
+        for pdf, number in tests:
+            with pymupdf.open(pdf) as document:
+                pdf_page = document[number - 1]
+                started = time.time()
+                try:
+                    text = paid.transcribe(vi.render(pdf_page), pdf_page)
+                    print(f"OK: {paid.model} read page {number} of {pdf.name}: {len(text)} chars in "
+                          f"{time.time() - started:.0f}s")
+                    print(text[:300], "\n")
+                except Exception as exc:
+                    print(f"FAILED on page {number} of {pdf.name}:", exc)
+                    hint = ("set PAID_REASONING_EFFORT to another value (low / none / \"\")" if "thinking" in str(exc).lower()
+                            else "pick a model from the list above for PAID_VISION_MODEL" if "404" in str(exc)
+                            else "check the Colab secret PAID_VISION_API_KEY and billing" if any(c in str(exc) for c in ("401", "403"))
+                            else "try PAID_VISION_MODEL = \"gemini-3.5-flash-lite\" (no thinking)" if "finish_reason=length" in str(exc)
+                            else ("Gemini blocked this page as RECITATION even as figure rows and JSON; in the run such "
+                                  "pages keep Qwen3-VL's reading, so you can still go on with cell 5") if "recitation" in str(exc).lower()
+                            else "see the message above")
+                    print(f"-> {hint} in cell 1, then rerun cells 1, 3 and this one")'''
+
+CHROMA_READERS = r'''# @title 6c. Pages per reader (text layer, OCR, Qwen3-VL, Gemini) and the 509-filing check (~3 minutes)
+# Reads every chunk's metadata in the final Chroma index. "paid model" = PAID_VISION_MODEL (Gemini Flash).
+# paidVL outcomes: not_needed = Qwen3-VL agreed with OCR; paid = Gemini's reading kept; paid_not_better = Qwen kept;
+# models_failed_ocr_fallback = both failed, OCR kept. "still without Qwen3-VL" must reach 0 when the run is done.
+summary = cp.reader_summary(s)'''
+
 CHROMA_NEXT = r'''## Next
 
-- **Real run:** set `SMOKE_TEST = False` and run cells 3-6. After a disconnect run cells 2-3 and then 5: finished filings are
+- **Real run:** set `SMOKE_TEST = False` and run cells 3, 5, 6, 6b and 6c. After a disconnect run cells 2-3 and then 5: finished filings are
   skipped and every page reading is cached on Drive.
 - **Check the routing first (optional):** `notebooks/colab_page_audit.ipynb` writes a CSV per PDF with the reader each page
   will get, plus the share per sector; it needs only a CPU.
 - **Faster Qwen3-VL:** serve it with vLLM on a bigger GPU and set `QWEN_READER = "openai"` with the secrets
   `VISION_API_BASE` / `VISION_MODEL`.
-- **Serving on your PC** after copying the index down: set `RAG_BACKEND=financial_vlm` and `RAG_VLM_DIR` to the folder that holds
-  `chroma/` and `vlm_ingest.sqlite3`.
+- **Serving on your PC:** copy `MyDrive/capstone_rag/indexes/chroma_db` to `<repo>/indexes/rag_home/indexes/chroma_db`;
+  the `local` profile serves it with no settings (`RAG_BACKEND=financial_vlm` is chosen when it is the only index).
+- **Deploying on GCP:** cell 12 copies the Drive copies to a bucket; on the VM `sh deploy/sync_from_gcs.sh` pulls them
+  (see `docs/deployment.md` section 7).
 - **Sectors:** ''' + SECTOR_LIST + "."
 
 # ============================================================================= Qdrant (visual index)
@@ -278,10 +391,27 @@ QDRANT_NEXT = r'''## Next
 - **Text first, ColPali later:** run with `STAGES = "text"` on a CPU runtime, then `STAGES = "visual"` on a GPU runtime.
 - **Storage:** the Drive snapshots of the full plan need more than the free 15 GB (about 17-29 GB of ColPali vectors for
   the full corpus; min500 is about half).
-- **Serving on your PC or the Docker server** after copying the snapshots down:
-  `python -m scripts.rag.financial_ingest_qdrant_db restore --root indexes/financial_qdrant --qdrant-url http://localhost:6333 --snapshot-dir <snapshots>`,
-  then `RAG_BACKEND=financial_qdrant` (see `docs/deployment.md`).
+- **Serving on the Docker server:** copy `MyDrive/capstone_rag/snapshots/qdrant_db` into `./snapshots/qdrant_db`, then
+  `docker compose run --rm --user root api sh deploy/restore_index.sh` (Qdrant restore + ingest state into
+  `<RAG_HOME>/indexes/qdrant_db`).
+- **Deploying on GCP:** cell 12 copies the Drive copies to a bucket; on the VM `sh deploy/sync_from_gcs.sh` pulls and
+  restores them (see `docs/deployment.md` section 7).
 - **Sectors:** ''' + SECTOR_LIST + "."
+
+
+GCS_EXPORT = r'''# @title 12. Optional: copy the Drive index copies to a Google Cloud Storage bucket (for the GCP VM)
+# The VM then runs `sh deploy/sync_from_gcs.sh` (docs/deployment.md section 7). Needs a GCP project with billing.
+GCS_BUCKET = ""                     # @param {type:"string"}   e.g. gs://capstone-rag-yourname
+GCP_PROJECT = ""                    # @param {type:"string"}
+if GCS_BUCKET:
+    from google.colab import auth
+    auth.authenticate_user()
+    if GCP_PROJECT:
+        !gcloud config set project {GCP_PROJECT}
+    !gcloud storage buckets describe {GCS_BUCKET} >/dev/null 2>&1 || gcloud storage buckets create {GCS_BUCKET} --location=us-central1
+    cp.export_to_gcs(s, GCS_BUCKET)
+else:
+    print("set GCS_BUCKET to export; skipped")'''
 
 
 def cell(kind, text):
@@ -299,7 +429,7 @@ def notebook(cells):
 
 
 def chroma():
-    setup = SETUP.replace("{PIP}", '"pymupdf>=1.24,<2" "qdrant-client>=1.12,<2" "chromadb>=1.1" "transformers>=4.57,<5" '
+    setup = SETUP.replace("{PIP}", '"pymupdf>=1.24,<2" "qdrant-client>=1.12,<2" "chromadb==1.5.9" "transformers>=4.57,<6" '
                                    '"sentence-transformers>=3" "rapidocr>=3,<4" onnxruntime "bitsandbytes>=0.48" accelerate') \
                  .replace("{MODULE}", "financial_ingest_chroma_db") \
                  .replace("{NO_GPU}", "OCR and the text layer work; Qwen3-VL will be very slow (use READER = 'ocr')")
@@ -308,6 +438,8 @@ def chroma():
         cell("code", CHROMA_SETTINGS),
         cell("code", setup),
         cell("code", CHROMA_STEP3),
+        cell("code", CHROMA_VERIFY),
+        cell("code", CHROMA_PAID_CHECK),
         cell("code", "# @title 4. Download the chosen sectors to Drive (resumable; skips PDFs already there)\n"
                      "cp.download(s)\n!du -sh {DRIVE_ROOT}/annual_reports/*/ 2>/dev/null | sort -k2"),
         cell("code", "# @title 5. Ingest into Chroma, one sector at a time (rerun after a disconnect: cells 2-3, then this one)\n"
@@ -316,22 +448,24 @@ def chroma():
         cell("code", "# @title 6. Status: filings done / failed, chunks, readings per reader, unverified figures\n"
                      "report = cp.status(s)"),
         cell("code", "# @title 6b. Coverage of the plan: planned -> downloaded -> ingested, per sector\ncov = cp.coverage(s)"),
+        cell("code", CHROMA_READERS),
         cell("code", "# @title 7. Retrieval checks (hybrid: Chroma dense + BM25, fused by RRF)\n"
                      'cp.query(s, "net interest income", sector="banking")\n'
                      'cp.query(s, "net oil-equivalent production", sector="oil_and_gas")\n'
                      'cp.query(s, "revenue by segment", sector="retail")'),
         cell("markdown", SERVE_MD.replace("{INDEX}", "the Chroma index").replace(
-            "{ENV}", "`RAG_BACKEND=financial_vlm`, `RAG_VLM_DIR=/content/rag/vlm_chroma`")),
+            "{ENV}", "`RAG_BACKEND=financial_vlm`, `RAG_VLM_DIR=/content/rag/indexes/chroma_db`")),
         cell("code", "# @title 8. " + SERVE_DEPS.split("# @title ", 1)[1].replace("{EXTRA}", "")),
         cell("code", "# @title 9. " + SERVE_START.split("# @title ", 1)[1]),
         cell("code", "# @title 10. " + SERVE_CHECK.split("# @title ", 1)[1]),
         cell("code", "# @title 11. " + SERVE_STOP.split("# @title ", 1)[1]),
+        cell("code", GCS_EXPORT),
         cell("markdown", CHROMA_NEXT),
     ])
 
 
 def qdrant():
-    setup = SETUP.replace("{PIP}", '"qdrant-client>=1.12,<2" "pymupdf>=1.24,<2" "transformers>=4.57,<5" '
+    setup = SETUP.replace("{PIP}", '"qdrant-client>=1.12,<2" "pymupdf>=1.24,<2" "transformers>=4.57,<6" '
                                    '"sentence-transformers>=3" "rapidocr>=3,<4" onnxruntime') \
                  .replace("{MODULE}", "financial_ingest_qdrant_db") \
                  .replace("{NO_GPU}", "the text stage works; ColPali will be very slow (use STAGES = 'text')")
@@ -355,12 +489,13 @@ def qdrant():
                      'if "visual" in STAGES:\n'
                      '    cp.query(s, "revenue by segment bar chart", sector="banking", visual=True)'),
         cell("markdown", SERVE_MD.replace("{INDEX}", "Qdrant (this VM)").replace(
-            "{ENV}", "`RAG_BACKEND=financial_qdrant`, `RAG_INGEST_DIR=/content/rag/colpali_qdrant`, `QDRANT_URL` "
+            "{ENV}", "`RAG_BACKEND=financial_qdrant`, `RAG_INGEST_DIR=/content/rag/indexes/qdrant_db`, `QDRANT_URL` "
                      "(serving needs the server, so `SMOKE_TEST = False`)")),
         cell("code", "# @title 8. " + SERVE_DEPS.split("# @title ", 1)[1].replace("{EXTRA}", extra)),
         cell("code", "# @title 9. " + SERVE_START.split("# @title ", 1)[1]),
         cell("code", "# @title 10. " + SERVE_CHECK.split("# @title ", 1)[1]),
         cell("code", "# @title 11. " + SERVE_STOP.split("# @title ", 1)[1]),
+        cell("code", GCS_EXPORT),
         cell("markdown", QDRANT_NEXT),
     ])
 

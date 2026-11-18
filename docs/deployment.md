@@ -33,7 +33,8 @@ flowchart LR
 | FastAPI + agents | the serving machine, **1 worker** | no | Rate limit, request IDs, answer cache and the 10-step agent cap |
 | Conversation context | `indexes/state/conversations.sqlite3` | no | Survives restarts (`CONVERSATION_DB`). Stores only the clarifier slots, never answers |
 | Qdrant | container next to the API | no | Must be the server, not embedded mode: embedded mode allows one process only |
-| Query embedding, reranker | inside FastAPI, CPU | no | MiniLM; the model is cached in `indexes/hf_cache` |
+| Query embedding, reranker | inside FastAPI, CPU | no | The index's model: bge-small (Pipeline 1 by default; or the shared embedding API, `RAG_EMBEDDING_PROVIDER=hosted`) or MiniLM; cached in `indexes/hf_cache` |
+| Mutual fund data (optional) | `RAG_HOME/indexes/mutual_fund/` | no | SQLite holdings + Chroma fund cards (bge-small); read by the API's fund agent and `/mutual_fund/*` routes. A few MB per fund; build it on the serving machine (§7.4) |
 | LLM | hosted endpoint | no (yours) | `LLM_API_BASE/KEY/MODEL` |
 | ColPali, OCR on GPU, VLM | **only while building the index** | yes | Not needed to answer questions |
 
@@ -560,7 +561,7 @@ Versions are the ones locked in `uv.lock`. The container installs the `pyproject
 | `cross-encoder/ms-marco-MiniLM-L-6-v2` | API container | Serving (when `RAG_RERANKER_MODEL` is set) | ~90 MB, CPU |
 | `vidore/colpali-v1.3-hf` | Colab GPU | Build only (optional visual pages) | ~3B parameters; serving uses it only if `RAG_FIN_VISUAL=1` |
 | RapidOCR detection and recognition models | Colab | Build only | Bundled with `rapidocr` |
-| Qwen2.5-VL-3B (or a closed vision model) | Colab / API | Build only, pipeline 2 | Optional; see §5.3 |
+| Qwen2.5-VL-3B (or a closed vision model) | Colab / API | Build only, pipeline 1 | Optional; see §5.3 |
 
 ### 6.5 Index build environment (Colab)
 
@@ -629,8 +630,162 @@ Versions are the ones locked in `uv.lock`. The container installs the `pyproject
 
 ---
 
-## 7. Not verified here
+## 7. Paths and storage: local PC, Colab with Google Drive, and GCP
 
+**Implemented on 13 November 2026** (the plan of 11 November). One module, [`scripts/common/storage.py`](../scripts/common/storage.py), defines the folders for every environment. [`runtime_profile.py`](../scripts/common/runtime_profile.py) (serving) and [`colab_pipeline.py`](../scripts/rag/colab_pipeline.py) (ingestion) both read it, so what an ingest writes is what the API serves. Tests: `tests/test_storage_layout.py`, `tests/test_runtime_profile.py`.
+
+### 7.1 One layout everywhere, one root per environment
+
+```
+<RAG_HOME>/                              live copy, on fast local disk
+  annual_reports/<sector>/*.pdf          ingestion only (Colab stages each sector here from Drive)
+  indexes/qdrant_db/                     pipeline 2: ingest.sqlite3, pages/, qdrant_embedded/ (local)   = RAG_INGEST_DIR
+  indexes/chroma_db/                     pipeline 1: chroma/ (+ bm25.sqlite3), vlm_ingest.sqlite3, pages/ = RAG_VLM_DIR
+  snapshots/qdrant_db/                   Qdrant snapshots + ingest.sqlite3, for restore on another machine
+  cache/vlm_pages/                       OCR / Qwen3-VL / paid page readings (never paid twice)
+  cache/hf/                              HF_HOME on Colab
+  models/                                local model copies (cross-encoder reranker)
+  page_audit/<sector>/*.csv
+  indexes/mutual_fund/                   nport_mutual_fund.sqlite3, chroma_mutual_fund/, raw_mutual_fund/  = RAG_MUTUAL_FUND_DIR
+  state/conversations.sqlite3                                                                            = CONVERSATION_DB
+  secrets/llm_ca.crt                     the endpoint's CA                                                = LLM_CA_CERT
+```
+
+| | **local** (PC) | **colab** | **server** (Docker anywhere) | **gcp** (Google Cloud VM) |
+|---|---|---|---|---|
+| Chosen by | default | detected automatically | `RAG_PROFILE=server` (compose default) | `RAG_PROFILE=gcp` in `.env` |
+| `RAG_HOME` (live) | `<repo>/indexes/rag_home` | `/content/rag` (VM disk) | `/app/rag_home` in the containers = `RAG_HOME_DIR` on the host (default `./indexes/rag_home`) | same; put `RAG_HOME_DIR` on the persistent disk, e.g. `/srv/capstone` |
+| Durable copy (same layout) | `RAG_HOME` itself | `MyDrive/capstone_rag` | the host folder | `gs://$RAG_GCS_BUCKET` |
+| Qdrant | embedded in `indexes/qdrant_db` | server on the VM (`127.0.0.1:6333`) | compose `qdrant` service | compose `qdrant` service |
+| `HF_HOME` | unchanged (your usual cache) | `/content/rag/cache/hf` | `/app/indexes/hf_cache` (image) | same |
+| `RAG_DEVICE` | `cpu` | `cuda` when a GPU is present | `cpu` | `cpu` |
+| `API_BASE_URL` | `http://127.0.0.1:8000` | same | `http://api:8000` | same |
+| `CONVERSATION_DB` | `<RAG_HOME>/state/conversations.sqlite3` | same | same | same |
+| `RAG_RERANKER_MODEL` | set when `<RAG_HOME>/models/ms-marco-MiniLM-L-6-v2` (locally also `<repo>/indexes/models/...`) exists | same rule | same rule | same rule |
+| `LLM_CA_CERT` | set when `<RAG_HOME>/secrets/llm_ca.crt` exists | same rule | same rule (compose mounts `SECRETS_DIR` there read-only) | same rule |
+
+**Defaults and backend:**
+- Every value is a default. A variable you set yourself wins; an empty value counts as unset.
+- `RAG_BACKEND` is `financial_qdrant` when `qdrant_db` holds an index, else `financial_vlm`. Set it to choose, for example to run one API per pipeline.
+- `/health` shows the resolved paths: `RAG_HOME`, `durable`, both index folders, and whether a reranker and a certificate were found. It never shows their contents.
+
+**Older folder names keep working:**
+- An index is looked up under `indexes/qdrant_db` / `indexes/chroma_db` first.
+- Then under the names used before: `colpali_qdrant`, `financial_qdrant`, `vlm_chroma` and `financial_vlm`. These are searched in `RAG_HOME` and `RAG_HOME/indexes`, plus `<repo>/indexes` locally and on servers. The first one holding its state file wins.
+- On Drive, `snapshots/colpali_qdrant`, `indexes/vlm_chroma` and `vlm_pages/` are reused the same way.
+- Nothing built before needs renaming or re-ingesting.
+
+### 7.2 Running in each environment
+
+**Local (PC):**
+- Build with `python -m scripts.rag.colab_pipeline run --pipeline vlm_chroma ...` (or `colpali_qdrant`, with embedded Qdrant).
+- It writes into `indexes/rag_home`, which is where the local API looks, so `uvicorn scripts.api.api_app:app` then serves it with no settings.
+- To serve another folder, set only `RAG_HOME`, and `RAG_BACKEND` to pick a pipeline.
+
+Example: both pipelines side by side. This was verified on 13 November 2026 with the Retail test index, whose folders still have the older names.
+
+```powershell
+$env:RAG_HOME="indexes/e2e_retail/work"
+$env:RAG_BACKEND="financial_qdrant"; uvicorn scripts.api.api_app:app --port 8000    # Qdrant
+$env:RAG_BACKEND="financial_vlm";    uvicorn scripts.api.api_app:app --port 8001    # Chroma (second terminal)
+$env:API_BASE_URL="http://127.0.0.1:8001"; streamlit run scripts\ui\api_streamlit_app.py --server.port 8502
+```
+
+**Colab:** nothing to set. The profile is detected, `RAG_HOME=/content/rag`, and the durable copy is `MyDrive/capstone_rag`. The ingest notebooks (`colab_ingest_chroma_db.ipynb`, `colab_ingest_qdrant_db.ipynb`):
+1. restore from Drive at the start of a session;
+2. write `indexes/chroma_db` / `indexes/qdrant_db` on the VM disk;
+3. copy to Drive after every sector;
+4. serve from the same folders.
+
+For the hosted LLM, upload the CA to `/content/rag/secrets/llm_ca.crt`, not to Drive.
+
+**Docker on any host (`server`):** copy the Drive folders into `./snapshots`: `qdrant_db/` with the snapshots and `ingest.sqlite3`, and `chroma_db/` as is. Then:
+
+```bash
+docker compose up -d qdrant
+docker compose run --rm --user root api sh deploy/restore_index.sh   # Qdrant restore + Chroma copy into RAG_HOME_DIR
+docker compose up -d
+```
+
+**Google Cloud VM (`gcp`):**
+
+```
+Colab: build into /content/rag ──after each sector──► Drive (MyDrive/capstone_rag) ──cell 12 / cp.export_to_gcs──► gs://bucket
+GCP VM: sh deploy/sync_from_gcs.sh  (bucket ──gcloud storage rsync──► RAG_HOME_DIR, Qdrant restore, docker compose up)
+```
+
+1. **On Colab, once after ingestion:** run cell 12 of either ingest notebook, or `python -m scripts.rag.colab_pipeline export --bucket gs://capstone-rag-<name>`. It authenticates, creates the bucket if needed, and copies `indexes/chroma_db` and `snapshots/qdrant_db` into it.
+2. **On the VM, in `.env`:**
+   - set `RAG_PROFILE=gcp`, `RAG_GCS_BUCKET=gs://capstone-rag-<name>` and `RAG_HOME_DIR=/srv/capstone` (on the persistent disk);
+   - add the LLM settings and `API_AUTH_TOKEN`;
+   - put `llm_ca.crt` in `SECRETS_DIR` (default `./secrets`, gitignored).
+3. **On the VM, run `sh deploy/sync_from_gcs.sh`.** It:
+   - rsyncs both index folders from the bucket;
+   - starts Qdrant;
+   - runs `restore_index.sh`;
+   - brings the stack up.
+
+   The VM's default service account reads a bucket in the same project, so there's no Google login on the server. Rerunning it copies only what changed.
+
+### 7.3 Storage rules
+
+- **Chroma, Qdrant and SQLite never run on Drive or on a mounted bucket.** They need real file locks and fast random reads. Colab builds on `/content/rag` and copies to Drive after each sector; the GCP VM copies from the bucket to its disk first.
+- **Serving needs only the indexes**, not the PDFs. The company list (`GET /companies`) comes from the index state files (`ingest.sqlite3`, `vlm_ingest.sqlite3`).
+- **The CA certificate never goes into git, Drive or a bucket.** `*.crt` and `secrets/` are gitignored, and compose mounts `SECRETS_DIR` read-only.
+- **Not changed:**
+  - model paths of the separate local multimodal path (`run_local_multimodal`, `indexes/models/*`);
+  - the older `colab_financial_ingest.ipynb`, which sets `RAG_INGEST_DIR` itself (still honoured).
+
+### 7.4 Mutual fund data in each environment
+
+Added 14 November 2026 ([mutual_fund_rag_design.md](mutual_fund_rag_design.md), [annual_report_rag_structure.md](annual_report_rag_structure.md) §13). The fund layer is optional: without `indexes/mutual_fund/nport_mutual_fund.sqlite3` the API serves exactly as before and `/mutual_fund/*` answers 404.
+
+| | Size | Build time (CPU) | Where |
+|---|---|---|---|
+| Four N-PORT XML filings | 4 MB | seconds (EDGAR) | `raw_mutual_fund/` |
+| `nport_mutual_fund.sqlite3` | a few MB per fund (tens of MB for 100 funds from a bulk ZIP) | ~7 s for four funds | `indexes/mutual_fund/` |
+| `chroma_mutual_fund/` (fund cards) | < 1 MB | seconds once bge-small (~130 MB) is cached | `indexes/mutual_fund/` |
+
+It is small enough to **build on the serving machine** rather than copy:
+
+```bash
+# local (PC)
+$env:SEC_USER_AGENT="capstone-research you@example.com"
+python -m scripts.downloads.download_mutual_fund latest
+python -m scripts.rag.nport_mutual_fund load --xml indexes\rag_home\indexes\mutual_fund\raw_mutual_fund
+python -m scripts.rag.cards_mutual_fund build
+
+# Docker (server / gcp): the same commands inside the api container write to RAG_HOME_DIR/indexes/mutual_fund
+docker compose run --rm -e SEC_USER_AGENT="capstone-research you@example.com" api python -m scripts.downloads.download_mutual_fund latest
+docker compose run --rm api python -m scripts.rag.nport_mutual_fund load --xml /app/rag_home/indexes/mutual_fund/raw_mutual_fund
+docker compose run --rm api python -m scripts.rag.cards_mutual_fund build      # add --embedding-provider hosted to use the shared API
+docker compose restart api
+```
+
+Notes:
+- `configs/funds_mutual_fund.json` (the funds to fetch) is in the image; the data is not.
+- Fund cards are embedded with bge-small. At serving time the API embeds a fund query with the provider `RAG_EMBEDDING_PROVIDER` picks (the server and GCP profiles prefer the shared API, which needs `EMBEDDING_API_KEY` and `secrets/embedding_ca.crt`) and falls back to the local model. Fund names resolve without the cards, so the cards matter only for questions that don't name a fund.
+
+**Copying the local data to Colab and GCP** (instead of building it again; same funds, same holdings date):
+
+```powershell
+# 1. on the PC: one zip of the database (SQLite backup, safe while the API runs), the fund cards and the raw filings, ~1 MB
+python -m scripts.rag.colab_pipeline pack-funds          # -> output/colab/mutual_fund_data.zip
+# 2. upload it to MyDrive/capstone_rag/mutual_fund_data.zip
+```
+
+| Where | What happens |
+|---|---|
+| Colab | `cp.restore(s)` (every ingest notebook calls it) unpacks the zip once into `MyDrive/capstone_rag/indexes/mutual_fund/` and copies that into `/content/rag/indexes/mutual_fund/`, where `cp.serve` and the API find it. Already in place: left alone. |
+| Bucket | `cp.export_to_gcs(s)` also runs `gcloud storage rsync` of `indexes/mutual_fund` to `gs://<bucket>/indexes/mutual_fund`. |
+| GCP VM | `sh deploy/sync_from_gcs.sh` pulls `indexes/mutual_fund` with the two indexes; `restore_index.sh` then finds it in place. |
+| Any Docker host | Put `mutual_fund_data.zip` (or a `mutual_fund/` folder) in `./snapshots` (`SNAPSHOT_DIR`); `restore_index.sh` unpacks or copies it into `RAG_HOME/indexes/mutual_fund`. |
+
+With no fund data anywhere, each step prints that it skipped it and the fund route stays off. `tests/test_colab_mutual_fund.py` covers the pack → restore → export path and the two deploy scripts.
+
+## 8. Not verified here
+
+- **Paths (§7):** the layout is implemented and tested; the local profile was verified live with both pipelines. Not run here: `gcloud storage` (`cp.export_to_gcs`, `deploy/sync_from_gcs.sh`) and the scripts inside Docker. `sh -n` checks their syntax, and the tests check the commands they build.
 - **Docker isn't installed on the development PC**, so `docker compose build` and `up` haven't been run yet. Everything they run is tested without Docker; the tests check the compose and `.env.example` wiring. The first build on the target machine is the real check, and it takes about 10 minutes to pull Python and the CPU torch wheel.
 - **Snapshot restore into a Qdrant container** depends on the shared `/qdrant/snapshots` volume. The restore code is tested; the container path is not.
 - **Prices:**

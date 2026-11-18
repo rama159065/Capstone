@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hybrid Chroma and Qdrant retrieval</title>
+<style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1200px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.88rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}
+.tag{display:inline-block;padding:0 .45rem;border-radius:10px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.text{background:#e0f2fe;color:#075985}.table{background:#dcfce7;color:#166534}.chart{background:#fae8ff;color:#86198f}
+.yes{color:#15803d;font-weight:600}.no{color:#b91c1c;font-weight:600}.part{color:#b45309;font-weight:600}
+td.todo{color:#94a3b8;font-style:italic;min-width:9rem}</style>
+<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script>
+</head><body>
+
+<h1>Hybrid Chroma and Qdrant retrieval</h1>
+<p>The Financial Report Copilot has two indexes built from the same annual reports. <b>Chroma</b> (pipeline 1) holds
+what OCR and vision models <em>read</em> on each page, values included. <b>Qdrant</b> (pipeline 2) holds ColPali
+vectors that <em>find</em> a page from its pixels. Each one alone misses some chart and table questions; the hybrid
+backend (<code>RAG_BACKEND=financial_hybrid</code>) uses Qdrant to find the page and Chroma to read it. This page
+explains the design, the code changes, how to run it locally, and the questions that test it on one filing
+(Chevron 2022).</p>
+
+<h2>1. Why one index is not enough</h2>
+<table>
+<tr><th>Failure</th><th>Chroma only</th><th>Qdrant only</th><th>Hybrid</th></tr>
+<tr><td>Values chunk ranks below the top k (its words don't match the question, or the rows sit past bge-small's 512-token limit)</td><td class="no">misses</td><td class="yes">ColPali finds the page</td><td class="yes">ColPali page → Chroma's reading of it</td></tr>
+<tr><td>A chart's <code>page_description</code> chunk (no values by design) outranks the values chunk</td><td class="part">misses before this change</td><td>n/a</td><td class="yes">same-page expansion adds the values</td></tr>
+<tr><td>Values exist only as pixels (garbled text layer, unlabelled bars, screenshots)</td><td class="yes">VLM wrote them down</td><td class="no">page found, no number in its text</td><td class="yes">values from Chroma</td></tr>
+<tr><td>A table split into parts loses its column headers</td><td class="part">partly</td><td class="yes">whole page text in one piece</td><td class="part">ColPali brings the page's chunks together</td></tr>
+<tr><td>The VLM misread a figure that no text layer or OCR confirms</td><td class="no">passed as "supported"</td><td>n/a</td><td class="yes">critic flags it, answer goes to human review</td></tr>
+</table>
+<blockquote><b>Chevron 2022 shows it plainly.</b> Every page of that PDF has a font-encoded (garbled) text layer. Page 35 holds
+the production and reserves charts: net crude oil 1,440 kbd, natural gas 7,677 MMcfd, NGLs 279 kbd, proved reserves
+11.2 billion BOE. Pipeline 2 stored page 35's garbled text, and none of those four values is anywhere in the Qdrant
+text, so Qdrant alone can only point at the page. Pipeline 1's Qwen3-VL reading of page 35 has the values; ColPali
+makes sure that page is retrieved.</blockquote>
+
+<h2>2. Architecture</h2>
+<h3>Ingestion (offline, same manifests)</h3>
+<pre class="mermaid">
+flowchart LR
+  PDF[Annual report PDF] --> AUD[page audit<br/>route per page]
+  AUD -->|pdfParser / ocr| T1[text layer or OCR]
+  AUD -->|qwen3VL / paidVL| V1[Qwen3-VL or Gemini<br/>reads page into Markdown]
+  AUD -->|chart / image| D1[Qwen3-VL description<br/>no values]
+  T1 & V1 & D1 --> C[(Chroma annual_reports_vlm<br/>bge-small 384 + BM25 sidecar<br/>RAG_VLM_DIR)]
+  PDF --> T2[text layer / OCR chunks] --> QT[(Qdrant annual_reports_text<br/>MiniLM dense + sparse)]
+  PDF --> CP[ColPali v1.3 page images] --> QV[(Qdrant annual_reports_visual<br/>mean-pooled rows/cols in RAM<br/>full multivectors on disk<br/>RAG_INGEST_DIR)]
+</pre>
+
+<h3>Query time</h3>
+<pre class="mermaid">
+flowchart TB
+  Q[question] --> P[planner<br/>targets per company x year<br/>visual_search if chart words or RAG_FIN_VISUAL=1]
+  P --> CS[Chroma search<br/>dense + BM25, RRF]
+  CS --> SP[same-page expansion<br/>description -> its value chunks]
+  P -->|visual_search| CV[ColPali query embedding]
+  CV --> PF[prefetch 200 pages<br/>mean_rows, mean_cols, summary]
+  PF --> MS[exact MaxSim on full vectors<br/>top 3 pages]
+  MS --> PR[Chroma reading chunks<br/>of each page found<br/>fallback: Qdrant page text]
+  SP --> F[reciprocal rank fusion]
+  PR --> F
+  F --> A[answer LLM with citations]
+  A --> K[calculator]
+  K --> CR[critic<br/>figure in a cited chunk?<br/>only VLM-read? LLM judge]
+  CR --> G[governance<br/>unverified_vlm_figure -> human review]
+</pre>
+
+<h3>Retrieval steps (<code>scripts/rag/financial_hybrid.py</code>)</h3>
+<ol>
+<li><b>Chroma search</b> (<code>financial_ingest_chroma_db.retrieve_for_agent</code>): dense bge-small and BM25 FTS5 over the reading chunks, fused by RRF (k = 60), filtered by ticker, fiscal year and sector.</li>
+<li><b>Same-page expansion</b> (<code>with_page_values</code>): a retrieved <code>page_description</code> chunk without any other chunk of its page brings up to 3 of that page's reading chunks, ranked with it (<code>retrieval_paths: vlm_text, same_page</code>).</li>
+<li><b>Visual search</b>, when the plan includes <code>visual_search</code>. <code>RAG_FIN_VISUAL</code> is <code>auto</code> by default for the hybrid (the planner, or chart and figure words in the question, decide), <code>1</code> for every question, <code>0</code> to turn it off. ColPali embeds the question; Qdrant prefetches 200 pages by the mean-pooled row and column vectors and the text summary vector, then ranks them by exact MaxSim over the full on-disk multivectors. The best 3 distinct pages are kept.</li>
+<li><b>Page reading</b> (<code>page_evidence</code>): for each ColPali page, Chroma's chunks of that page (values first, description last). A page Chroma never read falls back to pipeline 2's own text of the page.</li>
+<li><b>Fusion</b> (<code>fuse</code>): reciprocal rank over Chroma's list and ColPali's pages; a chunk found both ways adds both scores. Every hit keeps the shared evidence format, so citations, the critic and the API need no change.</li>
+</ol>
+
+<h3>Critic: figures only a VLM read</h3>
+<p>Each Chroma chunk carries <code>unverified_numbers</code>: figures the page reader wrote that neither the page's text layer nor OCR prints. <code>financial_tools.numeric_grounding</code> now returns <code>unverified</code>: answer figures that appear in a cited chunk <em>only</em> as such a figure. They still count as grounded (the reading states them), but governance adds the trigger <code>unverified_vlm_figure</code>, so the answer is shown with <code>final_status: pending_human_review</code> instead of being auto-approved. A figure stated without the flag by any other cited chunk (another page, or pipeline 2's text of the same page) counts as confirmed.</p>
+
+<h2>3. Code changes</h2>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>scripts/rag/financial_hybrid.py</code> (new)</td><td>The <code>financial_hybrid</code> backend: Chroma search, ColPali pages, page readings, fusion. ColPali loads once per process; <code>RAG_FIN_COLPALI_DTYPE</code> (default <code>bfloat16</code> on CPU).</td></tr>
+<tr><td><code>scripts/rag/financial_ingest_chroma_db.py</code></td><td><code>ChromaStore.page_payloads(doc_id, page)</code>; <code>with_page_values</code> applied to every Chroma search (also helps <code>RAG_BACKEND=financial_vlm</code>).</td></tr>
+<tr><td><code>scripts/agents/financial_tools.py</code></td><td><code>numeric_grounding</code> returns <code>unverified</code> (<code>confirmed_numbers</code>); <code>visual_mode</code> knows the hybrid.</td></tr>
+<tr><td><code>scripts/agents/financial_prompting_agent.py</code></td><td><code>retrieve_evidence</code> dispatches <code>financial_hybrid</code>; governance trigger <code>unverified_vlm_figure</code>.</td></tr>
+<tr><td><code>scripts/api/api_app.py</code></td><td>Start-up warm-up opens both indexes and loads ColPali for the hybrid.</td></tr>
+<tr><td><code>tests/test_financial_hybrid.py</code> (new)</td><td>13 tests: same-page expansion, Chroma page reads, ColPali page to Chroma reading, fallback to pipeline 2 text, fusion scores, visual settings, planner, dispatch, unverified figures through the whole graph. Full suite: 570 passed.</td></tr>
+</table>
+
+<h2>4. Run it locally on one filing (Chevron 2022)</h2>
+<h3>Test indexes</h3>
+<table>
+<tr><th>Index</th><th>Folder</th><th>Built with</th></tr>
+<tr><td>Qdrant (pipeline 2) text</td><td><code>indexes/rag_home/indexes/qdrant_db_cvx_test</code></td><td>315 chunks from 116 pages (OCR for every garbled page), MiniLM</td></tr>
+<tr><td>Qdrant (pipeline 2) visual</td><td>same folder</td><td>ColPali v1.3 on CPU, bfloat16, rule-selected visual pages</td></tr>
+<tr><td>Chroma (pipeline 1)</td><td><code>indexes/rag_home/indexes/chroma_db_cvx_test</code></td><td>routed readers: OCR, native tables, local Qwen3-VL-2B (llama.cpp) for chart and table pages, descriptions for chart pages; bge-small</td></tr>
+</table>
+<pre><code># one-row manifest: output/hybrid_test/pdf_manifest.jsonl (the CVX 2022 row of the oil_and_gas manifest)
+$pdfs = "data\raw\financial_report_qa\annual_reports\oil_and_gas"
+
+# pipeline 2: text, then ColPali (needs about 6 GB of free RAM on CPU)
+python -m scripts.rag.financial_ingest_qdrant_db ingest --root indexes\rag_home\indexes\qdrant_db_cvx_test `
+  --manifest output\hybrid_test\pdf_manifest.jsonl --pdf-dir $pdfs --stages text --ocr-max-pages-per-filing 0
+python -m scripts.rag.financial_ingest_qdrant_db ingest --root indexes\rag_home\indexes\qdrant_db_cvx_test `
+  --manifest output\hybrid_test\pdf_manifest.jsonl --pdf-dir $pdfs --stages visual --colpali-dtype bfloat16 --colpali-batch 1
+
+# pipeline 1: local Qwen3-VL-2B through llama.cpp on port 8081 (indexes\runtime\llama.cpp\llama-server.exe)
+$env:RAG_VISION_API_BASE = "http://127.0.0.1:8081/v1"; $env:RAG_VISION_MODEL = "local-qwen3-vl"
+python -m scripts.rag.financial_ingest_chroma_db ingest --root indexes\rag_home\indexes\chroma_db_cvx_test `
+  --manifest output\hybrid_test\pdf_manifest.jsonl --pdf-dir $pdfs --vlm routed --qwen-reader openai --low-priority</code></pre>
+
+<h3>Start the API and Streamlit on the hybrid</h3>
+<pre><code>$env:LLM_API_BASE = "https://&lt;your-llm-endpoint&gt;/v1"; $env:LLM_API_KEY = "&lt;key&gt;"; $env:LLM_MODEL = "&lt;model&gt;"
+$env:DEFAULT_LLM_PROVIDER = "hosted"
+$env:RAG_BACKEND = "financial_hybrid"
+$env:RAG_VLM_DIR    = "C:\Upgrad_Projects\IIT_Kharagpur\Capstone\indexes\rag_home\indexes\chroma_db_cvx_test"
+$env:RAG_INGEST_DIR = "C:\Upgrad_Projects\IIT_Kharagpur\Capstone\indexes\rag_home\indexes\qdrant_db_cvx_test"
+$env:RAG_FIN_VISUAL = "auto"            # 1 = ColPali on every question, 0 = off
+$env:RAG_FIN_COLPALI_DTYPE = "bfloat16"
+$env:HF_HUB_OFFLINE = "1"
+.venv\Scripts\python.exe -m uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
+
+# second window
+$env:API_BASE_URL = "http://127.0.0.1:8000"
+.venv\Scripts\python.exe -m streamlit run scripts\ui\api_streamlit_app.py</code></pre>
+<p>Embedded Qdrant allows one process, so keep a single API worker. To compare, restart the API with <code>RAG_BACKEND=financial_vlm</code> (Chroma only, same <code>RAG_VLM_DIR</code>) or <code>financial_qdrant</code> with <code>RAG_FIN_VISUAL=1</code> (Qdrant only).</p>
+<blockquote><b>Memory.</b> ColPali v1.3 is a 3-billion-parameter model: about 6 GB of RAM in bfloat16 on CPU, loaded once in the API process. With 16 GB of RAM, close browsers and other large apps first. The first chart question after start-up waits for the warm-up to finish loading it.</blockquote>
+<blockquote><b>Full corpus.</b> For the 509-filing demo, point <code>RAG_VLM_DIR</code> at the final Colab Chroma index (<code>chroma_db</code>, Gemini readings) and <code>RAG_INGEST_DIR</code> at a pipeline 2 index of the same filings; nothing else changes.</blockquote>
+
+<h2>5. Test questions (Chevron 2022)</h2>
+<p>All answers are in <code>edgar_ars_CVX_2022</code>. In Streamlit pick the agent under <b>Demo settings → Technique</b>, LLM provider <code>hosted</code>, company and year left on <em>Any</em>. Record the status, the cited pages (<code>..._p0035_...</code> means page 35) and <code>retrieval_paths</code> in the evidence: <code>visual</code> means ColPali found the page, <code>same_page</code> means the description brought its values.</p>
+
+<h3>5.1 Q&amp;A agent: <code>agentic_graph</code></h3>
+<table>
+<tr><th>#</th><th>Type</th><th>Question</th><th>Expected</th><th>Page</th><th>Chroma only</th><th>Qdrant only</th><th>Hybrid</th></tr>
+<tr><td>H1</td><td><span class="tag chart">chart</span></td><td>According to the production charts in Chevron's 2022 annual report, what was Chevron's net crude oil production in 2022?</td><td>1,440 thousand barrels per day</td><td>35</td><td class="todo">to be filled</td><td class="todo">to be filled</td><td class="todo">to be filled</td></tr>
+<tr><td>H2</td><td><span class="tag chart">chart</span></td><td>What net natural gas production did Chevron report in its 2022 annual-report chart?</td><td>7,677 million cubic feet per day</td><td>35</td><td class="todo">to be filled</td><td class="todo">to be filled</td><td class="todo">to be filled</td></tr>
+<tr><td>H3</td><td><span class="tag chart">chart</span></td><td>What were Chevron's net proved reserves at the end of 2022 according to the chart?</td><td>11.2 billion barrels of oil-equivalent</td><td>35</td><td class="todo">to be filled</td><td class="todo">to be filled</td><td class="todo">to be filled</td></tr>
+<tr><td>H4</td><td><span class="tag chart">chart</span></td><td>What did Chevron's 2022 chart show for net natural gas liquids production in 2022?</td><td>279 thousand barrels per day</td><td>35</td><td class="todo">to be filled</td><td class="todo">to be filled</td><td class="todo">to be filled</td></tr>
+<tr><td>H5</td><td><span class="tag table">table</span></td><td>What were Chevron's capital and exploratory expenditures in 2022, and how did they compare with 2021?</td><td>$12,296 million in 2022 vs $8,553 million in 2021 (change computed by the calculator)</td><td>44</td><td class="todo">to be filled</td><td class="todo">to be filled</td><td class="todo">to be filled</td></tr>
+<tr><td>H6</td><td><span class="tag table">table</span></td><td>What were Chevron's total revenues and other income for 2022?</td><td>$246,252 million (2021: $162,465 million)</td><td>58</td><td class="todo">to be filled</td><td class="todo">to be filled</td><td class="todo">to be filled</td></tr>
+<tr><td>H7</td><td><span class="tag table">table</span></td><td>What was Chevron's return on average capital employed in 2022?</td><td>20.3% (2021: 9.4%)</td><td>47</td><td class="todo">to be filled</td><td class="todo">to be filled</td><td class="todo">to be filled</td></tr>
+<tr><td>H8</td><td><span class="tag text">text</span></td><td>Who audited Chevron's 2022 consolidated financial statements?</td><td>PricewaterhouseCoopers LLP</td><td>55</td><td class="todo">to be filled</td><td class="todo">to be filled</td><td class="todo">to be filled</td></tr>
+<tr><td>H9</td><td><span class="tag table">table</span></td><td>What was Chevron's net income attributable to Chevron Corporation in 2022?</td><td>$35,465 million</td><td>47, 58</td><td class="todo">to be filled</td><td class="todo">to be filled</td><td class="todo">to be filled</td></tr>
+</table>
+
+<h3>5.2 Router: <code>router</code> (Streamlit default)</h3>
+<table>
+<tr><th>#</th><th>Type</th><th>Question</th><th>Expected route</th><th>Expected</th><th>Actual</th></tr>
+<tr><td>H10</td><td><span class="tag chart">chart</span></td><td>Show me what Chevron's 2022 production chart says about net crude oil production.</td><td>lookup → Q&amp;A agent with visual_search</td><td>1,440 kbd, cites page 35</td><td class="todo">to be filled</td></tr>
+<tr><td>H11</td><td><span class="tag table">table</span></td><td>Compare Chevron's 2022 capital and exploratory expenditures with 2021.</td><td>comparison → Q&amp;A agent</td><td>$12,296M vs $8,553M, change by calculator</td><td class="todo">to be filled</td></tr>
+<tr><td>H12</td><td><span class="tag text">text</span></td><td>Should I buy Chevron stock based on its 2022 results?</td><td>out_of_scope</td><td><code>refused</code></td><td class="todo">to be filled</td></tr>
+</table>
+<p>The trend and sector agents need several fiscal years and companies, so they are not tested on this one-filing index; run them against the full indexes.</p>
+
+<h3>5.3 What each column should show</h3>
+<ul>
+<li><b>Chroma only</b> (<code>financial_vlm</code>): H1–H4 are answered when Qwen3-VL read page 35 correctly and its chunk ranks in the top k. The description chunk now brings the values with it.</li>
+<li><b>Qdrant only</b> (<code>financial_qdrant</code>, <code>RAG_FIN_VISUAL=1</code>): H1–H4 find page 35 but its text has no values, so the expected status is <code>insufficient_evidence</code> or <code>evidence_only</code>. H5–H9 come from OCR text.</li>
+<li><b>Hybrid</b>: H1–H4 cite a page 35 chunk with <code>retrieval_paths</code> including <code>visual</code> and the values in the text; H5–H9 as Chroma or better. If a figure appears only in Qwen3-VL's reading and nowhere in the OCR text, the status is <code>pending_human_review</code> with trigger <code>unverified_vlm_figure</code>: that is the critic working, not a failure.</li>
+</ul>
+
+<h2>6. Results</h2>
+<p class="todo">To be filled after the test indexes are built and the questions are run with the hosted LLM.</p>
+
+<h2>7. Limits</h2>
+<ul>
+<li><b>ColPali on CPU</b> is slow to load (about 6 GB) and adds a few seconds per chart question. On a GPU machine it runs in float16 automatically.</li>
+<li><b>Local Qwen3-VL-2B</b> reads charts less reliably than the Gemini readings in the final Colab index. Wrong readings are exactly what the <code>unverified_vlm_figure</code> review catches; the full demo should use the Gemini index.</li>
+<li><b>Embedded Qdrant</b> is single-process; a Qdrant server (<code>QDRANT_URL</code>) lifts that.</li>
+<li><b>Same filing in both indexes:</b> the hybrid joins them by <code>doc_id</code> and page, so both must be built from the same manifests.</li>
+</ul>
+
+</body></html>

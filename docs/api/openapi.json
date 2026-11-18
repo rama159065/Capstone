@@ -792,6 +792,258 @@
           }
         }
       }
+    },
+    "/mutual_fund/funds": {
+      "get": {
+        "tags": [
+          "Mutual funds"
+        ],
+        "summary": "Loaded funds and their N-PORT filings",
+        "operationId": "list_funds_mutual_fund_funds_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response List Funds Mutual Fund Funds Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mutual_fund/holdings": {
+      "get": {
+        "tags": [
+          "Mutual funds"
+        ],
+        "summary": "Top equity holdings of one fund filing (share classes summed)",
+        "operationId": "holdings_mutual_fund_holdings_get",
+        "parameters": [
+          {
+            "name": "series_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 20,
+              "title": "Series Id"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 2100,
+                  "minimum": 2019
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Holdings Mutual Fund Holdings Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mutual_fund/holders/{ticker}": {
+      "get": {
+        "tags": [
+          "Mutual funds"
+        ],
+        "summary": "Loaded funds holding a corpus company, largest weight first",
+        "operationId": "holders_mutual_fund_holders__ticker__get",
+        "parameters": [
+          {
+            "name": "ticker",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticker"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Holders Mutual Fund Holders  Ticker  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mutual_fund/search": {
+      "get": {
+        "tags": [
+          "Mutual funds"
+        ],
+        "summary": "Fund cards nearest a query (bge-small-en-v1.5, collection fund_cards_mutual_fund)",
+        "operationId": "search_mutual_fund_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 300,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "top_k",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10,
+              "minimum": 1,
+              "default": 3,
+              "title": "Top K"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Search Mutual Fund Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key (only when the server sets API_AUTH_TOKEN).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1050,20 +1302,25 @@
               "structured_few_shot",
               "decomposition",
               "self_consistency",
-              "agentic_graph"
+              "agentic_graph",
+              "trend_graph",
+              "sector_trend_graph",
+              "fund_graph",
+              "router"
             ],
             "title": "Technique",
-            "description": "Financial QA workflow to execute.",
+            "description": "Financial QA workflow to execute. agentic_graph: the Q&A agent (planner, per-company searches, calculator, critic). trend_graph: the multi-year trend agent (one search per fiscal year, verified series, changes and CAGR computed in code). sector_trend_graph: the sector trend agent (one measure across one sector's companies, year by year, over a fixed panel; totals, changes and CAGR computed in code). fund_graph: the fund agent (a mutual fund's SEC N-PORT holdings as cited rows, linked to the holdings' annual reports; needs loaded fund data). router: a supervisor that sends each question to the Q&A agent, the trend agent, the sector trend agent, the fund agent (when fund data is loaded), a report handoff or a refusal. The others are single-prompt baselines.",
             "default": "agentic_graph"
           },
           "retrieval_mode": {
             "type": "string",
             "enum": [
+              "hybrid",
               "dense",
-              "hybrid"
+              "bm25"
             ],
             "title": "Retrieval Mode",
-            "description": "Use dense-only or hybrid dense-plus-BM25 retrieval.",
+            "description": "hybrid (default): dense + BM25 fused by RRF, on Qdrant or Chroma; dense or bm25: one retriever only (for ablations).",
             "default": "hybrid"
           },
           "ticker": {
@@ -1474,20 +1731,25 @@
               "structured_few_shot",
               "decomposition",
               "self_consistency",
-              "agentic_graph"
+              "agentic_graph",
+              "trend_graph",
+              "sector_trend_graph",
+              "fund_graph",
+              "router"
             ],
             "title": "Technique",
-            "description": "Financial QA workflow to execute.",
+            "description": "Financial QA workflow to execute. agentic_graph: the Q&A agent (planner, per-company searches, calculator, critic). trend_graph: the multi-year trend agent (one search per fiscal year, verified series, changes and CAGR computed in code). sector_trend_graph: the sector trend agent (one measure across one sector's companies, year by year, over a fixed panel; totals, changes and CAGR computed in code). fund_graph: the fund agent (a mutual fund's SEC N-PORT holdings as cited rows, linked to the holdings' annual reports; needs loaded fund data). router: a supervisor that sends each question to the Q&A agent, the trend agent, the sector trend agent, the fund agent (when fund data is loaded), a report handoff or a refusal. The others are single-prompt baselines.",
             "default": "agentic_graph"
           },
           "retrieval_mode": {
             "type": "string",
             "enum": [
+              "hybrid",
               "dense",
-              "hybrid"
+              "bm25"
             ],
             "title": "Retrieval Mode",
-            "description": "Use dense-only or hybrid dense-plus-BM25 retrieval.",
+            "description": "hybrid (default): dense + BM25 fused by RRF, on Qdrant or Chroma; dense or bm25: one retriever only (for ablations).",
             "default": "hybrid"
           },
           "ticker": {
@@ -1831,7 +2093,72 @@
               }
             ],
             "title": "Support Check",
-            "description": "agentic_graph only: the critic's support check. `verdict` is supported, partially_supported, unsupported or unverified; `claims` are the judge's per-claim decisions; `numeric` lists figures missing from the cited chunks. A hosted-LLM answer is shown only when the verdict is supported."
+            "description": "agentic_graph, trend_graph and router: the critic's support check. `verdict` is supported, partially_supported, unsupported or unverified; `claims` are the judge's per-claim decisions; `numeric` lists figures missing from the cited chunks. A hosted-LLM answer is shown only when the verdict is supported."
+          },
+          "route": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route",
+            "description": "router and trend_graph: the chosen route (lookup, comparison, trend, report, out_of_scope), the LLM's and the rules' choices, who decided and any rule adjustments."
+          },
+          "trend": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trend",
+            "description": "Trend route: the per-year series (each figure verified in that year's evidence), year-over-year changes, CAGR, missing years and chart rows."
+          },
+          "sector_trend": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector Trend",
+            "description": "Sector trend route: the sector, measure and years; the panel (companies verified in every year) and the ones left out with the reason; per year the sector total in USD millions, its change, the median company change and how many companies grew; the CAGRs; every company's verified figures with their chunks."
+          },
+          "mutual_fund": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mutual Fund",
+            "description": "Fund route: the fund, holdings date and accession; the lookup kind; the rows shown (top holdings, sector mix, exposure or holders); corpus coverage; for questions about the holdings' annual reports, each company's verified figures, growth and the weighted growth with its coverage."
+          },
+          "handoff": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handoff",
+            "description": "Report route: the company and year a full report would cover and whether a report profile exists."
           },
           "agent_run": {
             "anyOf": [
@@ -1844,7 +2171,7 @@
               }
             ],
             "title": "Agent Run",
-            "description": "agentic_graph only: the node path, step budget, every tool call (coverage_lookup, text_search, visual_search, calculator), retrieval attempts, repairs and calculations."
+            "description": "agentic_graph, trend_graph and router: the node path, step budget, every tool call (coverage_lookup, text_search, visual_search, calculator), retrieval attempts, repairs and calculations."
           }
         },
         "additionalProperties": true,
@@ -1890,6 +2217,19 @@
           "reason"
         ],
         "title": "GroundingResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
       },
       "HealthResponse": {
         "properties": {
@@ -2188,11 +2528,12 @@
           "retrieval_mode": {
             "type": "string",
             "enum": [
+              "hybrid",
               "dense",
-              "hybrid"
+              "bm25"
             ],
             "title": "Retrieval Mode",
-            "description": "Financial retrieval mode; non-financial domains always use hybrid search.",
+            "description": "hybrid (default): dense + BM25 fused by RRF, on Qdrant or Chroma; dense or bm25: one retriever only (for ablations).",
             "default": "hybrid"
           },
           "ticker": {
@@ -2304,6 +2645,46 @@
           "evidence"
         ],
         "title": "RetrieveResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     },
     "securitySchemes": {
@@ -2332,6 +2713,10 @@
     {
       "name": "Retrieval",
       "description": "Retrieve and return evidence without generating an answer."
+    },
+    {
+      "name": "Mutual funds",
+      "description": "Loaded SEC N-PORT fund data: funds, holdings, holders and fund-card search (read-only; questions go through the chat routes)."
     },
     {
       "name": "Multimodal RAG",

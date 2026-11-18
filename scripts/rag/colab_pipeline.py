@@ -14,14 +14,18 @@ Two pipelines over the sector corpus (scripts/downloads/download_annual_report_c
     clean narrative pages keep their text layer; all chunks are embedded as text into Chroma
     (persisted on disk, HNSW loaded into RAM when queried)
 
-Where things live on Colab:
+Where things live (the storage layout of scripts/common/storage.py; <work> = RAG_HOME):
     <drive_root>/annual_reports/       PDFs by sector + manifests (durable)
     <work>/annual_reports/             the sector being ingested, copied from Drive to fast local disk
-    <work>/<pipeline>/                 the live index on the VM's fast local disk (lost at disconnect)
-    <drive_root>/snapshots/colpali_qdrant/   Qdrant snapshots + ingest state, written after every sector
+    <work>/indexes/qdrant_db/          live index of colpali_qdrant on the VM's fast local disk (lost at disconnect)
+    <work>/indexes/chroma_db/          live index of vlm_chroma
+    <drive_root>/snapshots/qdrant_db/  Qdrant snapshots + ingest state, written after every sector
                                        (a snapshot copies the whole collection; snapshot_every=N for every N batches)
-    <drive_root>/indexes/vlm_chroma/         copy of the Chroma index + state, written after every sector
-    <drive_root>/vlm_pages/            VLM transcriptions, one JSONL per filing (append-only, so safe on Drive)
+    <drive_root>/indexes/chroma_db/    copy of the Chroma index + state, written after every sector
+    <drive_root>/cache/vlm_pages/      VLM transcriptions, one JSONL per filing (append-only, so safe on Drive)
+Folders written before this layout (<work>/colpali_qdrant, <work>/vlm_chroma, <drive_root>/snapshots/colpali_qdrant,
+<drive_root>/indexes/vlm_chroma, <drive_root>/vlm_pages) are found and reused, so nothing needs renaming.
+``export`` copies the Drive copies to a Google Cloud Storage bucket for the GCP deployment (deploy/sync_from_gcs.sh).
 
 ``restore`` brings the Drive copy back to local disk at the start of a session, and
 ``ingest`` processes one sector at a time, skipping finished filings. So a new
@@ -34,7 +38,8 @@ Notebook: notebooks/colab_rag_pipelines.ipynb. From a terminal:
     python -m scripts.rag.colab_pipeline run --pipeline vlm_chroma --sectors banking --vlm-pages tables_charts
     python -m scripts.rag.colab_pipeline query --pipeline vlm_chroma "net interest income" --sector banking
 
-Locally (no Colab) the defaults are repo folders and embedded Qdrant (``--qdrant-url ""``).
+Locally (no Colab) <work> is the local RAG_HOME (<repo>/indexes/rag_home), the folder the local API serves, and
+Qdrant is embedded (``--qdrant-url ""``).
 """
 from __future__ import annotations
 
@@ -54,6 +59,7 @@ import tarfile
 import time
 import urllib.request
 
+from scripts.common import storage
 from scripts.common.paths import ROOT
 from scripts.common.sector_corpus import MANIFEST_NAME, parse_sectors, read_manifest
 from scripts.rag import financial_ingest_qdrant_db as fi
@@ -69,15 +75,15 @@ QDRANT_PORT = 6333
 class Settings:
     pipeline: str = "colpali_qdrant"
     drive_root: Path = Path("/content/drive/MyDrive/capstone_rag") if IN_COLAB else ROOT / "indexes/pipelines_drive"
-    work: Path = Path("/content/rag") if IN_COLAB else ROOT / "indexes/pipelines"
+    work: Path = storage.layout("colab" if IN_COLAB else "local").home    # RAG_HOME: the live copy
     corpus_preset: str = "full"             # "full" = 1,004 filings; "min500" = the 509-filing variant (Track B minimum)
     sectors: str = ""                       # names or slugs, comma-separated; "" = every downloaded sector
     max_per_sector: int | None = 20         # download: largest companies first; None = the whole plan
     years: str | None = None                # download: e.g. "2024,2025"
     user_agent: str | None = os.getenv("SEC_USER_AGENT")
     qdrant_url: str | None = f"http://127.0.0.1:{QDRANT_PORT}" if IN_COLAB else None   # None = embedded (local runs)
-    embedding_provider: str = "local"
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_provider: str = "local"       # "hosted" = the shared embedding API (docs/embedding_key.md)
+    embedding_model: str | None = None      # None: BAAI/bge-small-en-v1.5 for vlm_chroma, all-MiniLM-L6-v2 for colpali_qdrant
     # colpali_qdrant
     stages: str = "text,visual"
     visual_pages: str = "tables_charts_images"   # ColPali pages; or "tables_charts" / "rule" (+ unreadable pages) / "all"
@@ -94,6 +100,8 @@ class Settings:
     qwen_reader: str = "transformers"       # routed: Qwen3-VL in-process, or "openai" (endpoint at RAG_VISION_API_BASE)
     paid_threshold: float = 0.10            # routed: paidVL page -> paid model when > 10% of Qwen3-VL's figures fail OCR
     paid_max_pages_per_pdf: int = 0         # routed: cap paid calls per filing (0 = no cap)
+    paid_first: bool = False                # routed: paidVL pages -> paid model first, Qwen3-VL only as a fallback
+    describe_visuals: bool = True           # routed: Qwen3-VL search description of chart and image pages
     vlm_model: str | None = None            # default Qwen/Qwen3-VL-4B-Instruct (or -2B / -8B)
     vlm_pages: str = "visual"               # tables, charts, images + unreadable pages
                                             # or "tables_charts_images" / "tables_charts" / "all"
@@ -109,6 +117,8 @@ class Settings:
         if self.corpus_preset not in ("full", "min500"):
             raise ValueError("corpus_preset must be 'full' or 'min500'")
         self.drive_root, self.work = Path(self.drive_root), Path(self.work)
+        if self.embedding_model is None:      # pipeline 1 uses bge-small (also served by the shared API)
+            self.embedding_model = fi.LOCAL_BGE_SMALL if self.pipeline == "vlm_chroma" else "sentence-transformers/all-MiniLM-L6-v2"
 
     @property
     def corpus(self):
@@ -119,16 +129,20 @@ class Settings:
         return self.work / "annual_reports"
 
     @property
+    def kind(self):
+        return storage.PIPELINE_KIND[self.pipeline]
+
+    @property
     def root(self):
-        return self.work / (self.pipeline + self.run_name)
+        return storage.work_index(self.work, self.kind, self.run_name)
 
     @property
     def backup(self):
-        return self.drive_root / ("snapshots" if self.pipeline == "colpali_qdrant" else "indexes") / (self.pipeline + self.run_name)
+        return storage.durable_index(self.drive_root, self.kind, self.run_name)
 
     @property
     def vlm_cache(self):
-        return self.drive_root / "vlm_pages"
+        return storage.first_existing([self.drive_root / "cache" / "vlm_pages", self.drive_root / "vlm_pages"])
 
 
 _loaded = {}          # models and clients shared by every sector and every call in this process
@@ -206,8 +220,80 @@ def download(s: Settings):
     return dl.main(argv)
 
 
+FUND_DIR = "mutual_fund"               # <home>/indexes/mutual_fund, the same name on Drive, in the bucket and on the VM
+FUND_ZIP = "mutual_fund_data.zip"       # what pack_mutual_fund writes; upload it to MyDrive/capstone_rag/
+FUND_DB = "nport_mutual_fund.sqlite3"
+
+
+def pack_mutual_fund(source=None, out=None) -> Path:
+    """Zip the local mutual fund data (N-PORT database, fund-card Chroma folder, raw filings) for Colab and GCP:
+    upload the zip to MyDrive/capstone_rag/ and ``restore`` unpacks it. The database is copied with SQLite's backup
+    API, so a running API that reads it doesn't matter."""
+    import sqlite3
+    import tempfile
+    import zipfile
+    source = Path(source or storage.layout().mutual_fund)
+    if not (source / FUND_DB).exists():
+        raise FileNotFoundError(f"no {FUND_DB} in {source}: load the funds first (scripts.rag.nport_mutual_fund load)")
+    out = Path(out or ROOT / "output" / "colab" / FUND_ZIP)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    partial = out.with_suffix(".zip.partial")
+    with tempfile.TemporaryDirectory() as tmp:
+        db_copy = Path(tmp) / FUND_DB
+        src, dst = sqlite3.connect(f"file:{(source / FUND_DB).as_posix()}?mode=ro", uri=True), sqlite3.connect(db_copy)
+        try:
+            src.backup(dst)
+        finally:
+            src.close()
+            dst.close()
+        with zipfile.ZipFile(partial, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.write(db_copy, FUND_DB)
+            for path in sorted(source.rglob("*")):
+                if path.is_file() and path.name != FUND_DB and not path.name.startswith(FUND_DB + "-"):
+                    archive.write(path, path.relative_to(source).as_posix())
+    partial.replace(out)
+    print(f"mutual fund data packed: {out} ({out.stat().st_size / 1e6:.1f} MB); upload it to MyDrive/capstone_rag/")
+    return out
+
+
+def durable_mutual_fund(s: Settings) -> Path | None:
+    """<drive_root>/indexes/mutual_fund, unpacked from <drive_root>/mutual_fund_data.zip the first time."""
+    import zipfile
+    folder = s.drive_root / "indexes" / FUND_DIR
+    if (folder / FUND_DB).exists():
+        return folder
+    archive = s.drive_root / FUND_ZIP
+    if not archive.exists():
+        return None
+    folder.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(archive) as zf:
+        for name in zf.namelist():                               # no absolute paths or ".." out of the folder
+            if Path(name).is_absolute() or ".." in Path(name).parts:
+                raise ValueError(f"unsafe path in {archive}: {name}")
+        zf.extractall(folder)
+    print(f"mutual fund data unpacked from {archive} into {folder}")
+    return folder
+
+
+def restore_mutual_fund(s: Settings) -> bool:
+    """Copy the mutual fund data from Drive to <work>/indexes/mutual_fund, where the API finds it (RAG_HOME layout).
+    Without it the router's fund route simply stays off."""
+    live = s.work / "indexes" / FUND_DIR
+    if (live / FUND_DB).exists():
+        print(f"mutual fund data already in place: {live}")
+        return False
+    durable = durable_mutual_fund(s)
+    if durable is None:
+        print(f"no mutual fund data on Drive ({s.drive_root / FUND_ZIP}); the fund route stays off")
+        return False
+    shutil.copytree(durable, live, dirs_exist_ok=True)
+    print(f"mutual fund data restored from {durable} into {live}")
+    return True
+
+
 def restore(s: Settings):
-    """Bring the Drive copy back to local disk when this session has no index yet."""
+    """Bring the Drive copy back to local disk when this session has no index yet (and the mutual fund data)."""
+    restore_mutual_fund(s)
     if s.pipeline == "colpali_qdrant":
         if (s.root / "ingest.sqlite3").exists() or not list(s.backup.glob("*.snapshot")):
             print("nothing to restore (first session, or this runtime already has the index)")
@@ -316,6 +402,8 @@ def ingest_vlm(s: Settings, sector, corpus=None):
             "--vlm", s.vlm, "--vlm-pages", pages, "--vlm-max-pages-per-pdf", str(s.vlm_max_pages_per_pdf),
             "--qwen-reader", s.qwen_reader, "--paid-threshold", str(s.paid_threshold),
             "--paid-max-pages-per-pdf", str(s.paid_max_pages_per_pdf)]
+    argv += [] if s.describe_visuals else ["--no-describe-visuals"]
+    argv += ["--paid-first"] if s.paid_first else []
     argv += ["--vlm-model", s.vlm_model] if s.vlm_model else []
     run = vi.VlmIngest(vi.build_parser().parse_args(argv), vlm=_loaded.get("vlm"), embedder=_loaded.get("embedder"))
     _loaded["embedder"] = run.embedder
@@ -368,8 +456,8 @@ def status(s: Settings):
         store = vi.ChromaStore(s.root) if (s.root / "chroma").exists() else None
         report["chroma"] = {"chunks": store.count() if store else 0, "where": "disk (persistent), HNSW in RAM when queried"}
         if store and store.count():
-            metas = store.collection.get(include=["metadatas"])["metadatas"]
-            report["chroma"]["by_sector"] = dict(sorted(Counter(m.get("sector_slug") for m in metas).items()))
+            sectors = Counter(m["sector_slug"] for m in chroma_metadatas(store, fields=("sector_slug",)))
+            report["chroma"]["by_sector"] = dict(sorted(sectors.items(), key=lambda kv: str(kv[0])))
         state = s.root / "vlm_ingest.sqlite3"
         with contextlib.redirect_stdout(io.StringIO()):          # vi.status prints; keep one report
             cache = vi.status(argparse.Namespace(root=s.root, cache_dir=s.vlm_cache))
@@ -434,7 +522,8 @@ def coverage(s: Settings, show=True):
                             for slug, c in rows.items()},
               "total": {k: total[k] for k in ("planned", "downloaded", "ingested", "pending", "failed")},
               "failed": failed,
-              "not_in_plan": sorted(set(status) - set(planned))}
+              "not_in_plan": sorted(set(status) - set(planned)),
+              "by_doc": planned}
     if show:
         print(f"{'sector':26s} {'planned':>7s} {'downloaded':>10s} {'ingested':>8s} {'pending':>7s} {'failed':>6s}")
         for slug, c in report["by_sector"].items():
@@ -446,10 +535,227 @@ def coverage(s: Settings, show=True):
     return report
 
 
+def chroma_metadatas(store, batch=5000, fields=None):
+    """Every chunk's metadata, read in batches so 300k+ chunks don't need one huge response."""
+    total = store.count()
+    for offset in range(0, total, batch):
+        for meta in store.collection.get(include=["metadatas"], limit=batch, offset=offset)["metadatas"]:
+            yield {k: meta.get(k) for k in fields} if fields else meta
+
+
+def chroma_check(root):
+    """Chunks in Chroma, BM25 and the state file, and the filings (doc_ids) Chroma holds."""
+    import sqlite3
+    out = {"chroma_chunks": 0, "bm25_chunks": 0, "state_chunks": 0, "state_complete": 0, "chroma_filings": set()}
+    state = Path(root) / "vlm_ingest.sqlite3"
+    if state.exists():
+        with contextlib.closing(sqlite3.connect(f"file:{state}?mode=ro", uri=True)) as db:
+            out["state_complete"], out["state_chunks"] = db.execute(
+                "SELECT COUNT(*), COALESCE(SUM(points), 0) FROM filings WHERE status='complete'").fetchone()
+            out["embedding"] = dict(db.execute("SELECT key, value FROM settings")).get("embedding")
+    if (Path(root) / "chroma").exists():
+        store = vi.ChromaStore(root)
+        out["chroma_chunks"], out["bm25_chunks"] = store.count(), store.bm25.count()
+        out["chroma_filings"] = {m["doc_id"] for m in chroma_metadatas(store, fields=("doc_id",))}
+    return out
+
+
+def embedding_matches(s: Settings, recorded):
+    """The index's recorded embedding (e.g. local:BAAI/bge-small-en-v1.5:384) is the one this run would use:
+    the same model name, or the hashing embedder of tests and smoke runs. Local and hosted bge-small are one model."""
+    recorded = recorded or ""
+    if s.embedding_provider == "hashing":
+        return recorded.startswith("hashing")
+    return Path(s.embedding_model).name in recorded
+
+
+def verify_upload(s: Settings, expected_filings=None):
+    """Is everything the PC staged on Drive, and did restore bring the index to local disk intact?
+
+    Checks the code and fund zips, every planned PDF (present, non-empty), the Drive index copy (state file,
+    page analyses, Chroma and BM25 files), the OCR cache, and - once ``restore`` ran - the local copy: Chroma chunks =
+    BM25 chunks = the state file's chunks, and every planned filing in Chroma. Prints one line per check.
+    """
+    from scripts.common.sector_corpus import resolve_local_path
+    planned = coverage(s, show=False)
+    expected = expected_filings or planned["total"]["planned"]
+    rows = read_manifest(s.corpus) if s.corpus.exists() else []
+    pdfs = [resolve_local_path(r) for r in rows]
+    missing = [str(p) for p in pdfs if not p.exists() or p.stat().st_size == 0]
+    durable = s.backup
+    pages = len(list((durable / "pages").glob("*.json"))) if (durable / "pages").exists() else 0
+    cached = len(list(s.vlm_cache.glob("*.jsonl"))) if s.vlm_cache.exists() else 0
+    checks = [
+        ("code zip on Drive", (s.drive_root / "capstone_code.zip").exists(), str(s.drive_root / "capstone_code.zip")),
+        ("mutual fund zip on Drive", (s.drive_root / FUND_ZIP).exists(), str(s.drive_root / FUND_ZIP)),
+        ("PDFs in the manifests", len(rows) >= expected, f"{len(rows)} rows (expect {expected})"),
+        ("PDF files present and non-empty", bool(pdfs) and not missing,
+         f"{len(pdfs) - len(missing)} ok, {len(missing)} missing, {folder_gb(s.corpus)} GB"),
+        ("planned filings downloaded", planned["total"]["downloaded"] == expected,
+         f"{planned['total']['downloaded']} of {expected}"),
+        ("Drive index: state file", (durable / "vlm_ingest.sqlite3").exists(), str(durable / "vlm_ingest.sqlite3")),
+        ("Drive index: page analyses", pages >= expected, f"{pages} json (expect {expected})"),
+        ("Drive index: Chroma + BM25 files", (durable / "chroma" / "chroma.sqlite3").exists()
+         and (durable / "chroma" / "bm25.sqlite3").exists(), f"{folder_gb(durable / 'chroma')} GB"),
+        ("OCR / page reading cache", cached > 0, f"{cached} filings cached in {s.vlm_cache}"),
+    ]
+    local = chroma_check(s.root) if (s.root / "vlm_ingest.sqlite3").exists() else None
+    if local:
+        absent = sorted(set(planned["by_doc"]) - local["chroma_filings"])
+        checks += [
+            ("local copy: filings complete in state", local["state_complete"] >= expected,
+             f"{local['state_complete']} (expect {expected})"),
+            ("local copy: embedding model = this run's", embedding_matches(s, local.get("embedding")),
+             f"{local.get('embedding')} (run: {s.embedding_provider} {s.embedding_model})"),
+            ("local copy: Chroma = BM25 = state chunks",
+             local["chroma_chunks"] == local["bm25_chunks"] == local["state_chunks"] > 0,
+             f"{local['chroma_chunks']:,} / {local['bm25_chunks']:,} / {local['state_chunks']:,}"),
+            ("local copy: every planned filing in Chroma", not absent,
+             f"{len(local['chroma_filings'])} filings" + (f", missing {absent[:5]}" if absent else "")),
+        ]
+    else:
+        checks.append(("local copy restored", False, f"nothing at {s.root}: run cp.restore(s) (cell 3) first"))
+    for name, ok, detail in checks:
+        print(f"{'OK  ' if ok else 'FAIL'} {name:42s} {detail}")
+    failed = [name for name, ok, _ in checks if not ok]
+    print("\nALL CHECKS PASSED" if not failed else f"\n{len(failed)} check(s) failed: {failed}")
+    return {"ok": not failed, "failed": failed, "missing_pdfs": missing[:50], "checks": checks}
+
+
+def current_routes(root):
+    """Pages per route under today's page_audit rules (and the pages that get a description), from the page analyses
+    saved in <root>/pages. The page_audit CSVs on Drive were written with older rules, so they are not used here."""
+    from scripts.rag import page_audit
+    counts = Counter()
+    for path in sorted((Path(root) / "pages").glob("*.json")):
+        for page in json.loads(path.read_text(encoding="utf-8")).get("pages", []):
+            route = page_audit.route(page)
+            counts[route] += 1
+            counts["describe"] += page["page_type"] in vi.DESCRIBE_TYPES and route in vi.DESCRIBE_ROUTES
+    return dict(counts)
+
+
+PAGE_READERS = ("pdfParser", "ocr", "qwen3VL", "paidVL")
+READER_NAMES = {"pdfParser": "PDF text layer / native tables", "ocr": "RapidOCR", "qwen3VL": "Qwen3-VL",
+                "paidVL": "paid model (Gemini Flash)"}
+
+
+def reader_summary(s: Settings, expected_filings=None):
+    """Who read each page of the final index, and whether all planned filings are in it.
+
+    Counts distinct (filing, page) pairs per ``reader`` (pdfParser text layer, ocr, qwen3VL, paidVL = the paid model,
+    e.g. Gemini Flash) from the Chroma chunks, the paidVL escalation outcomes, the Qwen3-VL page descriptions, and the
+    filings still carrying a ``skip=`` pipeline (read on the PC without Qwen3-VL, not yet redone).
+    """
+    import sqlite3
+    planned = coverage(s, show=False)
+    expected = expected_filings or planned["total"]["planned"]
+    store = vi.ChromaStore(s.root)
+    pages, escalations, descriptions, by_route = {}, Counter(), set(), Counter()
+    filings, unverified = set(), set()
+    for m in chroma_metadatas(store, fields=("doc_id", "page", "reader", "content_type", "escalation", "page_route",
+                                               "unverified_numbers")):
+        key = (m["doc_id"], m["page"])
+        filings.add(m["doc_id"])
+        if m.get("content_type") == "page_description":
+            descriptions.add(key)
+            continue
+        if key not in pages:
+            pages[key] = m.get("reader") or "pdfParser"
+            by_route[m.get("page_route") or "?"] += 1
+            if m.get("page_route") == "paidVL":
+                escalations[m.get("escalation") or "none"] += 1
+        if m.get("unverified_numbers") not in (None, "[]"):
+            unverified.add(key)
+    readers = Counter(pages.values())
+    with contextlib.closing(sqlite3.connect(state_path(s))) as db:
+        rows = db.execute("SELECT doc_id, status, pipeline FROM filings").fetchall()
+    complete = [d for d, st, _ in rows if st == "complete"]
+    still_skipped = [d for d, st, p in rows if st == "complete" and "skip=" in (p or "")]
+    absent = sorted(set(planned["by_doc"]) - filings)
+    report = {
+        "filings": {"planned": expected, "complete_in_state": len(complete), "in_chroma": len(filings),
+                    "missing_from_chroma": absent, "failed": planned["failed"],
+                    "still_without_qwen3vl": len(still_skipped)},
+        "chunks": {"chroma": store.count(), "bm25": store.bm25.count()},
+        "pages_indexed": len(pages),
+        "pages_by_reader": {r: readers.get(r, 0) for r in (*PAGE_READERS, *sorted(set(readers) - set(PAGE_READERS)))},
+        "pages_by_route": dict(by_route.most_common()),
+        "paidVL_pages_by_outcome": dict(escalations.most_common()),
+        "qwen3vl_page_descriptions": len(descriptions),
+        "pages_with_unverified_figures": len(unverified),
+    }
+    report["all_filings_present"] = not absent and len(filings) >= expected and not planned["failed"]
+    total = len(pages) or 1
+    print(f"Filings: {len(filings)} in Chroma, {len(complete)} complete in state, planned {expected}  -> "
+          + ("ALL PRESENT" if report["all_filings_present"] else f"MISSING {absent[:10]} FAILED {planned['failed'][:10]}"))
+    chunks = report["chunks"]
+    print(f"Chunks: Chroma {chunks['chroma']:,} | BM25 {chunks['bm25']:,}  ("
+          + ("match" if chunks["chroma"] == chunks["bm25"] else "MISMATCH: run cp.repair_index(s)") + ")")
+    print(f"Filings still without Qwen3-VL (PC run, skip=): {len(still_skipped)}")
+    planned_routes = current_routes(s.root)                  # today's routing rules over the saved page analyses
+    if planned_routes:
+        report["page_routes"] = planned_routes
+        print(f"Routing (current rules): {planned_routes.get('qwen3VL', 0):,} pages to qwen3VL, "
+              f"{planned_routes.get('paidVL', 0):,} to paidVL, {planned_routes.get('describe', 0):,} chart/image pages "
+              "to describe")
+    print(f"\nPages indexed: {len(pages):,}")
+    for reader, count in report["pages_by_reader"].items():
+        print(f"  {READER_NAMES.get(reader, reader):34s} {count:8,d}  {100 * count / total:5.1f}%")
+    print(f"  {'Qwen3-VL chart/image descriptions':34s} {len(descriptions):8,d}  (extra search chunks)")
+    print("\npaidVL pages by outcome: " + (", ".join(f"{k}={v:,}" for k, v in escalations.most_common()) or "none")
+          + "\n  not_needed = Qwen3-VL matched OCR | paid = Gemini's reading kept | paid_not_better = Qwen kept"
+            "\n  paid_first = Gemini read it first and matched OCR | paid_first_qwen_better = Qwen's reading kept"
+            " | paid_first_qwen_not_better = Gemini kept after Qwen also tried"
+            "\n  no_paid_model / paid_limit = Gemini not called | models_failed_ocr_fallback = OCR kept"
+            "\n  *_reading_short_ocr_kept = a text page the model only partly read: OCR text kept (+ the reading's figures)")
+    print(f"Pages with figures not confirmed by OCR or the text layer: {len(unverified):,}")
+    return report
+
+
+def index_mismatches(s: Settings):
+    """Filings whose chunk counts differ between the state file, Chroma and BM25: {doc_id: (state, chroma, bm25)}."""
+    import sqlite3
+    store = vi.ChromaStore(s.root)
+    chroma = Counter(m["doc_id"] for m in chroma_metadatas(store, fields=("doc_id",)))
+    bm25 = dict(store.bm25.db.execute("SELECT doc_id, COUNT(*) FROM chunks GROUP BY doc_id"))
+    with contextlib.closing(sqlite3.connect(state_path(s))) as db:
+        state = dict(db.execute("SELECT doc_id, points FROM filings WHERE stage='vlm' AND status='complete'"))
+    counts = {d: (state.get(d, 0), chroma.get(d, 0), bm25.get(d, 0)) for d in set(state) | set(chroma) | set(bm25)}
+    return {d: c for d, c in sorted(counts.items()) if len(set(c)) > 1}
+
+
+def repair_index(s: Settings, run=True):
+    """Re-ingest only the filings whose state, Chroma and BM25 counts disagree (from the saved readings, so no new
+    model calls), then check again and back up to Drive. ``run=False`` only lists them."""
+    import dataclasses
+    import sqlite3
+    bad = index_mismatches(s)
+    print(f"{len(bad)} filings differ between state / Chroma / BM25")
+    for doc_id, (state, chroma, bm25) in list(bad.items())[:20]:
+        print(f"  {doc_id:28s} state {state:5d}  chroma {chroma:5d}  bm25 {bm25:5d}")
+    if not bad or not run:
+        return bad
+    sectors = coverage(s, show=False)["by_doc"]
+    unplanned = sorted(d for d in bad if d not in sectors)
+    if unplanned:
+        print(f"not in the plan, left alone: {unplanned[:10]}")
+    redo = [d for d in bad if d in sectors]
+    with contextlib.closing(sqlite3.connect(state_path(s))) as db, db:
+        db.executemany("UPDATE filings SET status='pending' WHERE doc_id=? AND stage='vlm'", [(d,) for d in redo])
+    ingest(dataclasses.replace(s, sectors=",".join(sorted({sectors[d] for d in redo}))))
+    left = index_mismatches(s)
+    store = vi.ChromaStore(s.root)
+    print(f"after repair: {len(left)} filings differ; chunks Chroma {store.count():,} | BM25 {store.bm25.count():,}"
+          + ("  -> CONSISTENT" if not left else f"  -> still differ: {list(left)[:10]}"))
+    return left
+
+
 def serving_env(s: Settings):
     """Environment for FastAPI/agents so they answer from this pipeline's index (see runtime_profile)."""
-    env = {"RAG_PROFILE": "colab" if IN_COLAB else "local", "RAG_INGEST_DIR": str(s.work / "colpali_qdrant"),
-           "RAG_VLM_DIR": str(s.work / "vlm_chroma")}
+    env = {"RAG_PROFILE": "colab" if IN_COLAB else "local", "RAG_HOME": str(s.work),
+           "RAG_INGEST_DIR": str(storage.work_index(s.work, "qdrant_db", s.run_name)),
+           "RAG_VLM_DIR": str(storage.work_index(s.work, "chroma_db", s.run_name))}
     if s.pipeline == "colpali_qdrant":
         env.update(RAG_BACKEND="financial_qdrant", RAG_INGEST_DIR=str(s.root))
         if s.qdrant_url:
@@ -531,6 +837,34 @@ def page_audit(s: Settings, workers=None, force=False, limit=None, out=None):
                   workers=workers or os.cpu_count(), force=force, limit=limit)
 
 
+def export_to_gcs(s: Settings, bucket=None, dry_run=False):
+    """Copy the durable index copies (Drive) to a Google Cloud Storage bucket, in the storage layout the GCP VM reads
+    (deploy/sync_from_gcs.sh): <bucket>/indexes/chroma_db, <bucket>/snapshots/qdrant_db and <bucket>/indexes/mutual_fund.
+    Needs ``gcloud`` (preinstalled on Colab) and ``google.colab.auth.authenticate_user()`` first. Returns the commands
+    it ran."""
+    bucket = (bucket or os.getenv("RAG_GCS_BUCKET") or "").strip()
+    if not bucket:
+        raise ValueError("give the bucket (gs://name) or set RAG_GCS_BUCKET")
+    bucket = bucket if bucket.startswith("gs://") else f"gs://{bucket}"
+    commands = []
+    for kind, target in (("chroma_db", "indexes/chroma_db"), ("qdrant_db", "snapshots/qdrant_db")):
+        source = storage.durable_index(s.drive_root, kind, s.run_name)
+        if source.exists():
+            commands.append(["gcloud", "storage", "rsync", "-r", str(source), f"{bucket.rstrip('/')}/{target}"])
+        else:
+            print(f"skipped {kind}: no copy at {source}")
+    funds = durable_mutual_fund(s)
+    if funds is not None:
+        commands.append(["gcloud", "storage", "rsync", "-r", str(funds), f"{bucket.rstrip('/')}/indexes/{FUND_DIR}"])
+    else:
+        print(f"skipped mutual_fund: no {FUND_ZIP} or indexes/{FUND_DIR} under {s.drive_root}")
+    for command in commands:
+        print(" ".join(command))
+        if not dry_run:
+            subprocess.run(command, check=True)
+    return commands
+
+
 def run(s: Settings, download_first=True):
     prepare(s)
     restore(s)
@@ -547,7 +881,9 @@ def run(s: Settings, download_first=True):
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=["run", "prepare", "download", "restore", "ingest", "status", "coverage", "query",
-                                            "audit"])
+                                            "audit", "export", "pack-funds"])
+    parser.add_argument("--bucket", help="export: gs://bucket (default RAG_GCS_BUCKET)")
+    parser.add_argument("--out", type=Path, help="pack-funds: zip path (default output/colab/mutual_fund_data.zip)")
     parser.add_argument("text", nargs="?", help="query text")
     parser.add_argument("--sector", help="query filter")
     parser.add_argument("--ticker", help="query filter")
@@ -579,6 +915,10 @@ def main(argv=None):
         return query(s, args.text, args.sector, args.ticker, args.year, args.top_k, args.visual)
     if args.command == "run":
         return run(s, download_first=not args.no_download)
+    if args.command == "export":
+        return export_to_gcs(s, args.bucket)
+    if args.command == "pack-funds":
+        return pack_mutual_fund(out=args.out)
     return {"prepare": prepare, "download": download, "restore": restore, "ingest": ingest, "status": status,
             "coverage": coverage, "audit": page_audit}[args.command](s)
 
