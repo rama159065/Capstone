@@ -66,6 +66,19 @@ STATEMENT_LABELS: dict[str, tuple[str, ...]] = {
     "total assets": ("total assets",),
     "total liabilities": ("total liabilities",),
 }
+# Rows naming the measure with a qualifier the plain labels don't cover, seen in the banks' statements on the
+# 509-filing index: "Net income (loss)" (Truist), "Net income attributable to U.S. Bancorp", "Net income applicable to
+# shareholders of The Bank of New York Mellon Corporation". The figures must follow directly. Left out on purpose:
+# rows for common shareholders (after preferred dividends) and "Net income before (attribution of) noncontrolling
+# interests" (includes the minority share). The other banks report net income attributable to the company, and Citi
+# prints all three, so only its "Net income attributable to Citigroup" row is read.
+QUALIFIED_LABELS: dict[str, re.Pattern] = {
+    "net income": re.compile(
+        r"^net (?:income|earnings)(?: \(loss\))?"
+        r"(?: (?:attributable|applicable) to (?!noncontrolling)(?![a-z.,&'’ ]*\bcommon\b)[a-z.,&'’ ]+?)?"
+        r"(?=\s*[\$(:\-]?\s*\(?\d)"),
+}
+_DOT_LEADER = re.compile(r"(?:\s*\.){3,}")     # "Net income . . . . . . 2,741" (M&T)
 _ROW_FIGURE = re.compile(r"\(?-?\$?\s?\d{1,3}(?:,\d{3})+(?:\.\d+)?\)?|\(?-?\$?\s?\d+\.\d+\)?")
 _YEAR = re.compile(r"(?<!\d)(20[0-4]\d)(?!\d)")
 _SCALE = re.compile(r"\bin\s+(thousands|millions|billions)\b", re.I)     # "(in\nmillions)" wraps across lines
@@ -197,7 +210,7 @@ def company_query(plan: dict, ticker: str, year: int, phrases: list[str], broade
 
 def _row_cells(line: str) -> tuple[str, str]:
     """('total net revenues', '$ 56,334 $ 54,318') for a statement row, in plain text or a Markdown table."""
-    text = line.replace("|", " ").replace("—", " ").strip()
+    text = _DOT_LEADER.sub(" ", line.replace("|", " ").replace("—", " ")).strip()
     text = re.sub(r"\s+", " ", text)
     return text.lower(), text
 
@@ -226,6 +239,10 @@ def label_match(hits: list[dict[str, Any]], metric: str | None, year: int) -> di
             if not header or year not in header or pro_forma:
                 continue
             label = next((l for l in labels if lower.startswith(l)), None)
+            qualified = QUALIFIED_LABELS.get(metric or "")
+            if qualified and (not label or not re.match(r"^\s*[\$(:\-]?\s*\(?\d", plain[len(label):])):
+                found = qualified.match(lower)
+                label = found.group(0) if found else label
             if not label:
                 continue
             rest = plain[len(label):]
@@ -368,37 +385,52 @@ def aggregate(plan: dict, series: dict[str, dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-# ----------------------------------------------------------------------------- prompt text
+# ----------------------------------------------------------------------------- the answer, written in code
 
-def _pct(value: float | None) -> str:
-    return "n/a" if value is None else f"{value:+.2f}%"
-
-
-def table_text(sector_trend: dict) -> str:
-    rows = ["Fiscal year | Sector total (USD millions) | Total change | Median company change | Companies growing"]
-    for r in sector_trend.get("rows", []):
-        total = "n/a" if r["total"] is None else f"{r['total']:,.2f}"
-        growing = "n/a" if r["growing"] is None else f"{r['growing']} of {r['companies']}"
-        rows.append(f"FY{r['year']} | {total} | {_pct(r['total_pct_change'])} | "
-                    f"{_pct(r['median_company_pct_change'])} | {growing}")
-    if sector_trend.get("cagr_total") is not None:
-        rows.append(f"CAGR of the sector total FY{sector_trend['years'][0]}–FY{sector_trend['years'][-1]}: "
-                    f"{sector_trend['cagr_total']:.2f}%")
-    if sector_trend.get("median_company_cagr") is not None:
-        rows.append(f"Median company CAGR: {sector_trend['median_company_cagr']:.2f}%")
-    return "\n".join(rows)
+def _money(value: float) -> str:
+    return f"${value:,.0f} million" if float(value).is_integer() else f"${value:,.1f} million"
 
 
-def companies_text(sector_trend: dict) -> str:
-    rows = []
+def answer_text(sector_trend: dict) -> str:
+    """The sector answer, written from the table: every figure is either a company's verified figure (cited by its
+    chunk) or a total, change or CAGR the sector calculator computed. No LLM writes it, so there is no claim for the
+    support judge to check and nothing to repair; the critic checks the figures in code (``numeric_grounding``).
+    On the hosted Qwen3-8B the LLM-written answer and its judge took ~55 s and the judge's reply on 24 figures was cut
+    off at the 1,024-token limit, so the answer was withheld."""
+    rows = [r for r in sector_trend.get("rows", []) if r.get("total") is not None]
+    years = sector_trend.get("years") or []
+    sector, metric = sector_trend.get("sector") or "The sector", sector_trend.get("metric") or "the measure"
+    names = ", ".join(f"{n} ({t})" for n, t in zip(sector_trend.get("panel_names", []), sector_trend.get("panel", [])))
+    lines = []
+    if rows and years:
+        first, last = rows[0], rows[-1]
+        head = (f"{sector} {metric}, FY{years[0]}–FY{years[-1]}, for the {len(sector_trend.get('panel') or [])} "
+                f"companies whose figure is verified in every year ({names}): the panel total went from "
+                f"{_money(first['total'])} in FY{first['year']} to {_money(last['total'])} in FY{last['year']}")
+        if sector_trend.get("cagr_total") is not None:
+            head += f", a compound annual growth rate of {sector_trend['cagr_total']:.2f}%"
+        lines.append(head + ".")
+        lines.append("")
+        for row in rows:
+            line = f"- FY{row['year']}: {_money(row['total'])}"
+            if row.get("total_pct_change") is not None:
+                line += f" ({row['total_pct_change']:+.2f}% on FY{row['year'] - 1})"
+            if row.get("median_company_pct_change") is not None:
+                line += f"; median company change {row['median_company_pct_change']:+.2f}%"
+            if row.get("growing") is not None:
+                line += f"; {row['growing']} of {row['companies']} companies grew"
+            lines.append(line + ".")
+        if sector_trend.get("median_company_cagr") is not None:
+            lines.append(f"- Median company CAGR: {sector_trend['median_company_cagr']:.2f}%.")
+    lines += ["", "Company figures (as reported, USD millions):"]
     for company in sector_trend.get("companies", []):
-        if not company["in_panel"]:
+        if not company.get("in_panel"):
             continue
-        figures = "; ".join(f"FY{p['year']}: {p['value_text']} {p['unit']} [{p['chunk_id']}]".replace("  ", " ")
-                            for p in company["points"] if p.get("status") == "ok")
-        rows.append(f"{company['company']} ({company['ticker']}): {figures}")
-    return "\n".join(rows) or "none"
-
-
-def excluded_text(sector_trend: dict) -> str:
-    return "\n".join(f"{e['company']} ({e['ticker']}): {e['reason']}" for e in sector_trend.get("excluded", [])) or "none"
+        figures = "; ".join(f"FY{p['year']} {p['value_text']} [{p['chunk_id']}]"
+                            for p in company.get("points", []) if p.get("status") == "ok")
+        lines.append(f"- {company['company']} ({company['ticker']}): {figures}.")
+    excluded = sector_trend.get("excluded") or []
+    if excluded:
+        lines += ["", "Not in the panel: " + "; ".join(f"{e['company']} ({e['ticker']}): {e['reason']}"
+                                                       for e in excluded) + "."]
+    return "\n".join(lines)

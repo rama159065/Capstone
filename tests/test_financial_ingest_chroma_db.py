@@ -354,3 +354,31 @@ def test_chroma_replace_rewrites_chunks_chroma_dropped_and_fails_if_it_keeps_dro
     store.collection = Dropping(drops=10 ** 6)                             # Chroma keeps losing them: fail loudly
     with pytest.raises(RuntimeError, match="holds 0 of 4 chunks of doc_a"):
         store.replace("doc_a", records(4), [[float(i), 1.0, 0.0] for i in range(4)])
+
+
+def test_bm25_searches_a_filings_rowid_block_with_the_same_ranking(tmp_path):
+    # Matching the whole index and then filtering on the unindexed ticker/year columns took ~830 ms on the
+    # 317,037-chunk index; the filing's rowid block gives the same ranking in ~50 ms.
+    index = vi.Bm25Index(tmp_path / "bm25.sqlite3")
+
+    def records(ticker, year, texts):
+        return [(i, {"chunk_id": f"{ticker}_{year}_c{i}", "ticker": ticker, "fiscal_year": year,
+                     "sector_slug": "banking"}, text) for i, text in enumerate(texts)]
+    texts = ["Net income 49,552 million", "net interest income rose", "income statement net income", "risk factors"]
+    for ticker in ("JPM", "BAC"):
+        for year in (2023, 2024):
+            index.replace(f"edgar_ars_{ticker}_{year}", records(ticker, year, texts))
+    fast = index.search("JPMorgan net income 2024", 3, "JPM", 2024)
+    slow = [r[0] for r in index.db.execute(
+        "SELECT chunk_id FROM chunks WHERE chunks MATCH ? AND ticker = ? AND fiscal_year = ? ORDER BY bm25(chunks) LIMIT 3",
+        (" OR ".join(f'"{w}"' for w in sorted(set(fi.terms("JPMorgan net income 2024")))), "JPM", 2024))]
+    assert fast == slow and all(c.startswith("JPM_2024_") for c in fast)
+    assert index.filings("JPM", 2024) == ["edgar_ars_JPM_2024"] and index.filings(None) is None
+    assert index.search("net income", 3, "JPM", 2024, ("energy",)) == []
+
+    # A filing whose rows are not one block (e.g. a partial rewrite) falls back to the filtered query.
+    index.db.execute("INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?)", ("net income", "JPM_2023_extra",
+                     "edgar_ars_JPM_2023", "JPM", 2023, "banking"))
+    index._spans = None
+    assert index.spans()["edgar_ars_JPM_2023"][5] is False
+    assert "JPM_2023_extra" in index.search("net income", 10, "JPM", 2023)

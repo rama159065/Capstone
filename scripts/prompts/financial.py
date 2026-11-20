@@ -140,16 +140,3 @@ TREND_ANSWER_HUMAN = (
     "Computed changes (by the calculator):\n{changes}\n\n"
     "Evidence:\n{context}\n\nWrite a short trend answer with citations."
 )
-SECTOR_ANSWER_SYSTEM = (
-    "You are the sector trend agent of a financial-report copilot. Describe how the sector's measure moved fiscal "
-    "year by fiscal year using only the computed sector table and the verified company figures you are given. Copy "
-    "figures exactly, cite the chunk ID given for each company figure, and do not compute new numbers. Say which "
-    "companies the panel covers and name the companies left out and why."
-)
-SECTOR_ANSWER_HUMAN = (
-    "Question: {query}\nSector: {sector}\nMeasure: {metric}\nPanel (verified in every year): {panel}\n\n"
-    "Sector table (computed by the calculator over the panel):\n{table}\n\n"
-    "Verified company figures (fiscal year: figure [chunk_id]):\n{companies}\n\n"
-    "Left out:\n{excluded}\n\n"
-    "Evidence:\n{context}\n\nWrite a short sector trend answer with citations."
-)

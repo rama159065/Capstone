@@ -663,12 +663,6 @@ def _retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
             for hit in hits]
 
 
-# The sector answer prompt already carries the code-built table and every verified figure with its chunk ID, so its
-# evidence excerpts get a smaller budget: with the full 12,000 characters the prompt reached ~7,200 tokens and the
-# hosted Qwen3-8B (8,192-token context, 1,024 output tokens) rejected it with HTTP 400.
-SECTOR_CONTEXT_CHARS = 4000
-
-
 def evidence_to_context(evidence: list[dict[str, Any]], max_chars: int) -> str:
     blocks = []
     used = 0
@@ -1332,6 +1326,9 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         series = state.get("trend") or {}
         table = state.get("sector_trend") or {}
         fund_table = state.get("mutual_fund") or {}
+        if table.get("panel") and not fund_table:
+            # Sector trend: written in code from the verified table (no LLM call, nothing for a judge to check).
+            return {"answer": sector_agent.answer_text(table)}
         if fund_table:
             # Fund: the rows (and, for linked questions, only the company chunks that state a verified figure).
             used = evidence
@@ -1345,18 +1342,6 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
                 period_end=fund_table.get("period_end") or "each fund's latest loaded filing",
                 accession=fund_table.get("accession") or "per row", kind=fund_table.get("kind"),
                 table=fund_agent.table_text(fund_table), context=evidence_to_context(used, config.max_context_chars))
-        elif table.get("panel"):
-            # Sector trend: the code-computed table and the panel's verified figures, with only the chunks stating them.
-            used_ids = {p.get("chunk_id") for c in table.get("companies", []) if c.get("in_panel")
-                        for p in c.get("points", []) if p.get("status") == "ok"}
-            system = prompts.SECTOR_ANSWER_SYSTEM
-            human = prompts.SECTOR_ANSWER_HUMAN.format(
-                query=state["query"], sector=table.get("sector"), metric=table.get("metric"),
-                panel=", ".join(f"{n} ({t})" for n, t in zip(table.get("panel_names", []), table.get("panel", []))),
-                table=sector_agent.table_text(table), companies=sector_agent.companies_text(table),
-                excluded=sector_agent.excluded_text(table),
-                context=evidence_to_context([h for h in evidence if h.get("chunk_id") in used_ids],
-                                            min(config.max_context_chars, SECTOR_CONTEXT_CHARS)))
         elif series.get("verified_points"):
             # Trend: the verified series and the code-computed changes, with only the chunks that state them.
             used_ids = {p.get("chunk_id") for p in series.get("points", []) if p.get("status") == "ok"}
@@ -1434,7 +1419,14 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         answer = tools.strip_calculations(str(state.get("answer") or ""))     # CALC[...] the calculator didn't run
         check = validate_citations(answer, state.get("evidence", []))
         support = None
-        if check["valid"] and support_enabled:
+        table = state.get("sector_trend") or {}
+        if check["valid"] and support_enabled and table.get("panel") and answer == sector_agent.answer_text(table):
+            # Written in code from verified figures: the figures are checked in code; no LLM judge, no repair.
+            cited_hits = [h for h in state.get("evidence", []) if str(h.get("chunk_id")) in set(check["cited_chunk_ids"])]
+            numeric = tools.numeric_grounding(answer, cited_hits, state.get("calculations", []))
+            support = {"verdict": "supported" if numeric["grounded"] else "unsupported", "claims": [],
+                       "numeric": numeric, "method": "code_table", "attempt": state.get("repair_count", 0) + 1}
+        elif check["valid"] and support_enabled:
             support = support_check(state, answer, check["cited_chunk_ids"])
         accepted = check["valid"] and (support is None or support["verdict"] == "supported")
         return {
@@ -1534,6 +1526,10 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         check, support = state.get("citation_check", {}), state.get("support_check") or {}
         accepted = check.get("valid") and support.get("verdict", "supported") == "supported"
         if state.get("final_status") in STOPPED or accepted or state.get("repair_count", 0) > 1:
+            return "finish"
+        # A rewrite can't help when the answer was written in code, or when the judge's own reply was cut off (the
+        # banking run spent ~30 s on a repair that hit the same 1,024-token limit).
+        if support.get("method") == "code_table" or support.get("judge_cut_off"):
             return "finish"
         return "repair" if used(state) + tail(state) <= budget else "finish"      # answer (+calc), critic, governance
 

@@ -389,15 +389,47 @@ def test_excluded_reason_names_the_unit_problem():
     assert table["excluded"] == [{"ticker": "AMGN", "company": "Amgen", "reason": "unit scale differs between years"}]
 
 
-def test_sector_answer_prompt_keeps_a_small_evidence_budget(monkeypatch):
-    # With the full max_context_chars the hosted Qwen3-8B (8,192-token context) rejected the prompt with HTTP 400.
-    searches(monkeypatch, lambda c, n: [hit(c.ticker, c.year, statement(c.ticker, c.year) + "\n" + "filler " * 900)])
-    prompts_seen = []
-    original = agent.invoke_prompt
-    monkeypatch.setattr(agent, "invoke_prompt", lambda llm, system, human: prompts_seen.append(human)
-                        or original(llm, system, human))
-    big = agent.AgentConfig(**{**config(QUERY).__dict__, "max_context_chars": 12000})
-    agent.financial_graph(CountingLLM(), big, "sector_trend_graph")
-    sector_prompt = next(h for h in prompts_seen if "Sector table" in h)
-    evidence = sector_prompt.split("Evidence:\n", 1)[1]
-    assert len(evidence) <= agent.SECTOR_CONTEXT_CHARS + 200
+
+class PromptLog(agent.MockLLM):
+    def __init__(self):
+        self.prompts = []
+
+    def invoke(self, messages):
+        self.prompts.append("\n".join(getattr(m, "content", str(m)) for m in messages))
+        return super().invoke(messages)
+
+
+def test_sector_answer_is_written_in_code_and_checked_without_an_llm_judge(monkeypatch):
+    # On hosted Qwen3-8B the LLM-written answer + judge took ~55 s and the judge's reply was cut off on 24 figures.
+    searches(monkeypatch)
+    llm = PromptLog()
+    result = agent.financial_graph(llm, config(QUERY), "sector_trend_graph")
+    table = result["sector_trend"]
+    assert result["answer"] == sector.answer_text(table)
+    assert "$131,708 million" in result["answer"]                      # FY2024 total: 56,334 + 41,950 + 33,424
+    assert "[annual_report_edgar_ars_ABBV_2024_p0050_vlm0]" in result["answer"]
+    assert result["support_check"]["method"] == "code_table" and result["support_check"]["verdict"] == "supported"
+    assert result["support_check"]["numeric"]["grounded"] is True
+    assert not any("Support check JSON" in p or "sector trend agent" in p for p in llm.prompts)
+    assert result["agent_run"]["path"].count("answer_step") == 1 and result["final_status"] == "answered"
+
+
+@pytest.mark.parametrize("row, value", [
+    ("Net income (loss) $ (1,047) $ 6,267 $ 6,440", "(1,047)"),
+    ("Net income attributable to U.S. Bancorp 5,429 5,825 7,963", "5,429"),
+    ("Net income applicable to shareholders of The Bank of New York Mellon Corporation 3,286 2,573 3,759", "3,286"),
+    ("Net income before attribution of noncontrolling interests $ 9,269 $ 15,076 $ 22,018", None),
+    ("Net income before attribution of noncontrolling interests $ 9,269 $ 15,076 $ 22,018\n"
+     "Net income attributable to Citigroup $ 9,228 $ 14,845 $ 21,952", "9,228"),
+    ("Net income . . . . . . . . . . . . 2,741 1,992 1,859", "2,741"),
+    ("Net income 49,552 37,676 48,334", "49,552"),
+    ("Net income attributable to noncontrolling interests 1,041 1,031 1,073", None),
+    ("Net income available to common shareholders $ 8,040 $ 13,813 $ 20,995\n"
+     "Net income attributable to Citigroup $ 9,228 $ 14,845 $ 21,952", "9,228"),
+    ("Net income applicable to common shareholders of The Bank of New York Mellon Corp 3,053 2,362 3,552", None),
+    ("Net income increased 3% from 2022", None),
+])
+def test_bank_net_income_rows_are_read_in_code(row, value):
+    text = "Consolidated Statement of Income (in millions)\nYear ended December 31 2023 2022 2021\n" + row
+    found = sector.label_match([{"chunk_id": "x", "text": text}], "net income", 2023)
+    assert (found or {}).get("value") == value
