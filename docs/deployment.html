@@ -206,6 +206,7 @@ streamlit run scripts\ui\api_streamlit_app.py     # second terminal, same enviro
 <p>With only embedded Qdrant (<code>QDRANT_URL</code> unset), run just the API. Streamlit talks to the API, so it doesn't open the index itself.</p>
 <h3>3.3 Colab (option C)</h3>
 <p>Run <code>colab_rag_pipelines.ipynb</code> cells 9–12 (<code>cp.serve</code>). It uses the <code>colab</code> runtime profile.</p>
+<p><strong>Opening the UI from your PC:</strong> Colab's port proxy (the link cell 9 prints), a Cloudflare quick tunnel to Streamlit, or Streamlit on your PC calling the Colab API through a tunnel with <code>API_AUTH_TOKEN</code>. Steps, security and troubleshooting: <a href="colab_access.html">colab_access.html</a>.</p>
 <p><strong>Package versions on Colab.</strong> Every notebook install uses <code>pip install -c deploy/colab_constraints.txt</code>, which pins 34 packages to the versions in <code>uv.lock</code>, the ones tested on the PC:</p>
 <ul>
 <li><code>chromadb==1.5.9</code>, the version that wrote the index;</li>

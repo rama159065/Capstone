@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colab Access Patterns</title>
+<style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1200px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.88rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}
+.tag{display:inline-block;padding:0 .45rem;border-radius:10px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.text{background:#e0f2fe;color:#075985}.table{background:#dcfce7;color:#166534}.chart{background:#fae8ff;color:#86198f}
+.yes{color:#15803d;font-weight:600}.no{color:#b91c1c;font-weight:600}.part{color:#b45309;font-weight:600}
+td.todo{color:#94a3b8;font-style:italic;min-width:9rem}</style>
+<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script>
+</head><body>
+<h1>Opening the Colab-hosted Copilot from Your PC</h1>
+<p>The Streamlit UI and FastAPI run in Google Colab (<code>colab_ingest_chroma_db.ipynb</code>, cells 1–3 and 8–12) on the Chroma index restored from Drive. This page shows three ways to use them from a browser on your own PC for end-to-end testing.</p>
+<p>Related: <a href="deployment.html">deployment.html</a> §3.3 and §7.5, <a href="observability_langsmith.html">observability_langsmith.html</a>, <a href="../notebooks/README.md">notebooks/README.md</a>.</p>
+<h2>1. Summary</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Pattern</th>
+<th>What runs where</th>
+<th>Who can open it</th>
+<th>Setup</th>
+<th>LangSmith trace starts at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A</strong></td>
+<td>Colab port proxy</td>
+<td>Streamlit and FastAPI in Colab</td>
+<td>Only your signed-in Google account</td>
+<td>None: cell 9 prints the link</td>
+<td>Streamlit in Colab</td>
+</tr>
+<tr>
+<td><strong>B</strong></td>
+<td>Cloudflare quick tunnel to Streamlit</td>
+<td>Streamlit and FastAPI in Colab</td>
+<td>Anyone with the link</td>
+<td>One extra cell</td>
+<td>Streamlit in Colab</td>
+</tr>
+<tr>
+<td><strong>C</strong></td>
+<td>Local Streamlit, tunnel to FastAPI</td>
+<td>Streamlit on your PC; FastAPI, agents, Chroma and the LLM in Colab</td>
+<td>Only clients that send the API token</td>
+<td>One cell in Colab, four settings on the PC</td>
+<td>Streamlit on your PC</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Which to use:</strong></p>
+<ul>
+<li><strong>A</strong> for a quick check.</li>
+<li><strong>B</strong> when your network blocks Colab's proxy domain. This PC's network already blocks some Google download endpoints, so test A first.</li>
+<li><strong>C</strong> for the demo, or whenever you want one LangSmith trace from your own browser to the LLM.</li>
+</ul>
+<p>In every pattern, Streamlit and FastAPI listen only on <code>127.0.0.1</code> inside the Colab VM (<code>cp.serve</code>). Nothing is reachable from outside until you open a proxy or a tunnel.</p>
+<h2>2. How each pattern connects</h2>
+<pre class="mermaid">flowchart LR
+    subgraph PC[&quot;Your PC&quot;]
+        B1[&quot;Browser&quot;]
+        LS[&quot;Streamlit (pattern C)&lt;br/&gt;localhost:8501&quot;]
+    end
+    subgraph COLAB[&quot;Google Colab VM&quot;]
+        UI[&quot;Streamlit :8501&quot;]
+        API[&quot;FastAPI :8000&lt;br/&gt;agents · Chroma · LLM&quot;]
+        CF1[&quot;cloudflared → :8501&quot;]
+        CF2[&quot;cloudflared → :8000&quot;]
+    end
+    PROXY[&quot;Colab port proxy&lt;br/&gt;(your Google login)&quot;]
+    TCF[&quot;trycloudflare.com&quot;]
+    B1 --&gt;|&quot;A&quot;| PROXY --&gt; UI
+    B1 --&gt;|&quot;B&quot;| TCF --&gt; CF1 --&gt; UI
+    UI --&gt; API
+    B1 --&gt;|&quot;C&quot;| LS --&gt;|&quot;X-API-Key + trace headers&quot;| TCF
+    TCF --&gt; CF2 --&gt; API
+    API -. traces .-&gt; LSM[(&quot;LangSmith&quot;)]
+    UI -. traces .-&gt; LSM
+    LS -. traces .-&gt; LSM
+</pre>
+<h2>3. Pattern A: Colab's port proxy (no setup)</h2>
+<ol>
+<li>Run cells 1–3 (restore the Chroma index from Drive), then 8 and 9.</li>
+<li>Cell 9 prints <code>Open the chat UI: https://…</code> from <code>google.colab.kernel.proxyPort(8501)</code>. Open that link in your browser.</li>
+<li>If the page stays blank, run this in a new cell and use the window it opens:</li>
+</ol>
+<pre><code class="language-python">from google.colab.output import serve_kernel_port_as_window
+serve_kernel_port_as_window(8501)
+</code></pre>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>Only your Google account can open the link, and it works only while the notebook tab is open and connected.</li>
+<li>After a disconnect, rerun cells 2, 3, 8 and 9 and use the new link. The old one stops working.</li>
+<li>Turn on <em>LangSmith tracing</em> in the sidebar's <em>Demo settings</em>, or leave <code>TRACE_EVERY_REQUEST</code> on in cell 8.</li>
+</ul>
+<h2>4. Pattern B: Cloudflare quick tunnel to Streamlit</h2>
+<p>Run this cell after cell 9. It needs no Cloudflare account.</p>
+<pre><code class="language-python"># Temporary public https link to Streamlit (stops when this runtime ends)
+!wget -q -nc https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /content/cloudflared &amp;&amp; chmod +x /content/cloudflared
+import re, subprocess
+tunnel = subprocess.Popen([&quot;/content/cloudflared&quot;, &quot;tunnel&quot;, &quot;--no-autoupdate&quot;, &quot;--url&quot;, &quot;http://127.0.0.1:8501&quot;],
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+for line in tunnel.stdout:
+    if (m := re.search(r&quot;https://[a-z0-9-]+\.trycloudflare\.com&quot;, line)):
+        print(&quot;Streamlit:&quot;, m.group(0)); break
+# stop it: tunnel.terminate()
+</code></pre>
+<p>Open the printed <code>https://&lt;random-name&gt;.trycloudflare.com</code> link on your PC. Streamlit's websocket works through the tunnel: <code>cp.serve</code> already starts Streamlit with <code>--server.enableCORS false</code> and <code>--server.enableXsrfProtection false</code> for proxying.</p>
+<blockquote>
+<p><strong>Security:</strong> anyone with the link can use the UI, and through it your LLM key's quota and your LangSmith project. Don't share the link, and run <code>tunnel.terminate()</code> when you're done. The link changes every time the tunnel starts.</p>
+</blockquote>
+<h2>5. Pattern C: Streamlit on your PC, FastAPI in Colab</h2>
+<p>Here your browser talks to a Streamlit running on your PC. That Streamlit calls the FastAPI in Colab through a tunnel, and the agents, Chroma retrieval and LLM calls run in Colab.</p>
+<p><strong>In Colab:</strong></p>
+<ol>
+<li>Before cell 9, add a cell that sets an API token. Every request except <code>/health</code> and <code>/docs</code> then needs it.</li>
+</ol>
+<pre><code class="language-python">import secrets
+os.environ[&quot;API_AUTH_TOKEN&quot;] = secrets.token_urlsafe(32)
+print(&quot;API token (copy to the PC):&quot;, os.environ[&quot;API_AUTH_TOKEN&quot;])
+</code></pre>
+<ol start="2">
+<li>Run cell 9: <code>cp.serve</code> passes the token to the API.</li>
+<li>Run the tunnel cell from pattern B, with <code>8501</code> changed to <code>8000</code>. Copy the printed <code>https://….trycloudflare.com</code> URL.</li>
+</ol>
+<p><strong>On your PC (PowerShell, from the repo root):</strong></p>
+<pre><code class="language-powershell">$env:API_BASE_URL=&quot;https://&lt;printed-name&gt;.trycloudflare.com&quot;
+$env:API_AUTH_TOKEN=&quot;&lt;token printed in Colab&gt;&quot;
+$env:LANGSMITH_API_KEY=&quot;&lt;your LangSmith key&gt;&quot;
+$env:LANGSMITH_PROJECT=&quot;financial-report-copilot-colab&quot;
+streamlit run scripts\ui\api_streamlit_app.py
+</code></pre>
+<p>Open <code>http://localhost:8501</code> and turn on <em>LangSmith tracing</em> in the sidebar's <em>Demo settings</em>. Before you open the UI, you can check that the API answers:</p>
+<pre><code class="language-powershell">curl https://&lt;printed-name&gt;.trycloudflare.com/health
+</code></pre>
+<p><strong>What you get:</strong> every request carries the token (<code>X-API-Key</code>), so the public API link is useless without it. Each question is one trace in LangSmith:</p>
+<pre><code class="language-text">streamlit.conversation            your PC
+└─ api.conversation_turn          Colab
+   ├─ clarifier
+   ├─ api.financial_report_qa.router → LangGraph steps → retrieve.financial_vlm (Chroma) → LLM calls
+   └─ api.grounding_policy
+</code></pre>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>Use the same <code>LANGSMITH_PROJECT</code> on the PC as in Colab cell 8, so the whole trace lands in one project.</li>
+<li>The local Streamlit needs the repo's Python environment (<code>uv sync</code>). It doesn't need the Chroma index or any models, because retrieval and the LLM run in Colab.</li>
+<li><code>API_TIMEOUT_SECONDS</code> (default 180) is how long the local Streamlit waits for an answer. Sector-trend questions can take longer; raise it if they time out.</li>
+</ul>
+<h2>6. Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pattern A link opens a blank page or &quot;connection refused&quot;</td>
+<td>Your network blocks Colab's proxy domain, or the notebook disconnected</td>
+<td>Try <code>serve_kernel_port_as_window(8501)</code>; otherwise use pattern B or C</td>
+</tr>
+<tr>
+<td>Streamlit shows &quot;Please wait…&quot; forever over the tunnel</td>
+<td>The websocket isn't getting through</td>
+<td>Check that Streamlit was started by cell 9 (<code>cp.serve</code>), which sets the proxy-friendly flags; restart the tunnel</td>
+</tr>
+<tr>
+<td><code>401</code> / &quot;API key required&quot; from the local Streamlit</td>
+<td><code>API_AUTH_TOKEN</code> differs between Colab and the PC</td>
+<td>Copy the token printed in Colab again; restart the local Streamlit</td>
+</tr>
+<tr>
+<td><code>502</code> or <code>530</code> from trycloudflare</td>
+<td>The API or Streamlit in Colab has stopped, or the runtime disconnected</td>
+<td>Rerun cell 9, then start the tunnel again (the URL changes)</td>
+</tr>
+<tr>
+<td>Answers come back <code>not_grounded</code> after about 60 s</td>
+<td>Request deadline too short for several LLM calls</td>
+<td>Keep <code>REQUEST_TIMEOUT_SECONDS</code> at 180 in cell 8, then rerun cell 9</td>
+</tr>
+<tr>
+<td>The trace starts at <code>api.conversation_turn</code>, not <code>streamlit.conversation</code></td>
+<td>The Streamlit process has no <code>LANGSMITH_API_KEY</code></td>
+<td>Pattern C: set the key on the PC. Patterns A and B: cell 8 sets it for Colab's Streamlit</td>
+</tr>
+<tr>
+<td>Tunnel cell prints nothing</td>
+<td><code>cloudflared</code> couldn't connect out</td>
+<td>Rerun the cell; check <code>tunnel.poll()</code> and read <code>tunnel.stdout</code> for the error</td>
+</tr>
+</tbody>
+</table>
+<h2>7. When you're done</h2>
+<ol>
+<li>Stop the tunnels: <code>tunnel.terminate()</code> (one per tunnel cell).</li>
+<li>Run cell 12 to stop Streamlit and FastAPI. The restored index stays on the runtime's disk, and the copy on Drive isn't touched.</li>
+<li>If you created an <code>API_AUTH_TOKEN</code>, it only lived in this runtime: a new session makes a new one.</li>
+</ol>
+<p><em>Status, 20 November 2026:</em> patterns A–C follow from how <code>cp.serve</code> binds the servers (<code>127.0.0.1</code>, Streamlit with CORS and XSRF off) and how the Streamlit app sends <code>X-API-Key</code> and LangSmith trace headers. Pattern C's API token and trace path are covered by the local tests. None of the patterns has been run on a live Colab runtime yet.</p>
+</body></html>

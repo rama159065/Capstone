@@ -531,6 +531,8 @@ import urllib.request, uuid
 
 def call(path, body=None, timeout=900, request_id=None):
     headers = {"Content-Type": "application/json", "X-Request-ID": request_id or str(uuid.uuid4())}
+    if os.getenv("API_AUTH_TOKEN"):      # set when the API is opened through a tunnel (docs/colab_access.html)
+        headers["X-API-Key"] = os.environ["API_AUTH_TOKEN"]
     request = urllib.request.Request(f"http://127.0.0.1:8000{path}", headers=headers, method="POST" if body else "GET",
                                      data=json.dumps(body).encode() if body else None)
     with urllib.request.urlopen(request, timeout=timeout) as response:

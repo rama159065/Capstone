@@ -116,6 +116,8 @@ With only embedded Qdrant (`QDRANT_URL` unset), run just the API. Streamlit talk
 
 Run `colab_rag_pipelines.ipynb` cells 9–12 (`cp.serve`). It uses the `colab` runtime profile.
 
+**Opening the UI from your PC:** Colab's port proxy (the link cell 9 prints), a Cloudflare quick tunnel to Streamlit, or Streamlit on your PC calling the Colab API through a tunnel with `API_AUTH_TOKEN`. Steps, security and troubleshooting: [colab_access.html](colab_access.html).
+
 **Package versions on Colab.** Every notebook install uses `pip install -c deploy/colab_constraints.txt`, which pins 34 packages to the versions in `uv.lock`, the ones tested on the PC:
 - `chromadb==1.5.9`, the version that wrote the index;
 - the LangChain, LangGraph and LangSmith packages, FastAPI/Starlette/uvicorn, Streamlit, pydantic, transformers, sentence-transformers, tokenizers and huggingface-hub.
