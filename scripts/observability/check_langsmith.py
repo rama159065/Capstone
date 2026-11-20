@@ -56,13 +56,33 @@ def find_runs(project: str, request_id: str, wait: float) -> list[Any]:
     from langsmith import Client
     client = Client()
     query = f'and(eq(metadata_key, "request_id"), eq(metadata_value, "{request_id}"))'
-    deadline, runs = time.monotonic() + wait, []
+    deadline, runs, previous = time.monotonic() + wait, [], -1
     while time.monotonic() < deadline:
         runs = list(client.list_runs(project_name=project, filter=query, limit=100))
-        if any(run.name == "governance_step" for run in runs):
-            break
+        if any(run.name == "governance_step" for run in runs) or (runs and len(runs) == previous):
+            break                              # graph finished, or nothing new since the last poll (refusals, hand-offs)
+        previous = len(runs)
         time.sleep(3)
     return runs
+
+
+def trace_summary(project: str, request_id: str, wait: float = 30) -> dict[str, Any]:
+    """One request's trace in LangSmith: run counts by type, the root run's URL, the retriever runs and LLM runs.
+
+    Used by the Colab serving notebook to print a link per test question. Needs ``LANGSMITH_API_KEY``.
+    """
+    from langsmith import Client
+    runs = find_runs(project, request_id, wait)
+    if not runs:
+        return {"runs": 0, "url": None}
+    ids = {run.id for run in runs}
+    root = next((run for run in runs if run.parent_run_id not in ids), runs[0])
+    by_type: dict[str, int] = {}
+    for run in runs:
+        by_type[run.run_type] = by_type.get(run.run_type, 0) + 1
+    return {"runs": len(runs), "by_type": by_type, "root": root.name,
+            "retrievers": sorted({run.name for run in runs if run.run_type == "retriever"}),
+            "llm_calls": by_type.get("llm", 0), "url": Client().get_run_url(run=root, project_name=project)}
 
 
 def main(argv: list[str] | None = None) -> int:

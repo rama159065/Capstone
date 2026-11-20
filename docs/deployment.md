@@ -116,6 +116,25 @@ With only embedded Qdrant (`QDRANT_URL` unset), run just the API. Streamlit talk
 
 Run `colab_rag_pipelines.ipynb` cells 9–12 (`cp.serve`). It uses the `colab` runtime profile.
 
+**Package versions on Colab.** Every notebook install uses `pip install -c deploy/colab_constraints.txt`, which pins 34 packages to the versions in `uv.lock`, the ones tested on the PC:
+- `chromadb==1.5.9`, the version that wrote the index;
+- the LangChain, LangGraph and LangSmith packages, FastAPI/Starlette/uvicorn, Streamlit, pydantic, transformers, sentence-transformers, tokenizers and huggingface-hub.
+
+Colab keeps its own torch/CUDA build, Jupyter and kernel packages, numpy, pandas and scikit-learn. Changing those in a running session would need a restart and can break Colab's tools.
+
+Cell 8 of `colab_ingest_chroma_db.ipynb` prints Python, torch, CUDA, numpy, SQLite and every pinned version, and lists any version that differs from the tested one. It stops when:
+- Python is older than 3.12;
+- `chromadb` isn't 1.5.9;
+- SQLite is older than 3.35.
+
+After changing `uv.lock`, run `python -m scripts.common.colab_constraints` and rebuild the code zip; `tests/test_colab_constraints.py` fails while the file is out of date.
+
+Checked on 20 November 2026 with `uv pip compile` for Linux x86_64, binary wheels only:
+- **Python 3.12:** the pinned set resolves both against an older Colab-like base (numpy 2.0.2, pandas 2.2.2, torch 2.8.0) and a newer one (numpy 2.3.5, pandas 2.3.3, torch 2.10.0).
+- **Python 3.13:** it resolves against the newer base. It fails only with numpy 2.0.2, because qdrant-client 1.20 needs numpy 2.1+ on 3.13.
+
+Not run on a Colab runtime.
+
 ### 3.4 Getting the index from Google Drive onto the VM
 
 A VM **can't mount your Drive the way Colab does**: `drive.mount` only works inside Colab. The VM **copies** what it needs onto its own disk once, and Qdrant then restores from that local copy. Don't point Qdrant at a live Drive mount: it is slow and fails if the connection drops.
@@ -791,11 +810,11 @@ The API traces a request to LangSmith when the request asks for it (`enable_lang
 | | Local PC | Colab | Google Cloud VM (Docker Compose) |
 |---|---|---|---|
 | Where the key goes | Your PowerShell session (`$env:LANGSMITH_API_KEY`) | Colab secret `LANGSMITH_API_KEY` | `/opt/copilot/.env` (chmod 600, never in Git) |
-| Turn it on | `$env:LANGSMITH_TRACING="true"` (every request), or only the key and the per-request toggle | Serving-secrets cell (9 in `colab_rag_pipelines`, the serving-dependencies cell in the ingest notebooks): with the secret it sets `LANGSMITH_TRACING=true` | `LANGSMITH_TRACING=true` in `.env` |
+| Turn it on | `$env:LANGSMITH_TRACING="true"` (every request), or only the key and the per-request toggle `colab_ingest_chroma_db.ipynb` cell 8 (parameters: project, trace every request, LLM provider, request timeout); `colab_rag_pipelines` cell 9 and the Qdrant notebook also read the secret | `LANGSMITH_TRACING=true` in `.env` |
 | Project | `LANGSMITH_PROJECT`, default `capstone-financial-report-qa-api` | `financial-report-copilot-colab` (set by the cell) | `LANGSMITH_PROJECT` in `.env` (`annual-report-copilot` in `.env.example`) |
 | How the API gets it | the shell that runs `uvicorn` | `cp.serve` starts the API with the notebook's `os.environ` | `env_file: .env` on the `api` and `ui` services |
 | Network | outbound HTTPS to `api.smith.langchain.com` | same (Colab allows outbound HTTPS) | same (GCP allows outbound traffic by default; keep it if you restrict egress) |
-| Check it | `python -m scripts.observability.check_langsmith` | `!python -m scripts.observability.check_langsmith` after cell 10 | `docker compose exec api python -m scripts.observability.check_langsmith` |
+| Check it | `python -m scripts.observability.check_langsmith` cells 10 (check) and 11 (one question per route with a LangSmith link) of `colab_ingest_chroma_db.ipynb` | `docker compose exec api python -m scripts.observability.check_langsmith` |
 
 **Local:**
 
@@ -805,7 +824,7 @@ uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
 python -m scripts.observability.check_langsmith                 # second window, same key
 ```
 
-**Colab:** add the secret `LANGSMITH_API_KEY` (key icon → Add new secret → Notebook access on), run the serving cells, then:
+**Colab (Chroma index on Drive):** add the secrets `LANGSMITH_API_KEY`, `LLM_API_BASE`, `LLM_API_KEY` and `LLM_MODEL` (key icon → Add new secret → Notebook access on). In `colab_ingest_chroma_db.ipynb` run cells 1–3 (restore the index from Drive) and 8–11. Cell 11 prints, for each route, the agent path, the Chroma evidence, the LLM answer and a LangSmith link. The same check by hand:
 
 ```python
 !python -m scripts.observability.check_langsmith --llm-provider hosted --ticker JPM --year 2024

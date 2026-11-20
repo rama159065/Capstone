@@ -170,7 +170,7 @@ streamlit run scripts\ui\api_streamlit_app.py
 
 **Local, tracing only chosen requests:** set only `LANGSMITH_API_KEY`. Then turn on the *LangSmith tracing* toggle in the Streamlit sidebar's *Demo settings*, or send `"enable_langsmith": true` (and optionally `"langsmith_project"`) in the API request body.
 
-**Colab:** add `LANGSMITH_API_KEY` as a Colab secret. The serving-secrets cell (cell 9 of `colab_rag_pipelines.ipynb`, the serving-dependencies cell of the ingest notebooks) then sets the key, `LANGSMITH_TRACING=true` and the project `financial-report-copilot-colab`, and `cp.serve(s)` passes them to the API.
+**Colab:** add `LANGSMITH_API_KEY` as a Colab secret. In `colab_ingest_chroma_db.ipynb` run cells 1–3 (restore the Chroma index from Drive) and 8–12. Cell 8 sets the key, `LANGSMITH_TRACING` and the project (`financial-report-copilot-colab` by default). `cp.serve(s)` in cell 9 passes them to the API and Streamlit. Cell 10 checks that traces arrive, and cell 11 runs one question per route with a LangSmith link for each. (`colab_rag_pipelines.ipynb` cell 9 and the Qdrant notebook's serving cell also read the secret.)
 
 **Docker / Google Cloud:** in `.env` (not committed): `LANGSMITH_TRACING=true`, `LANGSMITH_API_KEY=…`, `LANGSMITH_PROJECT=annual-report-copilot`. Compose passes it to the `api` service.
 
