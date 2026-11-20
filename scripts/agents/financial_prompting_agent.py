@@ -368,7 +368,11 @@ def llm_plain_text_classifier(llm, message: str) -> dict[str, Any]:
     parsed["is_plain_text"] = bool(parsed.get("is_plain_text"))
     parsed["financial_intent"] = bool(parsed.get("financial_intent"))
     parsed["risk_level"] = str(parsed.get("risk_level", "medium")).lower()
-    parsed["safe_query"] = canonicalize_user_message(str(parsed.get("safe_query") or message))
+    # The classifier only decides; it never rewrites the question. Hosted Qwen3-8B returned safe_query=true (-> "True")
+    # and the graph then planned and answered "True". The LLM's suggestion is kept for audit only.
+    suggested = parsed.get("safe_query")
+    parsed["llm_safe_query"] = suggested if isinstance(suggested, str) else None
+    parsed["safe_query"] = canonicalize_user_message(message)
     parsed["allowed"] = (
         parsed["is_plain_text"]
         and parsed["financial_intent"]
