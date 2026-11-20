@@ -60,7 +60,14 @@ SECRETS = r'''for key in ("LLM_API_BASE", "LLM_API_KEY", "LLM_MODEL", "LLM_CA_CE
     try:
         os.environ[key] = userdata.get(key)
     except Exception:
-        print(f"{key} is not a Colab secret" + (": answers use llm_provider=mock" if key == "LLM_MODEL" else ""))'''
+        print(f"{key} is not a Colab secret" + (": answers use llm_provider=mock" if key == "LLM_MODEL" else ""))
+try:                                   # optional: LangSmith traces of every request (Colab secret LANGSMITH_API_KEY)
+    os.environ["LANGSMITH_API_KEY"] = userdata.get("LANGSMITH_API_KEY")
+    os.environ.setdefault("LANGSMITH_TRACING", "true")
+    os.environ.setdefault("LANGSMITH_PROJECT", "financial-report-copilot-colab")
+    print("LangSmith tracing on, project", os.environ["LANGSMITH_PROJECT"])
+except Exception:
+    print("LANGSMITH_API_KEY is not a Colab secret: no LangSmith traces")'''
 
 SERVE_MD = r'''## Serve this index: FastAPI + Streamlit on this runtime
 
@@ -70,7 +77,8 @@ browser -> Colab port proxy (only you) -> Streamlit :8501 -> FastAPI :8000 -> {I
 
 `cp.serve(s)` starts both with `cp.serving_env(s)`: {ENV}. Requests can filter by `ticker`, `year` and `sector`.
 For the Track B model add the Colab secrets `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL` (e.g. `Qwen/Qwen3-8B`) and,
-for a self-signed endpoint, `LLM_CA_CERT` (path to the CA certificate on Drive). Without them answers use the mock.'''
+for a self-signed endpoint, `LLM_CA_CERT` (path to the CA certificate on Drive). Without them answers use the mock.
+Add the secret `LANGSMITH_API_KEY` to trace every request to LangSmith (project `financial-report-copilot-colab`); see docs/observability_langsmith.md.'''
 
 SERVE_DEPS = r'''# @title Serving dependencies (from pyproject.toml; keeps Colab's CUDA torch) and LLM secrets
 import re, tomllib

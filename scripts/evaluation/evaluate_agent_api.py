@@ -34,6 +34,7 @@ import re
 import time
 import urllib.error
 import urllib.request
+import uuid
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Callable
@@ -183,11 +184,17 @@ def http_poster(base: str, timeout: float) -> Callable[[dict[str, Any]], tuple[i
         headers["X-API-Key"] = os.environ["API_AUTH_TOKEN"].strip()
 
     def post(body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+        # One X-Request-ID per question: the API puts it on the access log and on every LangSmith run, and the
+        # results row keeps it, so a failed question leads straight to its trace.
+        request_id = str(uuid.uuid4())
         request = urllib.request.Request(base.rstrip("/") + ENDPOINT, data=json.dumps(body).encode("utf-8"),
-                                         headers=headers, method="POST")
+                                         headers={**headers, "X-Request-ID": request_id}, method="POST")
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
-                return response.status, json.loads(response.read() or b"{}")
+                payload = json.loads(response.read() or b"{}")
+                if isinstance(payload, dict):
+                    payload.setdefault("request_id", response.headers.get("X-Request-ID") or request_id)
+                return response.status, payload
         except urllib.error.HTTPError as exc:
             try:
                 payload = json.loads(exc.read() or b"{}")
@@ -229,6 +236,8 @@ def run(items: list[dict[str, Any]], post: Callable, out_dir: Path, *, technique
         started = time.perf_counter()
         code, response = post(body)
         row = score(item, response if isinstance(response, dict) else {}, code)
+        if isinstance(response, dict) and response.get("request_id"):
+            row["request_id"] = response["request_id"]
         row["seconds"] = round(time.perf_counter() - started, 2)
         if code >= 400:
             row["error"] = str(response.get("detail") if isinstance(response, dict) else response)[:300]
@@ -357,18 +366,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run-id", default=time.strftime("run_%Y%m%d_%H%M%S"))
     parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR)
     parser.add_argument("--report-only", action="store_true", help="Rebuild the summary from results.jsonl.")
+    parser.add_argument("--langsmith", action="store_true",
+                        help="Ask the API to trace every question to LangSmith (the API needs LANGSMITH_API_KEY).")
+    parser.add_argument("--langsmith-project", default="capstone-agent-eval",
+                        help="LangSmith project for --langsmith; results.jsonl keeps each question's request_id to find its trace.")
     args = parser.parse_args(argv)
 
     items = load_items(args.eval_file, args.categories, args.ids, args.limit)
     out_dir = args.output_dir / args.run_id
     meta = {"run_id": args.run_id, "technique": args.technique, "llm_provider": args.llm_provider,
-            "api_base": args.api_base, "eval_file": str(args.eval_file)}
+            "api_base": args.api_base, "eval_file": str(args.eval_file),
+            "langsmith_project": args.langsmith_project if args.langsmith else None}
     if args.report_only:
         wanted = {item["id"] for item in items}
         rows = [row for row in read_rows(out_dir / "results.jsonl") if row["id"] in wanted]
     else:
+        extra = {"enable_langsmith": True, "langsmith_project": args.langsmith_project} if args.langsmith else None
         rows = run(items, http_poster(args.api_base, args.timeout), out_dir, technique=args.technique,
-                   llm_provider=args.llm_provider, embedding_provider=args.embedding_provider)
+                   llm_provider=args.llm_provider, embedding_provider=args.embedding_provider, extra=extra)
     if not rows:
         print("no results to summarize")
         return 1

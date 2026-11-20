@@ -30,6 +30,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from scripts.observability.langsmith_utils import traced_retrieval
 from scripts.rag import chunk_schema
 from scripts.rag import financial_ingest_chroma_db as chroma_db
 
@@ -129,14 +130,19 @@ def fuse(text_hits: list[dict[str, Any]], pages: list[dict[str, Any]], page_hits
 
 def retrieve_for_agent(query, top_k=5, ticker=None, year=None, sector=None, visual=None, mode="hybrid"):
     """Evidence for the financial agents from both indexes (see the module docstring)."""
-    text_hits = chroma_db.retrieve_for_agent(query, top_k, ticker=ticker, year=year, sector=sector, mode=mode)
+    # Each stage is its own LangSmith run when tracing is on (no-op otherwise): chroma_text, colpali_pages, fusion.
+    filters = {"ticker": ticker, "year": year, "sector": sector, "top_k": top_k}
+    text_hits = traced_retrieval("hybrid.chroma_text", lambda: chroma_db.retrieve_for_agent(
+        query, top_k, ticker=ticker, year=year, sector=sector, mode=mode), query=query, filters=filters)
     setting = visual_setting()
     use_visual = setting == "always" if visual is None else (bool(visual) and setting != "off")
     if not use_visual:
         return text_hits
-    pages = visual_pages(query, ticker, year, sector)
+    pages = traced_retrieval("hybrid.colpali_pages", lambda: visual_pages(query, ticker, year, sector), query=query,
+                             filters=filters)
     if not pages:
         return text_hits
     store = chroma_db.ChromaStore(Path(os.getenv("RAG_VLM_DIR", chroma_db.DEFAULT_ROOT)))
     page_hits = {(p["doc_id"], p["page"]): page_evidence(store, p) for p in pages}
-    return fuse(text_hits, pages, page_hits, top_k)
+    return traced_retrieval("hybrid.fusion", lambda: fuse(text_hits, pages, page_hits, top_k), query=query,
+                            filters={**filters, "colpali_pages": [[p["doc_id"], p["page"], p["rank"]] for p in pages]})

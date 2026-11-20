@@ -43,6 +43,8 @@ from scripts.agents.financial_clarifier import question_scope
 from scripts.guardrails import checks as guard_checks, patterns as guard_patterns
 from scripts.prompts import financial as prompts
 from scripts.observability.langsmith_utils import (
+    traced_llm,
+    traced_retrieval,
     add_langsmith_args,
     maybe_enable_from_args,
     run_traced,
@@ -76,14 +78,26 @@ class AgentConfig:
 
 
 class MockResponse:
-    def __init__(self, content: str) -> None:
+    def __init__(self, content: str, usage: dict[str, Any] | None = None) -> None:
         self.content = content
+        self.usage = usage or {}          # OpenAI-format token counts from a hosted response (for LangSmith)
+
+
+def as_role_messages(messages: list[Any]) -> list[dict[str, str]]:
+    """LangChain messages (or strings) as role/content dicts, the form LangSmith shows for an llm run."""
+    roles = {"system": "system", "human": "user", "ai": "assistant"}
+    return [{"role": roles.get(getattr(m, "type", ""), "user"), "content": str(getattr(m, "content", m))}
+            for m in messages]
 
 
 class MockLLM:
     """Deterministic local LLM stand-in for pipeline testing."""
 
     def invoke(self, messages: list[Any]) -> MockResponse:
+        return traced_llm("mock_llm", lambda: self._respond(messages), as_role_messages(messages),
+                          provider="mock", model="mock")
+
+    def _respond(self, messages: list[Any]) -> MockResponse:
         joined = "\n".join(getattr(message, "content", str(message)) for message in messages)
         if "Support check JSON" in joined:
             # Mock judge: supported when the answer cites a chunk that is in the cited evidence. Not a real check.
@@ -211,7 +225,9 @@ class HostedChatLLM:
                            "credential": hashlib.sha256(self.api_key.encode()).hexdigest(),
                            "temperature": self.temperature,
                            "messages": [str(getattr(m, "content", m)) + str(type(m)) for m in messages]})
-        return calls.run("hosted_model", lambda: self._invoke(messages), key=key, retry=True)
+        return traced_llm(
+            "hosted_llm", lambda: calls.run("hosted_model", lambda: self._invoke(messages), key=key, retry=True),
+            as_role_messages(messages), provider="openai-compatible", model=self.model, temperature=self.temperature)
 
     def _invoke(self, messages: list[Any]) -> MockResponse:
         payload = {
@@ -241,7 +257,8 @@ class HostedChatLLM:
 
         data = json.loads(raw)
         try:
-            return MockResponse(hosted_llm.clean_content(data["choices"][0]["message"]["content"]))
+            usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
+            return MockResponse(hosted_llm.clean_content(data["choices"][0]["message"]["content"]), usage=usage)
         except (KeyError, IndexError, TypeError) as exc:
             raise RuntimeError(f"Unexpected hosted LLM response shape: {raw[:1000]}") from exc
 
@@ -560,6 +577,17 @@ def answer_evidence(config: AgentConfig) -> list[dict[str, Any]]:
 
 
 def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
+    """One search on the served backend, traced to LangSmith as a retriever run ``retrieve.<backend>``."""
+    backend = os.getenv("RAG_BACKEND") or "chroma"
+    return traced_retrieval(
+        f"retrieve.{backend}", lambda: _retrieve_evidence(config), query=config.query,
+        filters={key: getattr(config, attr, None) for key, attr in (
+            ("ticker", "ticker"), ("year", "year"), ("sector", "sector"), ("top_k", "top_k"), ("visual", "visual"),
+            ("mode", "retrieval_mode"))},
+        metadata={"rag_backend": backend})
+
+
+def _retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
     if os.getenv("RAG_BACKEND") == "financial_qdrant":   # collections built by scripts/rag/financial_ingest_qdrant_db.py
         from scripts.rag.financial_ingest_qdrant_db import retrieve_for_agent
         return retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,

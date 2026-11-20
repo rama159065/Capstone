@@ -323,7 +323,7 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/chat/financial_report
 
 The API allows 60 requests per minute per client IP across all routes. Excess requests return `429 Too Many Requests` with a `Retry-After` header. The limiter is in-memory and per application process; use a shared rate-limit store such as Redis when running multiple workers or replicas. Client IPs come from the direct connection, so configure trusted proxy handling at the deployment boundary if the API is behind a reverse proxy.
 
-Enable LangSmith for API calls by setting `LANGSMITH_API_KEY` and either passing `enable_langsmith=true` in the request body or setting `LANGSMITH_TRACING=true` in the environment.
+Enable LangSmith for API calls by setting `LANGSMITH_API_KEY` and either passing `enable_langsmith=true` in the request body or setting `LANGSMITH_TRACING=true` in the environment. Tracing is per request: one request asking for it never turns it on for others. Every run carries the request ID, conversation turns share a `thread_id`, and LLM calls show their prompts and tokens. `/health` reports the setup without the key. See [docs/observability_langsmith.md](docs/observability_langsmith.md) ([HTML](docs/observability_langsmith.html)).
 
 API access logs include request IDs, route, status, and duration without recording request bodies or prompts. Each response returns `X-Request-ID`; when LangSmith tracing is active, the ID is attached as trace metadata. See [docs/fastapi_api.md](docs/fastapi_api.md#request-logging-and-trace-correlation).
 

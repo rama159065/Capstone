@@ -11,6 +11,7 @@ import hmac
 import json
 import contextvars
 import logging
+import contextlib
 import os
 import time
 from collections import OrderedDict, deque
@@ -28,7 +29,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
-from scripts.observability.langsmith_utils import configure_langsmith, env_flag, run_traced
+from scripts.observability.langsmith_utils import default_project, request_tracing, run_traced, tracing_status
 from scripts.common.runtime_profile import apply_profile, describe as describe_runtime
 from scripts.agents.financial_clarifier import Clarifier, ConversationStore, name as company_name
 from scripts.common.agent_limits import max_steps
@@ -728,23 +729,29 @@ async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONR
     )
 
 
-def configure_request_tracing(
-    *,
-    enabled: bool,
-    project_name: str | None,
-) -> dict[str, Any]:
-    tracing = configure_langsmith(
-        enabled=enabled or env_flag("LANGSMITH_TRACING"),
-        project_name=project_name,
-    )
-    logger.info(
-        "langsmith_trace_configured request_id=%s enabled=%s reason=%s project=%s",
-        request_id_context.get(),
-        tracing.get("enabled", False),
-        tracing.get("reason", "enabled" if tracing.get("enabled") else "disabled"),
-        tracing.get("project"),
-    )
-    return tracing
+@contextlib.contextmanager
+def request_trace(request: Any, fallback_project: str, metadata: dict[str, Any] | None = None):
+    """LangSmith tracing for one request: on when the request asks (``enable_langsmith``) or ``LANGSMITH_TRACING``
+    is set, and a key exists. Project: the request's, else ``LANGSMITH_PROJECT``, else ``fallback_project``.
+
+    Only this request (and the worker threads it starts) is traced; nothing in the process environment changes.
+    Every run carries the ``request_id`` (the ``X-Request-ID`` header) so a response, the access log and the trace
+    can be matched. Yields the ``langsmith`` status returned in the response.
+    """
+    with request_tracing(
+        enabled=bool(getattr(request, "enable_langsmith", False)),
+        project_name=getattr(request, "langsmith_project", None) or default_project(fallback_project),
+        tags=["capstone", "fastapi", FINANCIAL_DOMAIN],
+        metadata={**trace_request_metadata(), **(metadata or {})},
+    ) as tracing:
+        logger.info(
+            "langsmith_trace_configured request_id=%s enabled=%s reason=%s project=%s",
+            request_id_context.get(),
+            tracing.get("enabled", False),
+            tracing.get("reason", "enabled" if tracing.get("enabled") else "disabled"),
+            tracing.get("project"),
+        )
+        yield tracing
 
 
 def trace_request_metadata() -> dict[str, str]:
@@ -968,6 +975,7 @@ def health() -> HealthResponse:
         "conversation_store": "sqlite" if CONVERSATIONS.path else "memory",
         "agent_max_steps": max_steps(),
         "answer_cache_seconds": ANSWER_CACHE.ttl,
+        "langsmith": tracing_status(),
         "defaults": {"llm_provider": DEFAULT_LLM_PROVIDER, "embedding_provider": DEFAULT_EMBEDDING_PROVIDER},
     }
 
@@ -1031,10 +1039,11 @@ def chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
 
 
 def _chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
-    langsmith = configure_request_tracing(
-        enabled=request.enable_langsmith,
-        project_name=request.langsmith_project or "capstone-financial-report-qa-api",
-    )
+    with request_trace(request, "capstone-financial-report-qa-api") as langsmith:
+        return _chat_financial_traced(request, langsmith)
+
+
+def _chat_financial_traced(request: FinancialChatRequest, langsmith: dict[str, Any]) -> dict[str, Any]:
     config = financial_config_from_request(request)
     result = run_traced(
         f"api.financial_report_qa.{request.technique}",
@@ -1059,10 +1068,15 @@ def _chat_financial(request: FinancialChatRequest) -> dict[str, Any]:
             "retrieval_mode": request.retrieval_mode,
             "guardrails_enabled": request.enable_guardrails,
             "human_review_enabled": request.enable_human_review,
+            "ticker": request.ticker,
+            "year": request.year,
+            "sector": request.sector,
+            "rag_backend": os.getenv("RAG_BACKEND") or "chroma",
             **trace_request_metadata(),
         },
     )
-    summarized_result = apply_grounding_policy(summarize_result(result))
+    summarized_result = run_traced("api.grounding_policy", lambda: apply_grounding_policy(summarize_result(result)),
+                                   run_type="chain")
     return {
         "domain": FINANCIAL_DOMAIN,
         "display_name": "Financial Report QA",
@@ -1122,8 +1136,17 @@ def run_financial_report(spec: dict[str, Any]) -> dict[str, Any]:
 )
 def converse_financial(request: ConversationRequest) -> dict[str, Any]:
     conversation = CONVERSATIONS.get(request.conversation_id)
+    # thread_id groups every turn of one conversation in LangSmith's Threads view.
+    thread = {"thread_id": conversation.conversation_id, "conversation_id": conversation.conversation_id}
+    with request_trace(request, "capstone-financial-report-qa-api", thread):
+        return run_traced("api.conversation_turn", _converse_financial, request, conversation, run_type="chain",
+                          metadata=thread)
+
+
+def _converse_financial(request: ConversationRequest, conversation: Any) -> dict[str, Any]:
     if request.clarify:
-        outcome = get_clarifier().step(conversation, request.query, ticker=request.ticker, year=request.year)
+        outcome = run_traced("clarifier", get_clarifier().step, conversation, request.query, ticker=request.ticker,
+                             year=request.year, run_type="chain")
         CONVERSATIONS.save(conversation)
     else:
         outcome = {"status": "ready", "action": "answer", "conversation_id": conversation.conversation_id,
@@ -1131,7 +1154,8 @@ def converse_financial(request: ConversationRequest) -> dict[str, Any]:
     if outcome["status"] in {"needs_clarification", "cancelled"}:
         return outcome
     if outcome["action"] == "report":
-        return {**outcome, "clarifier": outcome["status"], **run_financial_report(outcome["report"])}
+        return {**outcome, "clarifier": outcome["status"],
+                **run_traced("report_pipeline", run_financial_report, outcome["report"], run_type="chain")}
     chat_request = FinancialChatRequest(**{
         **request.model_dump(exclude={"conversation_id", "clarify"}),
         "query": outcome["resolved_query"], "ticker": outcome["ticker"], "year": outcome["year"]})
@@ -1149,10 +1173,11 @@ def converse_financial(request: ConversationRequest) -> dict[str, Any]:
     responses=API_ERROR_RESPONSES,
 )
 def retrieve_financial(request: RetrieveRequest) -> dict[str, Any]:
-    langsmith = configure_request_tracing(
-        enabled=request.enable_langsmith,
-        project_name=request.langsmith_project or "capstone-financial-retrieval-api",
-    )
+    with request_trace(request, "capstone-financial-retrieval-api") as langsmith:
+        return _retrieve_financial(request, langsmith)
+
+
+def _retrieve_financial(request: RetrieveRequest, langsmith: dict[str, Any]) -> dict[str, Any]:
     config = financial_config_from_request(request)
     hits = run_traced(
         "api.financial_report_qa.retrieve",
