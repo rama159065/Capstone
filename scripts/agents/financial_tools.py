@@ -200,6 +200,12 @@ def strip_calculations(answer: str) -> str:
 # ----------------------------------------------------------------------------- support check (critic)
 
 CHUNK_ID_TOKEN = re.compile(r"\S*_p\d{3,}\S*")              # citation IDs are not figures
+# Dates and page references are not figures either: "December 31, 2025", "Dec. 31", "2025-12-31", "page 49", "pp. 49-50".
+NOT_FIGURES = re.compile(
+    r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?\b"
+    r"|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b"
+    r"|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}/\d{1,2}/\d{2,4}\b"
+    r"|\b(?:pages?|pp?\.)\s*\d+(?:\s*(?:-|–|,|and|to)\s*\d+)*", re.I)
 SCALES = (1.0, 1e3, 1e-3, 1e6, 1e-6, 1e9, 1e-9)             # "$254.5 billion" vs "254,453" (millions)
 VERDICTS = ("supported", "partially_supported", "unsupported", "unverified")
 
@@ -213,15 +219,17 @@ def _matches(value: float, decimals: int, known: set[float]) -> bool:
 def numeric_grounding(answer: str, cited: list[dict[str, Any]], calculations: list[dict[str, Any]]) -> dict[str, Any]:
     """Every figure in the answer must appear in a cited chunk or come from the calculator.
 
-    Years (1990-2049) and small counts (<= 10) are not checked. Rounding is allowed only to the precision the
-    answer shows, in any unit scale (thousands, millions, billions), so "$254.5 billion" matches 254,453 million.
+    Years (1990-2049), small counts (<= 10), dates and page references are not checked. Rounding is allowed only to
+    the precision the answer shows, in any unit scale (thousands, millions, billions), so "$254.5 billion" matches
+    254,453 million.
     """
     calculated = {abs(float(c["value"])) for c in calculations if c.get("value") is not None}
     known = evidence_numbers(cited) | calculated
     confirmed = confirmed_numbers(cited) | calculated
-    text = CHUNK_ID_TOKEN.sub(" ", CALC_TOKEN.sub(" ", answer))
+    text = NOT_FIGURES.sub(" ", CHUNK_ID_TOKEN.sub(" ", CALC_TOKEN.sub(" ", answer)))
     checked, ungrounded, unverified = 0, [], []
     for raw in NUMBER.findall(text):
+        raw = raw.rstrip(",")                                 # "revenue was 61,160, up 9%" -> "61,160"
         value = float(raw.replace(",", ""))
         if ("," not in raw and "." not in raw and 1990 <= value <= 2049) or (value <= 10 and value == int(value)):
             continue

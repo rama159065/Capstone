@@ -347,6 +347,12 @@ def deterministic_input_guard(message: str, max_chars: int = 4000) -> dict[str, 
     return {**result, "reason": "No deterministic risks found." if not labels else f"Detected: {', '.join(labels)}."}
 
 
+def policy_refusal(message: str) -> dict[str, Any]:
+    """Advice, forecasts, personal or non-public data and creative requests: refused by rule, before any LLM call."""
+    return guard_checks.policy_refusal(message, guard_patterns.FINANCIAL_POLICY_REFUSALS,
+                                       guard_patterns.POLICY_REFUSAL_MESSAGES)
+
+
 def llm_plain_text_classifier(llm, message: str) -> dict[str, Any]:
     system = prompts.CLASSIFIER_SYSTEM
     human = prompts.CLASSIFIER_HUMAN.format(message=message)
@@ -432,9 +438,9 @@ def governance_review_router(
     triggers: list[str] = []
     query = config.query.lower()
     answer = draft_answer.lower()
-    if any(term in query for term in INVESTMENT_REVIEW_TERMS):
+    if guard_checks.has_term(query, INVESTMENT_REVIEW_TERMS):      # whole words: not "stockholders'" for "hold"
         triggers.append("investment_or_decision_support_language")
-    if any(term in query for term in PUBLICATION_REVIEW_TERMS):
+    if guard_checks.has_term(query, PUBLICATION_REVIEW_TERMS):
         triggers.append("external_publication_or_export")
     if not evidence:
         triggers.append("low_retrieval_confidence")
@@ -544,6 +550,9 @@ def prepare_guarded_config(llm, config: AgentConfig, technique: str) -> tuple[Ag
             "Request blocked by security guardrails. Please rephrase as a plain financial-report question.",
             security=security,
         )
+    policy = policy_refusal(config.query)
+    if policy["refuse"]:
+        return None, refusal_result(technique, policy["message"], security={**security, "policy": policy})
 
     plain_text = llm_plain_text_classifier(llm, security["sanitized_query"])
     if not plain_text.get("allowed"):
@@ -887,6 +896,9 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
                 "final_status": "refused",
                 "answer": "Request blocked by security guardrails. Please rephrase as a plain financial-report question.",
             }
+        policy = policy_refusal(state["query"])
+        if policy["refuse"]:                   # decided by rule: the model is never asked whether to refuse
+            return {"security": {**security, "policy": policy}, "final_status": "refused", "answer": policy["message"]}
         return {"security": security, "query": security["sanitized_query"]}
 
     def plain_text_node(state: AgentState) -> AgentState:

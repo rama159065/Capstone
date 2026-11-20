@@ -6,6 +6,8 @@ Date: 2026-11-04. This is the Track B Week 1 deliverable: a single agent with a 
 - Evaluation set: [eval_set_v1](../data/evaluation/financial_report_qa/eval_set_v1.md), frozen before implementation
 - Task specification: [week1_task_specification.md](week1_task_specification.md)
 - Raw outputs: `output/prompt_baselines/<run>/` (`responses.jsonl`, `scores.jsonl`, `summary.json`, `report.md`)
+- Notebook: [notebooks/08_week1_prompt_strategies.ipynb](../notebooks/08_week1_prompt_strategies.ipynb) runs the whole comparison (PC or Colab)
+- **Follow-up, 20 Nov 2026:** [week1_failure_scenarios.md](week1_failure_scenarios.md) runs the same prompts on the capstone's own retrieval and lists each failure scenario, what RAG fixes and where answers are still wrong (summary in section 8)
 
 > **Model used.** These runs used **Qwen3-VL-2B-Instruct (Q4 GGUF, llama.cpp, CPU, 8k context)** as a local stand-in for the provided hosted ≤8B endpoint. The failure modes below are typical of 2–8B models. The exact numbers will change on the provided model, so rerun them (section 7) before the final report.
 
@@ -192,7 +194,7 @@ These questions need the visual/OCR path and the chart-value facts (design secti
 | Retrieval misses (largest effect) | Company/year filters from a planner; number-aware hybrid retrieval and the XBRL facts tool ([financial_ingest_qdrant_db.py](../scripts/rag/financial_ingest_qdrant_db.py), design sections 3–4). Measure retrieval separately (oracle vs real) |
 | Wrong row, period or unit; arithmetic | Numbers come from the **facts tool**, not from the model reading tables. Code computes ratios with `Decimal` and states the formula. The model writes words around facts it doesn't produce |
 | Invented numbers, "however…" contradictions | **Number grounding check** before release: every number must match a fact or a cited chunk, otherwise withhold or send to review (extends `apply_grounding_policy`) |
-| Advice, injection, out-of-scope | A **router/guard node before the LLM** (rules + classifier) returns the refusal. The model is never asked to decide whether to refuse; decomposition shows why |
+| Advice, injection, out-of-scope | A **router/guard node before the LLM** (rules + classifier) returns the refusal. The model is never asked to decide whether to refuse; decomposition shows why. **Implemented 20 Nov 2026:** `policy_refusal` in the graph's `security_step` refuses all 8 refusal items before any LLM call (section 8) |
 | Template capture | No worked numeric example. Use the JSON schema alone, or several examples with placeholder values (`<value>`), plus constrained JSON decoding (`response_format` / grammar) where the endpoint supports it |
 | Truncated reasoning | Short, bounded reasoning ("at most 5 lines"), or skip free reasoning and use structured extraction; raise the token budget only on the reasoning step; retry once on missing JSON |
 | Over-refusal | Critic → repair loop: if the answer declines but the facts tool has the value, answer again with that fact |
@@ -223,3 +225,48 @@ $env:LLM_API_BASE="https://<provided-endpoint>/v1"; $env:LLM_API_KEY="..."; $env
 - **Run size:** 602 calls per condition.
 - **Time:** about 3 h per condition on the local CPU stand-in; a hosted GPU endpoint should be much faster.
 - **Mock run:** `--llm-provider mock` checks the pipeline without a model.
+
+## 8. Follow-up (20 November 2026): prompts only, then the same prompts with the capstone's RAG
+
+Full write-up: [week1_failure_scenarios.md](week1_failure_scenarios.md). The runs in sections 2–6 gave every strategy
+five evidence chunks. The Week 1 task is a single-prompt attempt, so the follow-up adds the true baseline,
+**prompt only** (`--context none`): the question and the strategy's prompt, no documents. It then measures the same
+prompts with the capstone's retrieval (**rag**: the agent's company × year filters and Chroma hybrid search,
+pipeline 1). Same model, prompts and scorer; 430 answers per context.
+
+| Accuracy | **prompt only (Week 1)** | bm25 | **rag (capstone)** | oracle |
+|---|---|---|---|---|
+| zero_shot | 17% | 20% | **56%** | 63% |
+| structured_few_shot | 9% | 7% | **23%** | 34% |
+| chain_of_thought | 17% | 21% | **62%** | 70% |
+| self_consistency | 17% | 19% | **60%** | 66% |
+| decomposition | 17% | 20% | **53%** | 60% |
+| Single-figure answers right (of 200) | **0** | 7 | **117** | 126 |
+
+**How the model breaks with prompts only:** it gets no financial figure right (0 of 250 figure answers). It says
+"not available" 282 times, as the prompt asks, and invents 67 answers: Bank of America "20,000,000 employees", "PwC"
+as every company's auditor. Its 17% is almost all correct refusals and correct "not disclosed" answers, and the
+strategy barely matters.
+
+**What RAG fixes, question by question:** 180 answers go from wrong to correct and 29 the other way. That is 180 of
+the 200 fixes perfect evidence would give, and single-figure lookups go from 0% to 58% (oracle 63%). What RAG
+doesn't fix: copying the few-shot example, answering advice requests, and, with evidence present, answering
+not-disclosed questions the model should decline. The agent's checks cover those: the policy refusal, the coverage
+check and number grounding. The main failure with RAG becomes reading the wrong row or concept from the right filing
+(section 7 of the follow-up).
+
+| Of 72 questions with a document answer | bm25 | **rag** | oracle |
+|---|---|---|---|
+| Gold document in the 5 chunks | 37 | **69** | 72 |
+| Gold figure in the evidence | 12 | **39** | 39 |
+| Chart values in the evidence (of 8) | 0 | **4** | 0 |
+
+**Replaying every wrong answer through the agent's deterministic checks** (stopped before release: refused, not
+available, withheld or sent to review):
+- 67 of 362 prompt-only, 81 of 211 rag, 69 of 178 oracle and 116 of 356 BM25 wrong answers;
+- all advice, forecast and injection items (now refused by rule) and all oracle arithmetic errors (a computed figure must come from the calculator).
+
+**Three agent bugs found and fixed while doing this:**
+- advice wasn't refused by rule;
+- dates and page numbers counted as unsupported figures;
+- "hold" matched "stockholders'" and sent every stockholders' equity question to human review.
