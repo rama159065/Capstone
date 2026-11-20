@@ -164,3 +164,22 @@ def test_a_cut_off_judge_reply_fails_closed_and_says_why():
     assert out["verdict"] == "unverified" and out["claims"] == []
     assert "cut off" in out["reason"]
     assert financial_tools.parse_support("")["reason"] == "the support judge returned no claims"
+
+
+class CutOffJudge(ScriptedLLM):
+    def invoke(self, messages):
+        joined = "\n".join(getattr(m, "content", str(m)) for m in messages)
+        if "Support check JSON" in joined:
+            self.prompts.append(joined)
+            return agent.MockResponse('{"claims": [{"claim": "Costco net sales were 254,453 million", "chunk_ids": ["'
+                                      + CHUNK + '"], "supported": tr')
+        return super().invoke(messages)
+
+
+def test_a_cut_off_judge_reply_is_not_repaired():
+    # A rewrite can't fix the judge's own reply hitting the output limit; the banking run lost ~30 s to it.
+    llm = CutOffJudge(answers=[f"Costco net sales were 254,453 million in fiscal 2025 [{CHUNK}]."] * 2)
+    result = agent.agentic_graph_prompt(llm, config())
+    assert result["support_check"]["judge_cut_off"] is True and result["support_check"]["verdict"] == "unverified"
+    assert result["agent_run"]["path"].count("answer_step") == 1
+    assert sum("Support check JSON" in p for p in llm.prompts) == 1

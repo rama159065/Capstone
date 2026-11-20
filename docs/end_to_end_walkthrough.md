@@ -22,7 +22,7 @@ Related pages: [agent_flows.md](agent_flows.md) (every node and routing rule),
 | API | FastAPI on `127.0.0.1:8000`, one worker, default limits (`AGENT_MAX_STEPS=10`, 60 s request deadline, 300 s for sector and fund routes) |
 | Client | Streamlit's own request code (`build_payload` + `post_json`), the same path as typing into the chat |
 | Questions | 11: one or more for each agent, plus the router's refusal, clarification, report and not-available paths |
-| LangSmith | Tracing per request only; 5 evidence traces (one per agent), 12 in total with the reruns (section 9) |
+| LangSmith | Tracing per request only; 5 evidence traces (one per agent), 13 in total with the reruns (section 9) |
 
 This PC's index doesn't include Apple, so Apple questions are answered "not available" (section 7.4).
 
@@ -126,8 +126,8 @@ sequenceDiagram
 | `route_step` / `plan_step` | `financial_router.py` / `financial_tools.normalize_plan` | The agent (router) or the tools and targets (Q&A); the LLM proposes, rules validate | Yes |
 | Retrieval | `rag/financial_ingest_chroma_db.retrieve_for_agent` | Evidence chunks (section 6) | No |
 | `evidence_guard_step` | `guardrails/checks.py` | Drops chunks carrying instructions | No |
-| `answer_step` | `prompts/financial.py` | The answer, citing chunk IDs; `CALC[...]` goes to the calculator | Yes |
-| `critic_step` | `financial_tools.numeric_grounding` + support judge | Every figure must appear in a cited chunk; the judge must support every claim; one repair | Yes |
+| `answer_step` | `prompts/financial.py` | The answer, citing chunk IDs; `CALC[...]` goes to the calculator. Sector trends: written in code from the verified table | Yes (sector: no) |
+| `critic_step` | `financial_tools.numeric_grounding` + support judge | Every figure must appear in a cited chunk; the judge must support every claim; one repair (none when the judge's reply was cut off). Sector trends: figures checked in code only | Yes (sector: no) |
 | `governance_step` | `apply_governance` | Output filter (advice wording) and human-review triggers | No |
 | After the graph | `run_technique`, `apply_grounding_policy` | Coverage (`not_available`), company scope, citations must match retrieved chunks; with a hosted LLM only a `supported` answer is shown, else cited excerpts (`evidence_only`) | No |
 
@@ -141,10 +141,10 @@ sequenceDiagram
 | Plain-text classifier | LLM | Non-financial or risky messages | Passed every question (after fix 2 in section 8) |
 | Evidence guard | Rule | Instructions hidden in retrieved text | Nothing flagged |
 | Number grounding | Code | A figure that isn't in a cited chunk | 0 ungrounded figures in all 7 graph runs |
-| Support judge | LLM | A claim the cited evidence doesn't state | Caught the misread Chevron chunk; missed two "right filing, wrong row" answers (section 8) |
+| Support judge | LLM | A claim the cited evidence doesn't state | Caught the misread Chevron chunk; missed two "right filing, wrong row" answers (section 8); not used for sector answers (written in code) |
 | Citation check | Code | A cited chunk that wasn't retrieved | All citations valid |
 | Human review | Rule | Unsupported claims, low sector coverage, failed citations | 2 answers sent to review (Chevron chart, banking sector) |
-| Grounding policy | Code | Unverified generated text | 2 answers replaced by cited excerpts (`evidence_only`) |
+| Grounding policy | Code | Unverified generated text | 1 answer replaced by cited excerpts (`evidence_only`, the Chevron chart) |
 
 ## 6. Retrieval from Chroma
 
@@ -248,17 +248,29 @@ sent for human review. A retrieval miss, handled safely.
 ### 7.4 Sector trend agent (`sector_trend_graph`)
 
 **Question:** "How did banking sector net income trend from 2022 to 2025?"
-[LangSmith trace](https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa54-76ed-7410-9a42-e3df6321f499?poll=true)
+[LangSmith trace](https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa7c-f7a9-7172-b110-b42b424c3f92?poll=true)
+(after the speed-ups below; the
+[earlier run](https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa54-76ed-7410-9a42-e3df6321f499?poll=true)
+took 116 s)
 
 | Step | What happened |
 |---|---|
 | Coverage | 11 banks in the index; MTB left out (no FY2022–2024 filings), USB and WFC over the 8-company limit |
-| `sector_fetch_step` | 32 searches (8 banks × 4 years) |
-| `sector_series_step` | Each figure read from the statement row in code first; the LLM only where no row matched, and its figure kept only on a line naming the measure. Panel = banks verified in **every** year |
-| `answer_step` → `critic_step` | 24 figures grounded in code; the support judge's reply was cut off (below) |
-| Result | `evidence_only`, 117 s, 10 of 10 steps; human review (`unsupported_claims`, `low_sector_coverage`) |
+| `sector_fetch_step` | 32 searches (8 banks × 4 years), 4 at a time: 14 s |
+| `sector_series_step` | Each figure read from the statement row in code first (21 of 32); one broadened search for the rest (8 s), the row again, and only then the LLM, whose figure is kept only on a line naming the measure. Panel = banks verified in **every** year |
+| `answer_step` | **Written in code** from the table (no LLM call): totals, changes, CAGR, each company's figures with their chunk IDs, and the banks left out with the reason |
+| `critic_step` | Citations valid; all 26 figures checked in code against the cited chunks and the calculator (`support_check.method: code_table`, `supported`); no LLM judge |
+| Result | `pending_human_review` (only `low_sector_coverage`: 3 of 8 banks in the panel), 40 s, 8 of 10 steps |
 
-The panel the code built (USD millions):
+> Banking net income, FY2022–FY2025, for the 3 companies whose figure is verified in every year (Bank of America
+> (BAC), Fifth Third Bancorp (FITB), JPMorgan Chase (JPM)): the panel total went from $67,650 million in FY2022 to
+> $90,079 million in FY2025, a compound annual growth rate of 10.02%.
+> - FY2023: $78,416 million (+15.91% on FY2022); median company change -3.68%; 1 of 3 companies grew.
+> - FY2024: $87,917 million (+12.12% on FY2023); median company change +2.33%; 2 of 3 companies grew.
+> - FY2025: $90,079 million (+2.46% on FY2024); median company change +8.99%; 2 of 3 companies grew.
+>
+> Company figures, each cited (for example JPM FY2025 57,048 [annual_report_edgar_ars_JPM_2025_p0198_vlm0]), then
+> the banks not in the panel and why.
 
 | Bank | FY2022 | FY2023 | FY2024 | FY2025 |
 |---|---|---|---|---|
@@ -267,13 +279,20 @@ The panel the code built (USD millions):
 | JPMorgan Chase | 37,676 | 49,552 | 58,471 | 57,048 |
 | **Panel total** | **67,650** | **78,416** (+15.9%) | **87,917** (+12.1%) | **90,079** (+2.5%) |
 
-Five banks were dropped because a year's figure couldn't be verified (BNY, C, COF, STT, TFC), so the panel is three
-banks and the answer is flagged `low_sector_coverage`. The figures shown are correct.
+**Verdict: correct**, and flagged for review because the panel is small. BNY, Citi, Capital One, State Street and
+Truist were left out because at least one year's figure couldn't be verified: for those, the search didn't bring up
+the income statement page. That's a retrieval limit, not a reading error.
 
-**Why `evidence_only`:** the LLM support judge lists each claim as JSON. For 24 figures, its reply ran past the
-1,024-token output limit and was cut off, so no verdict could be parsed and the answer was withheld (fail closed).
-The table above is in the result (`sector_trend`) and on screen in Streamlit's "Sector trend" panel (expanded by
-default); only the generated prose was withheld.
+**Speed-ups made on 21 Nov (116 s → 40 s, 54,836 → 25,554 tokens):**
+
+| Change | Saving | Where |
+|---|---|---|
+| The sector answer is written in code from the verified table; the critic checks its figures in code instead of an LLM judge | ~55 s; the answer is no longer withheld because the judge's reply was cut off | `financial_sector_trend.answer_text`, `answer_node`, `critic_node` |
+| No repair when the answer was written in code or the judge's own reply was cut off (a rewrite can't help) | ~30 s in the earlier run; also applies to Q&A and trend | `should_repair`, `parse_support` (`judge_cut_off`) |
+| More statement-row labels for banks: "Net income (loss)", "…attributable to U.S. Bancorp", "…applicable to shareholders of The Bank of New York Mellon…", dot leaders; rows for common shareholders and before noncontrolling interests are skipped so every bank's figure is the same concept | 21 of 32 figures read in code (was 16), fewer LLM calls | `financial_sector_trend.QUALIFIED_LABELS` |
+| Faster searches: BM25 searches only the filing's block of rows (same ranking), and Chroma filters on the one `doc_id` field | BM25 834 → 56 ms, Chroma 292 → 75 ms per search; about 1.2 s → 0.4 s per search on this PC | `financial_ingest_chroma_db.Bm25Index.spans`, `ChromaStore.search` |
+
+Batching the query embeddings was also considered, but embedding a query takes only 15 ms here, so it wouldn't help.
 
 ### 7.5 Fund agent (`fund_graph`)
 
@@ -310,7 +329,7 @@ default); only the generated prose was withheld.
 | BAC auditor | Q&A | answered | 17 s | No answer given (says not in evidence) |
 | CVX production chart | Q&A | evidence_only | 24 s | Withheld (retrieval miss) |
 | JPM net income 2022–2025 | trend | answered | 42 s | Yes |
-| Banking net income 2022–2025 | sector trend | evidence_only | 117 s | Table correct; prose withheld |
+| Banking net income 2022–2025 | sector trend | pending_human_review | 40 s (was 117 s) | Yes; small panel flagged |
 | Vanguard 500 top 10 | fund | answered | 26 s | Yes |
 | Advice / missing company / report / Apple | router | refused / clarify / confirm / not available | ≤ 0.2 s | Yes (all four as designed) |
 
@@ -322,7 +341,7 @@ covers each):
 | 1 | "Citi" wasn't a company alias; "U.S. Personal Banking" read as the banking sector | One-company question sent to the sector agent | `common/companies.py`: "citi" added; test in `test_financial_clarifier.py` |
 | 2 | Qwen3-8B marked ordinary questions `is_plain_text: false` | Comparison, chart and trend questions refused in 2 s | `llm_plain_text_classifier`: the rule guard decides plain text; the LLM's view kept as `llm_is_plain_text`; prompt states what "plain text" means |
 | 3 | The plain-text step replaced the question with the LLM's `safe_query` (Qwen3-8B returned `true`) | The agent answered the question "True" | The classifier never rewrites the question (fixed 20 Nov) |
-| 4 | Sector answer prompt over the model's 8,192-token context | HTTP 400, request failed after ~70 s | Sector evidence excerpts capped at 4,000 characters (`SECTOR_CONTEXT_CHARS`); the table already carries every figure and chunk ID |
+| 4 | Sector answer prompt over the model's 8,192-token context | HTTP 400, request failed after ~70 s | First a smaller evidence budget; then (7.4) the sector answer is written in code, so there is no answer prompt at all |
 | 5 | Support judge's JSON longer than the output limit on long answers | 11-row fund answer withheld | Judge asked for short claims, a reason only for unsupported ones; a cut-off reply is reported as such |
 
 **Configuration found**: the course server stops a reply at **512 tokens** unless the request sets `max_tokens`
@@ -334,8 +353,10 @@ covers each):
   concept or year (company total for a segment, a pro forma note for the actual). Number grounding can't catch this,
   and Qwen3-8B as judge passed both. This matches the Week 1 analysis, where it was the largest failure type with
   RAG ([week1_failure_scenarios.md](week1_failure_scenarios.md)).
-- **Long answers and the judge**: with 24 figures the judge's JSON still doesn't fit in 1,024 tokens, so sector
-  answers end as `evidence_only` (safe, but no prose). Judging in batches would fix it.
+- **Long answers and the judge**: a Q&A or trend answer with many figures can still make the judge's JSON exceed
+  1,024 tokens; it then ends as `evidence_only` (safe), now without a pointless repair. Sector answers no longer use
+  the judge (7.4).
+- **Sector panels**: some banks' income statements aren't found by the search, so they drop out of the panel.
 - **Retrieval misses** (auditor name, Chevron chart): the answers were safe, not wrong; a larger `top_k` or the
   ColPali visual search would help.
 
@@ -351,12 +372,12 @@ tokens).
 | Router → trend | Citi segment 2025 vs 2024 | 25 s | 8,882 | [open](https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa44-f735-79d1-8a42-996a3366b4ff?poll=true) |
 | Q&A | JPM vs BAC 2025 | 19 s | 5,853 | [open](https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa49-1f46-7d92-9d24-59688f5f3cb8?poll=true) |
 | Trend | JPM 2022–2025 | 42 s | 14,520 | [open](https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa49-c9d2-7ea1-866a-578eb662d416?poll=true) |
-| Sector trend | Banking 2022–2025 | 116 s | 54,836 | [open](https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa54-76ed-7410-9a42-e3df6321f499?poll=true) |
+| Sector trend | Banking 2022–2025 | 40 s | 25,554 | [open](https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa7c-f7a9-7172-b110-b42b424c3f92?poll=true) |
 | Fund | Vanguard 500 top 10 | 26 s | 7,062 | [open](https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa56-3c2a-7b52-b138-096f5b453a7d?poll=true) |
 
-The other seven traces in the project (`annual-report-copilot`, 20–21 Nov) record the bugs before their fixes: the
-misrouted Citi question, two refusals by the plain-text step, two sector runs rejected for context length, and two
-fund runs cut off by the token limits. The links open only for members of the LangSmith workspace; for a report,
+The other eight traces in the project (`annual-report-copilot`, 20–21 Nov) record the runs before the fixes: the
+misrouted Citi question, two refusals by the plain-text step, two sector runs rejected for context length, two fund
+runs cut off by the token limits, and the 116 s sector run before the speed-ups. The links open only for members of the LangSmith workspace; for a report,
 take screenshots of the trace tree.
 
 ## 10. Reproducing
@@ -370,6 +391,6 @@ python -m scripts.evaluation.streamlit_walkthrough trend fund      # selected ca
 
 The script sends each question through Streamlit's own `build_payload` and `post_json` and writes
 `output/walkthrough/<case>.json` (the full response, including `agent_run`) and `summary.json`. A full run takes about
-5 minutes on this PC and makes about 50 hosted-LLM calls (the sector trend alone makes 19). In the Streamlit chat,
+4 minutes on this PC and makes about 40 hosted-LLM calls. In the Streamlit chat,
 the same questions take the same paths; the wording, and sometimes a figure the LLM picks, can differ between runs
 because the hosted model's replies aren't fully repeatable.

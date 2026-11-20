@@ -909,8 +909,30 @@ class Bm25Index:
         self.db.execute("CREATE VIRTUAL TABLE IF NOT EXISTS chunks USING fts5(terms, chunk_id UNINDEXED, "
                         "doc_id UNINDEXED, ticker UNINDEXED, fiscal_year UNINDEXED, sector_slug UNINDEXED, "
                         "tokenize = \"unicode61 tokenchars '$,.%'\")")
+        self._spans = None
+
+    def spans(self) -> dict:
+        """{doc_id: (ticker, fiscal_year, sector_slug, first rowid, last rowid, contiguous)}, read once (~0.6 s).
+
+        ``replace`` writes a filing's chunks in one batch, so they hold one block of rowids. Searching that block
+        (``rowid BETWEEN``) gives the same BM25 ranking as matching the whole index and then filtering on the
+        unindexed ticker/year columns, 15-30x faster (834 -> 56 ms on the 317,037-chunk index)."""
+        if self._spans is None:
+            rows = self.db.execute("SELECT doc_id, ticker, fiscal_year, sector_slug, MIN(rowid), MAX(rowid), COUNT(*) "
+                                   "FROM chunks GROUP BY doc_id").fetchall()
+            self._spans = {d: (str(t or "").upper(), y, slug, lo, hi, hi - lo + 1 == n)
+                           for d, t, y, slug, lo, hi, n in rows}
+        return self._spans
+
+    def filings(self, ticker, year=None, sectors=()):
+        """doc_ids of the filings a ticker/year/sector filter selects; None without a ticker (no shortcut)."""
+        if not ticker:
+            return None
+        return [d for d, (t, y, slug, *_rest) in self.spans().items()
+                if t == ticker.upper() and (not year or str(y) == str(int(year))) and (not sectors or slug in sectors)]
 
     def replace(self, doc_id, records):
+        self._spans = None
         with self.db:
             self.db.execute("DELETE FROM chunks WHERE doc_id = ?", (doc_id,))
             self.db.executemany("INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?)", [
@@ -921,8 +943,18 @@ class Bm25Index:
         words = sorted(set(fi.terms(query)))
         if not words:
             return []
+        match = " OR ".join('"' + w.replace('"', '""') + '"' for w in words)
+        docs = self.filings(ticker, year, sectors)
+        spans = self.spans()
+        if docs is not None and all(spans[d][5] for d in docs):
+            rows = []
+            for d in docs:                                   # each filing's rowid block (same ranking, much faster)
+                rows += self.db.execute("SELECT chunk_id, bm25(chunks) FROM chunks WHERE chunks MATCH ? AND rowid "
+                                        "BETWEEN ? AND ? ORDER BY bm25(chunks) LIMIT ?",
+                                        (match, spans[d][3], spans[d][4], top_k)).fetchall()
+            return [chunk_id for chunk_id, _ in sorted(rows, key=lambda r: r[1])[:top_k]]
         sql = "SELECT chunk_id FROM chunks WHERE chunks MATCH ?"
-        params = [" OR ".join('"' + w.replace('"', '""') + '"' for w in words)]
+        params = [match]
         if ticker:
             sql, params = sql + " AND ticker = ?", params + [ticker.upper()]
         if year:
@@ -994,6 +1026,10 @@ class ChromaStore:
         sectors = sorted(parse_sectors(sector) or [])
         conditions += [{"sector_slug": sectors[0]} if len(sectors) == 1 else {"sector_slug": {"$in": sectors}}] if sectors else []
         where = conditions[0] if len(conditions) == 1 else {"$and": conditions} if conditions else None
+        docs = self.bm25.filings(ticker, year, sectors) if ticker and year else None
+        if docs:        # none found (a sidecar missing the filing): keep the ticker/year filter
+            # One indexed field instead of $and of ticker and year: 292 -> 75 ms per query on this index.
+            where = {"doc_id": docs[0]} if len(docs) == 1 else {"doc_id": {"$in": docs}}
         found, rankings = {}, {}
         if hybrid.uses(mode, "dense"):
             result = self.collection.query(query_embeddings=[vector], n_results=max(top_k, candidates), where=where,

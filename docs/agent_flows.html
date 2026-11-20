@@ -631,7 +631,7 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
     R --&gt;|plan not buildable| CR[critic_step]
     SF --&gt; SS[sector_series_step - statement row in code; else broadened search + row; else LLM; fixed panel + sector table in code]
     SS --&gt;|fewer than 2 companies verified| CR
-    SS --&gt; A[answer_step - sector prompt]
+    SS --&gt; A[answer_step - written in code from the table]
     A --&gt; CR
     CR --&gt;|repair once| A
     CR --&gt; GV[governance_step]</pre>
@@ -661,18 +661,18 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 </tr>
 <tr>
   <td><code>answer_step</code></td>
-  <td>Sector prompt: the table, the panel's figures with chunk IDs and who was left out; no new numbers</td>
-  <td><strong>Yes</strong></td>
+  <td><strong>Written in code</strong> (<code>answer_text</code>) from the table: totals, changes, CAGR, the panel's figures with chunk IDs and who was left out. Until 21 Nov an LLM wrote it; on hosted Qwen3-8B that and its judge took ~55 s and the judge's reply on 24 figures was cut off</td>
+  <td>No</td>
 </tr>
 <tr>
   <td><code>critic_step</code>, <code>governance_step</code></td>
-  <td>As in section 6. Extra human-review triggers: <code>low_sector_coverage</code> (panel under half the companies read) and <code>unusual_sector_change</code> (a company moved more than <code>RAG_SECTOR_OUTLIER_PCT</code>, default 50%, in a year)</td>
-  <td>Yes (judge)</td>
+  <td>Citations checked as in section 6; every figure checked in code (<code>numeric_grounding</code> against the cited chunks and the calculator, <code>support_check.method: code_table</code>), no LLM judge and no repair. Extra human-review triggers: <code>low_sector_coverage</code> (panel under half the companies read) and <code>unusual_sector_change</code> (a company moved more than <code>RAG_SECTOR_OUTLIER_PCT</code>, default 50%, in a year)</td>
+  <td>No</td>
 </tr>
 </tbody>
 </table>
 <p>Budget: 8 steps, as the retry runs inside <code>sector_series_step</code> (Track B's 10-step cap holds with one repair). A sector request gets <code>RAG_SECTOR_TIMEOUT_SECONDS</code> (default 300) instead of the 60-second request deadline. The response's <code>sector_trend</code> holds <code>rows</code>, <code>panel</code>, <code>excluded</code>, <code>companies</code> (each figure with <code>method</code> <code>label</code> or <code>llm</code>, page and chunk), the CAGRs and <code>unusual_changes</code>; Streamlit shows the sector table, a chart of the total and the per-company figures.</p>
-<p><strong>Live check (local Chroma index, 180 min500 filings, mock LLM, 13 November 2026).</strong> &quot;How did healthcare revenue trend from 2022 to 2025?&quot; → <code>sector_trend</code>, 8 steps, 24 searches, 33 s. AbbVie (58,054 / 54,318 / 56,334 / 61,160) and Amgen (26,323 / 28,190 / 33,424 / 36,751) read from their statement rows; Abbott left out (no FY2023–24 statement row in the text layer, those pages were skipped at ingest); Danaher, Gilead and Intuitive Surgical left out (filings missing for some years). Sector total 84,377 → 97,911 USD m, CAGR 5.08%. &quot;How did banking net interest income change from 2022 to 2025?&quot; → no panel: bank income statements were rarely in the top hits and segment tables repeat the year header, so code read 5 of 32 figures and the line check rejected every mock guess; the answer says a sector trend needs at least 2 companies. A hosted extractor is needed for banks.</p>
+<p><strong>Live check (local Chroma index, 180 min500 filings, mock LLM, 13 November 2026).</strong> &quot;How did healthcare revenue trend from 2022 to 2025?&quot; → <code>sector_trend</code>, 8 steps, 24 searches, 33 s. AbbVie (58,054 / 54,318 / 56,334 / 61,160) and Amgen (26,323 / 28,190 / 33,424 / 36,751) read from their statement rows; Abbott left out (no FY2023–24 statement row in the text layer, those pages were skipped at ingest); Danaher, Gilead and Intuitive Surgical left out (filings missing for some years). Sector total 84,377 → 97,911 USD m, CAGR 5.08%. &quot;How did banking net interest income change from 2022 to 2025?&quot; → no panel: bank income statements were rarely in the top hits and segment tables repeat the year header, so code read 5 of 32 figures and the line check rejected every mock guess; the answer says a sector trend needs at least 2 companies. A hosted extractor is needed for banks. With the hosted LLM and the bank row labels added on 21 Nov, banking net income 2022–2025 reads 21 of 32 figures in code, builds a 3-bank panel and answers in about 40 s (<a href="end_to_end_walkthrough.html">end_to_end_walkthrough</a> 7.4).</p>
 <h2>7b. Multi-agent view of the three flows</h2>
 <p>All three flows are <strong>multi-agent flows</strong>: each question passes through several agents with separate roles, prompts and outputs, which hand work to each other. A critic agent can send work back for a rewrite. In the router flow, a supervisor agent also delegates to a specialist agent.</p>
 <h3>7b.1 The agents</h3>

@@ -55,7 +55,7 @@ critic, retrieval from the Chroma index, and the hosted LLM's answer. Every resu
 </tr>
 <tr>
 <td>LangSmith</td>
-<td>Tracing per request only; 5 evidence traces (one per agent), 12 in total with the reruns (section 9)</td>
+<td>Tracing per request only; 5 evidence traces (one per agent), 13 in total with the reruns (section 9)</td>
 </tr>
 </tbody>
 </table>
@@ -264,14 +264,14 @@ asks with buttons (a company list, years, Yes/No).</p>
 <tr>
 <td><code>answer_step</code></td>
 <td><code>prompts/financial.py</code></td>
-<td>The answer, citing chunk IDs; <code>CALC[...]</code> goes to the calculator</td>
-<td>Yes</td>
+<td>The answer, citing chunk IDs; <code>CALC[...]</code> goes to the calculator. Sector trends: written in code from the verified table</td>
+<td>Yes (sector: no)</td>
 </tr>
 <tr>
 <td><code>critic_step</code></td>
 <td><code>financial_tools.numeric_grounding</code> + support judge</td>
-<td>Every figure must appear in a cited chunk; the judge must support every claim; one repair</td>
-<td>Yes</td>
+<td>Every figure must appear in a cited chunk; the judge must support every claim; one repair (none when the judge's reply was cut off). Sector trends: figures checked in code only</td>
+<td>Yes (sector: no)</td>
 </tr>
 <tr>
 <td><code>governance_step</code></td>
@@ -338,7 +338,7 @@ asks with buttons (a company list, years, Yes/No).</p>
 <td>Support judge</td>
 <td>LLM</td>
 <td>A claim the cited evidence doesn't state</td>
-<td>Caught the misread Chevron chunk; missed two &quot;right filing, wrong row&quot; answers (section 8)</td>
+<td>Caught the misread Chevron chunk; missed two &quot;right filing, wrong row&quot; answers (section 8); not used for sector answers (written in code)</td>
 </tr>
 <tr>
 <td>Citation check</td>
@@ -356,7 +356,7 @@ asks with buttons (a company list, years, Yes/No).</p>
 <td>Grounding policy</td>
 <td>Code</td>
 <td>Unverified generated text</td>
-<td>2 answers replaced by cited excerpts (<code>evidence_only</code>)</td>
+<td>1 answer replaced by cited excerpts (<code>evidence_only</code>, the Chevron chart)</td>
 </tr>
 </tbody>
 </table>
@@ -518,7 +518,10 @@ sent for human review. A retrieval miss, handled safely.</p>
 <p><strong>Verdict: correct.</strong> All four figures match JPM's consolidated statements; the arithmetic was done in code.</p>
 <h3>7.4 Sector trend agent (<code>sector_trend_graph</code>)</h3>
 <p><strong>Question:</strong> &quot;How did banking sector net income trend from 2022 to 2025?&quot;
-<a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa54-76ed-7410-9a42-e3df6321f499?poll=true" target="_blank" rel="noopener">LangSmith trace</a></p>
+<a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa7c-f7a9-7172-b110-b42b424c3f92?poll=true" target="_blank" rel="noopener">LangSmith trace</a>
+(after the speed-ups below; the
+<a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa54-76ed-7410-9a42-e3df6321f499?poll=true" target="_blank" rel="noopener">earlier run</a>
+took 116 s)</p>
 <table>
 <thead>
 <tr>
@@ -533,23 +536,38 @@ sent for human review. A retrieval miss, handled safely.</p>
 </tr>
 <tr>
 <td><code>sector_fetch_step</code></td>
-<td>32 searches (8 banks × 4 years)</td>
+<td>32 searches (8 banks × 4 years), 4 at a time: 14 s</td>
 </tr>
 <tr>
 <td><code>sector_series_step</code></td>
-<td>Each figure read from the statement row in code first; the LLM only where no row matched, and its figure kept only on a line naming the measure. Panel = banks verified in <strong>every</strong> year</td>
+<td>Each figure read from the statement row in code first (21 of 32); one broadened search for the rest (8 s), the row again, and only then the LLM, whose figure is kept only on a line naming the measure. Panel = banks verified in <strong>every</strong> year</td>
 </tr>
 <tr>
-<td><code>answer_step</code> → <code>critic_step</code></td>
-<td>24 figures grounded in code; the support judge's reply was cut off (below)</td>
+<td><code>answer_step</code></td>
+<td><strong>Written in code</strong> from the table (no LLM call): totals, changes, CAGR, each company's figures with their chunk IDs, and the banks left out with the reason</td>
+</tr>
+<tr>
+<td><code>critic_step</code></td>
+<td>Citations valid; all 26 figures checked in code against the cited chunks and the calculator (<code>support_check.method: code_table</code>, <code>supported</code>); no LLM judge</td>
 </tr>
 <tr>
 <td>Result</td>
-<td><code>evidence_only</code>, 117 s, 10 of 10 steps; human review (<code>unsupported_claims</code>, <code>low_sector_coverage</code>)</td>
+<td><code>pending_human_review</code> (only <code>low_sector_coverage</code>: 3 of 8 banks in the panel), 40 s, 8 of 10 steps</td>
 </tr>
 </tbody>
 </table>
-<p>The panel the code built (USD millions):</p>
+<blockquote>
+<p>Banking net income, FY2022–FY2025, for the 3 companies whose figure is verified in every year (Bank of America
+(BAC), Fifth Third Bancorp (FITB), JPMorgan Chase (JPM)): the panel total went from $67,650 million in FY2022 to
+$90,079 million in FY2025, a compound annual growth rate of 10.02%.</p>
+<ul>
+<li>FY2023: $78,416 million (+15.91% on FY2022); median company change -3.68%; 1 of 3 companies grew.</li>
+<li>FY2024: $87,917 million (+12.12% on FY2023); median company change +2.33%; 2 of 3 companies grew.</li>
+<li>FY2025: $90,079 million (+2.46% on FY2024); median company change +8.99%; 2 of 3 companies grew.</li>
+</ul>
+<p>Company figures, each cited (for example JPM FY2025 57,048 [annual_report_edgar_ars_JPM_2025_p0198_vlm0]), then
+the banks not in the panel and why.</p>
+</blockquote>
 <table>
 <thead>
 <tr>
@@ -591,12 +609,42 @@ sent for human review. A retrieval miss, handled safely.</p>
 </tr>
 </tbody>
 </table>
-<p>Five banks were dropped because a year's figure couldn't be verified (BNY, C, COF, STT, TFC), so the panel is three
-banks and the answer is flagged <code>low_sector_coverage</code>. The figures shown are correct.</p>
-<p><strong>Why <code>evidence_only</code>:</strong> the LLM support judge lists each claim as JSON. For 24 figures, its reply ran past the
-1,024-token output limit and was cut off, so no verdict could be parsed and the answer was withheld (fail closed).
-The table above is in the result (<code>sector_trend</code>) and on screen in Streamlit's &quot;Sector trend&quot; panel (expanded by
-default); only the generated prose was withheld.</p>
+<p><strong>Verdict: correct</strong>, and flagged for review because the panel is small. BNY, Citi, Capital One, State Street and
+Truist were left out because at least one year's figure couldn't be verified: for those, the search didn't bring up
+the income statement page. That's a retrieval limit, not a reading error.</p>
+<p><strong>Speed-ups made on 21 Nov (116 s → 40 s, 54,836 → 25,554 tokens):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Saving</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The sector answer is written in code from the verified table; the critic checks its figures in code instead of an LLM judge</td>
+<td>~55 s; the answer is no longer withheld because the judge's reply was cut off</td>
+<td><code>financial_sector_trend.answer_text</code>, <code>answer_node</code>, <code>critic_node</code></td>
+</tr>
+<tr>
+<td>No repair when the answer was written in code or the judge's own reply was cut off (a rewrite can't help)</td>
+<td>~30 s in the earlier run; also applies to Q&amp;A and trend</td>
+<td><code>should_repair</code>, <code>parse_support</code> (<code>judge_cut_off</code>)</td>
+</tr>
+<tr>
+<td>More statement-row labels for banks: &quot;Net income (loss)&quot;, &quot;…attributable to U.S. Bancorp&quot;, &quot;…applicable to shareholders of The Bank of New York Mellon…&quot;, dot leaders; rows for common shareholders and before noncontrolling interests are skipped so every bank's figure is the same concept</td>
+<td>21 of 32 figures read in code (was 16), fewer LLM calls</td>
+<td><code>financial_sector_trend.QUALIFIED_LABELS</code></td>
+</tr>
+<tr>
+<td>Faster searches: BM25 searches only the filing's block of rows (same ranking), and Chroma filters on the one <code>doc_id</code> field</td>
+<td>BM25 834 → 56 ms, Chroma 292 → 75 ms per search; about 1.2 s → 0.4 s per search on this PC</td>
+<td><code>financial_ingest_chroma_db.Bm25Index.spans</code>, <code>ChromaStore.search</code></td>
+</tr>
+</tbody>
+</table>
+<p>Batching the query embeddings was also considered, but embedding a query takes only 15 ms here, so it wouldn't help.</p>
 <h3>7.5 Fund agent (<code>fund_graph</code>)</h3>
 <p><strong>Question:</strong> &quot;What are the top 10 holdings of the Vanguard 500 Index Fund?&quot;
 <a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa56-3c2a-7b52-b138-096f5b453a7d?poll=true" target="_blank" rel="noopener">LangSmith trace</a></p>
@@ -715,9 +763,9 @@ default); only the generated prose was withheld.</p>
 <tr>
 <td>Banking net income 2022–2025</td>
 <td>sector trend</td>
-<td>evidence_only</td>
-<td>117 s</td>
-<td>Table correct; prose withheld</td>
+<td>pending_human_review</td>
+<td>40 s (was 117 s)</td>
+<td>Yes; small panel flagged</td>
 </tr>
 <tr>
 <td>Vanguard 500 top 10</td>
@@ -769,7 +817,7 @@ covers each):</p>
 <td>4</td>
 <td>Sector answer prompt over the model's 8,192-token context</td>
 <td>HTTP 400, request failed after ~70 s</td>
-<td>Sector evidence excerpts capped at 4,000 characters (<code>SECTOR_CONTEXT_CHARS</code>); the table already carries every figure and chunk ID</td>
+<td>First a smaller evidence budget; then (7.4) the sector answer is written in code, so there is no answer prompt at all</td>
 </tr>
 <tr>
 <td>5</td>
@@ -787,8 +835,10 @@ covers each):</p>
 concept or year (company total for a segment, a pro forma note for the actual). Number grounding can't catch this,
 and Qwen3-8B as judge passed both. This matches the Week 1 analysis, where it was the largest failure type with
 RAG (<a href="week1_failure_scenarios.html">week1_failure_scenarios.md</a>).</li>
-<li><strong>Long answers and the judge</strong>: with 24 figures the judge's JSON still doesn't fit in 1,024 tokens, so sector
-answers end as <code>evidence_only</code> (safe, but no prose). Judging in batches would fix it.</li>
+<li><strong>Long answers and the judge</strong>: a Q&amp;A or trend answer with many figures can still make the judge's JSON exceed
+1,024 tokens; it then ends as <code>evidence_only</code> (safe), now without a pointless repair. Sector answers no longer use
+the judge (7.4).</li>
+<li><strong>Sector panels</strong>: some banks' income statements aren't found by the search, so they drop out of the panel.</li>
 <li><strong>Retrieval misses</strong> (auditor name, Chevron chart): the answers were safe, not wrong; a larger <code>top_k</code> or the
 ColPali visual search would help.</li>
 </ul>
@@ -832,9 +882,9 @@ tokens).</p>
 <tr>
 <td>Sector trend</td>
 <td>Banking 2022–2025</td>
-<td>116 s</td>
-<td>54,836</td>
-<td><a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa54-76ed-7410-9a42-e3df6321f499?poll=true" target="_blank" rel="noopener">open</a></td>
+<td>40 s</td>
+<td>25,554</td>
+<td><a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa7c-f7a9-7172-b110-b42b424c3f92?poll=true" target="_blank" rel="noopener">open</a></td>
 </tr>
 <tr>
 <td>Fund</td>
@@ -845,9 +895,9 @@ tokens).</p>
 </tr>
 </tbody>
 </table>
-<p>The other seven traces in the project (<code>annual-report-copilot</code>, 20–21 Nov) record the bugs before their fixes: the
-misrouted Citi question, two refusals by the plain-text step, two sector runs rejected for context length, and two
-fund runs cut off by the token limits. The links open only for members of the LangSmith workspace; for a report,
+<p>The other eight traces in the project (<code>annual-report-copilot</code>, 20–21 Nov) record the runs before the fixes: the
+misrouted Citi question, two refusals by the plain-text step, two sector runs rejected for context length, two fund
+runs cut off by the token limits, and the 116 s sector run before the speed-ups. The links open only for members of the LangSmith workspace; for a report,
 take screenshots of the trace tree.</p>
 <h2>10. Reproducing</h2>
 <pre><code class="language-powershell"># API and Streamlit as in section 2, then:
@@ -857,7 +907,7 @@ python -m scripts.evaluation.streamlit_walkthrough trend fund      # selected ca
 </code></pre>
 <p>The script sends each question through Streamlit's own <code>build_payload</code> and <code>post_json</code> and writes
 <code>output/walkthrough/&lt;case&gt;.json</code> (the full response, including <code>agent_run</code>) and <code>summary.json</code>. A full run takes about
-5 minutes on this PC and makes about 50 hosted-LLM calls (the sector trend alone makes 19). In the Streamlit chat,
+4 minutes on this PC and makes about 40 hosted-LLM calls. In the Streamlit chat,
 the same questions take the same paths; the wording, and sometimes a figure the LLM picks, can differ between runs
 because the hosted model's replies aren't fully repeatable.</p>
 <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></body></html>
