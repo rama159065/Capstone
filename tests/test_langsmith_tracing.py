@@ -228,3 +228,37 @@ def test_colpali_pages_show_as_documents() -> None:
     docs = ls.as_documents([{"doc_id": "d", "page": 35, "rank": 1, "payload": {"text": "Net production", "ticker": "CVX"}}])
     assert docs["documents"][0]["page_content"] == "Net production"
     assert docs["documents"][0]["metadata"] == {"doc_id": "d", "ticker": "CVX", "page": 35, "rank": 1}
+
+
+def test_api_continues_a_callers_trace_and_nests_the_chat_under_the_turn(runs, monkeypatch) -> None:
+    monkeypatch.setattr(api_app, "run_technique", lambda technique, provider, config: {
+        "technique": technique, "final_status": "answered", "answer": "A [c1].",
+        "citation_check": {"valid": True, "cited_chunk_ids": ["c1"], "allowed_chunk_ids": ["c1"]},
+        "evidence": [{"chunk_id": "c1", "source_type": "annual_report_pdf", "page": 1, "preview": "e"}]})
+    client = TestClient(api_app.app)
+    with ls.request_tracing(enabled=True, project_name="ui-project", metadata={"client": "streamlit"}):
+        def ui_call():
+            return client.post("/conversation/financial_report_qa", headers=ls.outgoing_trace_headers(), json={
+                "query": "What was Costco revenue in 2025?", "clarify": False, "enable_langsmith": True}).json()
+        turn = ls.run_traced("streamlit.conversation", ui_call)
+    assert turn["status"] == "answered"
+    by_name = {r["name"]: r for r in runs}
+    root = by_name["streamlit.conversation"]
+    assert root["parent"] is None
+    assert by_name["api.conversation_turn"]["parent"] == root["id"]
+    chat = next(r for r in runs if r["name"].startswith("api.financial_report_qa."))
+    assert chat["parent"] == by_name["api.conversation_turn"]["id"]           # not re-parented to the UI run
+    assert {r["project"] for r in runs} == {"ui-project"}
+    assert by_name["api.conversation_turn"]["metadata"]["client"] == "streamlit"
+
+
+def test_streamlit_post_json_sends_trace_headers_only_when_traced(runs, monkeypatch) -> None:
+    from scripts.ui import api_streamlit_app as ui
+    sent = []
+    monkeypatch.setattr(ui, "_post_json", lambda base, path, payload, extra=None: sent.append(extra) or {"ok": True})
+    ui.post_json("http://api", "/conversation/financial_report_qa", {"query": "q", "enable_langsmith": True})
+    assert "langsmith-trace" in sent[0] and "X-Request-ID" in sent[0]
+    assert [r["name"] for r in runs] == ["streamlit.conversation"]
+    assert runs[0]["metadata"]["client"] == "streamlit"
+    ui.post_json("http://api", "/conversation/financial_report_qa", {"query": "q", "enable_langsmith": False})
+    assert sent[1] is None and len(runs) == 1

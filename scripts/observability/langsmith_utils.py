@@ -106,12 +106,17 @@ def tracing_status() -> dict[str, Any]:
 
 @contextlib.contextmanager
 def request_tracing(*, enabled: bool, project_name: str | None = None, tags: list[str] | None = None,
-                    metadata: dict[str, Any] | None = None) -> Iterator[dict[str, Any]]:
+                    metadata: dict[str, Any] | None = None,
+                    parent_headers: dict[str, str] | None = None) -> Iterator[dict[str, Any]]:
     """Trace what runs inside this block to LangSmith when ``enabled`` (or ``LANGSMITH_TRACING``) and a key is set.
 
     Yields the status dict the API returns as ``langsmith``. Unlike :func:`configure_langsmith` it changes no
     environment variable: tracing, project, tags and metadata live in a ``tracing_context`` for this request (and the
     worker threads it starts with ``copy_context``). Nested blocks keep the outer project, metadata and tags.
+
+    ``parent_headers`` (the ``langsmith-trace`` and ``baggage`` headers of an incoming HTTP request, see
+    :func:`outgoing_trace_headers`) continue the caller's trace: the runs here become children of the caller's run,
+    in the caller's project, so Streamlit -> FastAPI -> agents is one trace.
     """
     if not (enabled or tracing_requested_by_env()):
         yield {"enabled": False, "reason": "not_requested"}
@@ -130,8 +135,15 @@ def request_tracing(*, enabled: bool, project_name: str | None = None, tags: lis
     merged_metadata = {**(outer.get("metadata") or {}), **(metadata or {})}
     merged_tags = list(dict.fromkeys([*(outer.get("tags") or []), *(tags or [])]))
     project = (outer.get("project_name") if outer.get("enabled") else None) or project_name
+    parent = dict(parent_headers) if parent_headers and parent_headers.get("langsmith-trace") else None
+    if parent:                     # the caller's trace applies once, at the top: inside a run, keep that run as parent
+        from langsmith.run_helpers import get_current_run_tree
+        if get_current_run_tree() is not None:
+            parent = None
+    if parent:
+        project = baggage_project(parent.get("baggage")) or project
     with tracing_context(enabled=True, project_name=project, tags=merged_tags or None,
-                         metadata=merged_metadata or None):
+                         metadata=merged_metadata or None, **({"parent": parent} if parent else {})):
         yield {"enabled": True, "project": project or default_project("default"),
                "endpoint": os.environ.get("LANGSMITH_ENDPOINT") or os.environ.get("LANGCHAIN_ENDPOINT")}
 
@@ -264,3 +276,28 @@ def traced_retrieval(name: str, call: Callable[[], list[dict[str, Any]]], *, que
 
     traceable(name=name, run_type="retriever", metadata=metadata or {})(search)(query, filters or {})
     return holder["hits"]
+
+
+TRACE_HEADERS = ("langsmith-trace", "baggage")
+
+
+def baggage_project(baggage: str | None) -> str | None:
+    """The ``langsmith-project`` entry of a W3C baggage header (the caller's project), if any."""
+    from urllib.parse import unquote
+    for item in (baggage or "").split(","):
+        key, _, value = item.strip().partition("=")
+        if key == "langsmith-project" and value:
+            return unquote(value)
+    return None
+
+
+def outgoing_trace_headers() -> dict[str, str]:
+    """Headers that let a downstream service continue the current run's trace ({} outside a traced run)."""
+    if not langsmith_is_enabled():
+        return {}
+    try:
+        from langsmith.run_helpers import get_current_run_tree
+    except Exception:
+        return {}
+    run = get_current_run_tree()
+    return dict(run.to_headers()) if run is not None else {}

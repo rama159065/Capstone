@@ -29,7 +29,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
-from scripts.observability.langsmith_utils import default_project, request_tracing, run_traced, tracing_status
+from scripts.observability.langsmith_utils import (
+    TRACE_HEADERS, default_project, request_tracing, run_traced, tracing_status,
+)
 from scripts.common.runtime_profile import apply_profile, describe as describe_runtime
 from scripts.agents.financial_clarifier import Clarifier, ConversationStore, name as company_name
 from scripts.common.agent_limits import max_steps
@@ -48,6 +50,10 @@ FINANCIAL_DOMAIN = "financial_report_qa"
 ALL_DOMAINS = (FINANCIAL_DOMAIN,)      # this service is the financial report copilot only
 logger = logging.getLogger(__name__)
 RUNTIME = apply_profile()   # local or colab defaults, before any retrieval runs
+# LangSmith distributed-trace headers of the current request (langsmith-trace, baggage), e.g. from Streamlit:
+# the request's runs join the caller's trace instead of starting a new one.
+trace_parent_context: contextvars.ContextVar[dict[str, str] | None] = contextvars.ContextVar(
+    "trace_parent", default=None)
 request_id_context: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "api_request_id", default=None
 )
@@ -584,6 +590,8 @@ async def log_request_and_enforce_rate_limit(request: Request, call_next):
         request_id = str(uuid4())
 
     request_id_token = request_id_context.set(request_id)
+    trace_parent_token = trace_parent_context.set(
+        {name: request.headers[name] for name in TRACE_HEADERS if request.headers.get(name)} or None)
     request.state.request_id = request_id
     started_at = time.perf_counter()
     client_id = request.client.host if request.client is not None else "unknown"
@@ -644,6 +652,7 @@ async def log_request_and_enforce_rate_limit(request: Request, call_next):
         raise
     finally:
         request_id_context.reset(request_id_token)
+        trace_parent_context.reset(trace_parent_token)
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -743,6 +752,7 @@ def request_trace(request: Any, fallback_project: str, metadata: dict[str, Any] 
         project_name=getattr(request, "langsmith_project", None) or default_project(fallback_project),
         tags=["capstone", "fastapi", FINANCIAL_DOMAIN],
         metadata={**trace_request_metadata(), **(metadata or {})},
+        parent_headers=trace_parent_context.get(),
     ) as tracing:
         logger.info(
             "langsmith_trace_configured request_id=%s enabled=%s reason=%s project=%s",

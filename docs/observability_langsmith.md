@@ -22,8 +22,8 @@ One ID joins all three: the **request ID** (`X-Request-ID`). The API puts it on 
 
 ```mermaid
 flowchart LR
-    U[Streamlit / client] -->|"POST + X-Request-ID"| MW[API middleware<br/>request ID + access log]
-    MW --> RT["request_trace()<br/>tracing_context for this request only"]
+    U["Streamlit<br/>streamlit.#lt;route#gt; root run"] -->|"POST + X-Request-ID<br/>+ langsmith-trace, baggage"| MW[API middleware<br/>request ID + trace headers + access log]
+    MW --> RT["request_trace()<br/>continues the Streamlit trace"]
     RT --> CONV["api.conversation_turn<br/>(thread_id = conversation_id)"]
     CONV --> CLAR[clarifier]
     CONV --> CHAT["api.financial_report_qa.#lt;technique#gt;"]
@@ -38,36 +38,40 @@ flowchart LR
 
 How the pieces connect:
 
-1. **Middleware** gives every request an ID (the caller's `X-Request-ID` if it is a UUID, otherwise a new one) and writes one access-log line when the request finishes.
-2. **`request_trace`** decides whether this request is traced: either the request asks (`enable_langsmith: true`, the Streamlit "LangSmith tracing" toggle) or `LANGSMITH_TRACING=true` is set for the whole API. Either way it needs a key. It opens a LangSmith `tracing_context` holding the project, the tags and the metadata (`request_id`, and `thread_id` for conversations). Nothing in the process environment changes, so other requests are unaffected.
-3. **Everything inside inherits the context.** The tracing context lives in Python context variables, and the worker threads (parallel searches in `financial_tools.fan_out`, model calls in `resilience.Calls`) start with `copy_context()`. So every LangGraph node, LLM call and tool call joins the same trace tree with the same metadata.
-4. **LLM calls are `llm` runs.** `MockLLM` and `HostedChatLLM` go through `traced_llm`, which records the role/content messages, the reply, the model name and, for hosted models, the token counts from the response's `usage`.
+1. **Streamlit starts the trace.** With the sidebar's *LangSmith tracing* toggle on (or `LANGSMITH_TRACING=true`) and a key in the Streamlit process, each question is a root run `streamlit.conversation` (or `streamlit.chat`) with `client=streamlit` and a new request ID. The HTTP call carries that ID as `X-Request-ID` and LangSmith's distributed-trace headers (`langsmith-trace`, `baggage`). Without a key in the Streamlit process, the trace starts at the API instead.
+2. **Middleware** gives every request an ID (the caller's `X-Request-ID` if it is a UUID, otherwise a new one), keeps the incoming trace headers for the request, and writes one access-log line when the request finishes.
+3. **`request_trace`** decides whether this request is traced: either the request asks (`enable_langsmith: true`, the Streamlit "LangSmith tracing" toggle) or `LANGSMITH_TRACING=true` is set for the whole API. Either way it needs a key. It opens a LangSmith `tracing_context` holding the project, the tags and the metadata (`request_id`, and `thread_id` for conversations). Nothing in the process environment changes, so other requests are unaffected. When the request carries Streamlit's trace headers, the API's runs become children of the Streamlit run, in its project: one trace from the browser to the LLM. The headers apply once, at the top. Inner runs keep their own parent.
+4. **Everything inside inherits the context.** The tracing context lives in Python context variables, and the worker threads (parallel searches in `financial_tools.fan_out`, model calls in `resilience.Calls`) start with `copy_context()`. So every LangGraph node, LLM call and tool call joins the same trace tree with the same metadata.
+5. **LLM calls are `llm` runs.** Searches are `retriever` runs (§4). `MockLLM` and `HostedChatLLM` go through `traced_llm`, which records the role/content messages, the reply, the model name and, for hosted models, the token counts from the response's `usage`.
 
 ## 3. What a trace shows
 
-One `/conversation/financial_report_qa` turn with the `agentic_graph` technique produces this tree. The run names below are the ones the test `test_agentic_graph_trace_shows_every_node_and_llm_call` checks.
+One question asked in Streamlit (conversation mode, the default `router` technique) produces this tree. It was captured on 20 November 2026 from the real Streamlit app (driven by Streamlit's `AppTest`), a real FastAPI process on the Chevron 2022 Chroma test index and the mock LLM, with both processes uploading to a stand-in LangSmith endpoint. That produced one trace of 26 runs in one project.
 
 ```text
-api.conversation_turn                         chain   thread_id, conversation_id, request_id
-├─ clarifier                                  chain   company / year / measure resolution
-└─ api.financial_report_qa.agentic_graph      chain   technique, provider, ticker, year, sector, rag_backend
-   ├─ financial_workflow                      chain
-   │  └─ LangGraph
-   │     ├─ security_step                     prompt-injection / unsafe-input decision
-   │     ├─ plain_text_step → mock_llm|hosted_llm   domain-intent classifier prompt and reply
-   │     ├─ plan_step → hosted_llm            planner prompt, proposed tools
-   │     ├─ retrieve_step                     searches per company × year
-   │     │  └─ retrieve.<backend>            retriever run: query, filters, hits as documents (§4)
-   │     ├─ evidence_guard_step, after_evidence    retry decision
-   │     ├─ answer_step → hosted_llm          answer prompt with evidence, draft answer
-   │     ├─ calculator_step (when CALC[...])  operands and result
-   │     ├─ critic_step → hosted_llm          support-check judge prompt and verdict
-   │     ├─ should_repair                     repair loop decision
-   │     └─ governance_step                   human-review triggers, final status
-   └─ api.grounding_policy                    citation validation, answer withheld or kept
+streamlit.conversation                        chain     Streamlit process: question, client=streamlit, request_id
+└─ api.conversation_turn                      chain     FastAPI: thread_id = conversation_id, request_id
+   ├─ clarifier                               chain     company / year / measure resolution
+   ├─ api.financial_report_qa.router          chain     technique, provider, ticker, year, sector, rag_backend
+   │  └─ financial_workflow                   tool
+   │     └─ LangGraph
+   │        ├─ security_step                  prompt-injection / unsafe-input decision
+   │        ├─ plain_text_step → mock_llm     llm       domain-intent classifier prompt and reply
+   │        ├─ route_step → mock_llm          llm       supervisor route (lookup, trend, sector, fund, report)
+   │        ├─ retrieve_step
+   │        │  └─ retrieve.financial_vlm      retriever query, filters, 5 documents (chunk ID, page, reader, scores)
+   │        ├─ evidence_guard_step → after_evidence     retry decision
+   │        ├─ answer_step → mock_llm         llm       answer prompt with evidence, draft answer
+   │        ├─ calculator_step                          when the answer has CALC[...]
+   │        ├─ critic_step → mock_llm         llm       support-check judge prompt and verdict
+   │        ├─ should_repair                            repair loop decision
+   │        └─ governance_step                          human-review triggers, final status
+   └─ api.grounding_policy                    chain     citation validation, answer withheld or kept
 ```
 
-The **router** technique adds the route step and the chosen specialist graph (trend, sector trend, fund). **Report** requests add a `report_pipeline` run.
+With the `agentic_graph` technique, `plan_step` (the planner LLM) replaces `route_step`. With a hosted model, the LLM runs are `hosted_llm`, and each holds a `hosted_model` tool run (the HTTP call, with retries). The test `test_agentic_graph_trace_shows_every_node_and_llm_call` checks the graph part, and `test_api_continues_a_callers_trace_and_nests_the_chat_under_the_turn` checks the Streamlit → API nesting.
+
+The router hands trend, sector-trend and fund questions to their own graphs, whose nodes appear under `LangGraph` in the same way. **Report** requests add a `report_pipeline` run.
 
 For each run LangSmith shows inputs, outputs, latency and errors. For `llm` runs it also shows the full prompt, the reply, the model (`ls_model_name`) and the tokens.
 
@@ -75,7 +79,8 @@ For each run LangSmith shows inputs, outputs, latency and errors. For `llm` runs
 
 | Key | Set by | Use |
 |---|---|---|
-| `request_id` | API middleware | Join the trace to the access log and the response header |
+| `request_id` | Streamlit (sent as `X-Request-ID`) or the API middleware | Join the trace to the access log and the response header |
+| `client` | Streamlit | `streamlit` on runs started from the UI |
 | `thread_id`, `conversation_id` | `/conversation` | LangSmith **Threads** view: all turns of one chat together |
 | `domain`, `technique`, `top_k`, `dense_top_k`, `bm25_top_k`, `retrieval_mode` | chat route | Filter by agent and retrieval settings |
 | `ticker`, `year`, `sector` | chat route | Find all traces for one company or sector |
@@ -202,12 +207,14 @@ python scripts\agents\financial_prompting_agent.py --llm-provider hosted --techn
 | 6 | No way to see whether tracing is configured, and a silent no-op when `LANGSMITH_TRACING` is set without a key | Demos could run untraced without notice | `/health` `langsmith` block with a `warning` | `test_health_reports_langsmith_without_the_key` |
 | 7 | The agent evaluation runner couldn't trace or link results to traces | Failed questions couldn't be inspected | `--langsmith`, `--langsmith-project`; one `X-Request-ID` per question stored in `results.jsonl` | `tests/test_evaluate_agent_api.py` |
 | 8 | Searches weren't runs of their own | A trace didn't show which backend answered or what it returned | `retrieve.<backend>` retriever run per search; the hybrid's three stages as child runs | `test_each_backend_search_is_a_retriever_run` (3 backends), `test_hybrid_stages_are_child_runs`, `test_colpali_pages_show_as_documents` |
+| 9 | The trace started at the API: the Streamlit side (question, HTTP call, waiting time) wasn't in LangSmith | No single view from the browser to the LLM | Streamlit opens a `streamlit.<route>` root run and sends `langsmith-trace`/`baggage` and `X-Request-ID`; the API continues that trace (headers applied once, at the top) | `test_api_continues_a_callers_trace_and_nests_the_chat_under_the_turn`, `test_streamlit_post_json_sends_trace_headers_only_when_traced`, live Streamlit run (§3) |
 
 All tests are offline: `RunTree.post`/`patch` are replaced, so the tests see every run that would be sent and nothing leaves the machine. The full suite passes (580 tests).
 
 ## 10. Known limits
 
 - **Answer cache:** with `ANSWER_CACHE_SECONDS` set, a repeated identical request is served from the cache. It creates no new trace, and its `langsmith` field is the stored one.
+- **Streamlit without a key:** the Streamlit root run needs `LANGSMITH_API_KEY` in the Streamlit process too. Docker Compose gives both services the same `.env`, and `cp.serve` passes the notebook's environment to both. Locally, set it in both terminals; otherwise the trace starts at the API.
 - **Multimodal routes** (`/multimodal/financial_report_qa/*`) aren't traced to LangSmith. They are not part of the Streamlit financial flow.
 - **Human review** is a status and payload in the response and the trace. No review queue stores or assigns it (see [agents_flows.md](agents_flows.md)).
 - **LangSmith plan limits** (traces per month, retention) depend on your account; check the pricing page before a large traced evaluation.

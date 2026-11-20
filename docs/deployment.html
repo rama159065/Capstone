@@ -2010,6 +2010,11 @@ docker compose exec api python -m scripts.observability.check_langsmith
 <td>No API key, <code>Authorization</code> header or bearer token</td>
 </tr>
 <tr>
+<td>Streamlit → FastAPI → agents → retrieval → LLM as one trace</td>
+<td>Real Streamlit app (<code>AppTest</code>, <em>LangSmith tracing</em> toggle on) → real API on the Chroma test index → mock LLM, both processes uploading to the stand-in</td>
+<td>One trace, 26 runs, one project: <code>streamlit.conversation</code> → <code>api.conversation_turn</code> → <code>clarifier</code>, <code>api.financial_report_qa.router</code> → LangGraph nodes → <code>retrieve.financial_vlm</code> (5 documents) and 4 LLM runs → <code>api.grounding_policy</code>. The Streamlit process needs the key too (same <code>.env</code> in Compose, the notebook's environment on Colab)</td>
+</tr>
+<tr>
 <td>All three RAG backends</td>
 <td>Same set-up, one API per backend (<code>financial_vlm</code>, <code>financial_qdrant</code>, <code>financial_hybrid</code>), a chart and a table question each</td>
 <td>All 6 traced end to end (23–26 runs, 4 LLM runs each) with a <code>retrieve.&lt;backend&gt;</code> retriever run; the hybrid's chart trace adds <code>hybrid.chroma_text</code>, <code>hybrid.colpali_pages</code> (pages 25, 8, 33) and <code>hybrid.fusion</code>. Details: <a href="observability_langsmith.html">observability_langsmith.md §4</a></td>
