@@ -56,6 +56,21 @@ def input_guard(message: str, injection: list[str], code: list[str], *, detect_e
             "sanitized_query": redact(sanitized)}
 
 
+def has_term(text: str, terms: Iterable[str]) -> bool:
+    """Whole words or phrases only: "hold" is not in "stockholders'", "sell" not in "selling, general and administrative"."""
+    lower = text.lower()
+    return any(re.search(rf"(?<![a-z]){re.escape(term.lower())}(?![a-z])", lower) for term in terms)
+
+
+def policy_refusal(message: str, policies: dict[str, list[str]], messages: dict[str, str]) -> dict[str, Any]:
+    """Requests refused by policy (advice, forecasts, personal or non-public data, creative writing), no LLM involved.
+
+    The first matching policy's message is the answer; every matching label is reported."""
+    text = canonicalize(message)
+    labels = [label for label, patterns in policies.items() if regex_labels(text, patterns, label)]
+    return {"refuse": bool(labels), "labels": labels, "message": messages.get(labels[0], "") if labels else ""}
+
+
 def injection_labels(text: str, injection: list[str], code: list[str]) -> list[str]:
     return sorted(set(regex_labels(text, injection, "prompt_injection") + regex_labels(text, code, "code_or_tool_payload")))
 
@@ -95,9 +110,8 @@ def output_filter(answer: str, injection: list[str], code: list[str],
               + regex_labels(text, code, "code_or_tool_payload")
               + regex_labels(text, SECRET_PATTERNS, "secret_or_credential")
               + regex_labels(text, SENSITIVE_DATA_PATTERNS, "sensitive_data"))
-    lower = text.lower()
     for terms, label in review_terms:
-        if any(term in lower for term in terms):
+        if has_term(text, terms):
             labels.append(label)
     labels = sorted(set(labels))
     return {"decision": decide(labels, OUTPUT_BLOCKING_LABELS), "risk_labels": labels,

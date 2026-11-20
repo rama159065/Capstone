@@ -135,3 +135,39 @@ def test_mock_run_end_to_end(tmp_path, monkeypatch):
     assert set(summary["strategies"]) == set(pb.STRATEGIES)
     assert summary["strategies"]["self_consistency"]["calls_per_question"] == 2
     assert (out / "report.md").exists() and (out / "scores.jsonl").exists()
+
+
+def test_prompt_only_context_sends_no_evidence_and_labels_memory_failures(tmp_path, monkeypatch):
+    """--context none is the Week 1 single-prompt baseline: question + prompt, no documents, no citations."""
+    eval_path = tmp_path / "eval.jsonl"
+    eval_path.write_text(json.dumps({**REVENUE, "id": "T-1"}) + "\n", encoding="utf-8")
+    monkeypatch.setattr(pb, "EVAL_SET", eval_path)
+    monkeypatch.setattr(pb, "CHUNKS", tmp_path / "missing_chunks.jsonl")      # never read for this context
+    monkeypatch.setattr(pb, "OUT_ROOT", tmp_path / "out")
+    sent = []
+
+    class Recorder(pb.MockClient):
+        def chat(self, system, user, **kwargs):
+            sent.append((system, user))
+            return super().chat(system, user, **kwargs)
+
+    monkeypatch.setattr(pb, "MockClient", Recorder)
+    args = SimpleNamespace(run_id="none", categories=None, ids=None, limit=None, top_k=5, context="none",
+                           llm_provider="mock", local_llm=False, strategies=pb.STRATEGIES, sc_samples=2,
+                           sc_temperature=0.7)
+    out = pb.run(args)
+    assert [r["hits"] for r in pb.read_jsonl(out / "retrieval.jsonl")] == [[]]
+    assert sent and all("Evidence:" not in user and "[c" not in user for _, user in sent)
+    assert all(system == pb.SYSTEM_PROMPT_ONLY for system, _ in sent)
+    pb.report(out, pb.STRATEGIES)
+    failures = {r["failure"] for r in pb.read_jsonl(out / "scores.jsonl")}
+    assert failures == {"declined_no_evidence"}                # the mock declines without evidence
+
+
+def test_prompt_only_scoring_never_blames_retrieval():
+    wrong = pb.score(REVENUE, "Revenue was $58,000 million.", None, [], "zero_shot", prompt_only=True)
+    assert not wrong["correct"] and wrong["failure"] == "hallucination_unsupported_claim"
+    right = pb.score(REVENUE, "Revenue was $61,160 million.", None, [], "zero_shot", prompt_only=True)
+    assert right["correct"]
+    declined = pb.score(REVENUE, "That figure is not available.", None, [], "zero_shot", prompt_only=True)
+    assert declined["failure"] == "declined_no_evidence"

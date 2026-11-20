@@ -27,6 +27,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import uuid
 from typing import Any
 
 import streamlit as st
@@ -37,6 +38,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.common.companies import NAMES as COMPANY_NAMES, SECTOR_NAMES  # noqa: E402 - after the repo is on sys.path
 from scripts.ui.ui_mutual_fund import render_mutual_fund  # noqa: E402
+from scripts.observability import langsmith_utils  # noqa: E402
 
 
 DEFAULT_API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")   # set by the runtime profile
@@ -87,10 +89,30 @@ def api_headers() -> dict[str, str]:
 
 
 def post_json(api_base: str, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """POST to the API. With LangSmith tracing asked for (sidebar toggle or LANGSMITH_TRACING) and a key in this
+    process, the call is a ``streamlit.<route>`` run and the API continues that trace (distributed tracing), so one
+    trace runs Streamlit -> FastAPI -> agents -> retrieval -> LLM. Without a key here the trace starts at the API."""
+    wanted = bool(payload.get("enable_langsmith")) or langsmith_utils.tracing_requested_by_env()
+    if not (wanted and langsmith_utils.has_api_key()):
+        return _post_json(api_base, path, payload)
+    request_id = str(uuid.uuid4())
+    route = path.strip("/").split("/")[0] or "api"
+    project = payload.get("langsmith_project") or langsmith_utils.default_project("capstone-financial-report-qa-api")
+    with langsmith_utils.request_tracing(enabled=True, project_name=project, tags=["capstone", "streamlit"],
+                                         metadata={"client": "streamlit", "request_id": request_id,
+                                                   "conversation_id": payload.get("conversation_id")}):
+        return langsmith_utils.run_traced(
+            f"streamlit.{route}", lambda question: _post_json(
+                api_base, path, payload, {"X-Request-ID": request_id, **langsmith_utils.outgoing_trace_headers()}),
+            payload.get("query"), run_type="chain")
+
+
+def _post_json(api_base: str, path: str, payload: dict[str, Any],
+               extra_headers: dict[str, str] | None = None) -> dict[str, Any]:
     request = urllib.request.Request(
         f"{api_base.rstrip('/')}{path}",
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", **api_headers()},
+        headers={"Content-Type": "application/json", **api_headers(), **(extra_headers or {})},
         method="POST",
     )
     try:

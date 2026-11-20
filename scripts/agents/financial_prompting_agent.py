@@ -43,6 +43,8 @@ from scripts.agents.financial_clarifier import question_scope
 from scripts.guardrails import checks as guard_checks, patterns as guard_patterns
 from scripts.prompts import financial as prompts
 from scripts.observability.langsmith_utils import (
+    traced_llm,
+    traced_retrieval,
     add_langsmith_args,
     maybe_enable_from_args,
     run_traced,
@@ -76,14 +78,26 @@ class AgentConfig:
 
 
 class MockResponse:
-    def __init__(self, content: str) -> None:
+    def __init__(self, content: str, usage: dict[str, Any] | None = None) -> None:
         self.content = content
+        self.usage = usage or {}          # OpenAI-format token counts from a hosted response (for LangSmith)
+
+
+def as_role_messages(messages: list[Any]) -> list[dict[str, str]]:
+    """LangChain messages (or strings) as role/content dicts, the form LangSmith shows for an llm run."""
+    roles = {"system": "system", "human": "user", "ai": "assistant"}
+    return [{"role": roles.get(getattr(m, "type", ""), "user"), "content": str(getattr(m, "content", m))}
+            for m in messages]
 
 
 class MockLLM:
     """Deterministic local LLM stand-in for pipeline testing."""
 
     def invoke(self, messages: list[Any]) -> MockResponse:
+        return traced_llm("mock_llm", lambda: self._respond(messages), as_role_messages(messages),
+                          provider="mock", model="mock")
+
+    def _respond(self, messages: list[Any]) -> MockResponse:
         joined = "\n".join(getattr(message, "content", str(message)) for message in messages)
         if "Support check JSON" in joined:
             # Mock judge: supported when the answer cites a chunk that is in the cited evidence. Not a real check.
@@ -211,7 +225,9 @@ class HostedChatLLM:
                            "credential": hashlib.sha256(self.api_key.encode()).hexdigest(),
                            "temperature": self.temperature,
                            "messages": [str(getattr(m, "content", m)) + str(type(m)) for m in messages]})
-        return calls.run("hosted_model", lambda: self._invoke(messages), key=key, retry=True)
+        return traced_llm(
+            "hosted_llm", lambda: calls.run("hosted_model", lambda: self._invoke(messages), key=key, retry=True),
+            as_role_messages(messages), provider="openai-compatible", model=self.model, temperature=self.temperature)
 
     def _invoke(self, messages: list[Any]) -> MockResponse:
         payload = {
@@ -241,7 +257,8 @@ class HostedChatLLM:
 
         data = json.loads(raw)
         try:
-            return MockResponse(hosted_llm.clean_content(data["choices"][0]["message"]["content"]))
+            usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
+            return MockResponse(hosted_llm.clean_content(data["choices"][0]["message"]["content"]), usage=usage)
         except (KeyError, IndexError, TypeError) as exc:
             raise RuntimeError(f"Unexpected hosted LLM response shape: {raw[:1000]}") from exc
 
@@ -330,6 +347,12 @@ def deterministic_input_guard(message: str, max_chars: int = 4000) -> dict[str, 
     return {**result, "reason": "No deterministic risks found." if not labels else f"Detected: {', '.join(labels)}."}
 
 
+def policy_refusal(message: str) -> dict[str, Any]:
+    """Advice, forecasts, personal or non-public data and creative requests: refused by rule, before any LLM call."""
+    return guard_checks.policy_refusal(message, guard_patterns.FINANCIAL_POLICY_REFUSALS,
+                                       guard_patterns.POLICY_REFUSAL_MESSAGES)
+
+
 def llm_plain_text_classifier(llm, message: str) -> dict[str, Any]:
     system = prompts.CLASSIFIER_SYSTEM
     human = prompts.CLASSIFIER_HUMAN.format(message=message)
@@ -345,7 +368,11 @@ def llm_plain_text_classifier(llm, message: str) -> dict[str, Any]:
     parsed["is_plain_text"] = bool(parsed.get("is_plain_text"))
     parsed["financial_intent"] = bool(parsed.get("financial_intent"))
     parsed["risk_level"] = str(parsed.get("risk_level", "medium")).lower()
-    parsed["safe_query"] = canonicalize_user_message(str(parsed.get("safe_query") or message))
+    # The classifier only decides; it never rewrites the question. Hosted Qwen3-8B returned safe_query=true (-> "True")
+    # and the graph then planned and answered "True". The LLM's suggestion is kept for audit only.
+    suggested = parsed.get("safe_query")
+    parsed["llm_safe_query"] = suggested if isinstance(suggested, str) else None
+    parsed["safe_query"] = canonicalize_user_message(message)
     parsed["allowed"] = (
         parsed["is_plain_text"]
         and parsed["financial_intent"]
@@ -415,9 +442,9 @@ def governance_review_router(
     triggers: list[str] = []
     query = config.query.lower()
     answer = draft_answer.lower()
-    if any(term in query for term in INVESTMENT_REVIEW_TERMS):
+    if guard_checks.has_term(query, INVESTMENT_REVIEW_TERMS):      # whole words: not "stockholders'" for "hold"
         triggers.append("investment_or_decision_support_language")
-    if any(term in query for term in PUBLICATION_REVIEW_TERMS):
+    if guard_checks.has_term(query, PUBLICATION_REVIEW_TERMS):
         triggers.append("external_publication_or_export")
     if not evidence:
         triggers.append("low_retrieval_confidence")
@@ -527,6 +554,9 @@ def prepare_guarded_config(llm, config: AgentConfig, technique: str) -> tuple[Ag
             "Request blocked by security guardrails. Please rephrase as a plain financial-report question.",
             security=security,
         )
+    policy = policy_refusal(config.query)
+    if policy["refuse"]:
+        return None, refusal_result(technique, policy["message"], security={**security, "policy": policy})
 
     plain_text = llm_plain_text_classifier(llm, security["sanitized_query"])
     if not plain_text.get("allowed"):
@@ -560,6 +590,17 @@ def answer_evidence(config: AgentConfig) -> list[dict[str, Any]]:
 
 
 def retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
+    """One search on the served backend, traced to LangSmith as a retriever run ``retrieve.<backend>``."""
+    backend = os.getenv("RAG_BACKEND") or "chroma"
+    return traced_retrieval(
+        f"retrieve.{backend}", lambda: _retrieve_evidence(config), query=config.query,
+        filters={key: getattr(config, attr, None) for key, attr in (
+            ("ticker", "ticker"), ("year", "year"), ("sector", "sector"), ("top_k", "top_k"), ("visual", "visual"),
+            ("mode", "retrieval_mode"))},
+        metadata={"rag_backend": backend})
+
+
+def _retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
     if os.getenv("RAG_BACKEND") == "financial_qdrant":   # collections built by scripts/rag/financial_ingest_qdrant_db.py
         from scripts.rag.financial_ingest_qdrant_db import retrieve_for_agent
         return retrieve_for_agent(config.query, config.top_k, ticker=config.ticker, year=config.year,
@@ -859,6 +900,9 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
                 "final_status": "refused",
                 "answer": "Request blocked by security guardrails. Please rephrase as a plain financial-report question.",
             }
+        policy = policy_refusal(state["query"])
+        if policy["refuse"]:                   # decided by rule: the model is never asked whether to refuse
+            return {"security": {**security, "policy": policy}, "final_status": "refused", "answer": policy["message"]}
         return {"security": security, "query": security["sanitized_query"]}
 
     def plain_text_node(state: AgentState) -> AgentState:

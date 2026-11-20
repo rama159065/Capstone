@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LangSmith Observability</title>
+<style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1200px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.88rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}
+.tag{display:inline-block;padding:0 .45rem;border-radius:10px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.text{background:#e0f2fe;color:#075985}.table{background:#dcfce7;color:#166534}.chart{background:#fae8ff;color:#86198f}
+.yes{color:#15803d;font-weight:600}.no{color:#b91c1c;font-weight:600}.part{color:#b45309;font-weight:600}
+td.todo{color:#94a3b8;font-style:italic;min-width:9rem}</style>
+<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script>
+</head><body>
+<h1>Observability, Traceability and Logging with LangSmith</h1>
+<p>This page explains how the Financial Report Copilot records what it does, and how to follow any answer back to the question, the evidence, the model calls and the checks that produced it.</p>
+<p>Code: <a href="../scripts/observability/langsmith_utils.py">langsmith_utils.py</a>, <a href="../scripts/api/api_app.py">api_app.py</a> (<code>request_trace</code>, <code>/health</code>), <a href="../scripts/agents/financial_prompting_agent.py">financial_prompting_agent.py</a> (<code>traced_llm</code> in <code>MockLLM</code> and <code>HostedChatLLM</code>), <a href="../scripts/common/resilience.py">resilience.py</a>, <a href="../scripts/observability/trace_log.py">trace_log.py</a>, <a href="../scripts/evaluation/evaluate_agent_api.py">evaluate_agent_api.py</a>. Tests: <a href="../tests/test_langsmith_tracing.py">test_langsmith_tracing.py</a>, <a href="../tests/test_langsmith_utils.py">test_langsmith_utils.py</a>.</p>
+<h2>1. Summary</h2>
+<p>The system has three layers, and each answers a different question:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Question it answers</th>
+<th>Where it lives</th>
+<th>Needs a key?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Logging</strong></td>
+<td>Did the request arrive, how long did it take, did it fail?</td>
+<td>API access log (stdout / <code>api.log</code>)</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Audit record</strong></td>
+<td>Why did the agent answer, refuse or ask for review?</td>
+<td><code>agent_run</code>, <code>security</code>, <code>evidence_guard</code>, <code>support_check</code>, <code>human_review</code> in every response</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>Tracing (LangSmith)</strong></td>
+<td>What exactly happened inside: every graph node, every LLM prompt and reply, tokens, latency?</td>
+<td>LangSmith project, one trace per request</td>
+<td><code>LANGSMITH_API_KEY</code></td>
+</tr>
+</tbody>
+</table>
+<p>One ID joins all three: the <strong>request ID</strong> (<code>X-Request-ID</code>). The API puts it on the access log line, returns it in the response header, and attaches it as metadata to every LangSmith run of that request.</p>
+<p><strong>LangSmith rather than Langfuse.</strong> LangSmith understands LangGraph out of the box: every node of the financial graph appears as a run without extra code. It is already wired into the API, the agents and the evaluation scripts, and its free Developer plan is enough for the demo and evaluation runs. Langfuse would be the choice if traces had to stay on our own servers. Self-hosting it adds Postgres, ClickHouse and other containers and needs new instrumentation, which isn't justified for public SEC filings. We use one tool, not both.</p>
+<h2>2. Architecture</h2>
+<pre class="mermaid">flowchart LR
+    U[&quot;Streamlit&lt;br/&gt;streamlit.#lt;route#gt; root run&quot;] --&gt;|&quot;POST + X-Request-ID&lt;br/&gt;+ langsmith-trace, baggage&quot;| MW[API middleware&lt;br/&gt;request ID + trace headers + access log]
+    MW --&gt; RT[&quot;request_trace()&lt;br/&gt;continues the Streamlit trace&quot;]
+    RT --&gt; CONV[&quot;api.conversation_turn&lt;br/&gt;(thread_id = conversation_id)&quot;]
+    CONV --&gt; CLAR[clarifier]
+    CONV --&gt; CHAT[&quot;api.financial_report_qa.#lt;technique#gt;&quot;]
+    CHAT --&gt; G[&quot;financial_workflow → LangGraph nodes&quot;]
+    G --&gt; LLM[&quot;hosted_llm / mock_llm&lt;br/&gt;(llm runs: messages, tokens)&quot;]
+    G --&gt; TOOLS[&quot;hosted_model, searches&lt;br/&gt;(resilience Calls: tool runs)&quot;]
+    CHAT --&gt; GP[api.grounding_policy]
+    RT -. runs .-&gt; LS[(LangSmith project)]
+    MW -. one line per request .-&gt; LOG[(access log)]
+    CHAT -. JSON .-&gt; RESP[&quot;response: agent_run, checks,&lt;br/&gt;langsmith status&quot;]
+</pre>
+<p>How the pieces connect:</p>
+<ol>
+<li><strong>Streamlit starts the trace.</strong> With the sidebar's <em>LangSmith tracing</em> toggle on (or <code>LANGSMITH_TRACING=true</code>) and a key in the Streamlit process, each question is a root run <code>streamlit.conversation</code> (or <code>streamlit.chat</code>) with <code>client=streamlit</code> and a new request ID. The HTTP call carries that ID as <code>X-Request-ID</code> and LangSmith's distributed-trace headers (<code>langsmith-trace</code>, <code>baggage</code>). Without a key in the Streamlit process, the trace starts at the API instead.</li>
+<li><strong>Middleware</strong> gives every request an ID (the caller's <code>X-Request-ID</code> if it is a UUID, otherwise a new one), keeps the incoming trace headers for the request, and writes one access-log line when the request finishes.</li>
+<li><strong><code>request_trace</code></strong> decides whether this request is traced: either the request asks (<code>enable_langsmith: true</code>, the Streamlit &quot;LangSmith tracing&quot; toggle) or <code>LANGSMITH_TRACING=true</code> is set for the whole API. Either way it needs a key. It opens a LangSmith <code>tracing_context</code> holding the project, the tags and the metadata (<code>request_id</code>, and <code>thread_id</code> for conversations). Nothing in the process environment changes, so other requests are unaffected. When the request carries Streamlit's trace headers, the API's runs become children of the Streamlit run, in its project: one trace from the browser to the LLM. The headers apply once, at the top. Inner runs keep their own parent.</li>
+<li><strong>Everything inside inherits the context.</strong> The tracing context lives in Python context variables, and the worker threads (parallel searches in <code>financial_tools.fan_out</code>, model calls in <code>resilience.Calls</code>) start with <code>copy_context()</code>. So every LangGraph node, LLM call and tool call joins the same trace tree with the same metadata.</li>
+<li><strong>LLM calls are <code>llm</code> runs.</strong> Searches are <code>retriever</code> runs (§4). <code>MockLLM</code> and <code>HostedChatLLM</code> go through <code>traced_llm</code>, which records the role/content messages, the reply, the model name and, for hosted models, the token counts from the response's <code>usage</code>.</li>
+</ol>
+<h2>3. What a trace shows</h2>
+<p>One question asked in Streamlit (conversation mode, the default <code>router</code> technique) produces this tree. It was captured on 20 November 2026 from the real Streamlit app (driven by Streamlit's <code>AppTest</code>), a real FastAPI process on the Chevron 2022 Chroma test index and the mock LLM, with both processes uploading to a stand-in LangSmith endpoint. That produced one trace of 26 runs in one project.</p>
+<pre><code class="language-text">streamlit.conversation                        chain     Streamlit process: question, client=streamlit, request_id
+└─ api.conversation_turn                      chain     FastAPI: thread_id = conversation_id, request_id
+   ├─ clarifier                               chain     company / year / measure resolution
+   ├─ api.financial_report_qa.router          chain     technique, provider, ticker, year, sector, rag_backend
+   │  └─ financial_workflow                   tool
+   │     └─ LangGraph
+   │        ├─ security_step                  prompt-injection / unsafe-input decision
+   │        ├─ plain_text_step → mock_llm     llm       domain-intent classifier prompt and reply
+   │        ├─ route_step → mock_llm          llm       supervisor route (lookup, trend, sector, fund, report)
+   │        ├─ retrieve_step
+   │        │  └─ retrieve.financial_vlm      retriever query, filters, 5 documents (chunk ID, page, reader, scores)
+   │        ├─ evidence_guard_step → after_evidence     retry decision
+   │        ├─ answer_step → mock_llm         llm       answer prompt with evidence, draft answer
+   │        ├─ calculator_step                          when the answer has CALC[...]
+   │        ├─ critic_step → mock_llm         llm       support-check judge prompt and verdict
+   │        ├─ should_repair                            repair loop decision
+   │        └─ governance_step                          human-review triggers, final status
+   └─ api.grounding_policy                    chain     citation validation, answer withheld or kept
+</code></pre>
+<p>With the <code>agentic_graph</code> technique, <code>plan_step</code> (the planner LLM) replaces <code>route_step</code>. With a hosted model, the LLM runs are <code>hosted_llm</code>, and each holds a <code>hosted_model</code> tool run (the HTTP call, with retries). The test <code>test_agentic_graph_trace_shows_every_node_and_llm_call</code> checks the graph part, and <code>test_api_continues_a_callers_trace_and_nests_the_chat_under_the_turn</code> checks the Streamlit → API nesting.</p>
+<p>The router hands trend, sector-trend and fund questions to their own graphs, whose nodes appear under <code>LangGraph</code> in the same way. <strong>Report</strong> requests add a <code>report_pipeline</code> run.</p>
+<p>For each run LangSmith shows inputs, outputs, latency and errors. For <code>llm</code> runs it also shows the full prompt, the reply, the model (<code>ls_model_name</code>) and the tokens.</p>
+<h3>Metadata and tags on every run</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Set by</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>request_id</code></td>
+<td>Streamlit (sent as <code>X-Request-ID</code>) or the API middleware</td>
+<td>Join the trace to the access log and the response header</td>
+</tr>
+<tr>
+<td><code>client</code></td>
+<td>Streamlit</td>
+<td><code>streamlit</code> on runs started from the UI</td>
+</tr>
+<tr>
+<td><code>thread_id</code>, <code>conversation_id</code></td>
+<td><code>/conversation</code></td>
+<td>LangSmith <strong>Threads</strong> view: all turns of one chat together</td>
+</tr>
+<tr>
+<td><code>domain</code>, <code>technique</code>, <code>top_k</code>, <code>dense_top_k</code>, <code>bm25_top_k</code>, <code>retrieval_mode</code></td>
+<td>chat route</td>
+<td>Filter by agent and retrieval settings</td>
+</tr>
+<tr>
+<td><code>ticker</code>, <code>year</code>, <code>sector</code></td>
+<td>chat route</td>
+<td>Find all traces for one company or sector</td>
+</tr>
+<tr>
+<td><code>rag_backend</code></td>
+<td>chat route</td>
+<td><code>financial_vlm</code> (Chroma, the default), <code>financial_qdrant</code> or <code>financial_hybrid</code></td>
+</tr>
+<tr>
+<td><code>guardrails_enabled</code>, <code>human_review_enabled</code></td>
+<td>chat route</td>
+<td>Ablation runs</td>
+</tr>
+<tr>
+<td><code>langgraph_node</code>, <code>langgraph_step</code></td>
+<td>LangGraph</td>
+<td>Which node a nested run belongs to</td>
+</tr>
+<tr>
+<td><code>ls_provider</code>, <code>ls_model_name</code>, <code>ls_temperature</code></td>
+<td><code>traced_llm</code></td>
+<td>Cost and latency per model</td>
+</tr>
+<tr>
+<td>tags <code>capstone</code>, <code>fastapi</code>, <code>financial_report_qa</code>, technique, providers</td>
+<td>API</td>
+<td>Quick filters</td>
+</tr>
+</tbody>
+</table>
+<h2>4. Tracing each RAG backend</h2>
+<p>Every search the agents make is a LangSmith <strong>retriever</strong> run named after the served backend. Its input is the query and filters (ticker, year, sector, top k, visual, mode); its output is the hits as documents (text up to 1,500 characters, plus chunk ID, page, reader, retrieval paths and scores). A trace therefore shows which pipeline answered and exactly what evidence the LLM saw.</p>
+<table>
+<thead>
+<tr>
+<th><code>RAG_BACKEND</code></th>
+<th>Retriever runs in a trace</th>
+<th>What the documents show</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>financial_vlm</code> (Chroma, default)</td>
+<td><code>retrieve.financial_vlm</code></td>
+<td>Chroma chunks; <code>retrieval_paths</code> <code>vlm_text</code> (and <code>same_page</code> when a chart description pulled in its page's values); <code>reader</code> (pdfParser, OCR, Qwen3-VL, Gemini)</td>
+</tr>
+<tr>
+<td><code>financial_qdrant</code> (Qdrant + ColPali)</td>
+<td><code>retrieve.financial_qdrant</code></td>
+<td>text hits (<code>text</code>) and ColPali page hits (<code>visual</code>) with the page's text layer or OCR text</td>
+</tr>
+<tr>
+<td><code>financial_hybrid</code> (both)</td>
+<td><code>retrieve.financial_hybrid</code> with child runs <code>hybrid.chroma_text</code> → <code>hybrid.colpali_pages</code> → <code>hybrid.fusion</code></td>
+<td>Chroma's hits, the pages ColPali found (doc ID, page, rank), and the fused list where ColPali pages carry <code>visual</code> and come after Chroma's top k</td>
+</tr>
+</tbody>
+</table>
+<p>The hybrid's ColPali and fusion runs appear only when the plan includes <code>visual_search</code> (chart questions, or <code>RAG_FIN_VISUAL=1</code>). A text question shows just <code>hybrid.chroma_text</code>.</p>
+<p><strong>Verified on 20 November 2026 (live API, Chevron 2022 test indexes, mock LLM, stand-in LangSmith endpoint):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>Question</th>
+<th>Final status</th>
+<th>Runs uploaded</th>
+<th>LLM runs</th>
+<th>Retriever runs (documents)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>financial_vlm</code></td>
+<td>chart: net crude oil production</td>
+<td>answered</td>
+<td>23</td>
+<td>4</td>
+<td><code>retrieve.financial_vlm</code> (5: pages 35, 35, 37, 37, 41)</td>
+</tr>
+<tr>
+<td><code>financial_vlm</code></td>
+<td>table: net income</td>
+<td>answered</td>
+<td>23</td>
+<td>4</td>
+<td><code>retrieve.financial_vlm</code> (5)</td>
+</tr>
+<tr>
+<td><code>financial_qdrant</code></td>
+<td>chart</td>
+<td>answered</td>
+<td>23</td>
+<td>4</td>
+<td><code>retrieve.financial_qdrant</code> (5: four <code>text</code>, one <code>visual</code>)</td>
+</tr>
+<tr>
+<td><code>financial_qdrant</code></td>
+<td>table</td>
+<td>answered</td>
+<td>23</td>
+<td>4</td>
+<td><code>retrieve.financial_qdrant</code> (5)</td>
+</tr>
+<tr>
+<td><code>financial_hybrid</code></td>
+<td>chart</td>
+<td>answered</td>
+<td>26</td>
+<td>4</td>
+<td><code>retrieve.financial_hybrid</code> (11) → <code>hybrid.chroma_text</code> (5), <code>hybrid.colpali_pages</code> (3: pages 25, 8, 33), <code>hybrid.fusion</code> (11)</td>
+</tr>
+<tr>
+<td><code>financial_hybrid</code></td>
+<td>table</td>
+<td>answered</td>
+<td>24</td>
+<td>4</td>
+<td><code>retrieve.financial_hybrid</code> (5) → <code>hybrid.chroma_text</code> (5)</td>
+</tr>
+</tbody>
+</table>
+<p>Every run carried the request ID and the conversation's <code>thread_id</code>, and went to that backend's project. Every trace ran from <code>api.conversation_turn</code> to <code>governance_step</code> and <code>api.grounding_policy</code>. Results: <code>output/hybrid_test/langsmith_backend_check.json</code>.</p>
+<p><strong>Cold start:</strong> on CPU, the first Qdrant or hybrid question after the API starts loads the text embedder and ColPali (bfloat16, about 6 GB). That can take longer than the 60-second request deadline (<code>RAG_REQUEST_TIMEOUT_SECONDS</code>), and the answer is then <code>not_grounded</code>. The trace shows this: <code>retrieve_step</code> followed directly by <code>api.grounding_policy</code>. Send one warm-up question before a demo, or raise the deadline. Warm, each traced question took 2–4 seconds.</p>
+<h2>5. Traceability: from an answer back to its cause</h2>
+<table>
+<thead>
+<tr>
+<th>Starting point</th>
+<th>Steps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A user reports a wrong answer in Streamlit</td>
+<td>The response carries <code>X-Request-ID</code>. In LangSmith, filter the project by metadata <code>request_id = &lt;id&gt;</code>. Open <code>answer_step</code> to see the evidence the model received, then <code>critic_step</code> for the support verdict.</td>
+</tr>
+<tr>
+<td>An access-log line shows a slow or failed request</td>
+<td>Take <code>request_id</code> from the log line and use the same filter. Latency per node shows whether retrieval, the LLM or the critic was slow.</td>
+</tr>
+<tr>
+<td>A multi-turn conversation went wrong</td>
+<td>Open <strong>Threads</strong> and pick the <code>conversation_id</code>. Each turn shows the clarifier's questions and the final run.</td>
+</tr>
+<tr>
+<td>An evaluation question failed</td>
+<td><code>output/eval/agent_api/&lt;run_id&gt;/results.jsonl</code> stores <code>request_id</code> per question. Run the evaluation with <code>--langsmith</code> and search that ID.</td>
+</tr>
+<tr>
+<td>Why was an answer withheld or sent to review?</td>
+<td>Without LangSmith: the response's <code>agent_run</code>, <code>support_check</code>, <code>human_review</code> and <code>explanation</code>. With LangSmith: the <code>governance_step</code> output shows the triggers (for example <code>unverified_vlm_figure</code>, <code>unverified_calculation</code>).</td>
+</tr>
+</tbody>
+</table>
+<h3>Watching the guardrails and the critic</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Node / run</th>
+<th>What to look at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Input security (injection, unsafe requests)</td>
+<td><code>security_step</code></td>
+<td><code>decision</code> (<code>allow</code>/<code>block</code>) and <code>risk_labels</code></td>
+</tr>
+<tr>
+<td>Domain intent / scope</td>
+<td><code>plain_text_step</code></td>
+<td>Classifier prompt and reply; refusal reason</td>
+</tr>
+<tr>
+<td>Evidence guard (prompt injection in documents, missing targets)</td>
+<td><code>evidence_guard_step</code>, <code>after_evidence</code></td>
+<td>Dropped hits, retry chosen or not</td>
+</tr>
+<tr>
+<td>Calculator</td>
+<td><code>calculator_step</code></td>
+<td>Expression, operands found in evidence, result</td>
+</tr>
+<tr>
+<td>Critic support check</td>
+<td><code>critic_step</code></td>
+<td>Numeric grounding (<code>ungrounded</code>, <code>unverified</code>) and the LLM judge verdict</td>
+</tr>
+<tr>
+<td>Repair loop</td>
+<td><code>should_repair</code>, second <code>answer_step</code></td>
+<td>How many repairs, whether citations were fixed</td>
+</tr>
+<tr>
+<td>Governance / HITL</td>
+<td><code>governance_step</code></td>
+<td><code>final_status</code>, <code>human_review.triggers</code></td>
+</tr>
+<tr>
+<td>Citation policy</td>
+<td><code>api.grounding_policy</code></td>
+<td>Whether the answer was withheld</td>
+</tr>
+</tbody>
+</table>
+<h2>6. Logging</h2>
+<table>
+<thead>
+<tr>
+<th>Log</th>
+<th>Example / contents</th>
+<th>Never contains</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API access log</td>
+<td><code>api_request_completed request_id=… method=POST path=/chat/financial_report_qa status_code=200 duration_ms=8123.4</code> (warning level for 4xx/5xx)</td>
+<td>Request bodies, prompts, answers, keys</td>
+</tr>
+<tr>
+<td>Tracing decision</td>
+<td><code>langsmith_trace_configured request_id=… enabled=True reason=enabled project=…</code></td>
+<td>The key</td>
+</tr>
+<tr>
+<td>Startup</td>
+<td>Runtime profile, chosen <code>financial_backend</code>, retrieval warm-up time</td>
+<td>Keys</td>
+</tr>
+<tr>
+<td>Report pipeline JSONL</td>
+<td><code>output/pdf/&lt;TICKER&gt;_&lt;YEAR&gt;/&lt;trace_id&gt;/logs/&lt;trace_id&gt;.jsonl</code>: spans, model calls, artifacts with SHA-256. Summarise with <code>python -m scripts.observability.monitor_report_trace</code></td>
+<td>Keys</td>
+</tr>
+<tr>
+<td>Response audit record</td>
+<td><code>agent_run.path</code>, <code>steps</code>, <code>tool_calls</code>, <code>calculations</code>, <code>search_fan_out</code>, <code>repairs</code>, plus <code>security</code>, <code>evidence_guard</code>, <code>output_filter</code>, <code>support_check</code>, <code>human_review</code></td>
+<td>Keys</td>
+</tr>
+</tbody>
+</table>
+<p>The JSONL trace (<code>trace_log.TraceLog</code>) is used by report generation and the multimodal answer path. The financial chat path does not write JSONL files. Its offline record is the <code>agent_run</code> block in the response, and its detailed trace is LangSmith.</p>
+<p><code>GET /health</code> reports the LangSmith setup without the key: <code>api_key_set</code>, <code>tracing_all_requests</code>, <code>project</code>, <code>endpoint</code>, and a <code>warning</code> when <code>LANGSMITH_TRACING</code> is set but no key is present.</p>
+<h2>7. Setup</h2>
+<p>The key stays with you. Set it in your own terminal or in a secrets store, never in the repo, a notebook or Drive.</p>
+<p><strong>Local (PowerShell), tracing every request:</strong></p>
+<pre><code class="language-powershell">$env:LANGSMITH_API_KEY=&quot;&lt;your key&gt;&quot;
+$env:LANGSMITH_TRACING=&quot;true&quot;
+$env:LANGSMITH_PROJECT=&quot;financial-report-copilot&quot;
+uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
+streamlit run scripts\ui\api_streamlit_app.py
+</code></pre>
+<p><strong>Local, tracing only chosen requests:</strong> set only <code>LANGSMITH_API_KEY</code>. Then turn on the <em>LangSmith tracing</em> toggle in the Streamlit sidebar's <em>Demo settings</em>, or send <code>&quot;enable_langsmith&quot;: true</code> (and optionally <code>&quot;langsmith_project&quot;</code>) in the API request body.</p>
+<p><strong>Colab:</strong> add <code>LANGSMITH_API_KEY</code> as a Colab secret. In <code>colab_ingest_chroma_db.ipynb</code> run cells 1–3 (restore the Chroma index from Drive) and 8–12. Cell 8 sets the key, <code>LANGSMITH_TRACING</code> and the project (<code>financial-report-copilot-colab</code> by default). <code>cp.serve(s)</code> in cell 9 passes them to the API and Streamlit. Cell 10 checks that traces arrive, and cell 11 runs one question per route with a LangSmith link for each. (<code>colab_rag_pipelines.ipynb</code> cell 9 and the Qdrant notebook's serving cell also read the secret.)</p>
+<p><strong>Docker / Google Cloud:</strong> in <code>.env</code> (not committed): <code>LANGSMITH_TRACING=true</code>, <code>LANGSMITH_API_KEY=…</code>, <code>LANGSMITH_PROJECT=annual-report-copilot</code>. Compose passes it to the <code>api</code> service.</p>
+<p><strong>Checking it works (any environment):</strong> <code>python -m scripts.observability.check_langsmith</code> sends one traced conversation turn and looks its runs up in LangSmith by request ID (PASS/FAIL/SKIP per step). On the VM: <code>docker compose exec api python -m scripts.observability.check_langsmith</code>. Per-environment steps and what was verified: <a href="deployment.html">deployment.md §7.5</a>.</p>
+<p><strong>Project name, in order of precedence:</strong> the request's <code>langsmith_project</code>, then <code>LANGSMITH_PROJECT</code>, then the route default (<code>capstone-financial-report-qa-api</code> for chat and conversation, <code>capstone-financial-retrieval-api</code> for <code>/retrieve</code>). A conversation's inner chat run stays in the conversation's project.</p>
+<p><strong>CLIs and evaluations:</strong></p>
+<pre><code class="language-powershell"># agent evaluation through the API (the API needs the key; each row keeps its request_id)
+python -m scripts.evaluation.evaluate_agent_api --langsmith --langsmith-project capstone-agent-eval --run-id eval_traced
+# retrieval evaluation and the standalone agent
+python scripts\evaluation\evaluate_financial_rag.py --enable-langsmith --langsmith-project capstone-financial-rag-eval
+python scripts\agents\financial_prompting_agent.py --llm-provider hosted --technique agentic_graph --query &quot;...&quot; --enable-langsmith
+</code></pre>
+<h2>8. Privacy, cost and limits</h2>
+<ul>
+<li><strong>What is sent:</strong> prompts, retrieved evidence excerpts, answers and metadata for traced requests. These come from public SEC filings. API keys, authorization headers and the LLM endpoint's key are never recorded; a test checks this.</li>
+<li><strong>Hiding content:</strong> <code>LANGSMITH_HIDE_INPUTS=true</code> / <code>LANGSMITH_HIDE_OUTPUTS=true</code> keep the tree and timings but drop the contents.</li>
+<li><strong>Volume:</strong> <code>LANGSMITH_TRACING_SAMPLING_RATE=0.2</code> traces one request in five when tracing every request. Prefer per-request tracing for demos.</li>
+<li><strong>No key or no network:</strong> nothing is sent, and the API answers normally. The response's <code>langsmith</code> field says why tracing is off (<code>not_requested</code>, <code>missing_LANGSMITH_API_KEY</code>).</li>
+</ul>
+<h2>9. Issues found and fixed</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Issue</th>
+<th>Effect</th>
+<th>Fix</th>
+<th>Test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The API turned tracing on by writing <code>LANGSMITH_TRACING</code> and the project into the process environment on the first request with <code>enable_langsmith=true</code></td>
+<td>Every later request was traced, even with the toggle off. Concurrent requests overwrote each other's project.</td>
+<td><code>request_trace</code> uses a per-request <code>tracing_context</code>; the environment is no longer changed by requests</td>
+<td><code>test_api_request_flag_does_not_turn_tracing_on_for_later_requests</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Hosted LLM calls were raw HTTP inside a <code>tool</code> run with no inputs</td>
+<td>Traces showed no prompts, replies or tokens</td>
+<td><code>traced_llm</code>: <code>llm</code> runs with messages, reply, model and token usage, for both hosted and mock LLMs</td>
+<td><code>test_hosted_llm_run_records_tokens_and_never_the_key</code>, <code>test_request_tracing_traces_only_inside_the_block</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>The Streamlit path (<code>/conversation</code>) didn't trace the clarifier or the report pipeline, and turns had no shared ID</td>
+<td>Multi-turn chats couldn't be followed</td>
+<td><code>api.conversation_turn</code> run with <code>thread_id</code>/<code>conversation_id</code>; <code>clarifier</code> and <code>report_pipeline</code> runs</td>
+<td><code>test_conversation_turns_share_a_thread_id</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>LANGSMITH_PROJECT</code> was ignored by the API: the route default always won</td>
+<td>Traces went to an unexpected project</td>
+<td>Request project, then <code>LANGSMITH_PROJECT</code>, then route default</td>
+<td>covered by the API test</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Few filter fields on chat runs</td>
+<td>Hard to find traces by company or backend</td>
+<td>Added <code>ticker</code>, <code>year</code>, <code>sector</code>, <code>rag_backend</code> metadata; grounding policy as its own run</td>
+<td>API test</td>
+</tr>
+<tr>
+<td>6</td>
+<td>No way to see whether tracing is configured, and a silent no-op when <code>LANGSMITH_TRACING</code> is set without a key</td>
+<td>Demos could run untraced without notice</td>
+<td><code>/health</code> <code>langsmith</code> block with a <code>warning</code></td>
+<td><code>test_health_reports_langsmith_without_the_key</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>The agent evaluation runner couldn't trace or link results to traces</td>
+<td>Failed questions couldn't be inspected</td>
+<td><code>--langsmith</code>, <code>--langsmith-project</code>; one <code>X-Request-ID</code> per question stored in <code>results.jsonl</code></td>
+<td><code>tests/test_evaluate_agent_api.py</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Searches weren't runs of their own</td>
+<td>A trace didn't show which backend answered or what it returned</td>
+<td><code>retrieve.&lt;backend&gt;</code> retriever run per search; the hybrid's three stages as child runs</td>
+<td><code>test_each_backend_search_is_a_retriever_run</code> (3 backends), <code>test_hybrid_stages_are_child_runs</code>, <code>test_colpali_pages_show_as_documents</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td>The trace started at the API: the Streamlit side (question, HTTP call, waiting time) wasn't in LangSmith</td>
+<td>No single view from the browser to the LLM</td>
+<td>Streamlit opens a <code>streamlit.&lt;route&gt;</code> root run and sends <code>langsmith-trace</code>/<code>baggage</code> and <code>X-Request-ID</code>; the API continues that trace (headers applied once, at the top)</td>
+<td><code>test_api_continues_a_callers_trace_and_nests_the_chat_under_the_turn</code>, <code>test_streamlit_post_json_sends_trace_headers_only_when_traced</code>, live Streamlit run (§3)</td>
+</tr>
+</tbody>
+</table>
+<p>All tests are offline: <code>RunTree.post</code>/<code>patch</code> are replaced, so the tests see every run that would be sent and nothing leaves the machine. The full suite passes (580 tests).</p>
+<h2>10. Known limits</h2>
+<ul>
+<li><strong>Answer cache:</strong> with <code>ANSWER_CACHE_SECONDS</code> set, a repeated identical request is served from the cache. It creates no new trace, and its <code>langsmith</code> field is the stored one.</li>
+<li><strong>Streamlit without a key:</strong> the Streamlit root run needs <code>LANGSMITH_API_KEY</code> in the Streamlit process too. Docker Compose gives both services the same <code>.env</code>, and <code>cp.serve</code> passes the notebook's environment to both. Locally, set it in both terminals; otherwise the trace starts at the API.</li>
+<li><strong>Multimodal routes</strong> (<code>/multimodal/financial_report_qa/*</code>) aren't traced to LangSmith. They are not part of the Streamlit financial flow.</li>
+<li><strong>Human review</strong> is a status and payload in the response and the trace. No review queue stores or assigns it (see <a href="agents_flows.html">agents_flows.md</a>).</li>
+<li><strong>LangSmith plan limits</strong> (traces per month, retention) depend on your account; check the pricing page before a large traced evaluation.</li>
+</ul>
+</body></html>

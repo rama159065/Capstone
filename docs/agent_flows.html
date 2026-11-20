@@ -169,10 +169,10 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 <tbody>
 <tr>
   <td><code>security_step</code></td>
-  <td>Input guard: prompt injection, code or tool abuse, length</td>
+  <td>Input guard: prompt injection, code or tool abuse, length; <strong>policy refusal</strong> (advice, forecasts, personal or non-public data, creative requests: <code>policy_refusal</code>, answered without any LLM call)</td>
   <td>No (regex)</td>
   <td>query</td>
-  <td><code>security</code>, refusal</td>
+  <td><code>security</code> (with <code>policy</code>), refusal</td>
 </tr>
 <tr>
   <td><code>plain_text_step</code></td>

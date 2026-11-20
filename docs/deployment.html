@@ -206,6 +206,26 @@ streamlit run scripts\ui\api_streamlit_app.py     # second terminal, same enviro
 <p>With only embedded Qdrant (<code>QDRANT_URL</code> unset), run just the API. Streamlit talks to the API, so it doesn't open the index itself.</p>
 <h3>3.3 Colab (option C)</h3>
 <p>Run <code>colab_rag_pipelines.ipynb</code> cells 9–12 (<code>cp.serve</code>). It uses the <code>colab</code> runtime profile.</p>
+<p><strong>Opening the UI from your PC:</strong> Colab's port proxy (the link cell 9 prints), a Cloudflare quick tunnel to Streamlit, or Streamlit on your PC calling the Colab API through a tunnel with <code>API_AUTH_TOKEN</code>. Steps, security and troubleshooting: <a href="colab_access.html">colab_access.html</a>.</p>
+<p><strong>Package versions on Colab.</strong> Every notebook install uses <code>pip install -c deploy/colab_constraints.txt</code>, which pins 34 packages to the versions in <code>uv.lock</code>, the ones tested on the PC:</p>
+<ul>
+<li><code>chromadb==1.5.9</code>, the version that wrote the index;</li>
+<li>the LangChain, LangGraph and LangSmith packages, FastAPI/Starlette/uvicorn, Streamlit, pydantic, transformers, sentence-transformers, tokenizers and huggingface-hub.</li>
+</ul>
+<p>Colab keeps its own torch/CUDA build, Jupyter and kernel packages, numpy, pandas and scikit-learn. Changing those in a running session would need a restart and can break Colab's tools.</p>
+<p>Cell 8 of <code>colab_ingest_chroma_db.ipynb</code> prints Python, torch, CUDA, numpy, SQLite and every pinned version, and lists any version that differs from the tested one. It stops when:</p>
+<ul>
+<li>Python is older than 3.12;</li>
+<li><code>chromadb</code> isn't 1.5.9;</li>
+<li>SQLite is older than 3.35.</li>
+</ul>
+<p>After changing <code>uv.lock</code>, run <code>python -m scripts.common.colab_constraints</code> and rebuild the code zip; <code>tests/test_colab_constraints.py</code> fails while the file is out of date.</p>
+<p>Checked on 20 November 2026 with <code>uv pip compile</code> for Linux x86_64, binary wheels only:</p>
+<ul>
+<li><strong>Python 3.12:</strong> the pinned set resolves both against an older Colab-like base (numpy 2.0.2, pandas 2.2.2, torch 2.8.0) and a newer one (numpy 2.3.5, pandas 2.3.3, torch 2.10.0).</li>
+<li><strong>Python 3.13:</strong> it resolves against the newer base. It fails only with numpy 2.0.2, because qdrant-client 1.20 needs numpy 2.1+ on 3.13.</li>
+</ul>
+<p>Not run on a Colab runtime.</p>
 <h3>3.4 Getting the index from Google Drive onto the VM</h3>
 <p>A VM <strong>can't mount your Drive the way Colab does</strong>: <code>drive.mount</code> only works inside Colab. The VM <strong>copies</strong> what it needs onto its own disk once, and Qdrant then restores from that local copy. Don't point Qdrant at a live Drive mount: it is slow and fails if the connection drops.</p>
 <p><strong>What to copy:</strong></p>
@@ -550,7 +570,7 @@ python -m scripts.downloads.download_annual_report_corpus --preset full   --outp
 <tr>
   <td><code>LANGSMITH_TRACING</code>, <code>LANGSMITH_API_KEY</code>, <code>LANGSMITH_PROJECT</code></td>
   <td>off</td>
-  <td>Trace dashboard for the submission</td>
+  <td>Trace dashboard: <code>TRACING=true</code> traces every request, the key alone allows per-request tracing (<code>enable_langsmith</code>). <code>/health</code> shows the setup; check with <code>python -m scripts.observability.check_langsmith</code> (§7.5)</td>
 </tr>
 <tr>
   <td><code>API_BASE_URL</code>, <code>API_TIMEOUT_SECONDS</code>, <code>UI_SHOW_ADVANCED</code></td>
@@ -1903,10 +1923,150 @@ python -m scripts.rag.colab_pipeline pack-funds          # -&gt; output/colab/mu
 </tbody>
 </table>
 <p>With no fund data anywhere, each step prints that it skipped it and the fund route stays off. <code>tests/test_colab_mutual_fund.py</code> covers the pack → restore → export path and the two deploy scripts.</p>
+<h3>7.5 LangSmith tracing in each environment</h3>
+<p>The API traces a request to LangSmith when the request asks for it (<code>enable_langsmith</code>, the Streamlit <em>LangSmith tracing</em> toggle) or <code>LANGSMITH_TRACING=true</code> is set, provided <code>LANGSMITH_API_KEY</code> is set. Each trace holds the conversation turn, every LangGraph node, each LLM call (prompt, reply, tokens) and the request ID. Design and fixes: <a href="observability_langsmith.html">observability_langsmith.md</a>.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Local PC</th>
+<th>Colab</th>
+<th>Google Cloud VM (Docker Compose)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Where the key goes</td>
+<td>Your PowerShell session (<code>$env:LANGSMITH_API_KEY</code>)</td>
+<td>Colab secret <code>LANGSMITH_API_KEY</code></td>
+<td><code>/opt/copilot/.env</code> (chmod 600, never in Git)</td>
+</tr>
+<tr>
+<td>Turn it on</td>
+<td><code>$env:LANGSMITH_TRACING=&quot;true&quot;</code> (every request), or only the key and the per-request toggle</td>
+<td><code>colab_ingest_chroma_db.ipynb</code> cell 8 (parameters: project, trace every request, LLM provider, request timeout); <code>colab_rag_pipelines</code> cell 9 and the Qdrant notebook also read the secret</td>
+<td><code>LANGSMITH_TRACING=true</code> in <code>.env</code></td>
+</tr>
+<tr>
+<td>Project</td>
+<td><code>LANGSMITH_PROJECT</code>, default <code>capstone-financial-report-qa-api</code></td>
+<td><code>financial-report-copilot-colab</code> (set by the cell)</td>
+<td><code>LANGSMITH_PROJECT</code> in <code>.env</code> (<code>annual-report-copilot</code> in <code>.env.example</code>)</td>
+</tr>
+<tr>
+<td>How the API gets it</td>
+<td>the shell that runs <code>uvicorn</code></td>
+<td><code>cp.serve</code> starts the API with the notebook's <code>os.environ</code></td>
+<td><code>env_file: .env</code> on the <code>api</code> and <code>ui</code> services</td>
+</tr>
+<tr>
+<td>Network</td>
+<td>outbound HTTPS to <code>api.smith.langchain.com</code></td>
+<td>same (Colab allows outbound HTTPS)</td>
+<td>same (GCP allows outbound traffic by default; keep it if you restrict egress)</td>
+</tr>
+<tr>
+<td>Check it</td>
+<td><code>python -m scripts.observability.check_langsmith</code></td>
+<td>cells 10 (check) and 11 (one question per route with a LangSmith link) of <code>colab_ingest_chroma_db.ipynb</code></td>
+<td><code>docker compose exec api python -m scripts.observability.check_langsmith</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Local:</strong></p>
+<pre><code class="language-powershell">$env:LANGSMITH_API_KEY=&quot;&lt;your key&gt;&quot;; $env:LANGSMITH_TRACING=&quot;true&quot;; $env:LANGSMITH_PROJECT=&quot;financial-report-copilot&quot;
+uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
+python -m scripts.observability.check_langsmith                 # second window, same key
+</code></pre>
+<p><strong>Colab (Chroma index on Drive):</strong> add the secrets <code>LANGSMITH_API_KEY</code>, <code>LLM_API_BASE</code>, <code>LLM_API_KEY</code> and <code>LLM_MODEL</code> (key icon → Add new secret → Notebook access on). In <code>colab_ingest_chroma_db.ipynb</code> run cells 1–3 (restore the index from Drive) and 8–11. Cell 11 prints, for each route, the agent path, the Chroma evidence, the LLM answer and a LangSmith link. The same check by hand:</p>
+<pre><code class="language-python">!python -m scripts.observability.check_langsmith --llm-provider hosted --ticker JPM --year 2024
+</code></pre>
+<p><strong>Google Cloud VM:</strong></p>
+<pre><code class="language-bash">cat &gt;&gt; /opt/copilot/.env &lt;&lt;'EOF'
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=&lt;your key&gt;
+LANGSMITH_PROJECT=annual-report-copilot
+EOF
+docker compose up -d api ui                      # recreates both with the new .env
+docker compose exec api python -m scripts.observability.check_langsmith
+</code></pre>
+<p>The check script prints PASS, FAIL or SKIP for four steps:</p>
+<ol>
+<li>LangSmith answers from this machine.</li>
+<li><code>/health</code> shows <code>langsmith.api_key_set: true</code>.</li>
+<li>A <code>/conversation</code> turn sent with <code>enable_langsmith</code> and a new <code>X-Request-ID</code> reports <code>langsmith.enabled</code>.</li>
+<li>Looking the runs up in LangSmith by that request ID finds the conversation turn, the graph nodes (<code>security_step</code> … <code>governance_step</code>) and at least one LLM run.</li>
+</ol>
+<p>Choose <code>--ticker</code>/<code>--year</code> for a filing your index holds. Step 4 needs the key in the shell that runs the check. Inside the container it is there already.</p>
+<p><code>/health</code> also shows the setup without the key: <code>api_key_set</code>, <code>tracing_all_requests</code>, <code>project</code>, <code>endpoint</code>. It adds a <code>warning</code> when <code>LANGSMITH_TRACING</code> is on but the key is missing, a mistake that otherwise traces nothing silently.</p>
+<p><strong>Verified on 20 November 2026:</strong></p>
+<table>
+<thead>
+<tr>
+<th>What</th>
+<th>How</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LangSmith reachable from the development PC</td>
+<td><code>GET https://api.smith.langchain.com/info</code></td>
+<td>HTTP 200 (also the EU endpoint)</td>
+</tr>
+<tr>
+<td>The running API sends a complete trace over HTTP</td>
+<td>Real <code>uvicorn</code> process (Chevron 2022 Chroma test index, mock LLM) with <code>LANGSMITH_ENDPOINT</code> pointed at a local stand-in that records every upload; one traced <code>/conversation</code> turn</td>
+<td>2 uploads to <code>/runs/multipart</code>, 22 runs: <code>api.conversation_turn</code> → <code>api.financial_report_qa.agentic_graph</code> → <code>financial_workflow</code> → LangGraph → <code>security_step</code> … <code>governance_step</code>, 4 <code>mock_llm</code> runs, <code>api.grounding_policy</code>. All 27 run records carry the <code>request_id</code>; <code>thread_id</code>, ticker, year and <code>rag_backend=financial_vlm</code> are present</td>
+</tr>
+<tr>
+<td>An untraced request sends nothing</td>
+<td>Same API, request without <code>enable_langsmith</code></td>
+<td>No upload; response <code>langsmith: {enabled: false, reason: not_requested}</code></td>
+</tr>
+<tr>
+<td>No secrets in the trace</td>
+<td>Searched the uploads</td>
+<td>No API key, <code>Authorization</code> header or bearer token</td>
+</tr>
+<tr>
+<td>Streamlit → FastAPI → agents → retrieval → LLM as one trace</td>
+<td>Real Streamlit app (<code>AppTest</code>, <em>LangSmith tracing</em> toggle on) → real API on the Chroma test index → mock LLM, both processes uploading to the stand-in</td>
+<td>One trace, 26 runs, one project: <code>streamlit.conversation</code> → <code>api.conversation_turn</code> → <code>clarifier</code>, <code>api.financial_report_qa.router</code> → LangGraph nodes → <code>retrieve.financial_vlm</code> (5 documents) and 4 LLM runs → <code>api.grounding_policy</code>. The Streamlit process needs the key too (same <code>.env</code> in Compose, the notebook's environment on Colab)</td>
+</tr>
+<tr>
+<td>All three RAG backends</td>
+<td>Same set-up, one API per backend (<code>financial_vlm</code>, <code>financial_qdrant</code>, <code>financial_hybrid</code>), a chart and a table question each</td>
+<td>All 6 traced end to end (23–26 runs, 4 LLM runs each) with a <code>retrieve.&lt;backend&gt;</code> retriever run; the hybrid's chart trace adds <code>hybrid.chroma_text</code>, <code>hybrid.colpali_pages</code> (pages 25, 8, 33) and <code>hybrid.fusion</code>. Details: <a href="observability_langsmith.html">observability_langsmith.md §4</a></td>
+</tr>
+<tr>
+<td>Check script against the running API</td>
+<td><code>check_langsmith --api-base http://127.0.0.1:8010</code></td>
+<td>Steps 1–3 PASS; step 4 SKIP (no key in that shell)</td>
+</tr>
+<tr>
+<td>Check script against the real LangSmith</td>
+<td>Lookup with an invalid key</td>
+<td>LangSmith answered 403; the script reports FAIL with the reason</td>
+</tr>
+<tr>
+<td>Trace tree, per-request isolation, LLM runs, conversation threads, <code>/health</code></td>
+<td><code>tests/test_langsmith_tracing.py</code> (9 tests, offline)</td>
+<td>Pass</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Not yet verified:</strong></p>
+<ul>
+<li><strong>With your key, in your LangSmith account (all three environments):</strong> run the check script above. Step 4 passing is the confirmation.</li>
+<li><strong>Colab:</strong> the notebook cell and <code>cp.serve</code> pass the variables (<code>serving_env</code> adds to <code>os.environ</code>); not run on a Colab runtime here.</li>
+<li><strong>Docker / GCP:</strong> the compose file loads <code>.env</code> into the <code>api</code> and <code>ui</code> services, and the image installs <code>langsmith</code> (from <code>pyproject.toml</code>). Docker Desktop isn't running on the development PC, so the container hasn't been started here.</li>
+</ul>
 <h2>8. Not verified here</h2>
 <ul>
 <li><strong>Paths (§7):</strong> the layout is implemented and tested; the local profile was verified live with both pipelines. Not run here: <code>gcloud storage</code> (<code>cp.export_to_gcs</code>, <code>deploy/sync_from_gcs.sh</code>) and the scripts inside Docker. <code>sh -n</code> checks their syntax, and the tests check the commands they build.</li>
-<li><strong>Docker isn't installed on the development PC</strong>, so <code>docker compose build</code> and <code>up</code> haven't been run yet. Everything they run is tested without Docker; the tests check the compose and <code>.env.example</code> wiring. The first build on the target machine is the real check, and it takes about 10 minutes to pull Python and the CPU torch wheel.</li>
+<li><strong>Docker Desktop is installed on the development PC but wasn't running</strong>, so <code>docker compose build</code> and <code>up</code> haven't been run yet. Everything they run is tested without Docker; the tests check the compose and <code>.env.example</code> wiring. The first build on the target machine is the real check, and it takes about 10 minutes to pull Python and the CPU torch wheel.</li>
+<li><strong>LangSmith (§7.5):</strong> the API's uploads were checked locally against a stand-in endpoint, and LangSmith itself is reachable. A run in your own LangSmith account (check script step 4) and the Colab and container runs are still to do.</li>
 <li><strong>Snapshot restore into a Qdrant container</strong> depends on the shared <code>/qdrant/snapshots</code> volume. The restore code is tested; the container path is not.</li>
 <li><strong>Prices:</strong><ul>
 <li>LLM prices were read from the providers' pages on 9–10 November 2026. Several change on 30 November, 1 December and 1 January.</li>

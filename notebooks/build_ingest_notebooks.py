@@ -50,7 +50,9 @@ def fetch_code(root, repo_url, branch):
 fetch_code(Path("/content/Capstone"), REPO, BRANCH)
 sys.path.insert(0, "/content/Capstone")
 %cd /content/Capstone
-!pip -q install {PIP}
+CONSTRAINTS = "/content/Capstone/deploy/colab_constraints.txt"   # versions tested on the PC (from uv.lock)
+PIN = f"-c {CONSTRAINTS}" if Path(CONSTRAINTS).exists() else ""
+!pip -q install {PIN} {PIP}
 import importlib.util
 assert importlib.util.find_spec("scripts.rag.{MODULE}"), \
     "old code: rebuild capstone_code.zip (python -m scripts.common.colab_bundle) and upload it to Drive"
@@ -60,7 +62,14 @@ SECRETS = r'''for key in ("LLM_API_BASE", "LLM_API_KEY", "LLM_MODEL", "LLM_CA_CE
     try:
         os.environ[key] = userdata.get(key)
     except Exception:
-        print(f"{key} is not a Colab secret" + (": answers use llm_provider=mock" if key == "LLM_MODEL" else ""))'''
+        print(f"{key} is not a Colab secret" + (": answers use llm_provider=mock" if key == "LLM_MODEL" else ""))
+try:                                   # optional: LangSmith traces of every request (Colab secret LANGSMITH_API_KEY)
+    os.environ["LANGSMITH_API_KEY"] = userdata.get("LANGSMITH_API_KEY")
+    os.environ.setdefault("LANGSMITH_TRACING", "true")
+    os.environ.setdefault("LANGSMITH_PROJECT", "financial-report-copilot-colab")
+    print("LangSmith tracing on, project", os.environ["LANGSMITH_PROJECT"])
+except Exception:
+    print("LANGSMITH_API_KEY is not a Colab secret: no LangSmith traces")'''
 
 SERVE_MD = r'''## Serve this index: FastAPI + Streamlit on this runtime
 
@@ -70,13 +79,15 @@ browser -> Colab port proxy (only you) -> Streamlit :8501 -> FastAPI :8000 -> {I
 
 `cp.serve(s)` starts both with `cp.serving_env(s)`: {ENV}. Requests can filter by `ticker`, `year` and `sector`.
 For the Track B model add the Colab secrets `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL` (e.g. `Qwen/Qwen3-8B`) and,
-for a self-signed endpoint, `LLM_CA_CERT` (path to the CA certificate on Drive). Without them answers use the mock.'''
+for a self-signed endpoint, `LLM_CA_CERT` (path to the CA certificate on Drive). Without them answers use the mock.
+Add the secret `LANGSMITH_API_KEY` to trace every request to LangSmith (project `financial-report-copilot-colab`); see docs/observability_langsmith.md.'''
 
 SERVE_DEPS = r'''# @title Serving dependencies (from pyproject.toml; keeps Colab's CUDA torch) and LLM secrets
 import re, tomllib
 deps = tomllib.load(open("/content/Capstone/pyproject.toml", "rb"))["project"]["dependencies"]
-deps = [d for d in deps if re.split(r"[<>=!~ \[]", d)[0] not in {"torch", "torchvision", "jupyterlab"}]
-subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *deps])
+deps = [d.split("#")[0].strip() for d in deps if re.split(r"[<>=!~ \[]", d)[0] not in {"torch", "torchvision", "jupyterlab"}]
+pin = ["-c", "/content/Capstone/deploy/colab_constraints.txt"] if Path("/content/Capstone/deploy/colab_constraints.txt").exists() else []
+subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *pin, *deps])
 from google.colab import userdata
 ''' + SECRETS + "{EXTRA}"
 
@@ -414,6 +425,212 @@ else:
     print("set GCS_BUCKET to export; skipped")'''
 
 
+CHROMA_SERVE_MD = r"""## Serve the Chroma index with LangSmith: Streamlit → FastAPI → agents → Chroma retrieval → LLM
+
+```
+browser -> Colab port proxy (only you) -> Streamlit :8501 -> FastAPI :8000 -> LangGraph agents
+        -> Chroma annual_reports_vlm + BM25 (restored from Drive) -> LLM          every step traced to LangSmith
+```
+
+**Only serving (the index is already on Drive):** run cells 1, 2 and 3 (restore), skip 3b–7, then run 8–12.
+Cell 3 copies `MyDrive/capstone_rag/indexes/chroma_db` (about 6 GB) to local disk; leave `SMOKE_TEST` off.
+
+**Colab secrets** (key icon on the left, *Notebook access* on):
+
+| Secret | Needed for |
+|---|---|
+| `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL` | real LLM answers (Track B model, e.g. `Qwen/Qwen3-8B`); without them answers use the mock LLM |
+| `LLM_CA_CERT` | a self-signed LLM endpoint: path to its CA certificate on Drive |
+| `LANGSMITH_API_KEY` | traces in LangSmith (smith.langchain.com → Settings → API keys) |
+
+`cp.serve` starts both processes with this notebook's environment, so the API and Streamlit both get the LLM and
+LangSmith settings. A question asked in Streamlit is then **one trace**: `streamlit.conversation` →
+`api.conversation_turn` → clarifier and agent → LangGraph steps → `retrieve.financial_vlm` (the Chroma documents) →
+LLM runs (prompt, reply, tokens) → `api.grounding_policy`. See docs/observability_langsmith.md."""
+
+CHROMA_SERVE_SETUP = r"""# @title 8. Serving settings, dependencies, LLM and LangSmith secrets
+LLM_PROVIDER = "hosted"  # @param ["hosted", "mock"]
+TECHNIQUE = "router"  # @param ["router", "agentic_graph"]
+# router: the supervisor picks lookup / trend / sector trend / report / refusal (Streamlit's default); agentic_graph: Q&A only
+LANGSMITH_PROJECT = "financial-report-copilot-colab"  # @param {type:"string"}
+TRACE_EVERY_REQUEST = True  # @param {type:"boolean"}
+# True: every API request is traced. False: only requests that ask (Streamlit sidebar toggle "LangSmith tracing")
+REQUEST_TIMEOUT_SECONDS = 180  # @param {type:"integer"}
+# one question makes several LLM calls (classifier, route/plan, answer, critic); the API default of 60 s is tight
+import re, tomllib
+deps = tomllib.load(open("/content/Capstone/pyproject.toml", "rb"))["project"]["dependencies"]
+deps = [d.split("#")[0].strip() for d in deps if re.split(r"[<>=!~ \[]", d)[0] not in {"torch", "torchvision", "jupyterlab"}]
+subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "-c", "/content/Capstone/deploy/colab_constraints.txt",
+                       *deps])
+# Same versions as tested on the PC (deploy/colab_constraints.txt, from uv.lock); torch/CUDA stay Colab's own
+from importlib.metadata import PackageNotFoundError, version as installed
+from scripts.common.colab_constraints import pinned
+import sqlite3, numpy, torch
+
+
+def got(name):
+    try:
+        return installed(name)
+    except PackageNotFoundError:
+        return None
+
+
+mismatch = {name: {"installed": got(name), "tested": want} for name, want in pinned().items()
+            if got(name) not in (None, want)}
+print(json.dumps({"python": sys.version.split()[0], "torch": torch.__version__, "cuda": torch.cuda.is_available(),
+                  "numpy": numpy.__version__, "sqlite": sqlite3.sqlite_version, "chromadb": got("chromadb"),
+                  "langsmith": got("langsmith"), "langgraph": got("langgraph"), "pinned_packages": len(pinned()),
+                  "version_mismatches": mismatch}, indent=1))
+assert sys.version_info >= (3, 12), "this code needs Python 3.12+ (Runtime -> Change runtime type -> latest runtime)"
+assert got("chromadb") == "1.5.9", "chromadb must be 1.5.9, the version that wrote the index: rerun this cell"
+assert tuple(int(x) for x in sqlite3.sqlite_version.split(".")[:2]) >= (3, 35), "Chroma needs SQLite 3.35+"
+if mismatch:
+    print("WARNING: versions differ from the tested ones. Runtime -> Restart session, then rerun cells 2, 3 and this one.")
+from google.colab import userdata
+
+
+def secret(name):
+    try:
+        return userdata.get(name) or None
+    except Exception:                    # not defined, or notebook access off
+        return None
+
+
+for key in ("LLM_API_BASE", "LLM_API_KEY", "LLM_MODEL", "LLM_CA_CERT"):
+    value = secret(key)
+    if value:
+        os.environ[key] = value
+    else:
+        os.environ.pop(key, None)
+if LLM_PROVIDER == "hosted" and not all(os.getenv(k) for k in ("LLM_API_BASE", "LLM_API_KEY", "LLM_MODEL")):
+    print("WARNING: LLM_API_BASE / LLM_API_KEY / LLM_MODEL secrets missing -> using the mock LLM")
+    LLM_PROVIDER = "mock"
+langsmith_key = secret("LANGSMITH_API_KEY")
+if langsmith_key:
+    os.environ.update(LANGSMITH_API_KEY=langsmith_key, LANGSMITH_PROJECT=LANGSMITH_PROJECT,
+                      LANGSMITH_TRACING="true" if TRACE_EVERY_REQUEST else "false")
+else:
+    for key in ("LANGSMITH_API_KEY", "LANGSMITH_TRACING"):
+        os.environ.pop(key, None)
+    print("WARNING: no LANGSMITH_API_KEY secret -> nothing is traced (answers still work)")
+os.environ.update(DEFAULT_LLM_PROVIDER=LLM_PROVIDER, RAG_REQUEST_TIMEOUT_SECONDS=str(REQUEST_TIMEOUT_SECONDS))
+state = cp.state_path(s)
+print(json.dumps({
+    "index": str(s.root), "index_ready": state.exists(),
+    "index_gb": round(sum(f.stat().st_size for f in s.root.rglob("*") if f.is_file()) / 1e9, 2) if s.root.exists() else 0,
+    "llm": f"{LLM_PROVIDER} ({os.getenv('LLM_MODEL') or 'mock'})", "technique": TECHNIQUE,
+    "langsmith": {"key": bool(langsmith_key), "project": LANGSMITH_PROJECT if langsmith_key else None,
+                  "trace_every_request": TRACE_EVERY_REQUEST},
+    "request_timeout_seconds": REQUEST_TIMEOUT_SECONDS}, indent=1))
+assert state.exists(), f"no Chroma index under {s.root}: run cell 3 (restore from Drive) first"
+"""
+
+CHROMA_SERVE_START = r"""# @title 9. Start FastAPI + Streamlit on the Chroma index, warm up, open the UI
+import urllib.request, uuid
+
+
+def call(path, body=None, timeout=900, request_id=None):
+    headers = {"Content-Type": "application/json", "X-Request-ID": request_id or str(uuid.uuid4())}
+    if os.getenv("API_AUTH_TOKEN"):      # set when the API is opened through a tunnel (docs/colab_access.html)
+        headers["X-API-Key"] = os.environ["API_AUTH_TOKEN"]
+    request = urllib.request.Request(f"http://127.0.0.1:8000{path}", headers=headers, method="POST" if body else "GET",
+                                     data=json.dumps(body).encode() if body else None)
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return json.load(response)
+
+
+try:
+    for process in (ui, api):            # a rerun of this cell restarts both
+        process.terminate()
+except NameError:
+    pass
+api, ui = cp.serve(s)                    # RAG_BACKEND=financial_vlm, RAG_VLM_DIR=<the restored Chroma index>
+health = call("/health")
+print("backend:", health["runtime"]["financial_backend"], "| index:", health["runtime"].get("RAG_VLM_DIR"))
+print("langsmith:", health.get("langsmith"))
+import time
+started = time.time()                    # warm-up: loads the embedder and the reranker before the first question
+warm = call("/retrieve/financial_report_qa", {"query": "net income", "ticker": "JPM", "top_k": 3})
+print(f"warm-up retrieval: {warm['count']} hits in {time.time() - started:.0f}s")
+from google.colab.output import eval_js
+print("Open the chat UI:", eval_js("google.colab.kernel.proxyPort(8501)"))
+print("In the sidebar: Demo settings -> LLM provider", LLM_PROVIDER, "| LangSmith tracing is",
+      "on for every request" if os.getenv("LANGSMITH_TRACING") == "true" else "the 'LangSmith tracing' toggle")
+"""
+
+CHROMA_SERVE_CHECK = r"""# @title 10. LangSmith check: one traced question, its runs found in LangSmith by request ID
+if not os.getenv("LANGSMITH_API_KEY"):
+    print("skipped: add the LANGSMITH_API_KEY secret and rerun cells 8-9")
+else:
+    check = subprocess.run([sys.executable, "-m", "scripts.observability.check_langsmith", "--llm-provider", LLM_PROVIDER,
+                            "--ticker", "JPM", "--year", "2025", "--project", LANGSMITH_PROJECT,
+                            "--question", "What was JPMorgan Chase's net income in its 2025 annual report?"],
+                           capture_output=True, text=True, cwd="/content/Capstone", env=os.environ.copy())
+    print(check.stdout or check.stderr[-2000:])
+"""
+
+CHROMA_SERVE_FLOW = r"""# @title 11. Agentic flow test: each route, Chroma retrieval and the LLM answer, with a LangSmith link per question
+QUESTIONS = [   # (route expected, question): companies in the min500 corpus
+    ("lookup / text", "Who was Bank of America's independent auditor for fiscal year 2025?"),
+    ("lookup / table", "What was Citi's U.S. Personal Banking net income in 2025 compared with 2024?"),
+    ("lookup / comparison", "Which company had higher net income attributable to the company in its fiscal year ending in 2025: JPMorgan Chase or Bank of America?"),
+    ("lookup / chart", "According to the production charts in Chevron's 2022 annual report, what was Chevron's net crude oil production in 2022?"),
+    ("trend", "How did JPMorgan Chase's net income trend from 2022 to 2025?"),
+    ("sector_trend (slow: one search per bank and year)", "How did banking sector net income trend from 2022 to 2025?"),
+    ("report hand-off", "Generate a financial report for Microsoft for fiscal 2025."),
+    ("out of scope: refused", "Should I buy NVIDIA stock right now?"),
+]
+RUN_SECTOR_TREND = True  # @param {type:"boolean"}
+traced = bool(os.getenv("LANGSMITH_API_KEY"))
+if traced:
+    from scripts.observability.check_langsmith import trace_summary
+rows = []
+for expected, question in QUESTIONS:
+    if expected.startswith("sector_trend") and not RUN_SECTOR_TREND:
+        continue
+    request_id, started = str(uuid.uuid4()), time.time()
+    try:
+        turn = call("/conversation/financial_report_qa", {
+            "query": question, "clarify": False, "technique": TECHNIQUE, "llm_provider": LLM_PROVIDER,
+            "enable_langsmith": traced}, request_id=request_id)
+    except Exception as exc:             # a timeout or HTTP error still has a trace
+        turn = {"result": {"final_status": f"error: {exc}"}}
+    result = turn.get("result") or turn
+    route = (result.get("route") or {}) if isinstance(result.get("route"), dict) else {}
+    evidence = result.get("evidence_preview") or []
+    row = {"expected": expected, "route": route.get("route"), "status": result.get("final_status"),
+           "seconds": round(time.time() - started, 1),
+           "agent_path": " > ".join((result.get("agent_run") or {}).get("path") or []),
+           "chroma_hits": [f"{e.get('ticker')} {e.get('year')} p{e.get('page')}" for e in evidence],
+           "support": (result.get("support_check") or {}).get("verdict"),
+           "answer": (result.get("answer") or "").replace("\n", " ")[:400], "request_id": request_id}
+    if traced:
+        try:
+            row["langsmith"] = trace_summary(LANGSMITH_PROJECT, request_id, wait=45)
+        except Exception as exc:
+            row["langsmith"] = {"error": str(exc)[:200]}
+    rows.append(row)
+    print(f"\n[{row['expected']}] {question}\n  route={row['route']} status={row['status']} {row['seconds']}s "
+          f"support={row['support']}\n  agent: {row['agent_path']}\n  Chroma evidence: {row['chroma_hits']}\n"
+          f"  answer: {row['answer']}")
+    if traced:
+        ls = row["langsmith"]
+        print(f"  LangSmith: {ls.get('runs')} runs, {ls.get('llm_calls')} LLM calls, retrievers {ls.get('retrievers')}"
+              f"\n  trace: {ls.get('url') or ls.get('error')}")
+out = Path(s.work) / "logs" / f"agent_flow_test_{time.strftime('%Y%m%d_%H%M%S')}.json"
+out.parent.mkdir(parents=True, exist_ok=True)
+out.write_text(json.dumps(rows, indent=1), encoding="utf-8")
+finished = sum(r["status"] in {"answered", "pending_human_review", "report_handoff", "refused", "not_available"}
+               for r in rows)
+print(f"\nsaved {out} | {finished}/{len(rows)} questions finished with a final status (check each route and answer"
+      " above; with the mock LLM, routes and answers are placeholders)")
+"""
+
+CHROMA_SERVE_STOP = r"""# @title 12. Stop serving (the index stays; rerun cell 9 to start again)
+for process in (ui, api):
+    process.terminate()
+print("stopped")"""
+
 def cell(kind, text):
     lines = text.split("\n")
     source = [line + "\n" for line in lines[:-1]] + [lines[-1]]
@@ -453,13 +670,13 @@ def chroma():
                      'cp.query(s, "net interest income", sector="banking")\n'
                      'cp.query(s, "net oil-equivalent production", sector="oil_and_gas")\n'
                      'cp.query(s, "revenue by segment", sector="retail")'),
-        cell("markdown", SERVE_MD.replace("{INDEX}", "the Chroma index").replace(
-            "{ENV}", "`RAG_BACKEND=financial_vlm`, `RAG_VLM_DIR=/content/rag/indexes/chroma_db`")),
-        cell("code", "# @title 8. " + SERVE_DEPS.split("# @title ", 1)[1].replace("{EXTRA}", "")),
-        cell("code", "# @title 9. " + SERVE_START.split("# @title ", 1)[1]),
-        cell("code", "# @title 10. " + SERVE_CHECK.split("# @title ", 1)[1]),
-        cell("code", "# @title 11. " + SERVE_STOP.split("# @title ", 1)[1]),
-        cell("code", GCS_EXPORT),
+        cell("markdown", CHROMA_SERVE_MD),
+        cell("code", CHROMA_SERVE_SETUP),
+        cell("code", CHROMA_SERVE_START),
+        cell("code", CHROMA_SERVE_CHECK),
+        cell("code", CHROMA_SERVE_FLOW),
+        cell("code", CHROMA_SERVE_STOP),
+        cell("code", GCS_EXPORT.replace("# @title 12.", "# @title 13.")),
         cell("markdown", CHROMA_NEXT),
     ])
 

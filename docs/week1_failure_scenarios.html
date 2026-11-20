@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Week 1 failure scenarios: the prompt-only baseline, how it breaks, and what the capstone&#x27;s RAG fixes</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
+<h1>Week 1 failure scenarios: the prompt-only baseline, how it breaks, and what the capstone's RAG fixes</h1>
+<p>Date: 20 November 2026. This page is the Track B Week 1 deliverable's failure analysis, and it follows up
+<a href="week1_prompt_baselines.html">week1_prompt_baselines.md</a>:</p>
+<blockquote>
+<p>Single-agent, single-prompt attempt. Systematic comparison of at least three prompting strategies (structured output
+with few-shot, chain-of-thought or self-consistency, decomposition prompting). Small models break in specific ways —
+the team must document how theirs breaks.</p>
+</blockquote>
+<p><strong>Week 1 is prompts only.</strong> One agent, one prompt, no documents: the model gets the question and a prompting strategy
+and must answer from what it knows. That is the <strong>none</strong> context below and the baseline for everything else. The
+capstone then adds retrieval (<strong>rag</strong>), with the same model, prompts and scorer, so the difference between the two is
+what RAG fixes. Two reference runs bracket it: <strong>oracle</strong> (the right document handed to the model: the ceiling for
+prompting) and <strong>bm25</strong> (naive keyword search).</p>
+<p>For every failure scenario this page gives:</p>
+<ul>
+<li>how often it happens with prompts only;</li>
+<li>how many of those answers capstone retrieval turns into correct ones;</li>
+<li>which of the agent's checks stops the rest before release;</li>
+<li>and where we still won't get the correct result.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Notebook</td>
+<td><a href="../notebooks/08_week1_prompt_strategies.ipynb">notebooks/08_week1_prompt_strategies.ipynb</a> (PC or Colab): templates → evidence per context → run → results → failure examples → replay</td>
+</tr>
+<tr>
+<td>Comparison code</td>
+<td><a href="../scripts/evaluation/prompt_baselines.py">scripts/evaluation/prompt_baselines.py</a>: <code>--context none / rag / bm25 / oracle</code>, <code>--retrieval-only</code>, <code>--compare</code>, <code>--pack</code></td>
+</tr>
+<tr>
+<td>Replay code</td>
+<td><a href="../scripts/evaluation/failure_replay.py">scripts/evaluation/failure_replay.py</a>: every wrong answer through the agent's deterministic checks</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td><a href="../tests/test_week1_failures.py">tests/test_week1_failures.py</a>, <a href="../tests/test_prompt_baselines.py">tests/test_prompt_baselines.py</a></td>
+</tr>
+<tr>
+<td>Raw outputs</td>
+<td><code>output/prompt_baselines/local_qwen3vl2b_{none,bm25,rag,oracle}/</code>, <code>comparison.md</code>, <code>failure_replay.md</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Notebook check (20 Nov):</strong> before this round, notebooks 01 and 06 ran the prompt templates on 6–9 hand-picked
+questions. No notebook ran the systematic comparison on the frozen 86-question set, ran the prompts without documents,
+or compared them with the capstone's retrieval. Notebook 08 does all three.</p>
+<blockquote>
+<p><strong>Model.</strong> Every number comes from the local stand-in <strong>Qwen3-VL-2B-Instruct</strong> (Q4 GGUF, llama.cpp, CPU), with one
+run per strategy and context: 86 questions × 5 strategies = <strong>430 answers per context</strong>. Rerun on the provided
+endpoint with notebook 08 on Colab (section 10).</p>
+</blockquote>
+<hr />
+<h2>1. The Week 1 baseline and the evidence sets</h2>
+<table>
+<thead>
+<tr>
+<th>Context</th>
+<th>What the model gets</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>none</strong></td>
+<td>the question and the strategy's prompt. No documents, no citations; the prompts ask for units and period and say &quot;if you do not know the figure, say it is not available and do not guess&quot;</td>
+<td><strong>the Week 1 single-prompt attempt</strong></td>
+</tr>
+<tr>
+<td><strong>rag</strong></td>
+<td>the same prompts plus five chunks (<code>[c1]</code>…<code>[c5]</code>, at most 6,000 characters) from the capstone's retrieval. <code>financial_tools.plan_targets</code> reads the companies and years in the question with no LLM; each company × year is one filtered search through the agent's <code>answer_evidence</code> on <code>RAG_BACKEND=financial_vlm</code> (Chroma pipeline 1: bge-small dense + BM25 sidecar, RRF)</td>
+<td><strong>the capstone</strong></td>
+</tr>
+<tr>
+<td><strong>oracle</strong></td>
+<td>five chunks from the gold document, preferring those that contain the gold figure</td>
+<td>reference: the ceiling for prompting</td>
+</tr>
+<tr>
+<td><strong>bm25</strong></td>
+<td>five chunks from BM25 over the 52,592 text-layer chunks of the 100 eval filings; no filters</td>
+<td>reference: naive retrieval</td>
+</tr>
+</tbody>
+</table>
+<p>The five strategies are the same in every context: zero-shot, structured output with few-shot (three fictional worked
+examples), chain-of-thought, self-consistency (chain-of-thought sampled three times at temperature 0.7, majority
+vote) and decomposition (sub-questions for company, period, measure, unit, source and calculation). In the none
+context the wording drops the evidence and citations (&quot;recall the figure from the company's annual report&quot;).</p>
+<p>The rag run used <code>indexes/rag_home/indexes/chroma_db_bge</code>: 509 filings and 317,037 chunks, an earlier build of the
+same min500 corpus. The final Colab index on Drive holds 335,699 chunks with better page readings.</p>
+<h2>2. Week 1, prompts only: how the model breaks</h2>
+<table>
+<thead>
+<tr>
+<th>Prompt only (none)</th>
+<th>Accuracy</th>
+<th>single_figure</th>
+<th>computed_metric</th>
+<th>comparison</th>
+<th>text_fact</th>
+<th>chart_value</th>
+<th>not_disclosed</th>
+<th>refusal</th>
+<th>Calls/q</th>
+<th>Tokens/q</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>zero_shot</td>
+<td>17%</td>
+<td>0%</td>
+<td>0%</td>
+<td>50%</td>
+<td>20%</td>
+<td>0%</td>
+<td>83%</td>
+<td>62%</td>
+<td>1</td>
+<td>162</td>
+</tr>
+<tr>
+<td>structured_few_shot</td>
+<td>9%</td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+<td>20%</td>
+<td>0%</td>
+<td>50%</td>
+<td>38%</td>
+<td>1</td>
+<td>463</td>
+</tr>
+<tr>
+<td>chain_of_thought</td>
+<td>17%</td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+<td>20%</td>
+<td>0%</td>
+<td>83%</td>
+<td>100%</td>
+<td>1</td>
+<td>433</td>
+</tr>
+<tr>
+<td>self_consistency</td>
+<td>17%</td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+<td>20%</td>
+<td>0%</td>
+<td>83%</td>
+<td>100%</td>
+<td>3</td>
+<td>1,287</td>
+</tr>
+<tr>
+<td>decomposition</td>
+<td>17%</td>
+<td>0%</td>
+<td>0%</td>
+<td>50%</td>
+<td>0%</td>
+<td>0%</td>
+<td>83%</td>
+<td>88%</td>
+<td>1</td>
+<td>367</td>
+</tr>
+<tr>
+<td><strong>All 430 answers</strong></td>
+<td><strong>16%</strong></td>
+<td><strong>0 of 200</strong></td>
+<td><strong>0 of 50</strong></td>
+<td>6 of 30</td>
+<td>8 of 50</td>
+<td>0 of 30</td>
+<td>23 of 30</td>
+<td>31 of 40</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Failure label, prompt only</th>
+<th>zero_shot</th>
+<th>structured_few_shot</th>
+<th>chain_of_thought</th>
+<th>self_consistency</th>
+<th>decomposition</th>
+<th><strong>Total</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>declined_no_evidence</code>: says the figure isn't available</td>
+<td>50</td>
+<td>60</td>
+<td>53</td>
+<td>57</td>
+<td>62</td>
+<td><strong>282</strong></td>
+</tr>
+<tr>
+<td><code>hallucination_unsupported_claim</code>: answers from memory, wrongly</td>
+<td>18</td>
+<td>10</td>
+<td>17</td>
+<td>14</td>
+<td>8</td>
+<td><strong>67</strong></td>
+</tr>
+<tr>
+<td><code>copied_few_shot_example</code></td>
+<td>0</td>
+<td>7</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>7</td>
+</tr>
+<tr>
+<td><code>permission_routing_failure</code>: answers an advice or injection request</td>
+<td>3</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>truncated_output</code></td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+</tr>
+<tr>
+<td><strong>Incorrect (of 86)</strong></td>
+<td>71</td>
+<td>78</td>
+<td>71</td>
+<td>71</td>
+<td>70</td>
+<td><strong>362</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Verbatim examples</strong> (prompt only; gold from the eval set):</p>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Model, prompt only</th>
+<th>Gold</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Adobe net income attributable, FY2025 (FIN-002)</td>
+<td>&quot;$1.1 billion&quot;</td>
+<td>$7,130 million</td>
+</tr>
+<tr>
+<td>Bank of America total assets, FY2024 (FIN-033)</td>
+<td>&quot;$2.75 trillion&quot;</td>
+<td>$3,261,519 million</td>
+</tr>
+<tr>
+<td>JPMorgan Chase cash paid for buybacks, FY2024 (FIN-040)</td>
+<td>&quot;$10.5 billion&quot;</td>
+<td>$18,830 million</td>
+</tr>
+<tr>
+<td>Visa cash and cash equivalents, FY2025 (FIN-025)</td>
+<td>&quot;$10.5 billion&quot;</td>
+<td>$17,164 million</td>
+</tr>
+<tr>
+<td>Amazon operating margin, FY2025 (FIN-048)</td>
+<td>&quot;36.7%&quot;</td>
+<td>11.2%</td>
+</tr>
+<tr>
+<td>Broadcom employees, FY2025 (FIN-064)</td>
+<td>&quot;117,000&quot;</td>
+<td>approximately 33,000</td>
+</tr>
+<tr>
+<td>Bank of America employees, FY2025 (FIN-066)</td>
+<td>&quot;20,000,000&quot;</td>
+<td>approximately 213,000</td>
+</tr>
+<tr>
+<td>Independent auditor of AbbVie, Adobe, AMD, Amazon, Broadcom, Bank of America (FIN-057–065)</td>
+<td>&quot;PwC&quot; for all six</td>
+<td>EY, KPMG, EY, EY, PwC, PwC</td>
+</tr>
+<tr>
+<td>NVIDIA or AMD: higher revenue in the year ending 2025 (FIN-055)</td>
+<td>&quot;NVIDIA … AMD reported approximately $7.8 billion&quot; (scored right: the winner is right)</td>
+<td>NVIDIA $130,497 million vs AMD $34,639 million</td>
+</tr>
+<tr>
+<td>Zero-shot, FIN-081 (will Berkshire beat expectations?)</td>
+<td>answers with an outlook instead of refusing</td>
+<td>refuse</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How the small model breaks without documents:</strong></p>
+<ul>
+<li><strong>It cannot answer a single financial figure.</strong> 0 of 200 single-figure answers and 0 of 50 computed metrics are right, across all five strategies. A 2B model doesn't hold 10-K figures; no prompt changes that.</li>
+<li><strong>It mostly declines (282 of 430), as the prompt asks.</strong> That is the safe failure, and it is why most &quot;correct&quot; prompt-only answers are refusals (31 of 40) and not-disclosed questions (23 of 30): saying &quot;not available&quot; is right there.</li>
+<li><strong>When it does answer, it invents (67).</strong> The invented figures are confident, plausible in shape and wrong in size. &quot;$10.5 billion&quot; appears for two different companies and measures. It names the most familiar auditor (PwC) for every company and is right only when that guess happens to be true (2 of 6).</li>
+<li><strong>Correct-looking comparisons are guesses.</strong> The 6 right comparisons pick the bigger, better-known company, with figures that are wrong (AMD &quot;$7.8 billion&quot;).</li>
+<li><strong>The strategy hardly matters.</strong> Four strategies score 17%. Structured few-shot is lower (9%) because the model copies the fictional example (7 answers). Self-consistency costs three calls for the same 17%. Chain-of-thought and self-consistency refuse all 8 advice and injection items. Zero-shot (3), structured few-shot (1) and decomposition (1) answer some of them.</li>
+</ul>
+<h2>3. What the capstone's RAG fixes</h2>
+<p>Same model, prompts and scorer; the only change is the evidence.</p>
+<table>
+<thead>
+<tr>
+<th>Accuracy (86 questions)</th>
+<th><strong>none (Week 1)</strong></th>
+<th>bm25</th>
+<th><strong>rag (capstone)</strong></th>
+<th>oracle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>zero_shot</td>
+<td>17%</td>
+<td>20%</td>
+<td><strong>56%</strong></td>
+<td>63%</td>
+</tr>
+<tr>
+<td>structured_few_shot</td>
+<td>9%</td>
+<td>7%</td>
+<td><strong>23%</strong></td>
+<td>34%</td>
+</tr>
+<tr>
+<td>chain_of_thought</td>
+<td>17%</td>
+<td>21%</td>
+<td><strong>62%</strong></td>
+<td>70%</td>
+</tr>
+<tr>
+<td>self_consistency</td>
+<td>17%</td>
+<td>19%</td>
+<td><strong>60%</strong></td>
+<td>66%</td>
+</tr>
+<tr>
+<td>decomposition</td>
+<td>17%</td>
+<td>20%</td>
+<td><strong>53%</strong></td>
+<td>60%</td>
+</tr>
+<tr>
+<td><strong>All 430 answers</strong></td>
+<td><strong>68 (16%)</strong></td>
+<td>74 (17%)</td>
+<td><strong>219 (51%)</strong></td>
+<td>252 (59%)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>By category, all five strategies</strong> (correct answers):</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th><strong>none</strong></th>
+<th>bm25</th>
+<th><strong>rag</strong></th>
+<th>oracle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>single_figure (200)</td>
+<td><strong>0</strong></td>
+<td>7</td>
+<td><strong>117 (58%)</strong></td>
+<td>126 (63%)</td>
+</tr>
+<tr>
+<td>computed_metric (50)</td>
+<td><strong>0</strong></td>
+<td>11</td>
+<td><strong>25 (50%)</strong></td>
+<td>29 (58%)</td>
+</tr>
+<tr>
+<td>comparison (30)</td>
+<td>6</td>
+<td>1</td>
+<td><strong>11</strong></td>
+<td>15</td>
+</tr>
+<tr>
+<td>text_fact (50)</td>
+<td>8</td>
+<td>10</td>
+<td><strong>30</strong></td>
+<td>37</td>
+</tr>
+<tr>
+<td>chart_value (30)</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>not_disclosed (30)</td>
+<td><strong>23</strong></td>
+<td>18</td>
+<td>12</td>
+<td>18</td>
+</tr>
+<tr>
+<td>refusal (40)</td>
+<td><strong>31</strong></td>
+<td>27</td>
+<td>24</td>
+<td>27</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Measured question by question: prompt only → rag</strong> (same question, same strategy):</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Fixed (wrong prompt-only → correct with rag)</th>
+<th>Newly wrong (correct prompt-only → wrong with rag)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>zero_shot</td>
+<td>39</td>
+<td>6</td>
+</tr>
+<tr>
+<td>structured_few_shot</td>
+<td>20</td>
+<td>8</td>
+</tr>
+<tr>
+<td>chain_of_thought</td>
+<td>42</td>
+<td>4</td>
+</tr>
+<tr>
+<td>self_consistency</td>
+<td>42</td>
+<td>5</td>
+</tr>
+<tr>
+<td>decomposition</td>
+<td>37</td>
+<td>6</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>180</strong></td>
+<td><strong>29</strong></td>
+</tr>
+</tbody>
+</table>
+<p>With the oracle document instead of rag, 200 are fixed. <strong>Capstone retrieval gets 180 of the 200 fixes that perfect
+evidence would give.</strong> BM25 fixes only 33 and breaks 27: naive retrieval is not much better than no documents.</p>
+<p><strong>Which prompt-only failures RAG fixes:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Prompt-only failure</th>
+<th>Wrong</th>
+<th>Correct with rag</th>
+<th>Correct with oracle</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Declined: no evidence</td>
+<td>282</td>
+<td><strong>141</strong></td>
+<td>157</td>
+<td>the figure is now in front of the model, and it reads it</td>
+</tr>
+<tr>
+<td>Invented from memory</td>
+<td>67</td>
+<td><strong>37</strong></td>
+<td>40</td>
+<td>the right figure replaces the remembered one</td>
+</tr>
+<tr>
+<td>Copied the few-shot example</td>
+<td>7</td>
+<td>1</td>
+<td>1</td>
+<td>a prompt problem; evidence doesn't fix it</td>
+</tr>
+<tr>
+<td>Answered an advice or injection request</td>
+<td>5</td>
+<td>1</td>
+<td>2</td>
+<td>not fixed by evidence (the one &quot;fix&quot; is chance)</td>
+</tr>
+<tr>
+<td>Truncated</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>362</strong></td>
+<td><strong>180</strong></td>
+<td><strong>200</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>What RAG doesn't fix and what it makes worse</strong> (the 29 newly wrong answers):</p>
+<ul>
+<li><strong>Evidence makes the model answer when it should decline.</strong> Not-disclosed questions fall from 23 correct to 12, and refusals from 31 to 24. With five chunks in front of it, the model finds <em>some</em> number and answers: a bank's &quot;gross profit&quot;, an outlook for Berkshire. In the capstone these are not left to the model. The coverage check returns <code>not_available</code> for a company, year or measure the filings don't hold, and the policy refusal refuses advice and forecasts before any LLM call (section 6).</li>
+<li><strong>Structured few-shot still copies its example</strong> (47 of 86 with rag), now with a real figure from the evidence.</li>
+<li><strong>Reading errors appear</strong>: the wrong row of the right table, figures swapped between the two companies of a comparison, and truncation on long table chunks. They are sections 5 to 7.</li>
+</ul>
+<h2>4. Retrieval: the evidence the model gets</h2>
+<p>Of the 86 questions, 72 have an answer in a document. The none context has no evidence by design (0 everywhere).</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>bm25</th>
+<th><strong>rag</strong></th>
+<th>oracle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gold document in the 5 chunks</td>
+<td>37</td>
+<td><strong>69</strong></td>
+<td>72</td>
+</tr>
+<tr>
+<td>Gold figure in the evidence</td>
+<td>12</td>
+<td><strong>39</strong></td>
+<td>39</td>
+</tr>
+</tbody>
+</table>
+<p><strong>By category</strong> (gold document / gold figure in the evidence; figures are checked for single-figure and computed items):</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>bm25</th>
+<th><strong>rag</strong></th>
+<th>oracle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>single_figure (40)</td>
+<td>18 / 7</td>
+<td><strong>37 / 32</strong></td>
+<td>40 / 33</td>
+</tr>
+<tr>
+<td>computed_metric (10)</td>
+<td>5 / 5</td>
+<td><strong>10 / 7</strong></td>
+<td>10 / 6</td>
+</tr>
+<tr>
+<td>comparison (6)</td>
+<td>4</td>
+<td><strong>6</strong></td>
+<td>6</td>
+</tr>
+<tr>
+<td>text_fact (10)</td>
+<td>8</td>
+<td><strong>10</strong></td>
+<td>10</td>
+</tr>
+<tr>
+<td>chart_value (6): gold values in the evidence</td>
+<td>0 of 8</td>
+<td><strong>4 of 8</strong></td>
+<td>0 of 8</td>
+</tr>
+</tbody>
+</table>
+<p><strong>What capstone retrieval changes:</strong></p>
+<ul>
+<li><strong>Wrong company or year disappears.</strong> The filters keep every chunk inside the filing the question names. BM25 missed the gold filing for 35 of the 72 questions, mostly with pages from other companies or years.</li>
+<li><strong>Chart values become text.</strong> Pipeline 1 transcribes chart pages into text chunks (Qwen3-VL or the paid model). Both values of the NVIDIA peer chart (FIN-067, FIN-068) are now in the evidence. The PDF text layer that BM25 and oracle read doesn't contain them.</li>
+<li><strong>Matches the oracle on figures:</strong> the gold figure is in the evidence for 39 questions in both. Rag found it for 4 questions the oracle missed (FIN-007, 034, 037, 045), and the oracle found it for 4 that rag missed.</li>
+</ul>
+<p><strong>Where retrieval still misses:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Questions</th>
+<th>What happens</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FIN-008 (Salesforce), FIN-011 and FIN-038 (Home Depot)</td>
+<td>right company, &quot;wrong&quot; filing</td>
+<td><strong>Fiscal-year labelling.</strong> These companies' years end in January or February. The question says &quot;fiscal 2025&quot;, the eval gold is the year ending Jan/Feb 2026 (filing <code>…_2026</code>), and the filter takes the filing labelled 2025. Neither side is plainly wrong: the label is ambiguous for these companies</td>
+</tr>
+<tr>
+<td>FIN-010 (Alphabet dividends), FIN-030 (AMD revenue 2024), FIN-033 (BofA total assets), FIN-040 (JPM buybacks)</td>
+<td>right filing, the figure's page not in the top 5</td>
+<td>ranking: the statement page loses to MD&amp;A pages that repeat the words. The agent's retry broadens the query once; this single-shot test doesn't</td>
+</tr>
+<tr>
+<td>FIN-069 to FIN-072 (Chevron 2022 production charts)</td>
+<td>chart pages not in the top 5</td>
+<td>the chart descriptions don't use the question's wording (&quot;net production&quot;, &quot;reserves&quot;)</td>
+</tr>
+</tbody>
+</table>
+<h2>5. How the model breaks, with and without evidence: the scenarios</h2>
+<p>Incorrect answers summed over all five strategies (430 answers per column). Verbatim Week 1 examples with evidence
+are in <a href="week1_prompt_baselines.html">week1_prompt_baselines.md</a> section 4 and in notebook 08, step 5; those marked
+<em>rag</em> come from the new run.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Scenario (failure label)</th>
+<th><strong>none</strong></th>
+<th>bm25</th>
+<th><strong>rag</strong></th>
+<th>oracle</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S0</td>
+<td><strong>No evidence: declines</strong> (<code>declined_no_evidence</code>)</td>
+<td><strong>282</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td>prompt only, &quot;not available&quot; for every figure question it doesn't invent</td>
+</tr>
+<tr>
+<td>S1</td>
+<td><strong>Retrieval miss</strong>: the figure isn't in the evidence, so the model declines or answers from the wrong filing (<code>retrieval_miss</code>)</td>
+<td></td>
+<td><strong>181</strong></td>
+<td><strong>27</strong></td>
+<td>32</td>
+<td>BM25 returns another company's page for &quot;AbbVie revenue 2025&quot;</td>
+</tr>
+<tr>
+<td>S2</td>
+<td><strong>Template capture</strong>: the worked example leaks into the answer (<code>copied_few_shot_example</code>)</td>
+<td>7</td>
+<td>55</td>
+<td>47</td>
+<td>40</td>
+<td><em>rag:</em> &quot;Example Corp's total assets for fiscal 2025 were $104,816 million [c1]&quot;: the example's wording around a real figure from the evidence</td>
+</tr>
+<tr>
+<td>S3</td>
+<td><strong>Wrong row or concept</strong> (<code>reasoning_error</code>)</td>
+<td></td>
+<td>39</td>
+<td><strong>56</strong></td>
+<td>27</td>
+<td><em>rag:</em> PepsiCo long-term debt &quot;$4,030 million&quot; (a short-term debt line; gold $42,321 million); Visa and Mastercard revenues swapped (FIN-054)</td>
+</tr>
+<tr>
+<td>S4</td>
+<td><strong>Over-refusal</strong>: declines although the figure is in the evidence (<code>over_refusal</code>)</td>
+<td></td>
+<td>32</td>
+<td>15</td>
+<td>20</td>
+<td>self-consistency votes &quot;not available&quot; on Alphabet dividends</td>
+</tr>
+<tr>
+<td>S5</td>
+<td><strong>Truncated output</strong>: the answer runs out of tokens before the JSON (<code>truncated_output</code>)</td>
+<td>1</td>
+<td>18</td>
+<td>26</td>
+<td>16</td>
+<td>18 of 86 chain-of-thought calls on rag hit the 500-token limit</td>
+</tr>
+<tr>
+<td>S6</td>
+<td><strong>Invented numbers</strong> (<code>hallucination_unsupported_claim</code>)</td>
+<td><strong>67</strong></td>
+<td>13</td>
+<td>21</td>
+<td>16</td>
+<td><em>none:</em> Broadcom &quot;117,000 employees&quot; (about 33,000); <em>rag:</em> Bank of America employees &quot;164,668&quot; from an EEO table (about 213,000)</td>
+</tr>
+<tr>
+<td>S7</td>
+<td><strong>Arithmetic and rounding</strong> (<code>calculation_error</code>)</td>
+<td></td>
+<td>12</td>
+<td>8</td>
+<td>14</td>
+<td>AbbVie operating margin 24.5% (true 24.65%)</td>
+</tr>
+<tr>
+<td>S8</td>
+<td><strong>Wrong units or scale</strong> (<code>wrong_or_missing_scale</code>)</td>
+<td></td>
+<td>0</td>
+<td>5</td>
+<td>7</td>
+<td>AMD diluted EPS &quot;$2.61 million&quot;</td>
+</tr>
+<tr>
+<td>S9</td>
+<td><strong>Advice, forecasts, injection: answered instead of refused</strong> (<code>permission_routing_failure</code>)</td>
+<td>5</td>
+<td>6</td>
+<td>6</td>
+<td>6</td>
+<td><em>rag, zero-shot:</em> Berkshire &quot;is expected to beat expectations&quot; (FIN-081)</td>
+</tr>
+<tr>
+<td>S10</td>
+<td><strong>Chart-only values</strong>: printed only in a chart image</td>
+<td>0% in every context</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Chevron 2022 production charts</td>
+</tr>
+<tr>
+<td>S11</td>
+<td><strong>Not in the filings</strong> (future year, company not in the corpus, a measure banks don't report)</td>
+<td>part of S3/S6</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Microsoft revenue for fiscal 2027 answered with FY2026 revenue</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Total incorrect (of 430)</strong></td>
+<td><strong>362</strong></td>
+<td><strong>356</strong></td>
+<td><strong>211</strong></td>
+<td><strong>178</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>How the failure mix shifts.</strong> Prompt only, the failures are <em>not knowing</em> (S0) and <em>inventing</em> (S6). Capstone
+retrieval removes most of both: the figure is in the evidence. The remaining errors move to <strong>reading</strong> that
+filing:</p>
+<ul>
+<li>wrong row or concept (S3: 56);</li>
+<li>truncation on longer table chunks (S5: 26);</li>
+<li>the few retrieval misses left (S1: 27, against 181 for BM25).</li>
+</ul>
+<p>That is the expected shape: retrieval fixes <em>knowing</em>, and the remaining failures are the model's <em>reading</em>, which
+the checks in section 6 and the agent's critic target.</p>
+<h2>6. What the capstone's checks stop</h2>
+<p>Two separate mechanisms, measured separately:</p>
+<ol>
+<li><strong>Retrieval</strong> turns wrong answers into <strong>correct</strong> ones (section 3).</li>
+<li><strong>Checks before release</strong> turn the remaining wrong answers into <strong>safe</strong> ones (refused, not available, withheld for evidence, or sent to human review). The replay ran every recorded wrong answer through the same functions the LangGraph flow runs:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Function (graph step)</th>
+<th>Stops</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>policy</td>
+<td><code>financial_prompting_agent.policy_refusal</code> (<code>security_step</code>, before any LLM call)</td>
+<td>advice, forecasts, personal and non-public data, creative requests</td>
+</tr>
+<tr>
+<td>input guard</td>
+<td><code>deterministic_input_guard</code> (<code>security_step</code>)</td>
+<td>prompt injection, code, secrets</td>
+</tr>
+<tr>
+<td>coverage</td>
+<td><code>financial_clarifier.question_scope</code> (<code>run_technique</code>)</td>
+<td>a company, year or measure the filings don't hold → <code>not_available</code></td>
+</tr>
+<tr>
+<td>company scope</td>
+<td><code>guardrails.checks.company_scope_check</code> (<code>run_technique</code>, after the graph)</td>
+<td>a cited chunk from a company the question didn't ask about</td>
+</tr>
+<tr>
+<td>number grounding</td>
+<td><code>financial_tools.numeric_grounding</code> (<code>critic_step</code>)</td>
+<td>a figure that appears in no cited chunk and didn't come from the calculator</td>
+</tr>
+<tr>
+<td>output filter</td>
+<td><code>output_content_filter</code> (<code>governance_step</code>)</td>
+<td>advice wording in the answer → human review</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Replay result, all five strategies</strong> (<code>output/prompt_baselines/failure_replay.md</code>; wrong → caught):</p>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th><strong>none</strong></th>
+<th>bm25</th>
+<th><strong>rag</strong></th>
+<th>oracle</th>
+<th>Main layer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S0 declined, no evidence</td>
+<td>282 → 0</td>
+<td></td>
+<td></td>
+<td></td>
+<td>(a decline is already safe)</td>
+</tr>
+<tr>
+<td>S1 retrieval miss</td>
+<td></td>
+<td>181 → 31</td>
+<td><strong>27 → 0</strong></td>
+<td>32 → 0</td>
+<td>company scope (bm25 cites other companies; rag's filters prevent that)</td>
+</tr>
+<tr>
+<td>S2 template capture</td>
+<td>7 → 7</td>
+<td>55 → 41</td>
+<td><strong>47 → 37</strong></td>
+<td>40 → 23</td>
+<td>number grounding, policy, coverage</td>
+</tr>
+<tr>
+<td>S3 wrong row or concept</td>
+<td></td>
+<td>39 → 15</td>
+<td><strong>56 → 10</strong></td>
+<td>27 → 10</td>
+<td>number grounding</td>
+</tr>
+<tr>
+<td>S4 over-refusal</td>
+<td></td>
+<td>32 → 0</td>
+<td>15 → 0</td>
+<td>20 → 0</td>
+<td>(a refusal is already safe)</td>
+</tr>
+<tr>
+<td>S5 truncated output</td>
+<td>1 → 1</td>
+<td>18 → 6</td>
+<td>26 → 10</td>
+<td>16 → 3</td>
+<td>number grounding, policy</td>
+</tr>
+<tr>
+<td>S6 invented numbers</td>
+<td><strong>67 → 54</strong></td>
+<td>13 → 10</td>
+<td><strong>21 → 11</strong></td>
+<td>16 → 11</td>
+<td>number grounding (a remembered figure has no evidence to match), coverage</td>
+</tr>
+<tr>
+<td>S7 arithmetic</td>
+<td></td>
+<td>12 → 7</td>
+<td>8 → 5</td>
+<td>14 → <strong>14</strong></td>
+<td>number grounding: a computed figure must come from the calculator</td>
+</tr>
+<tr>
+<td>S8 units or scale</td>
+<td></td>
+<td>0</td>
+<td>5 → 2</td>
+<td>7 → 2</td>
+<td>number grounding</td>
+</tr>
+<tr>
+<td>S9 advice, injection</td>
+<td>5 → <strong>5</strong></td>
+<td>6 → <strong>6</strong></td>
+<td>6 → <strong>6</strong></td>
+<td>6 → <strong>6</strong></td>
+<td><strong>policy (new)</strong>, input guard</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>362 → 67</strong></td>
+<td><strong>356 → 116</strong></td>
+<td><strong>211 → 81</strong></td>
+<td><strong>178 → 69</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Where every answer ends up</strong> (430 answers per context, deterministic checks only):</p>
+<table>
+<thead>
+<tr>
+<th>Outcome</th>
+<th><strong>none (Week 1)</strong></th>
+<th>bm25</th>
+<th><strong>rag (capstone)</strong></th>
+<th>oracle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Correct</td>
+<td>68 (16%)</td>
+<td>74 (17%)</td>
+<td><strong>219 (51%)</strong></td>
+<td>252 (59%)</td>
+</tr>
+<tr>
+<td>Wrong, stopped by a check (refused, not available, withheld, review)</td>
+<td>67</td>
+<td>116</td>
+<td>81</td>
+<td>69</td>
+</tr>
+<tr>
+<td>Wrong, but the model declined or gave no answer (safe)</td>
+<td>282</td>
+<td>193</td>
+<td>40</td>
+<td>61</td>
+</tr>
+<tr>
+<td><strong>Wrong and released</strong></td>
+<td>13 (3%)</td>
+<td>47 (11%)</td>
+<td><strong>90 (21%)</strong></td>
+<td>48 (11%)</td>
+</tr>
+</tbody>
+</table>
+<p>Reading the table:</p>
+<ul>
+<li>
+<p><strong>Prompt only is safe because it is useless.</strong> Two thirds of its answers are &quot;not available&quot;, and number grounding withholds almost every invented figure, because a figure from memory has no evidence to match. All 13 released wrong answers are the same guess, &quot;PwC&quot;, for the auditor of AbbVie, Adobe, AMD and Amazon: a name, not a figure, so number grounding has nothing to check.</p>
+</li>
+<li>
+<p><strong>The last row is the honest cost of RAG.</strong> With evidence the model answers almost every question, so confidently wrong answers reach the checks more often. Of the 90 released:</p>
+<ul>
+<li>46 are a wrong row or concept from the right filing (S3);</li>
+<li>13 are cut-off answers that still contain a figure (S5);</li>
+<li>10 are invented or mis-attributed figures (S6);</li>
+<li>10 are template captures around a real figure (S2).</li>
+</ul>
+<p>Number grounding can't stop them, because the figure <em>is</em> in the cited chunk. The agent's next layers target these, and the replay leaves them out: the critic's LLM support check (every claim must be supported by a cited chunk), the repair loop, and, for trend and sector questions, reading the statement row in code instead of from the LLM.</p>
+</li>
+</ul>
+<p><strong>Cost of the checks.</strong> Number grounding would withhold 24 of 207 correct oracle answers to answerable questions,
+and nothing else would. Before the date fix in section 8 the count was 53, and a further 13 went to review because of
+the substring bug in section 8. On rag it would withhold 42 of 183. 32 of the 42 are <strong>mis-citations</strong>: the figure
+is right and is in one of the five chunks, but not the one cited. On rag the five chunks often come from the same
+filing and repeat the same table, and the small model tends to cite <code>[c1]</code> by default. Example: Mastercard's cash and
+cash equivalents, $10,566 million, is in <code>[c3]</code>, and the answer cites <code>[c1]</code>. Withholding is the right call for an
+answer whose cited chunk doesn't hold the figure. In the graph, the critic sends such an answer back once to repair
+it (<code>support_check</code> marks it unsupported; <code>should_repair</code> allows one repair), and the replay doesn't model that.</p>
+<h3>Measured: the strategies with capstone retrieval</h3>
+<table>
+<thead>
+<tr>
+<th>Failure label, rag evidence</th>
+<th>zero_shot</th>
+<th>structured_few_shot</th>
+<th>chain_of_thought</th>
+<th>self_consistency</th>
+<th>decomposition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>copied_few_shot_example</td>
+<td>0</td>
+<td><strong>47</strong></td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>reasoning_error</td>
+<td>14</td>
+<td>9</td>
+<td>6</td>
+<td>12</td>
+<td><strong>15</strong></td>
+</tr>
+<tr>
+<td>truncated_output</td>
+<td>0</td>
+<td>1</td>
+<td><strong>18</strong></td>
+<td>7</td>
+<td>0</td>
+</tr>
+<tr>
+<td>hallucination_unsupported_claim</td>
+<td><strong>9</strong></td>
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td><strong>8</strong></td>
+</tr>
+<tr>
+<td>retrieval_miss</td>
+<td>6</td>
+<td>2</td>
+<td>4</td>
+<td>6</td>
+<td>9</td>
+</tr>
+<tr>
+<td>over_refusal</td>
+<td>2</td>
+<td>2</td>
+<td>3</td>
+<td><strong>7</strong></td>
+<td>1</td>
+</tr>
+<tr>
+<td>calculation_error</td>
+<td>2</td>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td>4</td>
+</tr>
+<tr>
+<td>permission_routing_failure</td>
+<td>3</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>3</td>
+</tr>
+<tr>
+<td>wrong_or_missing_scale</td>
+<td>2</td>
+<td>2</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td><strong>Accuracy</strong></td>
+<td>56%</td>
+<td>23%</td>
+<td><strong>62%</strong></td>
+<td>60%</td>
+<td>53%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Across the strategies:</strong></p>
+<ul>
+<li><strong>With evidence the strategies separate; without it they don't.</strong> Prompt only, four of five score 17%. With rag the order is chain-of-thought &gt; self-consistency &gt; zero-shot &gt; decomposition &gt; structured few-shot, the same as with oracle evidence.</li>
+<li><strong>Structured few-shot breaks the same way regardless of evidence.</strong> On rag, 47 of 86 answers copy the worked example (&quot;Example Corp's … was $… [c1]&quot;), against 55 on bm25 and 40 on oracle. It is a prompt failure, and retrieval can't fix it. The agent's prompts have no worked example with figures.</li>
+<li><strong>Decomposition copies the schema as well as the example.</strong> 14 of its rag answers return <code>&quot;answerability&quot;: &quot;answerable | not_answerable_from_corpus | refuse&quot;</code>, the literal enum from the prompt. The value is still often right (9 of the 14 are scored correct), but a strict parser would reject them. The agent validates its JSON fields in code.</li>
+<li><strong>Zero-shot and decomposition read the wrong row most often</strong> (14 and 15). With no step-by-step reasoning, the model takes the first plausible number in a table. Chain-of-thought has the fewest wrong rows (6) but loses 18 answers to truncation.</li>
+<li><strong>Self-consistency trades truncation for refusals.</strong> Majority voting over three samples truncates less than chain-of-thought (7 against 18) but votes &quot;not available&quot; more often (7 against 3), and it costs three calls (78 s per question on CPU) for 2 points less.</li>
+<li><strong>The advice problem doesn't depend on evidence.</strong> Zero-shot and decomposition answer refusal items in every context. The policy refusal stops all of them before any LLM call.</li>
+</ul>
+<p><strong>Chain-of-thought in detail</strong> (the best single prompt with evidence):</p>
+<table>
+<thead>
+<tr>
+<th>chain_of_thought</th>
+<th>none</th>
+<th>bm25</th>
+<th><strong>rag</strong></th>
+<th>oracle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Accuracy (86 questions)</strong></td>
+<td>17%</td>
+<td>21%</td>
+<td><strong>62%</strong></td>
+<td>70%</td>
+</tr>
+<tr>
+<td>single_figure (40)</td>
+<td>0%</td>
+<td>2%</td>
+<td><strong>70%</strong></td>
+<td>70%</td>
+</tr>
+<tr>
+<td>computed_metric (10)</td>
+<td>0%</td>
+<td>20%</td>
+<td><strong>50%</strong></td>
+<td>80%</td>
+</tr>
+<tr>
+<td>comparison (6)</td>
+<td>0%</td>
+<td>17%</td>
+<td><strong>67%</strong></td>
+<td>50%</td>
+</tr>
+<tr>
+<td>text_fact (10)</td>
+<td>20%</td>
+<td>10%</td>
+<td><strong>50%</strong></td>
+<td>80%</td>
+</tr>
+<tr>
+<td>chart_value (6)</td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>not_disclosed (6)</td>
+<td>83%</td>
+<td>83%</td>
+<td>67%</td>
+<td>83%</td>
+</tr>
+<tr>
+<td>refusal (8)</td>
+<td>100%</td>
+<td>100%</td>
+<td>88%</td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Single-figure lookups go from 0% to 70%</strong>, the same as the oracle.</li>
+<li><strong>Truncation is the main remaining loss</strong> (18 answers). Pipeline 1's chunks carry whole tables as Markdown, so the model reasons over more rows and runs out of its 500 tokens before the JSON. This is a Week 1 prompt limit, not a retrieval problem: the agent's answer prompt doesn't ask for step-by-step reasoning.</li>
+<li><strong>The chart values reached the evidence but weren't read correctly.</strong> FIN-067 and FIN-068 have both values in the chunks, and the model still answered wrong.</li>
+</ul>
+<h3>Scenario by scenario</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Fixed by RAG retrieval?</th>
+<th>Stopped by a check?</th>
+<th>Where we still won't get the correct result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S0 no evidence, declines</td>
+<td><strong>yes, half:</strong> 141 of 282 become correct with rag (157 with oracle)</td>
+<td>n/a: a decline is safe</td>
+<td>the questions whose figure retrieval doesn't bring (S1) or the model misreads (S3)</td>
+</tr>
+<tr>
+<td>S1 retrieval miss</td>
+<td><strong>Mostly.</strong> Filtered search finds the gold filing for 69 of 72 questions (bm25: 37) and the figure for 39 (bm25: 12)</td>
+<td>company scope catches wrong-company answers</td>
+<td>fiscal-year labels for January/February year ends (FIN-008, 011, 038); statement pages ranked below MD&amp;A (FIN-010, 030, 033, 040)</td>
+</tr>
+<tr>
+<td>S2 template capture</td>
+<td>no: a prompt problem</td>
+<td><strong>avoided by design</strong>: the graph's answer prompt has no example, and the agent's structured few-shot example contains no figures (<code>prompts/financial.py</code>). In the replay the checks still catch 41/55 (bm25), 37/47 (rag) and 23/40 (oracle) copied answers</td>
+<td><strong>observed on rag:</strong> 10 copies wrap a real figure from the cited chunk (&quot;Example Corp's total assets for fiscal 2025 were $104,816 million&quot;) and pass number grounding</td>
+</tr>
+<tr>
+<td>S3 wrong row or concept</td>
+<td>partly: with the right filing, the right row is often among the 5 chunks, but so are many wrong ones. <strong>The largest remaining failure on rag (56, 46 of them released)</strong></td>
+<td>number grounding catches a figure from an uncited chunk (10/56 rag, 10/27 oracle)</td>
+<td>a real figure from the wrong row of a cited table passes number grounding; the critic's LLM support check and the trend/sector agents' statement-row reading in code address it</td>
+</tr>
+<tr>
+<td>S4 over-refusal</td>
+<td>yes, when the figure was missing; the model declines less when the chunk is the right statement</td>
+<td>no: a refusal is the safe failure</td>
+<td>the evidence guard broadens the search once for a target with no evidence, and the critic can send the answer back once; a small model can still decline</td>
+</tr>
+<tr>
+<td>S5 truncated output</td>
+<td>no</td>
+<td>10 of 26 on rag (the partial answer's figure has no support)</td>
+<td>the graph's answer prompt asks for a cited answer, not step-by-step reasoning, so long reasoning doesn't use up the budget there</td>
+</tr>
+<tr>
+<td>S6 invented numbers</td>
+<td><strong>yes, mostly:</strong> 37 of 67 prompt-only inventions become correct with rag</td>
+<td><strong>yes</strong> for remembered figures (54/67: no evidence holds them); partly with evidence (11/21 rag)</td>
+<td>a figure that exists in the cited chunk but belongs to another row or company (BofA's EEO headcount)</td>
+</tr>
+<tr>
+<td>S7 arithmetic</td>
+<td>no</td>
+<td><strong>yes</strong>: every computed figure must come from <code>CALC[...]</code> (the calculator, with operands from the evidence), so a hand-computed one is withheld (14/14 oracle, 5/8 rag)</td>
+<td>the model must write <code>CALC[...]</code>. If it doesn't, the answer is withheld, not corrected</td>
+</tr>
+<tr>
+<td>S8 units or scale</td>
+<td>partly: pipeline 1 chunks carry the table's <code>scale</code></td>
+<td>number grounding allows any scale, so a wrong-scale copy of the right digits passes</td>
+<td>the critic's support check; the API shows the cited excerpt next to the answer</td>
+</tr>
+<tr>
+<td>S9 advice, injection</td>
+<td>no, in any context</td>
+<td><strong>yes, all 8 refusal items, by rule before any LLM call</strong> (7 by policy, 1 by the injection guard)</td>
+<td>requests phrased outside the patterns go to the LLM classifier and the answer prompt, and advice wording in an answer goes to human review</td>
+</tr>
+<tr>
+<td>S10 chart-only values</td>
+<td><strong>partly</strong>: the NVIDIA peer chart's values are now in text chunks (4 of 8 values)</td>
+<td>number grounding withholds an invented chart value</td>
+<td>the Chevron production charts aren't ranked into the top 5</td>
+</tr>
+<tr>
+<td>S11 not in the filings</td>
+<td><strong>made worse by evidence:</strong> not-disclosed questions fall from 23/30 correct prompt-only to 12/30 with rag</td>
+<td><strong>yes</strong>: coverage returns <code>not_available</code> for FIN-074 (company not in the corpus), FIN-075 (FY2027), FIN-076 (bank gross profit), and policy refuses FIN-078 (a forecast)</td>
+<td>FIN-073 and FIN-077 (a document type or region breakdown the filings don't have) still depend on the model saying &quot;not available&quot;</td>
+</tr>
+</tbody>
+</table>
+<h2>7. Where we still won't get correct results</h2>
+<p>Even with capstone retrieval and every check, these stay wrong (or come out as safe non-answers rather than correct
+ones):</p>
+<ol>
+<li>
+<p><strong>Fiscal years that end in January or February</strong> (Salesforce, Home Depot, NVIDIA, Walmart and similar). &quot;Fiscal 2025&quot; can mean the year that <em>ends</em> in early 2025 or early 2026. The agent follows the filing's own label. The eval gold sometimes takes the other year.</p>
+</li>
+<li>
+<p><strong>The statement page ranked below commentary pages.</strong> The filing is right but the figure's page is 6th or lower. The agent's one broadened retry helps; a cross-encoder reranker (<code>RAG_RERANKER_MODEL</code>) would help more.</p>
+</li>
+<li>
+<p><strong>Charts whose description doesn't share the question's words</strong> (Chevron production charts).</p>
+</li>
+<li>
+<p><strong>Right number, wrong concept, from a cited table: the largest remaining failure with capstone retrieval.</strong> On rag, 56 of 211 wrong answers are a wrong row or concept, and 46 of them pass every deterministic check. Examples:</p>
+<ul>
+<li>PepsiCo long-term debt answered with a short-term debt line;</li>
+<li>Bank of America's EEO-table headcount instead of &quot;approximately 213,000&quot;;</li>
+<li>Visa's and Mastercard's revenues swapped in a comparison.</li>
+</ul>
+<p>Number grounding can't tell two real figures in the same table apart, and company scope can't catch a swap between two companies the question asked about. Only the LLM support check or reading the statement row in code can. With a 2B model, the support check is itself a small-model judgement.</p>
+</li>
+<li>
+<p><strong>Questions the filings can't answer, once evidence is present.</strong> With chunks in front of it the model answers where it should decline (not-disclosed 23 → 12 correct). The coverage check covers the cases it knows (company, year, measures banks don't report); a breakdown the filings don't have still depends on the model.</p>
+</li>
+<li>
+<p><strong>Template capture around a real figure.</strong> With structured few-shot prompting, 10 rag answers kept the example's wording (&quot;Example Corp's …&quot;) around a figure that really is in the cited chunk, so number grounding lets them through. The agent's own prompts avoid this by design (no worked example with figures). The risk only applies to the Week 1 template.</p>
+</li>
+<li>
+<p><strong>Small-model behaviour that no check turns into a correct answer.</strong> These end safe (declined or withheld) rather than correct:</p>
+<ul>
+<li>over-refusal;</li>
+<li>an answer withheld because the model computed instead of writing <code>CALC[...]</code>;</li>
+<li>truncation;</li>
+<li>a correct figure cited to the wrong chunk (32 rag answers), unless the critic's single repair fixes the citation.</li>
+</ul>
+</li>
+<li>
+<p><strong>Advice or forecasts phrased outside the policy patterns.</strong> They fall back to the LLM classifier and the answer prompt (the Week 1 weakness), with the output filter as the last net.</p>
+</li>
+</ol>
+<h2>8. Code changes in this round</h2>
+<table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Why (Week 1 finding)</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Policy refusal before any LLM call</strong>: advice, forecasts, personal data, non-public information, creative requests. Runs in the graph's <code>security_step</code> and in <code>prepare_guarded_config</code> for the non-graph techniques</td>
+<td>the model answered advice and forecast requests in every context (S9). The Week 1 mitigation table said &quot;a router/guard node before the LLM&quot;, but the code still left the decision to the LLM</td>
+<td><code>guardrails/patterns.py</code> (<code>FINANCIAL_POLICY_REFUSALS</code>), <code>guardrails/checks.policy_refusal</code>, <code>agents/financial_prompting_agent.policy_refusal</code></td>
+</tr>
+<tr>
+<td><strong>Number grounding ignores dates and page references</strong></td>
+<td>&quot;December 31, 2025&quot;, &quot;2025-12-31&quot; and &quot;page 49&quot; counted as unsupported figures, so correct cited answers were withheld</td>
+<td><code>financial_tools.NOT_FIGURES</code></td>
+</tr>
+<tr>
+<td><strong>Review terms match whole words</strong></td>
+<td>&quot;hold&quot; matched &quot;stockholders'&quot; and &quot;sell&quot; matched &quot;selling, general and administrative&quot;. Every stockholders' equity question went to human review, and answers mentioning it went to the review queue</td>
+<td><code>guardrails.checks.has_term</code> (output filter and human-review triggers)</td>
+</tr>
+<tr>
+<td><strong><code>--context none</code></strong>: the prompt-only Week 1 baseline (closed-book versions of the five prompts, failure labels <code>declined_no_evidence</code> and <code>hallucination_unsupported_claim</code>)</td>
+<td>Week 1 is a single-prompt attempt without documents</td>
+<td><code>evaluation/prompt_baselines.py</code> (<code>SYSTEM_PROMPT_ONLY</code>, <code>SUFFIX_PROMPT_ONLY</code>, <code>score(prompt_only=...)</code>)</td>
+</tr>
+<tr>
+<td><code>--context rag</code>, <code>--retrieval-only</code>, <code>--compare</code> (with fixed / newly wrong per strategy), <code>--pack</code></td>
+<td>measure the same prompts on the capstone's retrieval</td>
+<td><code>evaluation/prompt_baselines.py</code></td>
+</tr>
+<tr>
+<td>Failure replay</td>
+<td>which check stops which failure</td>
+<td><code>evaluation/failure_replay.py</code></td>
+</tr>
+<tr>
+<td><strong>The report scores every strategy recorded in a run</strong></td>
+<td>runs done one strategy at a time (as on CPU) kept only the last strategy in <code>summary.json</code></td>
+<td><code>prompt_baselines.main</code></td>
+</tr>
+<tr>
+<td>Notebook 08</td>
+<td>Week 1 comparison in a notebook (PC and Colab), prompt only first</td>
+<td><code>notebooks/build_week1_notebook.py</code></td>
+</tr>
+</tbody>
+</table>
+<p>A direct question such as &quot;Should I buy Apple stock?&quot; used to be answered and flagged for human review. It is now
+refused outright. Softer wording (&quot;Is Apple undervalued…&quot;) still goes to human review
+(<code>tests/test_financial_prompting_agent.py</code>).</p>
+<h2>9. Limits</h2>
+<ul>
+<li><strong>Stand-in model, one run per strategy and context.</strong> Differences of a few points are noise at 86 items; read the categories and failure counts.</li>
+<li><strong>A 2B model's memory is a low bar for prompt only.</strong> A larger model would remember some headline figures (revenue of the largest companies). It would still invent the rest, and the eval set's figures are exact.</li>
+<li><strong>The prompt-only wording differs from the evidence prompts only where it must</strong> (no evidence, no citations, &quot;recall the figure&quot;). The strategies, schema and few-shot examples are otherwise the same.</li>
+<li><strong>The rag run used the earlier bge index</strong> (<code>chroma_db_bge</code>), not the final Drive index.</li>
+<li><strong>The replay is deterministic only.</strong> It leaves out the critic's LLM support check, the repair loop and the calculator, which need the model. So a &quot;caught&quot; count is a lower bound on what the full graph stops.</li>
+<li><strong>Single-shot retrieval.</strong> The rag context does one search per target; the agent adds one broadened retry for missing targets.</li>
+<li><strong>The scorer is heuristic</strong> (see Week 1 section 6).</li>
+</ul>
+<h2>10. Reproducing</h2>
+<pre><code class="language-powershell"># PC: prompt only (about 2 hours on CPU for all five strategies; resumable)
+.venv\Scripts\python.exe -m scripts.evaluation.prompt_baselines --local-llm --context none --run-id local_qwen3vl2b_none
+# capstone retrieval: evidence only (minutes), then the model (hours on CPU; resumable)
+$env:RAG_BACKEND=&quot;financial_vlm&quot;; $env:RAG_VLM_DIR=&quot;indexes\rag_home\indexes\chroma_db_bge&quot;
+.venv\Scripts\python.exe -m scripts.evaluation.prompt_baselines --context rag --retrieval-only --run-id local_qwen3vl2b_rag
+.venv\Scripts\python.exe -m scripts.evaluation.prompt_baselines --local-llm --context rag --run-id local_qwen3vl2b_rag
+# comparison (prompt only first: the fixed / newly wrong table is against the first run) and the replay
+.venv\Scripts\python.exe -m scripts.evaluation.prompt_baselines --compare local_qwen3vl2b_none local_qwen3vl2b_bm25 local_qwen3vl2b_rag local_qwen3vl2b_oracle
+.venv\Scripts\python.exe -m scripts.evaluation.failure_replay local_qwen3vl2b_none local_qwen3vl2b_bm25 local_qwen3vl2b_rag local_qwen3vl2b_oracle
+</code></pre>
+<p><strong>On Colab with the provided endpoint:</strong></p>
+<ol>
+<li>On the PC, run <code>python -m scripts.evaluation.prompt_baselines --pack</code>, then upload <code>output/colab/week1_baselines.zip</code> (the BM25 chunks and the recorded runs) and <code>capstone_code.zip</code> to <code>MyDrive/capstone_rag/</code>.</li>
+<li>Add the Colab secrets <code>LLM_API_BASE</code>, <code>LLM_API_KEY</code> and <code>LLM_MODEL</code>.</li>
+<li>Open notebook 08 and run all cells. The none context needs nothing else; it restores the Chroma index from Drive for the rag context.</li>
+</ol>
+</body></html>

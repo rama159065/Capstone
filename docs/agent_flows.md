@@ -92,7 +92,7 @@ flowchart TD
 
 | Node | Role | LLM? | Reads | Writes |
 |---|---|---|---|---|
-| `security_step` | Input guard: prompt injection, code or tool abuse, length | No (regex) | query | `security`, refusal |
+| `security_step` | Input guard: prompt injection, code or tool abuse, length; **policy refusal** (advice, forecasts, personal or non-public data, creative requests: `policy_refusal`, answered without any LLM call) | No (regex) | query | `security` (with `policy`), refusal |
 | `plain_text_step` | Is this a safe, plain-language finance question? Returns a cleaned query | **Yes** (JSON) | query | `plain_text`, refusal |
 | `plan_step` | **Planner.** The LLM proposes `intent`, `tools`, `needs_calculation`; `normalize_plan` validates it and splits targets | **Yes** + rules | query, request ticker/year | `plan` |
 | `retrieve_step` | **Executor.** Runs the plan: `coverage_lookup`, then `text_search` (+ `visual_search`) per target. On a retry, only missing targets | No | plan, evidence check | `evidence`, `tool_calls`, `retrieval_attempts` |
