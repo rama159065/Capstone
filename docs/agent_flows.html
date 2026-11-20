@@ -991,6 +991,7 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 <p><strong>Safety rules in code.</strong> A figure the LLM copies for both years from one chunk is left out (&quot;the same figure was read for both years&quot;), not reported as 0% growth. Companies whose filings aren't indexed are listed as not used, never searched.</p>
 <p><strong>Live check (14 November 2026; local API on the Chroma index with 180 filings, real N-PORT data for four Vanguard funds, mock LLM).</strong> Top holdings, holders, exposure, sector mix, returns and net assets: <code>fund</code> route, 7 steps, valid citations, 0.2–5.5 s. Value fund top 10 revenue growth: 8 steps, ABBV +8.57% read from its statement rows, JPM left out (same figure for both years), the rest not indexed → <code>pending_human_review</code> (<code>low_fund_coverage</code>). &quot;What does the Vanguard fund hold?&quot; → asks which of the four. &quot;Should I buy the Vanguard 500 Index Fund?&quot; → refused. The Q&amp;A, trend, sector trend and report routes gave the same results as before.</p>
 <h2>8. Worked runs (local Retail index, mock LLM)</h2>
+<p>For runs with the hosted LLM on the 509-filing Chroma index, one per agent and with LangSmith traces, see <a href="end_to_end_walkthrough.html">end_to_end_walkthrough.html</a>.</p>
 <p>Measured on 10 Nov 2026 against the live API with the 5-filing Retail index (Costco 2024/2025, Walmart, Home Depot and Amazon 2025). Searches took 0.6–0.7 s each once the model was loaded.</p>
 <table>
 <thead>

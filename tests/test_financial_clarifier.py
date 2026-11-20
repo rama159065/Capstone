@@ -412,3 +412,14 @@ def test_manifests_without_a_sector_get_it_from_the_ticker(tmp_path):
     assert [(r["sector"], r["sector_slug"]) for r in read_manifest(path)] == [
         ("Banking", "banking"), ("Oil and gas", "oil_and_gas"), ("unknown", "unknown")]
     assert [r["ticker"] for r in read_manifest(path, "oil_and_gas")] == ["XOM"]
+
+
+def test_citi_segment_question_is_a_company_question_not_a_sector_trend():
+    # "Citi" (the bank's own name in its reports) was not an alias, and "U.S. Personal Banking" then read as the
+    # banking sector: the router sent a one-company question to the sector trend agent.
+    clarifier = Clarifier({"C": [2024, 2025], "JPM": [2024, 2025]})
+    question = "What was Citi's U.S. Personal Banking net income in 2025 compared with 2024?"
+    companies = clarifier.companies_in(question)
+    assert companies == ["C"]
+    assert clarifier.intent_in(question, companies, clarifier.years_in(question)) != "sector_trend"
+    assert clarifier.companies_in("Citizens and citizenship") == []

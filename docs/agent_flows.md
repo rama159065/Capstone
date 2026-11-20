@@ -432,6 +432,9 @@ flowchart TD
 
 ## 8. Worked runs (local Retail index, mock LLM)
 
+For runs with the hosted LLM on the 509-filing Chroma index, one per agent and with LangSmith traces, see
+[end_to_end_walkthrough.md](end_to_end_walkthrough.md).
+
 Measured on 10 Nov 2026 against the live API with the 5-filing Retail index (Costco 2024/2025, Walmart, Home Depot and Amazon 2025). Searches took 0.6–0.7 s each once the model was loaded.
 
 | Question | Plan (tools, targets) | Path | Result |

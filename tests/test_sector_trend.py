@@ -387,3 +387,17 @@ def test_excluded_reason_names_the_unit_problem():
                                       [point(2023, 28190, ""), point(2024, 33424, "millions")])}
     table = sector.aggregate(plan, series)
     assert table["excluded"] == [{"ticker": "AMGN", "company": "Amgen", "reason": "unit scale differs between years"}]
+
+
+def test_sector_answer_prompt_keeps_a_small_evidence_budget(monkeypatch):
+    # With the full max_context_chars the hosted Qwen3-8B (8,192-token context) rejected the prompt with HTTP 400.
+    searches(monkeypatch, lambda c, n: [hit(c.ticker, c.year, statement(c.ticker, c.year) + "\n" + "filler " * 900)])
+    prompts_seen = []
+    original = agent.invoke_prompt
+    monkeypatch.setattr(agent, "invoke_prompt", lambda llm, system, human: prompts_seen.append(human)
+                        or original(llm, system, human))
+    big = agent.AgentConfig(**{**config(QUERY).__dict__, "max_context_chars": 12000})
+    agent.financial_graph(CountingLLM(), big, "sector_trend_graph")
+    sector_prompt = next(h for h in prompts_seen if "Sector table" in h)
+    evidence = sector_prompt.split("Evidence:\n", 1)[1]
+    assert len(evidence) <= agent.SECTOR_CONTEXT_CHARS + 200

@@ -2,7 +2,7 @@
 
 Agentic RAG system for the Track B capstone (API-side, hosted <=8B inference APIs): a **financial report copilot over SEC annual reports**.
 
-It answers questions about company filings with every figure cited to its page, compares companies, checks growth with a calculator, and refuses advice or anything the filings don't cover. It uses hybrid retrieval (dense vectors + BM25, fused by reciprocal rank), LangGraph agents with guardrails and a support-checking critic, human-in-the-loop routing, a FastAPI backend, a Streamlit UI and retrieval evaluation. The agent flow is described in [docs/agent_flows.md](docs/agent_flows.md).
+It answers questions about company filings with every figure cited to its page, compares companies, checks growth with a calculator, and refuses advice or anything the filings don't cover. It uses hybrid retrieval (dense vectors + BM25, fused by reciprocal rank), LangGraph agents with guardrails and a support-checking critic, human-in-the-loop routing, a FastAPI backend, a Streamlit UI and retrieval evaluation. The agent flow is described in [docs/agent_flows.md](docs/agent_flows.md). A walkthrough of one question per agent, from the Streamlit chat through FastAPI, the checks and the Chroma index to the hosted LLM's answer (with LangSmith traces), is in [docs/end_to_end_walkthrough.md](docs/end_to_end_walkthrough.md).
 
 ## Why This Is Agentic RAG
 

@@ -365,7 +365,11 @@ def llm_plain_text_classifier(llm, message: str) -> dict[str, Any]:
         "safe_query": message,
     }
     parsed = safe_json_loads(text, fallback=fallback)
-    parsed["is_plain_text"] = bool(parsed.get("is_plain_text"))
+    # Hosted Qwen3-8B marked ordinary questions is_plain_text=false while calling them low-risk financial questions,
+    # which refused them. Code, markup, encoded payloads and injection are what the rule guard looks for; when it
+    # finds none, the message is plain text. The LLM's own view is kept for audit.
+    parsed["llm_is_plain_text"] = parsed.get("is_plain_text")
+    parsed["is_plain_text"] = bool(parsed.get("is_plain_text")) or not deterministic_input_guard(message)["risk_labels"]
     parsed["financial_intent"] = bool(parsed.get("financial_intent"))
     parsed["risk_level"] = str(parsed.get("risk_level", "medium")).lower()
     # The classifier only decides; it never rewrites the question. Hosted Qwen3-8B returned safe_query=true (-> "True")
@@ -657,6 +661,12 @@ def _retrieve_evidence(config: AgentConfig) -> list[dict[str, Any]]:
     )
     return [{**hit, "retrieval_ranks": {name: hit[f"{name}_rank"] for name in ("dense", "bm25") if hit.get(f"{name}_rank")}}
             for hit in hits]
+
+
+# The sector answer prompt already carries the code-built table and every verified figure with its chunk ID, so its
+# evidence excerpts get a smaller budget: with the full 12,000 characters the prompt reached ~7,200 tokens and the
+# hosted Qwen3-8B (8,192-token context, 1,024 output tokens) rejected it with HTTP 400.
+SECTOR_CONTEXT_CHARS = 4000
 
 
 def evidence_to_context(evidence: list[dict[str, Any]], max_chars: int) -> str:
@@ -1346,7 +1356,7 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
                 table=sector_agent.table_text(table), companies=sector_agent.companies_text(table),
                 excluded=sector_agent.excluded_text(table),
                 context=evidence_to_context([h for h in evidence if h.get("chunk_id") in used_ids],
-                                            config.max_context_chars))
+                                            min(config.max_context_chars, SECTOR_CONTEXT_CHARS)))
         elif series.get("verified_points"):
             # Trend: the verified series and the code-computed changes, with only the chunks that state them.
             used_ids = {p.get("chunk_id") for p in series.get("points", []) if p.get("status") == "ok"}
