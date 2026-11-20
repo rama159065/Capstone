@@ -66,7 +66,7 @@ COMPANIES: dict[str, tuple[str, str, list[str]]] = {
     "JPM": ("JPMorgan Chase", BANKING, ["jpmorgan", "jp morgan", "chase"]),
     "BAC": ("Bank of America", BANKING, ["bank of america", "bofa"]),
     "WFC": ("Wells Fargo", BANKING, ["wells fargo"]),
-    "C": ("Citigroup", BANKING, ["citigroup", "citibank"]),
+    "C": ("Citigroup", BANKING, ["citigroup", "citibank", "citi"]),
     "ALLY": ("Ally Financial", BANKING, ["ally financial", "ally bank"]),
     "BNY": ("BNY", BANKING, ["bank of new york mellon", "bny mellon"]),
     "BOKF": ("BOK Financial", BANKING, ["bok financial"]),

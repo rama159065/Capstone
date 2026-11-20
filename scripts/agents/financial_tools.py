@@ -269,7 +269,12 @@ def parse_support(text: str) -> dict[str, Any]:
         data = {}
     claims = [c for c in data.get("claims") or [] if isinstance(c, dict)]
     if not claims:
-        return {"verdict": "unverified", "claims": [], "reason": "the support judge returned no claims"}
+        # A reply that starts JSON but doesn't parse was usually cut off by the output-token cap (hosted Qwen3-8B,
+        # max 1,024 tokens, on an 11-claim fund answer).
+        cut = bool(text and "{" in text and not data)
+        return {"verdict": "unverified", "claims": [],
+                "reason": "the support judge's reply was cut off or not valid JSON" if cut
+                else "the support judge returned no claims"}
     unsupported = [c for c in claims if c.get("supported") is not True]
     stated = str(data.get("verdict") or "").strip().lower()
     if unsupported:

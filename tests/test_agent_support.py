@@ -155,3 +155,12 @@ def test_api_grounding_policy_keeps_the_support_verdict(monkeypatch):
                                                "grounding": {"method": "llm_support_check",
                                                              "semantic_answer_verified": True}})
     assert withheld["grounding"]["status"] == "not_grounded" and withheld["grounding"]["semantic_answer_verified"] is False
+
+
+def test_a_cut_off_judge_reply_fails_closed_and_says_why():
+    from scripts.agents import financial_tools
+    cut = '{"claims": [{"claim": "NVIDIA 7.51%", "chunk_ids": ["nport_x_h426"], "supported": true, "reason": ""}, {"claim": "8. Meta'
+    out = financial_tools.parse_support(cut)
+    assert out["verdict"] == "unverified" and out["claims"] == []
+    assert "cut off" in out["reason"]
+    assert financial_tools.parse_support("")["reason"] == "the support judge returned no claims"

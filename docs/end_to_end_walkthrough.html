@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>End-to-end walkthrough: Streamlit, FastAPI, the agents, the checks, Chroma and the hosted LLM</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style></head><body>
+<h1>End-to-end walkthrough: Streamlit, FastAPI, the agents, the checks, Chroma and the hosted LLM</h1>
+<p>This guide follows real questions through the whole Financial Report Copilot, one for each agent. Each question starts
+in the Streamlit chat and goes through FastAPI, the clarifier, the agent's LangGraph steps, the guardrails and the
+critic, retrieval from the Chroma index, and the hosted LLM's answer. Every result below comes from a run on
+21 November 2026. Five of the runs were traced in LangSmith as evidence (section 9).</p>
+<p>Related pages: <a href="agent_flows.html">agent_flows.md</a> (every node and routing rule),
+<a href="agents_flows.html">agents_flows.md</a> (what each agent decides), <a href="fastapi_api.html">fastapi_api.md</a> (routes),
+<a href="annual_report_rag_structure.html">annual_report_rag_structure.md</a> (the index),
+<a href="observability_langsmith.html">observability_langsmith.md</a> (tracing) and
+<a href="agent_test_questions.html">agent_test_questions.html</a> (more test questions).</p>
+<h2>1. What was run</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Index</td>
+<td>Pipeline 1 Chroma index (<code>chroma_db_bge</code>): the <code>min500</code> corpus, <strong>509 annual reports</strong> from 143 companies in 13 sectors, FY2022–FY2026, <strong>317,037 chunks</strong>, embedded with <code>BAAI/bge-small-en-v1.5</code>; BM25 sidecar (SQLite FTS5)</td>
+</tr>
+<tr>
+<td>Retrieval backend</td>
+<td><code>RAG_BACKEND=financial_vlm</code> (the capstone's main backend)</td>
+</tr>
+<tr>
+<td>Fund data</td>
+<td>SEC N-PORT holdings in <code>indexes/mutual_fund/nport_mutual_fund.sqlite3</code></td>
+</tr>
+<tr>
+<td>LLM</td>
+<td>Hosted <code>Qwen/Qwen3-8B</code> (course endpoint, OpenAI-compatible, private CA), <code>LLM_MAX_TOKENS=1024</code></td>
+</tr>
+<tr>
+<td>API</td>
+<td>FastAPI on <code>127.0.0.1:8000</code>, one worker, default limits (<code>AGENT_MAX_STEPS=10</code>, 60 s request deadline, 300 s for sector and fund routes)</td>
+</tr>
+<tr>
+<td>Client</td>
+<td>Streamlit's own request code (<code>build_payload</code> + <code>post_json</code>), the same path as typing into the chat</td>
+</tr>
+<tr>
+<td>Questions</td>
+<td>11: one or more for each agent, plus the router's refusal, clarification, report and not-available paths</td>
+</tr>
+<tr>
+<td>LangSmith</td>
+<td>Tracing per request only; 5 evidence traces (one per agent), 12 in total with the reruns (section 9)</td>
+</tr>
+</tbody>
+</table>
+<p>This PC's index doesn't include Apple, so Apple questions are answered &quot;not available&quot; (section 7.4).</p>
+<h2>2. Starting it</h2>
+<p>In PowerShell, from the repo root. The keys stay in the gitignored <code>secrets\</code> folder:</p>
+<pre><code class="language-powershell">$env:LLM_API_KEY  = (Get-Content secrets\llm_api_key.txt -Raw).Trim()
+$env:LLM_API_BASE = &quot;https://103.42.50.41:1032/v1&quot;
+$env:LLM_MODEL    = &quot;Qwen/Qwen3-8B&quot;
+$env:LLM_MAX_TOKENS = &quot;1024&quot;            # the server stops replies at 512 tokens unless asked for more (max 1024)
+$env:DEFAULT_LLM_PROVIDER = &quot;hosted&quot;
+$env:RAG_BACKEND  = &quot;financial_vlm&quot;
+$env:RAG_VLM_DIR  = &quot;$PWD\indexes\rag_home\indexes\chroma_db_bge&quot;
+# optional, only when traces are wanted (free plan: trace single questions, never batch runs)
+$env:LANGSMITH_API_KEY = (Get-Content secrets\langsmith_api_key.txt -Raw).Trim()
+$env:LANGSMITH_PROJECT = &quot;annual-report-copilot&quot;
+uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000
+</code></pre>
+<p>The LLM's CA certificate is found automatically at <code>indexes\rag_home\secrets\llm_ca.crt</code>. In a second window:</p>
+<pre><code class="language-powershell">streamlit run scripts\ui\api_streamlit_app.py      # http://localhost:8501
+</code></pre>
+<p><code>GET /health</code> should show <code>financial_backend: financial_vlm</code>, <code>vlm_index_ready: true</code>, <code>ca_cert: true</code> and, when the
+LangSmith key is set, <code>langsmith.api_key_set: true</code> with <code>tracing_all_requests: false</code>.</p>
+<h2>3. Using Streamlit</h2>
+<p><strong>Sidebar</strong></p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ask clarifying questions</td>
+<td>on</td>
+<td>Sends the question to <code>/conversation</code>, which asks for a missing company, year or measure before running an agent</td>
+</tr>
+<tr>
+<td>Sectors (optional)</td>
+<td>none</td>
+<td>Limits evidence to these sectors</td>
+</tr>
+<tr>
+<td>Company / Fiscal year (optional)</td>
+<td>Any</td>
+<td>Filters retrieval; the lists come from <code>GET /companies</code> (only what the index holds)</td>
+</tr>
+<tr>
+<td>Demo settings → <strong>Technique</strong></td>
+<td><code>router</code></td>
+<td>Which agent runs (below)</td>
+</tr>
+<tr>
+<td>Demo settings → LLM provider</td>
+<td><code>hosted</code> (with <code>DEFAULT_LLM_PROVIDER=hosted</code>)</td>
+<td><code>mock</code> gives placeholder wording; retrieval and checks are still real</td>
+</tr>
+<tr>
+<td>Retrieval mode / Evidence chunks</td>
+<td>hybrid / 5</td>
+<td>Dense + BM25 fused by RRF; chunks per search</td>
+</tr>
+<tr>
+<td>Guardrails / Human review routing</td>
+<td>on / on</td>
+<td>Leave on: these are the checks in section 5</td>
+</tr>
+<tr>
+<td>LangSmith tracing</td>
+<td>off</td>
+<td>Turn on only for a question you want as evidence</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Choosing an agent (Technique)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Technique</th>
+<th>Agent</th>
+<th>Ask it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>router</code> (default)</td>
+<td>Supervisor: picks the agent from the question</td>
+<td>Anything; the router sends it on</td>
+</tr>
+<tr>
+<td><code>agentic_graph</code></td>
+<td>Q&amp;A agent</td>
+<td>A figure, fact or explanation for one company and year, or a comparison of companies</td>
+</tr>
+<tr>
+<td><code>trend_graph</code></td>
+<td>Trend agent</td>
+<td>One measure for one company across several years</td>
+</tr>
+<tr>
+<td><code>sector_trend_graph</code></td>
+<td>Sector trend agent</td>
+<td>One measure across a sector's companies, year by year</td>
+</tr>
+<tr>
+<td><code>fund_graph</code></td>
+<td>Fund agent</td>
+<td>A mutual fund's holdings, sector mix, returns or net assets</td>
+</tr>
+</tbody>
+</table>
+<p><strong>What an answer shows</strong>: a status badge (<code>answered</code>, <code>evidence_only</code>, <code>pending_human_review</code>, <code>not_available</code>,
+<code>refused</code>), the answer with <code>[chunk_id]</code> citations (the ID names the filing and page, for example
+<code>annual_report_edgar_ars_JPM_2025_p0198_vlm0</code> is JPM's FY2025 report, page 198), an <strong>Agent run</strong> panel (the steps
+taken, the router's decision, the plan, every tool call and calculation), <strong>Citations and Human Review</strong> (citation
+check, support check, review triggers) and <strong>Evidence</strong> (the retrieved chunks). If the clarifier needs something, it
+asks with buttons (a company list, years, Yes/No).</p>
+<h2>4. The request path</h2>
+<pre class="mermaid">sequenceDiagram
+    participant U as Streamlit
+    participant A as FastAPI
+    participant C as Clarifier (rules)
+    participant G as Agent graph (LangGraph)
+    participant R as Chroma + BM25 / N-PORT SQLite
+    participant L as Hosted Qwen3-8B
+    U-&gt;&gt;A: POST /conversation/financial_report_qa (+ langsmith-trace headers when traced)
+    A-&gt;&gt;A: request ID, rate limit, API key
+    A-&gt;&gt;C: company, years, measure, intent
+    alt something missing, not covered, or a report
+        C--&gt;&gt;U: needs_clarification (options to click)
+    else complete
+        C-&gt;&gt;G: run_technique(technique) under a deadline
+        G-&gt;&gt;G: security_step: input guard + policy refusal (rules)
+        G-&gt;&gt;L: plain_text_step: is this a financial question?
+        G-&gt;&gt;L: route_step (router) or plan_step (Q&amp;A): which tools, which company x year
+        G-&gt;&gt;R: one filtered search per company x year, in parallel
+        G-&gt;&gt;G: evidence guard (injection in retrieved text), trend/sector figures read in code
+        G-&gt;&gt;L: answer_step: answer from the evidence, with citations
+        G-&gt;&gt;L: critic_step: support judge (+ numbers and citations checked in code)
+        G-&gt;&gt;G: governance_step: output filter, human review triggers
+        G--&gt;&gt;A: result + agent_run
+        A-&gt;&gt;A: coverage, company scope, grounding policy
+        A--&gt;&gt;U: answer, citations, evidence, agent_run
+    end
+</pre>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Code</th>
+<th>Decides</th>
+<th>LLM call?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Middleware</td>
+<td><code>api/api_app.py</code></td>
+<td><code>X-Request-ID</code>, per-IP rate limit, API key</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Clarifier</td>
+<td><code>agents/financial_clarifier.py</code></td>
+<td>Company, years, measure, intent; whether the filings cover them</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Deadline</td>
+<td><code>run_technique</code> → <code>resilience.Calls</code></td>
+<td>60 s per request (300 s for sector and fund routes); a failure becomes <code>tool_error</code>, never a guess</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>security_step</code></td>
+<td><code>guardrails/checks.py</code></td>
+<td>Injection, code, encoded payloads; advice, forecasts, personal data refused by rule</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>plain_text_step</code></td>
+<td><code>llm_plain_text_classifier</code></td>
+<td>Financial intent and risk; never rewrites the question</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>route_step</code> / <code>plan_step</code></td>
+<td><code>financial_router.py</code> / <code>financial_tools.normalize_plan</code></td>
+<td>The agent (router) or the tools and targets (Q&amp;A); the LLM proposes, rules validate</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Retrieval</td>
+<td><code>rag/financial_ingest_chroma_db.retrieve_for_agent</code></td>
+<td>Evidence chunks (section 6)</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>evidence_guard_step</code></td>
+<td><code>guardrails/checks.py</code></td>
+<td>Drops chunks carrying instructions</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>answer_step</code></td>
+<td><code>prompts/financial.py</code></td>
+<td>The answer, citing chunk IDs; <code>CALC[...]</code> goes to the calculator</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>critic_step</code></td>
+<td><code>financial_tools.numeric_grounding</code> + support judge</td>
+<td>Every figure must appear in a cited chunk; the judge must support every claim; one repair</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>governance_step</code></td>
+<td><code>apply_governance</code></td>
+<td>Output filter (advice wording) and human-review triggers</td>
+<td>No</td>
+</tr>
+<tr>
+<td>After the graph</td>
+<td><code>run_technique</code>, <code>apply_grounding_policy</code></td>
+<td>Coverage (<code>not_available</code>), company scope, citations must match retrieved chunks; with a hosted LLM only a <code>supported</code> answer is shown, else cited excerpts (<code>evidence_only</code>)</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<h2>5. The checks, and what they did in this run</h2>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Kind</th>
+<th>Stops</th>
+<th>In this run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Policy refusal</td>
+<td>Rule</td>
+<td>Advice, forecasts, personal or non-public data</td>
+<td>&quot;Should I buy NVIDIA stock now?&quot; refused in 0.1 s, no LLM call</td>
+</tr>
+<tr>
+<td>Input guard</td>
+<td>Rule</td>
+<td>Injection, code, encoded payloads</td>
+<td>All 11 questions clean</td>
+</tr>
+<tr>
+<td>Clarifier coverage</td>
+<td>Rule</td>
+<td>Companies or years not in the index; reports need a Yes</td>
+<td>Apple → &quot;not available&quot;, with three similar covered companies offered; the Costco report asked for confirmation</td>
+</tr>
+<tr>
+<td>Plain-text classifier</td>
+<td>LLM</td>
+<td>Non-financial or risky messages</td>
+<td>Passed every question (after fix 2 in section 8)</td>
+</tr>
+<tr>
+<td>Evidence guard</td>
+<td>Rule</td>
+<td>Instructions hidden in retrieved text</td>
+<td>Nothing flagged</td>
+</tr>
+<tr>
+<td>Number grounding</td>
+<td>Code</td>
+<td>A figure that isn't in a cited chunk</td>
+<td>0 ungrounded figures in all 7 graph runs</td>
+</tr>
+<tr>
+<td>Support judge</td>
+<td>LLM</td>
+<td>A claim the cited evidence doesn't state</td>
+<td>Caught the misread Chevron chunk; missed two &quot;right filing, wrong row&quot; answers (section 8)</td>
+</tr>
+<tr>
+<td>Citation check</td>
+<td>Code</td>
+<td>A cited chunk that wasn't retrieved</td>
+<td>All citations valid</td>
+</tr>
+<tr>
+<td>Human review</td>
+<td>Rule</td>
+<td>Unsupported claims, low sector coverage, failed citations</td>
+<td>2 answers sent to review (Chevron chart, banking sector)</td>
+</tr>
+<tr>
+<td>Grounding policy</td>
+<td>Code</td>
+<td>Unverified generated text</td>
+<td>2 answers replaced by cited excerpts (<code>evidence_only</code>)</td>
+</tr>
+</tbody>
+</table>
+<h2>6. Retrieval from Chroma</h2>
+<p>Every <code>text_search</code> is one filtered search for one company and fiscal year:</p>
+<ol>
+<li><strong>Filter</strong>: Chroma <code>where</code> on <code>ticker</code>, <code>year</code> (and <code>sector</code> when set), so a JPM 2025 search can only return JPM's
+FY2025 annual report.</li>
+<li><strong>Dense</strong>: the question embedded with bge-small (the model the index was built with), 50 nearest chunks by cosine.</li>
+<li><strong>BM25</strong>: the same filter over the FTS5 sidecar (<code>chroma/bm25.sqlite3</code>).</li>
+<li><strong>Fusion</strong>: reciprocal rank fusion (k = 60), keeping the top <em>k</em> (3 per target for comparisons and trends, 5 for a
+single lookup).</li>
+<li><strong>Chart pages</strong>: when a chart's <code>page_description</code> chunk is found without its values, up to 3 reading chunks of
+the same page follow it.</li>
+<li>Searches for different targets run in parallel (4 workers); results keep target order. A target with no usable
+evidence gets one broadened retry if the step budget allows.</li>
+</ol>
+<p>Chunks come from the routed page readers (text layer, native tables, OCR, Qwen3-VL, paid model). Each one carries
+<code>reader</code>, <code>page</code>, <code>doc_id</code> and, for vision readings, <code>unverified_numbers</code>, so the critic can tell which figures only a
+vision model saw.</p>
+<h2>7. The runs, agent by agent</h2>
+<h3>7.1 Router (supervisor)</h3>
+<p><strong>Question:</strong> &quot;What was Citi's U.S. Personal Banking net income in 2025 compared with 2024?&quot; (technique <code>router</code>)
+<a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa44-f735-79d1-8a42-996a3366b4ff?poll=true" target="_blank" rel="noopener">LangSmith trace</a></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clarifier</td>
+<td>Company C, years 2024–2025, measure net income → ready</td>
+</tr>
+<tr>
+<td><code>route_step</code></td>
+<td>Hosted LLM proposed <code>trend</code>; the rule parser agreed (<code>decided_by: llm</code>) → trend agent</td>
+</tr>
+<tr>
+<td><code>trend_fetch_step</code></td>
+<td>Coverage, then one search for C 2024 and one for C 2025 (3 chunks each)</td>
+</tr>
+<tr>
+<td><code>trend_series_step</code></td>
+<td>The LLM copied each year's figure; code kept each only because that year's chunk states it; change and % change computed in code</td>
+</tr>
+<tr>
+<td><code>answer_step</code> → <code>critic_step</code></td>
+<td>Answer written; 4 figures grounded, judge <code>supported</code></td>
+</tr>
+<tr>
+<td>Result</td>
+<td><code>answered</code>, 25 s, 8 of 10 steps</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Citi's U.S. Personal Banking net income in 2025 was $14,306 millions of dollars, compared with $12,682 millions
+of dollars in 2024, an increase of +1,624.00 or +12.81% [annual_report_edgar_ars_C_2024_p0322_vlm1,
+annual_report_edgar_ars_C_2025_p0024_vlm0].</p>
+</blockquote>
+<p><strong>Verdict: wrong.</strong> Those are Citi's <strong>total</strong> net income figures. The segment's are $3,097 million (2025) and $1,382
+million (2024). The trend agent keeps the measure (&quot;net income&quot;) but not the segment, and both checks passed because
+both figures really are in the cited chunks. This is the main remaining failure type (section 8).</p>
+<p>The first run of this question (before fix 1) went to the sector agent instead, because &quot;Citi&quot; wasn't a known name
+and &quot;Personal Banking&quot; read as the banking sector. The critic caught it: it saw Bank of America's figures cited for
+Citi, withheld the answer and sent it for review
+(<a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa42-622a-75f2-a0fc-24442049dea6?poll=true" target="_blank" rel="noopener">trace</a>).</p>
+<h3>7.2 Q&amp;A agent (<code>agentic_graph</code>)</h3>
+<p><strong>Comparison:</strong> &quot;Which company had higher net income attributable to the company in its fiscal year ending in 2025:
+JPMorgan Chase or Bank of America?&quot;
+<a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa49-1f46-7d92-9d24-59688f5f3cb8?poll=true" target="_blank" rel="noopener">LangSmith trace</a></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>plan_step</code></td>
+<td>Hosted LLM: tools <code>coverage_lookup</code>, <code>text_search</code>, <code>calculator</code>; rules split the comparison into JPM 2025 and BAC 2025</td>
+</tr>
+<tr>
+<td><code>retrieve_step</code></td>
+<td>Two filtered searches in parallel, 3 chunks each</td>
+</tr>
+<tr>
+<td><code>evidence_guard_step</code></td>
+<td>Nothing flagged</td>
+</tr>
+<tr>
+<td><code>answer_step</code> → <code>critic_step</code></td>
+<td>2 figures grounded, judge <code>supported</code>, citations valid</td>
+</tr>
+<tr>
+<td>Result</td>
+<td><code>answered</code>, 20 s, 8 of 10 steps</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>JPMorgan Chase had a net income of $48,665 million, while Bank of America had a net income of $30,509 million.
+Therefore, JPMorgan Chase had higher net income attributable to the company in its fiscal year ending in 2025.
+[annual_report_edgar_ars_JPM_2025_p0346_vlm4, annual_report_edgar_ars_BAC_2025_p0073_vlm0]</p>
+</blockquote>
+<p><strong>Verdict: right conclusion, wrong JPM figure.</strong> Bank of America's $30,509 million is correct. JPM's FY2025 figure is
+$57,048 million (the trend run below finds it). The $48,665 million comes from a <strong>pro forma note</strong> in JPM's 2025
+10-K, showing <strong>2023</strong> net income as if the First Republic acquisition had happened earlier. Same failure type as 7.1.</p>
+<p><strong>Text:</strong> &quot;Who was Bank of America's independent auditor for fiscal year 2025?&quot; → <code>answered</code> in 17 s, but the answer
+says the evidence doesn't name the firm. The search found the &quot;Report of Independent Registered Public Accounting
+Firm&quot; page, but not the chunk with PricewaterhouseCoopers' signature. A safe miss (no guess), not a correct answer.</p>
+<p><strong>Chart:</strong> &quot;According to the production charts in Chevron's 2022 annual report, what was Chevron's net crude oil
+production in 2022?&quot; → <code>evidence_only</code> in 24 s, 10 of 10 steps. The search returned results-of-operations tables,
+not the production chart page (1,440 thousand barrels per day). The model said the figure wasn't stated, the judge
+found the answer only partly supported, the repair didn't help, and the answer was replaced by cited excerpts and
+sent for human review. A retrieval miss, handled safely.</p>
+<h3>7.3 Trend agent (<code>trend_graph</code>)</h3>
+<p><strong>Question:</strong> &quot;How did JPMorgan Chase's net income trend from 2022 to 2025?&quot;
+<a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa49-c9d2-7ea1-866a-578eb662d416?poll=true" target="_blank" rel="noopener">LangSmith trace</a></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>route_step</code></td>
+<td>Technique fixed to the trend agent</td>
+</tr>
+<tr>
+<td><code>trend_fetch_step</code></td>
+<td>4 searches (JPM 2022, 2023, 2024, 2025), one per filing</td>
+</tr>
+<tr>
+<td><code>trend_series_step</code></td>
+<td>One figure per year, each kept only if that year's chunk states it; 3 changes, 3 % changes and the CAGR computed in code</td>
+</tr>
+<tr>
+<td><code>answer_step</code> → <code>critic_step</code></td>
+<td>11 figures grounded, judge <code>supported</code></td>
+</tr>
+<tr>
+<td>Result</td>
+<td><code>answered</code>, 42 s, 8 of 10 steps</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>JPMorgan Chase's net income increased from 37,676 millions of USD in FY2022 to 49,552 in FY2023 (+31.52%), rose to
+58,471 in FY2024 (+18.00%) and decreased to 57,048 in FY2025 (−2.43%). The CAGR from FY2022 to FY2025 was 14.83%.
+(each year cites its own filing: JPM 2022 p.180, 2023 p.205, 2024 p.207, 2025 p.198)</p>
+</blockquote>
+<p><strong>Verdict: correct.</strong> All four figures match JPM's consolidated statements; the arithmetic was done in code.</p>
+<h3>7.4 Sector trend agent (<code>sector_trend_graph</code>)</h3>
+<p><strong>Question:</strong> &quot;How did banking sector net income trend from 2022 to 2025?&quot;
+<a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa54-76ed-7410-9a42-e3df6321f499?poll=true" target="_blank" rel="noopener">LangSmith trace</a></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Coverage</td>
+<td>11 banks in the index; MTB left out (no FY2022–2024 filings), USB and WFC over the 8-company limit</td>
+</tr>
+<tr>
+<td><code>sector_fetch_step</code></td>
+<td>32 searches (8 banks × 4 years)</td>
+</tr>
+<tr>
+<td><code>sector_series_step</code></td>
+<td>Each figure read from the statement row in code first; the LLM only where no row matched, and its figure kept only on a line naming the measure. Panel = banks verified in <strong>every</strong> year</td>
+</tr>
+<tr>
+<td><code>answer_step</code> → <code>critic_step</code></td>
+<td>24 figures grounded in code; the support judge's reply was cut off (below)</td>
+</tr>
+<tr>
+<td>Result</td>
+<td><code>evidence_only</code>, 117 s, 10 of 10 steps; human review (<code>unsupported_claims</code>, <code>low_sector_coverage</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>The panel the code built (USD millions):</p>
+<table>
+<thead>
+<tr>
+<th>Bank</th>
+<th>FY2022</th>
+<th>FY2023</th>
+<th>FY2024</th>
+<th>FY2025</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bank of America</td>
+<td>27,528</td>
+<td>26,515</td>
+<td>27,132</td>
+<td>30,509</td>
+</tr>
+<tr>
+<td>Fifth Third</td>
+<td>2,446</td>
+<td>2,349</td>
+<td>2,314</td>
+<td>2,522</td>
+</tr>
+<tr>
+<td>JPMorgan Chase</td>
+<td>37,676</td>
+<td>49,552</td>
+<td>58,471</td>
+<td>57,048</td>
+</tr>
+<tr>
+<td><strong>Panel total</strong></td>
+<td><strong>67,650</strong></td>
+<td><strong>78,416</strong> (+15.9%)</td>
+<td><strong>87,917</strong> (+12.1%)</td>
+<td><strong>90,079</strong> (+2.5%)</td>
+</tr>
+</tbody>
+</table>
+<p>Five banks were dropped because a year's figure couldn't be verified (BNY, C, COF, STT, TFC), so the panel is three
+banks and the answer is flagged <code>low_sector_coverage</code>. The figures shown are correct.</p>
+<p><strong>Why <code>evidence_only</code>:</strong> the LLM support judge lists each claim as JSON. For 24 figures, its reply ran past the
+1,024-token output limit and was cut off, so no verdict could be parsed and the answer was withheld (fail closed).
+The table above is in the result (<code>sector_trend</code>) and on screen in Streamlit's &quot;Sector trend&quot; panel (expanded by
+default); only the generated prose was withheld.</p>
+<h3>7.5 Fund agent (<code>fund_graph</code>)</h3>
+<p><strong>Question:</strong> &quot;What are the top 10 holdings of the Vanguard 500 Index Fund?&quot;
+<a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa56-3c2a-7b52-b138-096f5b453a7d?poll=true" target="_blank" rel="noopener">LangSmith trace</a></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fund_lookup_step</code></td>
+<td><code>fund_search</code> found the fund; <code>fund_lookup</code> ran fixed SQL over its latest N-PORT filing (holdings as of 30 June 2026), each row cited as <code>nport_*</code></td>
+</tr>
+<tr>
+<td><code>answer_step</code> → <code>critic_step</code></td>
+<td>11 figures grounded, judge <code>supported</code></td>
+</tr>
+<tr>
+<td>Result</td>
+<td><code>answered</code>, 26 s, 7 of 10 steps</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>The top 10 holdings of the Vanguard 500 Index Fund as of 2026-06-30 are: 1. NVIDIA (NVDA) 7.51% of net assets
+[nport_000003640526000473_h426] · 2. Apple 6.59% · 3. Alphabet 5.84% · 4. Microsoft 4.30% · 5. Amazon 3.62% ·
+6. Broadcom 2.77% · 7. Micron 2.02% · 8. Meta 1.92% · 9. Tesla 1.84% · 10. Eli Lilly 1.47% (each row cited)</p>
+</blockquote>
+<p><strong>Verdict: correct</strong> (matches the N-PORT rows).</p>
+<h3>7.6 Router: no agent needed</h3>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Result</th>
+<th>Time</th>
+<th>What decided it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&quot;Should I buy NVIDIA stock now?&quot;</td>
+<td><code>refused</code>: &quot;I can't give investment advice… I can tell you what the companies' annual reports state&quot;</td>
+<td>0.1 s</td>
+<td>Policy rule in <code>security_step</code>; no LLM call</td>
+</tr>
+<tr>
+<td>&quot;What was the revenue?&quot;</td>
+<td>Asks &quot;Which company?&quot; with the covered companies as buttons</td>
+<td>0.2 s</td>
+<td>Clarifier: company missing</td>
+</tr>
+<tr>
+<td>&quot;Generate a full financial report for Costco for fiscal 2025&quot;</td>
+<td>Asks for confirmation; notes that an automated report profile exists only for Apple FY2024</td>
+<td>0.1 s</td>
+<td>Clarifier: reports need a Yes</td>
+</tr>
+<tr>
+<td>&quot;What was Apple's net income in fiscal 2024?&quot;</td>
+<td>&quot;I don't have filings for Apple… Similar companies I do have: Adobe, Applied Materials and AMD&quot;</td>
+<td>0.2 s</td>
+<td>Clarifier coverage</td>
+</tr>
+</tbody>
+</table>
+<h2>8. Results, and what this run found</h2>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Agent</th>
+<th>Status</th>
+<th>Time</th>
+<th>Correct?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Citi segment, 2025 vs 2024</td>
+<td>router → trend</td>
+<td>answered</td>
+<td>25 s</td>
+<td>No: company total, not the segment</td>
+</tr>
+<tr>
+<td>JPM vs BAC net income 2025</td>
+<td>Q&amp;A</td>
+<td>answered</td>
+<td>20 s</td>
+<td>Conclusion yes; JPM figure from a pro forma note</td>
+</tr>
+<tr>
+<td>BAC auditor</td>
+<td>Q&amp;A</td>
+<td>answered</td>
+<td>17 s</td>
+<td>No answer given (says not in evidence)</td>
+</tr>
+<tr>
+<td>CVX production chart</td>
+<td>Q&amp;A</td>
+<td>evidence_only</td>
+<td>24 s</td>
+<td>Withheld (retrieval miss)</td>
+</tr>
+<tr>
+<td>JPM net income 2022–2025</td>
+<td>trend</td>
+<td>answered</td>
+<td>42 s</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Banking net income 2022–2025</td>
+<td>sector trend</td>
+<td>evidence_only</td>
+<td>117 s</td>
+<td>Table correct; prose withheld</td>
+</tr>
+<tr>
+<td>Vanguard 500 top 10</td>
+<td>fund</td>
+<td>answered</td>
+<td>26 s</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Advice / missing company / report / Apple</td>
+<td>router</td>
+<td>refused / clarify / confirm / not available</td>
+<td>≤ 0.2 s</td>
+<td>Yes (all four as designed)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Bugs found by running with the hosted LLM, and fixed</strong> (the mock LLM in the tests never showed them; a test now
+covers each):</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Bug</th>
+<th>Effect</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>&quot;Citi&quot; wasn't a company alias; &quot;U.S. Personal Banking&quot; read as the banking sector</td>
+<td>One-company question sent to the sector agent</td>
+<td><code>common/companies.py</code>: &quot;citi&quot; added; test in <code>test_financial_clarifier.py</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Qwen3-8B marked ordinary questions <code>is_plain_text: false</code></td>
+<td>Comparison, chart and trend questions refused in 2 s</td>
+<td><code>llm_plain_text_classifier</code>: the rule guard decides plain text; the LLM's view kept as <code>llm_is_plain_text</code>; prompt states what &quot;plain text&quot; means</td>
+</tr>
+<tr>
+<td>3</td>
+<td>The plain-text step replaced the question with the LLM's <code>safe_query</code> (Qwen3-8B returned <code>true</code>)</td>
+<td>The agent answered the question &quot;True&quot;</td>
+<td>The classifier never rewrites the question (fixed 20 Nov)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Sector answer prompt over the model's 8,192-token context</td>
+<td>HTTP 400, request failed after ~70 s</td>
+<td>Sector evidence excerpts capped at 4,000 characters (<code>SECTOR_CONTEXT_CHARS</code>); the table already carries every figure and chunk ID</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Support judge's JSON longer than the output limit on long answers</td>
+<td>11-row fund answer withheld</td>
+<td>Judge asked for short claims, a reason only for unsupported ones; a cut-off reply is reported as such</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Configuration found</strong>: the course server stops a reply at <strong>512 tokens</strong> unless the request sets <code>max_tokens</code>
+(maximum 1024). Set <code>LLM_MAX_TOKENS=1024</code> everywhere (<code>.env.example</code> already does; the Colab notebooks don't yet).</p>
+<p><strong>Open limits</strong></p>
+<ul>
+<li><strong>Right filing, wrong row</strong> (7.1, 7.2): the agent cites a real figure from the right filing, but for a different
+concept or year (company total for a segment, a pro forma note for the actual). Number grounding can't catch this,
+and Qwen3-8B as judge passed both. This matches the Week 1 analysis, where it was the largest failure type with
+RAG (<a href="week1_failure_scenarios.html">week1_failure_scenarios.md</a>).</li>
+<li><strong>Long answers and the judge</strong>: with 24 figures the judge's JSON still doesn't fit in 1,024 tokens, so sector
+answers end as <code>evidence_only</code> (safe, but no prose). Judging in batches would fix it.</li>
+<li><strong>Retrieval misses</strong> (auditor name, Chevron chart): the answers were safe, not wrong; a larger <code>top_k</code> or the
+ColPali visual search would help.</li>
+</ul>
+<h2>9. LangSmith evidence</h2>
+<p>Tracing was on only for the five evidence questions; global tracing stayed off. Each trace starts at
+<code>streamlit.conversation</code> (the UI), continues into the API (<code>api.conversation_turn</code>), the graph, every node, each
+Chroma search (<code>retrieve.financial_vlm</code>, a retriever run with its documents) and each Qwen3-8B call (prompt, reply,
+tokens).</p>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>Question</th>
+<th>Time</th>
+<th>Tokens</th>
+<th>Trace</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Router → trend</td>
+<td>Citi segment 2025 vs 2024</td>
+<td>25 s</td>
+<td>8,882</td>
+<td><a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa44-f735-79d1-8a42-996a3366b4ff?poll=true" target="_blank" rel="noopener">open</a></td>
+</tr>
+<tr>
+<td>Q&amp;A</td>
+<td>JPM vs BAC 2025</td>
+<td>19 s</td>
+<td>5,853</td>
+<td><a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa49-1f46-7d92-9d24-59688f5f3cb8?poll=true" target="_blank" rel="noopener">open</a></td>
+</tr>
+<tr>
+<td>Trend</td>
+<td>JPM 2022–2025</td>
+<td>42 s</td>
+<td>14,520</td>
+<td><a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa49-c9d2-7ea1-866a-578eb662d416?poll=true" target="_blank" rel="noopener">open</a></td>
+</tr>
+<tr>
+<td>Sector trend</td>
+<td>Banking 2022–2025</td>
+<td>116 s</td>
+<td>54,836</td>
+<td><a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa54-76ed-7410-9a42-e3df6321f499?poll=true" target="_blank" rel="noopener">open</a></td>
+</tr>
+<tr>
+<td>Fund</td>
+<td>Vanguard 500 top 10</td>
+<td>26 s</td>
+<td>7,062</td>
+<td><a href="https://smith.langchain.com/o/1bce886d-0a5a-49ec-a8da-3c5c95164277/projects/p/e1cb48f0-3cab-4f1d-86b0-93801ebb7d43/r/01a1fa56-3c2a-7b52-b138-096f5b453a7d?poll=true" target="_blank" rel="noopener">open</a></td>
+</tr>
+</tbody>
+</table>
+<p>The other seven traces in the project (<code>annual-report-copilot</code>, 20–21 Nov) record the bugs before their fixes: the
+misrouted Citi question, two refusals by the plain-text step, two sector runs rejected for context length, and two
+fund runs cut off by the token limits. The links open only for members of the LangSmith workspace; for a report,
+take screenshots of the trace tree.</p>
+<h2>10. Reproducing</h2>
+<pre><code class="language-powershell"># API and Streamlit as in section 2, then:
+python -m scripts.evaluation.streamlit_walkthrough                 # all 11 questions, nothing traced
+python -m scripts.evaluation.streamlit_walkthrough --trace         # + one LangSmith trace per agent (5 traces)
+python -m scripts.evaluation.streamlit_walkthrough trend fund      # selected cases
+</code></pre>
+<p>The script sends each question through Streamlit's own <code>build_payload</code> and <code>post_json</code> and writes
+<code>output/walkthrough/&lt;case&gt;.json</code> (the full response, including <code>agent_run</code>) and <code>summary.json</code>. A full run takes about
+5 minutes on this PC and makes about 50 hosted-LLM calls (the sector trend alone makes 19). In the Streamlit chat,
+the same questions take the same paths; the wording, and sometimes a figure the LLM picks, can differ between runs
+because the hosted model's replies aren't fully repeatable.</p>
+<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></body></html>
