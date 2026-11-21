@@ -368,8 +368,9 @@ def llm_plain_text_classifier(llm, message: str) -> dict[str, Any]:
     # Hosted Qwen3-8B marked ordinary questions is_plain_text=false while calling them low-risk financial questions,
     # which refused them. Code, markup, encoded payloads and injection are what the rule guard looks for; when it
     # finds none, the message is plain text. The LLM's own view is kept for audit.
+    rule_clean = not deterministic_input_guard(message)["risk_labels"]
     parsed["llm_is_plain_text"] = parsed.get("is_plain_text")
-    parsed["is_plain_text"] = bool(parsed.get("is_plain_text")) or not deterministic_input_guard(message)["risk_labels"]
+    parsed["is_plain_text"] = bool(parsed.get("is_plain_text")) or rule_clean
     parsed["financial_intent"] = bool(parsed.get("financial_intent"))
     parsed["risk_level"] = str(parsed.get("risk_level", "medium")).lower()
     # The classifier only decides; it never rewrites the question. Hosted Qwen3-8B returned safe_query=true (-> "True")
@@ -377,10 +378,15 @@ def llm_plain_text_classifier(llm, message: str) -> dict[str, Any]:
     suggested = parsed.get("safe_query")
     parsed["llm_safe_query"] = suggested if isinstance(suggested, str) else None
     parsed["safe_query"] = canonicalize_user_message(message)
+    # Hosted Qwen3-8B rated "What was Bank of America's average trading VaR in 2025?" risk_level=medium every time:
+    # it judged the financial topic (value at risk), not the request. Injection, code and encoded payloads are the rule
+    # guard's job and advice/forecasts the policy rules', both before this step; so an LLM "medium" refuses only when
+    # the rule guard also flagged the message. "high" and "critical" still refuse.
     parsed["allowed"] = (
         parsed["is_plain_text"]
         and parsed["financial_intent"]
-        and parsed["risk_level"] not in {"medium", "high", "critical"}
+        and parsed["risk_level"] not in {"high", "critical"}
+        and (parsed["risk_level"] != "medium" or rule_clean)
     )
     return parsed
 
@@ -1285,7 +1291,8 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
             missing = set(state.get("evidence_check", {}).get("missing", []))
             targets = [t for t in targets if tools.target_label(t) in missing]
         metric = clarifier.metric_in(state["query"])
-        query = state["query"] if attempt == 1 else tools.broaden_query(state["query"], metric, METRICS.get(metric, []))
+        query = (tools.expand_query(state["query"]) if attempt == 1
+                 else tools.broaden_query(state["query"], metric, METRICS.get(metric, [])))
         visual = "visual_search" in plan.get("tools", [])
         evidence = list(state.get("evidence", [])) if attempt > 1 else []
         seen = {hit.get("chunk_id") for hit in evidence}
@@ -1293,6 +1300,15 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
                            tool="text_search+visual_search" if visual else "text_search", attempt=attempt,
                            ticker=t.get("ticker"), year=t.get("year"), visual=visual,
                            source_type=plan.get("source_type") or config.source_type) for t in targets]
+        statement = statement_metric(state["query"]) if attempt == 1 else None
+        if statement:
+            # One more search per company-year for its income statement, so the reported row can be read in code
+            # (statement_figures): the question's own wording found JPM's pro forma note, not its statement.
+            statement_plan = {"metric": statement}
+            jobs += [search_job(tools.target_label(t), sector_agent.company_query(
+                         statement_plan, t["ticker"], int(t["year"]), METRICS.get(statement, [])), 3,
+                         tool="statement_search", ticker=t["ticker"], year=t["year"])
+                     for t in targets if t.get("ticker") and t.get("year")]
         for fresh in run_searches(jobs, seen, calls_log):
             evidence.extend(fresh)
         return {"plan": plan, "evidence": evidence, "retrieval_attempts": attempt, "tool_calls": calls_log}
@@ -1358,11 +1374,42 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
                 plan=json.dumps({key: plan.get(key) for key in ("intent", "tools", "targets")}, ensure_ascii=False))
             if "calculator" in plan.get("tools", []):
                 human += "\n\n" + prompts.CALCULATOR_INSTRUCTION
+            figures = statement_figures(state)
+            if figures:
+                human += "\n\n" + prompts.STATEMENT_FIGURES_INSTRUCTION.format(figures="\n".join(
+                    f"- {NAMES.get(f['ticker'], f['ticker'])} ({f['ticker']}) FY{f['year']} {f['metric']}: "
+                    f"{f['value']} {f['unit']} [{f['chunk_id']}]".replace("  ", " ") for f in figures))
         feedback = critic_feedback(state) if state.get("repair_count", 0) else ""
         if feedback:
             human += "\n\n" + prompts.REPAIR_INSTRUCTION.format(
                 feedback=feedback, allowed=", ".join(str(hit.get("chunk_id")) for hit in evidence))
         return {"answer": invoke_prompt(llm, system, human)}
+
+    def statement_metric(query: str) -> str | None:
+        """The statement measure a figure or comparison question asks for (net income, revenue, ...), else None."""
+        metric = clarifier.metric_in(query)
+        if metric not in sector_agent.STATEMENT_LABELS:
+            return None
+        companies, years = clarifier.companies_in(query), clarifier.years_in(query)
+        return metric if clarifier.intent_in(query, companies, years) in ("figure", "comparison") else None
+
+    def statement_figures(state: AgentState) -> list[dict]:
+        """Q&A figure and comparison questions: the asked measure's statement row, read in code for each company-year
+        target from that target's evidence (``label_match`` skips pro forma tables). On hosted Qwen3-8B the answer to
+        "JPMorgan or Bank of America, higher net income in FY2025?" quoted JPM's pro forma 2023 note (48,665) although
+        the consolidated statement (57,048) was retrieved too."""
+        metric = statement_metric(state.get("query", ""))
+        if not metric:
+            return []
+        figures = []
+        for target in (state.get("plan") or {}).get("targets") or []:
+            if not (target.get("ticker") and target.get("year")):
+                continue
+            hits = [h for h in state.get("evidence", []) if h.get("target") == tools.target_label(target)]
+            row = sector_agent.label_match(hits, metric, int(target["year"]))
+            if row:
+                figures.append({"ticker": target["ticker"], "year": int(target["year"]), "metric": metric, **row})
+        return figures
 
     def critic_feedback(state: AgentState) -> str:
         check, support = state.get("citation_check") or {}, state.get("support_check") or {}
@@ -1428,6 +1475,15 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
                        "numeric": numeric, "method": "code_table", "attempt": state.get("repair_count", 0) + 1}
         elif check["valid"] and support_enabled:
             support = support_check(state, answer, check["cited_chunk_ids"])
+            # The reported statement figure, read in code, must be the one the answer gives (not a pro forma note,
+            # a segment or another year that also sits in the evidence).
+            ignored = [f for f in statement_figures(state) if f["value"].strip("()") not in answer]
+            if ignored:
+                notes = [f"the reported {f['metric']} of {NAMES.get(f['ticker'], f['ticker'])} for FY{f['year']} is "
+                         f"{f['value']} [{f['chunk_id']}] (consolidated statement row); use that figure" for f in ignored]
+                support = {**support, "verdict": "partially_supported" if support.get("claims") else "unsupported",
+                           "unsupported_claims": [*(support.get("unsupported_claims") or []), *notes],
+                           "statement_check": {"ignored": [f"{f['ticker']} FY{f['year']}" for f in ignored]}}
         accepted = check["valid"] and (support is None or support["verdict"] == "supported")
         return {
             "answer": answer,

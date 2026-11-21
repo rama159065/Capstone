@@ -183,3 +183,42 @@ def test_a_cut_off_judge_reply_is_not_repaired():
     assert result["support_check"]["judge_cut_off"] is True and result["support_check"]["verdict"] == "unverified"
     assert result["agent_run"]["path"].count("answer_step") == 1
     assert sum("Support check JSON" in p for p in llm.prompts) == 1
+
+
+STATEMENT = ("Consolidated Statements of Income (in millions)\nYears ended 2025 2024 2023\n"
+             "Net income 8,099 7,367 6,292")
+PRO_FORMA = ("The pro forma information is not indicative of the results had the acquisition occurred earlier.\n"
+             "Year ended (in millions) 2023 2022\nNet income 5,140 4,980")
+
+
+def test_a_pro_forma_figure_is_repaired_to_the_statement_row(monkeypatch):
+    # Hosted Qwen3-8B quoted JPM's pro forma note (48,665) instead of its statement row (57,048); the judge agreed.
+    statement_id, pro_forma_id = CHUNK, "annual_report_edgar_ars_COST_2025_p0090_text0"
+    monkeypatch.setattr(agent, "retrieve_evidence",
+                        lambda run_config: [hit(pro_forma_id, PRO_FORMA), hit(statement_id, STATEMENT)])
+    llm = ScriptedLLM(answers=[f"Costco net income was 5,140 million [{pro_forma_id}].",
+                               f"Costco net income was 8,099 million in fiscal 2025 [{statement_id}]."],
+                      verdicts=[True, True])
+    result = agent.agentic_graph_prompt(llm, config("What was Costco's net income in fiscal 2025?"))
+    answers = [p for p in llm.prompts if "Answer with citations." in p]
+    assert "Statement figures read in code" in answers[0] and f"8,099 millions [{statement_id}]" in answers[0]
+    assert "is 8,099" in answers[1]                                    # the repair feedback names the statement row
+    assert result["support_check"]["verdict"] == "supported" and "8,099" in result["answer"]
+    assert result["agent_run"]["repairs"] == 1
+    tools_used = [c["tool"] for c in result["agent_run"]["tool_calls"]]
+    assert "statement_search" in tools_used
+
+
+def test_explanations_are_not_forced_to_quote_the_statement_row(monkeypatch):
+    monkeypatch.setattr(agent, "retrieve_evidence", lambda run_config: [hit(CHUNK, STATEMENT)])
+    llm = ScriptedLLM(answers=[f"Higher membership fees drove Costco's net income [{CHUNK}]."], verdicts=[True])
+    result = agent.agentic_graph_prompt(llm, config("Why did Costco's net income change in fiscal 2025?"))
+    assert "statement_check" not in (result["support_check"] or {})
+    assert "statement_search" not in [c["tool"] for c in result["agent_run"]["tool_calls"]]
+
+
+def test_auditor_questions_search_with_the_filings_term():
+    expanded = tools.expand_query("Who was Bank of America's independent auditor for fiscal year 2025?")
+    assert expanded.endswith("independent registered public accounting firm")
+    assert tools.expand_query(expanded) == expanded                      # added once
+    assert tools.expand_query("What was Costco's revenue in 2025?") == "What was Costco's revenue in 2025?"

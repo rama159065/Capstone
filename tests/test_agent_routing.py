@@ -99,15 +99,19 @@ def test_calculator_rejects_anything_but_arithmetic(expression):
 def test_comparison_runs_one_filtered_search_per_company(monkeypatch):
     calls = searches(monkeypatch, lambda c, n: [hit(c.ticker, c.year, n)])
     result = run(config("Compare Costco and Walmart revenue in 2025"))
-    assert [(t, y) for t, y, _, _ in calls] == [("COST", 2025), ("WMT", 2025)]
+    # The question's search for each company, then (revenue is a statement measure) its income statement search.
+    assert [(t, y) for t, y, _, _ in calls] == [("COST", 2025), ("WMT", 2025)] * 2
+    assert calls[2][2] == "Costco revenue fiscal year 2025"
     run_info = result["agent_run"]
-    assert [c["tool"] for c in run_info["tool_calls"]][:3] == ["coverage_lookup", "text_search", "text_search"]
+    assert [c["tool"] for c in run_info["tool_calls"]][:5] == ["coverage_lookup", "text_search", "text_search",
+                                                                "statement_search", "statement_search"]
     assert {h["target"] for h in result["evidence"]} == {"COST 2025", "WMT 2025"}
     assert run_info["retrieval_attempts"] == 1 and run_info["steps"] <= 10
 
 
 def test_missing_company_triggers_one_broadened_retry(monkeypatch):
-    calls = searches(monkeypatch, lambda c, n: [] if (c.ticker == "WMT" and n == 2) else [hit(c.ticker, c.year, n)])
+    # Walmart finds nothing on either first-attempt search (the question's and the income statement's: calls 2 and 4).
+    calls = searches(monkeypatch, lambda c, n: [] if (c.ticker == "WMT" and n in (2, 4)) else [hit(c.ticker, c.year, n)])
     result = run(config("What was Costco and Walmart net income in 2025?"))
     run_info = result["agent_run"]
     assert run_info["retrieval_attempts"] == 2 and run_info["path"].count("retrieve_step") == 2

@@ -215,10 +215,29 @@ JPMorgan Chase or Bank of America?"
 **Verdict: right conclusion, wrong JPM figure.** Bank of America's $30,509 million is correct. JPM's FY2025 figure is
 $57,048 million (the trend run below finds it). The $48,665 million comes from a **pro forma note** in JPM's 2025
 10-K, showing **2023** net income as if the First Republic acquisition had happened earlier. Same failure type as 7.1.
+The question's own wording found that note (p.346) but not JPM's income statement.
+
+**Fixed (21 Nov, agent and retrieval):** for figure and comparison questions on a statement measure, the executor adds
+one income-statement search per company-year, the statement row is read in code (`label_match`, which skips pro forma
+tables) and given to the answer step, and the critic requires that figure. Rerun: *"JPMorgan Chase (JPM) FY2025 net
+income: $57,048 million [annual_report_edgar_ars_JPM_2025_p0198_vlm0]; Bank of America (BAC) FY2025 net income:
+$30,509 million"*, `supported`, 15 s.
 
 **Text:** "Who was Bank of America's independent auditor for fiscal year 2025?" → `answered` in 17 s, but the answer
-says the evidence doesn't name the firm. The search found the "Report of Independent Registered Public Accounting
-Firm" page, but not the chunk with PricewaterhouseCoopers' signature. A safe miss (no guess), not a correct answer.
+said the evidence doesn't name the firm. Page 129 names PricewaterhouseCoopers, but it is a two-column page and the
+text-layer reader interleaved the columns ("…has been audited by to the maintenance of records that, in reasonable
+detail, PricewaterhouseCoopers, LLP…"), so the plain question didn't match it (outside the top 10).
+
+**Fixed (21 Nov, retrieval):** the search adds the filings' term for everyday words ("auditor" → "independent
+registered public accounting firm", `financial_tools.expand_query`). Rerun: *"Bank of America's independent auditor
+for fiscal year 2025 was PricewaterhouseCoopers, LLP"* [p.129], `supported`, 16 s. The lasting fix is at ingestion:
+column-aware text extraction for two-column pages (or a vision reading, as the page audit routed this page).
+
+**Table, refused:** "What was Bank of America's average total trading positions portfolio VaR in 2025 (Table 42)?"
+was refused in 2 s: Qwen3-8B's plain-text check rated it `risk_level: medium` every time, judging the topic (value at
+risk), not the request. **Fixed (21 Nov, agent):** the prompt says `risk_level` rates the request, not the financial
+topic, and an LLM "medium" refuses only when the rule guard also flagged the message. Rerun: *"$72 million, as
+indicated in Table 42"* [p.118], `supported`, 8 s.
 
 **Chart:** "According to the production charts in Chevron's 2022 annual report, what was Chevron's net crude oil
 production in 2022?" → `evidence_only` in 24 s, 10 of 10 steps. The search returned results-of-operations tables,
@@ -325,8 +344,9 @@ Batching the query embeddings was also considered, but embedding a query takes o
 | Case | Agent | Status | Time | Correct? |
 |---|---|---|---|---|
 | Citi segment, 2025 vs 2024 | router → trend | answered | 25 s | No: company total, not the segment |
-| JPM vs BAC net income 2025 | Q&A | answered | 20 s | Conclusion yes; JPM figure from a pro forma note |
-| BAC auditor | Q&A | answered | 17 s | No answer given (says not in evidence) |
+| JPM vs BAC net income 2025 | Q&A | answered | 20 s → 15 s | Was a pro forma JPM figure; **fixed**: $57,048M vs $30,509M |
+| BAC auditor | Q&A | answered | 17 s → 16 s | Was "not in evidence"; **fixed**: PricewaterhouseCoopers |
+| BAC trading VaR, Table 42 | Q&A | refused → answered | 2 s → 8 s | Was refused; **fixed**: $72 million |
 | CVX production chart | Q&A | evidence_only | 24 s | Withheld (retrieval miss) |
 | JPM net income 2022–2025 | trend | answered | 42 s | Yes |
 | Banking net income 2022–2025 | sector trend | pending_human_review | 40 s (was 117 s) | Yes; small panel flagged |
@@ -352,7 +372,13 @@ covers each):
 - **Right filing, wrong row** (7.1, 7.2): the agent cites a real figure from the right filing, but for a different
   concept or year (company total for a segment, a pro forma note for the actual). Number grounding can't catch this,
   and Qwen3-8B as judge passed both. This matches the Week 1 analysis, where it was the largest failure type with
-  RAG ([week1_failure_scenarios.md](week1_failure_scenarios.md)).
+  RAG ([week1_failure_scenarios.md](week1_failure_scenarios.md)). The statement-row check now covers consolidated
+  statement measures (net income, revenue, operating income, total assets…); segment figures such as Citi's U.S.
+  Personal Banking are still open.
+- **Pages this PC's index lacks**: this index (`chroma_db_bge`) holds text-layer and OCR readings only. Pages the
+  page audit routed to `paidVL` (Citi 2025 p.41, Wells Fargo 2023 p.44, Chevron 2022 p.41) are missing, and pages
+  routed to `qwen3VL` kept only their text layer (BAC 2025 p.39 Erica screen, Chevron 2022 p.35 production charts,
+  garbled). The Colab index (335,699 chunks) was built with the vision readers.
 - **Long answers and the judge**: a Q&A or trend answer with many figures can still make the judge's JSON exceed
   1,024 tokens; it then ends as `evidence_only` (safe), now without a pointless repair. Sector answers no longer use
   the judge (7.4).
