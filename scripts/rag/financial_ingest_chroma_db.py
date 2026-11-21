@@ -1225,7 +1225,66 @@ def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAUL
     vector = embedder([query])[0] if hybrid.uses(mode, "dense") else None
     hits = [chunk_schema.evidence_hit(p, rrf_score=score, paths=["vlm_text"], ranks=ranks)
             for score, p, ranks in backend.search(vector, query, top_k, ticker, year, sector, mode=mode)]
-    return with_page_values(backend, hits)
+    return with_page_context(backend, with_page_values(backend, hits))
+
+
+# A statement read from the text layer is chunked as prose (1,200-character windows), so a chunk that continues a
+# table often starts with figure rows and no header: on the 41 bank filings of the 509-filing index, 465 of 715
+# "Net income" rows had no year header in their chunk (which column is 2025?) and 252 no scale. The header sits in an
+# earlier chunk of the same page; it is carried to the top of the chunk at query time (no re-ingest needed).
+_CTX_YEAR = re.compile(r"(?<!\d)(20[0-4]\d)(?!\d)")
+_CTX_FIGURE = re.compile(r"\d{1,3}(?:,\d{3})+|\d+\.\d+")
+_CTX_PRO_FORMA = re.compile(r"\bpro\s+forma\b", re.I)
+CONTEXT_MARK = "[Page context, carried from earlier on this page]"
+
+
+def _year_header(line):
+    """A line naming two or more fiscal years and no figures: a table's column header."""
+    return len(set(_CTX_YEAR.findall(line))) >= 2 and not _CTX_FIGURE.search(_CTX_YEAR.sub(" ", line))
+
+
+def page_context(store, hit, cache=None):
+    """The header a table-continuation chunk lacks: the page title, a pro forma marker if that table is pro forma,
+    and the last year-header line of the earlier chunks on its page. None when the chunk needs nothing."""
+    if hit.get("content_type") == "page_description":
+        return None
+    lines = [line for line in str(hit.get("text") or "").splitlines() if line.strip()]
+    first_row = next((i for i, line in enumerate(lines) if _CTX_FIGURE.search(line) and not _year_header(line)), None)
+    if first_row is None or any(_year_header(line) for line in lines[:first_row]):
+        return None
+    meta = hit.get("metadata") or {}
+    doc_id, page, index = meta.get("doc_id"), hit.get("page"), meta.get("chunk_index")
+    if doc_id is None or page is None or index is None:
+        return None
+    key = (doc_id, int(page))
+    if cache is None or key not in cache:
+        payloads = store.page_payloads(doc_id, page)
+        if cache is not None:
+            cache[key] = payloads
+    else:
+        payloads = cache[key]
+    earlier = [p for p in payloads if int(p.get("chunk_index") or 0) < int(index)]
+    before = [line for p in earlier for line in str(p.get("text") or "").splitlines() if line.strip()]
+    header_at = next((i for i in range(len(before) - 1, -1, -1) if _year_header(before[i])), None)
+    if header_at is None:
+        return None
+    title = before[0].strip()
+    parts = [title] if title and title != before[header_at].strip() else []
+    if any(_CTX_PRO_FORMA.search(line) for line in before[max(0, header_at - 8):header_at]):
+        parts.append("(pro forma table)")
+    return "\n".join([*parts, before[header_at].strip()])
+
+
+def with_page_context(store, hits):
+    """Each table-continuation hit gets its page's title and column header at the top (``page_context``)."""
+    cache = {}
+    for hit in hits:
+        context = page_context(store, hit, cache)
+        if context:
+            hit["page_context"] = context
+            hit["text"] = f"{CONTEXT_MARK}\n{context}\n{hit['text']}"
+            hit["preview"] = re.sub(r"\s+", " ", hit["text"])[:500]
+    return hits
 
 
 SAME_PAGE_LIMIT = 3     # value chunks added after one page_description hit
