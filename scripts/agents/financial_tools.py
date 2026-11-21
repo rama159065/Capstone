@@ -128,6 +128,21 @@ STOP_WORDS = {"what", "was", "were", "is", "are", "the", "a", "an", "of", "for",
               "with", "between", "compare", "versus", "vs"}
 
 
+# Everyday words for things annual reports name formally. A question's word adds the filing's term to the search query.
+# On the 509-filing index "Who was Bank of America's independent auditor for fiscal year 2025?" missed the page naming
+# PricewaterhouseCoopers (a two-column page whose text layer interleaves the columns); with the formal term it ranks 2nd.
+TERM_EXPANSIONS = {
+    r"\bauditors?\b|\baudit firm\b|\baccounting firm\b": "independent registered public accounting firm",
+}
+
+
+def expand_query(query: str) -> str:
+    """The question plus the formal term for any everyday word it uses (``TERM_EXPANSIONS``), once."""
+    extra = [term for pattern, term in TERM_EXPANSIONS.items()
+             if re.search(pattern, query, re.I) and term.lower() not in query.lower()]
+    return " ".join([query, *extra])
+
+
 def broaden_query(query: str, metric: str | None, metric_phrases: list[str]) -> str:
     """Retry query: the question's content words plus the metric's synonyms and statement names."""
     words = [w for w in re.findall(r"[A-Za-z0-9$%.,'-]+", query) if w.lower().strip("?.,") not in STOP_WORDS]
