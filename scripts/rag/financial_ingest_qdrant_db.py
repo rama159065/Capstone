@@ -81,7 +81,8 @@ TEXT, VISUAL = "annual_reports_text", "annual_reports_visual"
 LEGACY = {TEXT: "docs_text", VISUAL: "visual_pages"}      # names before the rename (shared with LocalRAG)
 GRID = 32                          # ColPali v1.3: 32 x 32 image patches + special tokens
 INDEXING_THRESHOLD = 10_000        # KB; Qdrant's default, restored after bulk upload
-ANALYSIS_VERSION = 2                  # 2: font-encoding garbage counts as garbled (non_ascii_garbage)
+ANALYSIS_VERSION = 3                  # 2: font-encoding garbage counts as garbled (non_ascii_garbage)
+                                      # 3: ASCII ciphers and doubled glyphs count as garbled (unreadable_layer)
 CHUNK_CHARS, OVERLAP_CHARS, TABLE_CHARS = 1200, 200, 3000
 RENDER_SCALE = 1.5                 # same scale as the pooling evaluation
 STOPWORDS = frozenset("the of and to in a is for on that by with as are be this from or at an our we".split())
@@ -179,11 +180,48 @@ def non_ascii_garbage(text, min_chars=40, share=.30):
     return odd >= min_chars and odd / len(chars) > share
 
 
+_WORD_SHAPE = re.compile(r"""^[(\["'“‘$€£]*(?:[A-Za-z][a-z]+(?:['’\-][A-Za-z]+)*|[A-Z][A-Z&.\-]*|\d[\d,.]*%?|[a-z])"""
+                         r"""[)\]"'”’.,;:%*]*$""")
+_NEUTRAL_TOKEN = re.compile(r"^[$\-–—()%.,:;•·|/]+$")
+_VOWELS = frozenset("AEIOUY")
+
+
+def unreadable_layer(text, min_chars=100):
+    """A text layer that is not text, which the stopword and non-ASCII checks miss (scan of the 509 filings, Nov 2026):
+
+    * symbol cipher: fonts without a character map give shifted ASCII ("C B>AA>DCH" for "in millions", BAC 2022-23,
+      GS, BNY, STT): under ``WORD_SHAPE_MIN`` of the text is word- or number-shaped;
+    * letter cipher: the same shift onto capitals only ("CPF FGXGNQRGTU", NVIDIA 2024): mostly capital words with
+      too few vowels for English;
+    * doubled glyphs: each word drawn twice ("PARTPART II ITEMITEM", "20242024", Caterpillar, Intel, CVS), which
+      also corrupts the figures.
+    Pages with fewer than ``min_chars`` characters are not judged."""
+    tokens = [t for t in text.split() if not _NEUTRAL_TOKEN.match(t)]
+    total = sum(map(len, tokens))
+    if total < min_chars:
+        return False
+    if sum(len(t) for t in tokens if _WORD_SHAPE.match(t)) / total < WORD_SHAPE_MIN:
+        return True
+    caps = [t for t in tokens if len(t) >= 3 and t.isalpha() and t.isupper()]
+    cap_letters = sum(map(len, caps))
+    if cap_letters >= min_chars and cap_letters / total > .5 and \
+            sum(c in _VOWELS for t in caps for c in t) / cap_letters < CAPS_VOWELS_MIN:
+        return True
+    long = [t for t in tokens if len(t) >= 4]
+    doubled = sum(1 for t in long if len(t) % 2 == 0 and t[:len(t) // 2] == t[len(t) // 2:])
+    return len(long) >= 20 and doubled / len(long) > DOUBLED_MAX
+
+
+WORD_SHAPE_MIN = .6      # word-shaped share: clean pages ~0.9-1.0, cipher pages mostly < 0.15 (20k-page sample)
+CAPS_VOWELS_MIN = .25    # English capitals: ~0.38 vowels (AEIOUY)
+DOUBLED_MAX = .3         # share of 4+ character tokens drawn twice
+
+
 def analyse_page(page):
     text = page.get_text(sort=True).strip()
     words = re.findall(r"[a-z]+", text.lower())
     garbled = ((len(words) >= 40 and sum(w in STOPWORDS for w in words) / len(words) < .05) or text.count("�") > 5
-               or non_ascii_garbage(text))
+               or non_ascii_garbage(text) or unreadable_layer(text))
     try:
         tables = [t for t in map(table_markdown, page.find_tables().tables) if t]
     except Exception:

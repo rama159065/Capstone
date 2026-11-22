@@ -444,12 +444,14 @@ def vlm_targets(pages, mode, limit=0):
     return targets[:limit] if limit else targets
 
 
-ROUTE_VERSION = 5          # v2: pdfParser+colpali tables/pictures with few text-layer figures are OCR-checked
+ROUTE_VERSION = 6          # v2: pdfParser+colpali tables/pictures with few text-layer figures are OCR-checked
                            # v3: "chart" pages with 600+ words are text pages (page_audit.TEXT_PAGE_WORDS)
                            # v4: paid replies cut off by their token budget are retried (v3 kept Qwen for them), so
                            #     filings finished under v3 run again; cached readings are reused
                            # v5: a paidVL reading much shorter than the page's OCR text (a text page whose verbatim copy
                            #     the paid model refused) keeps the OCR text, plus the reading's figures
+                           # v6: on a page whose text layer is unusable the OCR reading drops its native-table blocks
+                           #     that are not text (readable_blocks); cached readings are reused
 SKIPPABLE_ROUTES = ("qwen3VL", "paidVL")
 SHORT_READING_SHARE = .25   # a paidVL reading shorter than this share of the page's OCR text left most of the page out
 SHORT_READING_MIN_OCR = 800 # ... checked only when OCR found at least this many characters (a real page of text)
@@ -482,7 +484,8 @@ class RoutedReader:
 
     The Qwen3-VL model loads only when the first page needs it. ``paid`` is None when no paid model is configured.
     ``skip_routes`` (qwen3VL, paidVL) leaves those pages to a later run: they keep their text layer if it is usable,
-    so a CPU-only machine can index everything OCR can read and Qwen3-VL fills in the rest later (cached OCR reused).
+    and are OCR'd if it is not (``unusable_layer``: garbled or outlined), so a CPU-only machine can index everything OCR
+    can read and Qwen3-VL fills in the rest later (cached OCR reused).
     """
 
     def __init__(self, qwen_factory, qwen_signature, ocr=None, paid=None, threshold=.10, paid_limit=0, describe=True,
@@ -546,6 +549,27 @@ def cross_check(markdown, reference):
     return {"unverified": unverified, "figures": len(figures), "share": len(unverified) / len(figures) if figures else 0.0}
 
 
+def unusable_layer(page):
+    """The text layer can't be indexed at all (garbled or glyphs drawn as outlines): a page on a skipped route is
+    OCR'd now rather than left empty until the model run."""
+    return bool(page.get("garbled")) or page.get("page_type") == "outlined_text"
+
+
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+_TABLE_RULE = re.compile(r"^---( \| ---)*$", re.M)
+
+
+def readable_blocks(markdown):
+    """An OCR reading of a page whose text layer is unusable, without its unreadable native tables. The OCR reader
+    puts the page's native tables (``fi.table_markdown``) before the OCR text, and on such a page those tables are the
+    cipher again (Con Edison 2023, Citi 2025: "bAaaAdc\\x01"). Only table blocks are dropped; the OCR text (one block,
+    lines joined by newlines) is always kept. Applied when the reading is used, so cached readings stay valid."""
+    def unreadable_table(block):
+        return bool(_TABLE_RULE.search(block)) and (len(_CONTROL_CHARS.findall(block)) > .02 * len(block)
+                                                    or fi.unreadable_layer(block) or fi.non_ascii_garbage(block))
+    return "\n\n".join(block for block in markdown.split("\n\n") if not unreadable_table(block))
+
+
 def prefetch_plan(reader, pages, limit=0):
     """The readings a filing will certainly need, by lane: gpu (Qwen3-VL transcriptions and descriptions), paid (the
     paid model, with --paid-first), ocr (CPU). Conditional readings (Qwen after a doubtful paid reading, the paid model
@@ -562,6 +586,9 @@ def prefetch_plan(reader, pages, limit=0):
     for page, route in routed:
         if reader.describe and page["page_type"] in DESCRIBE_TYPES and route in DESCRIBE_ROUTES:
             plan["gpu"].append(("describe", page))
+        if route in reader.skip_routes and unusable_layer(page):
+            plan["ocr"].append(("ocr", page))                       # unreadable layer: OCR now, the model later
+            continue
         if route in reader.skip_routes or route in ("none", "pdfParser"):
             continue
         if route == "ocr" or (route in ("qwen3VL", "paidVL") and page["page"] not in allowed):
@@ -639,7 +666,8 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                     loaded[name][page["page"]] = row_
                 print(json.dumps({"doc_id": doc_id, "page": page["page"], "reader": name, "chars": len(text),
                                   "seconds": row_["seconds"]}), flush=True)
-            return loaded[name][page["page"]]["markdown"]
+            markdown = loaded[name][page["page"]]["markdown"]
+            return readable_blocks(markdown) if name == "ocr" and unusable_layer(page) else markdown
 
         def try_read(name, page, doc=None):
             """A model reading, or "" when the model fails. A failure is tried once per filing run (the prefetch
@@ -681,6 +709,8 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                                             "page": page}
             if route == "none":
                 entries[number] = {**base, "skip": True}
+            elif route in reader.skip_routes and unusable_layer(page):
+                entries[number] = ocr_entry(page, base, "skipped_route_unreadable_layer")   # else the page is empty
             elif route == "pdfParser" or route in reader.skip_routes:
                 continue                                            # native text (if usable), chunked by vlm_records
             elif route == "pdfParser+colpali":

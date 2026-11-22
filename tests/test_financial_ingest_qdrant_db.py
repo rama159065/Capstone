@@ -326,7 +326,31 @@ def test_font_encoding_garbage_counts_as_garbled_but_normal_text_does_not():
     assert fi.non_ascii_garbage(costco)
     assert not fi.non_ascii_garbage(clean)                   # a few dashes, quotes and accents are normal
     assert not fi.non_ascii_garbage("±²³ ¤ µ")              # too short to judge
-    assert fi.ANALYSIS_VERSION == 2                          # cached page analyses are redone with the new rule
+    assert fi.ANALYSIS_VERSION == 3                          # cached page analyses are redone with the new rule
+
+
+def test_unreadable_layer_catches_ascii_ciphers_and_doubled_glyphs():
+    """Real text layers from the 509 filings (Nov 2026 scan) that the stopword and non-ASCII checks let through."""
+    symbol_cipher = ("BECBE4G<BAVF ?B4A 4A7 ?84F8 CBEG9B?<B 8K6?H7<A: ?B4AF 4A7 @B78? BHGCHG E8FH?GF GB 78G8E@<A8 "
+                     "G;8 BI8E4?? 4??BJ4A68 9BE ?B4A HA9HA787 ?8A7<A: 6B@@<G@8AGF 466BHAG87 9BE HA78") * 2   # BAC 2022
+    letter_cipher = ("CPF FGXGNQRGTU WUG QWT EQORWVKPI UQNWVKQPU VQ CEEGNGTCVG C YKFG TCPIG QH KORQTVCPV "
+                     "CRRNKECVKQPU HTQO GPVGTRTKUG FCVC EGPVGT") * 2                                        # NVIDIA 2024
+    doubled = ("ITEMITEM 12.12. SecuritySecurity OwnershipOwnership ofof CertainCertain BeneficialBeneficial OwnersOwners "
+               "andand ManagementManagement andand RelatedRelated StockholderStockholder MattersMatters TheThe "
+               "informationinformation requiredrequired byby thisthis itemitem isis incorporatedincorporated") # CAT 2025
+    assert fi.unreadable_layer(symbol_cipher)
+    assert fi.unreadable_layer(letter_cipher)
+    assert fi.unreadable_layer(doubled)
+    prose = ("Net interest income increased $1.2 billion to $56.9 billion in 2024, driven by higher deposit balances "
+             "and the benefit of fixed-rate assets repricing, partially offset by higher funding costs. ") * 3
+    table = ("Consolidated Statement of Income (In millions) 2024 2023 2022\nNet interest income $ 56,931 $ 56,931 "
+             "$ 52,462\nNoninterest income 44,957 41,964 42,488\nTotal revenue, net of interest expense $ 101,888 "
+             "$ 98,581 $ 94,950\nProvision for credit losses 5,821 4,394 2,543\nNet income $ 27,132 $ 26,515 $ 27,528")
+    capitals = ("PART II DUKE ENERGY CORPORATION DUKE ENERGY CAROLINAS, LLC PROGRESS ENERGY, INC. DUKE ENERGY "
+                "PROGRESS, LLC DUKE ENERGY FLORIDA, LLC DUKE ENERGY OHIO, INC. DUKE ENERGY INDIANA, LLC PIEDMONT "
+                "NATURAL GAS DISTRIBUTION COMPANY, INC. ITEM 8. FINANCIAL STATEMENTS AND SUPPLEMENTARY DATA")
+    for text in (prose, table, capitals, "C B>AA>DCH"):                 # the last one is too short to judge
+        assert not fi.unreadable_layer(text)
 
 
 def test_needs_ocr_covers_pages_without_a_text_layer():
