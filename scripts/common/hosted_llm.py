@@ -119,6 +119,34 @@ def payload_extras(*, max_tokens: int | None = None) -> dict:
     return extras
 
 
+CONTEXT_TOO_LONG = re.compile(r"maximum context length", re.I)
+SHRINK_STEPS = 4
+
+
+def shrink_messages(messages: list[dict]) -> list[dict]:
+    """The same messages with a fifth of the longest one cut from its middle (evidence), instructions kept.
+
+    The course endpoint answers HTTP 400 when input + output exceed 8,192 tokens. Characters don't predict tokens
+    (a page of figures is ~2 characters a token), so the prompt is cut only when the endpoint says it is too long.
+    A claim whose evidence was cut is judged unsupported, so this can only withhold an answer, never support one."""
+    longest = max(range(len(messages)), key=lambda i: len(str(messages[i].get("content") or "")))
+    text = str(messages[longest]["content"])
+    cut = len(text) // 5
+    start = int(len(text) * 0.45)
+    shorter = text[:start] + "\n[... evidence cut to fit the model's context ...]\n" + text[start + cut:]
+    return [{**m, "content": shorter} if i == longest else m for i, m in enumerate(messages)]
+
+
+def context_too_long(exc: urllib.error.HTTPError) -> bool:
+    """The endpoint refused the prompt for its length (HTTP 400 naming the context length)."""
+    if exc.code != 400:
+        return False
+    try:
+        return bool(CONTEXT_TOO_LONG.search(exc.read().decode("utf-8", "replace")))
+    except (OSError, ValueError):
+        return False
+
+
 def clean_content(text: str | None) -> str:
     """Remove Qwen3 <think> blocks; an unclosed block (cut off by max_tokens) leaves no answer."""
     text = THINK_BLOCK.sub("", text or "")

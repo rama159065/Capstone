@@ -1255,7 +1255,7 @@ def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAUL
     vector = embedder([query])[0] if hybrid.uses(mode, "dense") else None
     hits = [chunk_schema.evidence_hit(p, rrf_score=score, paths=["vlm_text"], ranks=ranks)
             for score, p, ranks in backend.search(vector, query, top_k, ticker, year, sector, mode=mode)]
-    return with_page_context(backend, with_page_values(backend, hits))
+    return with_chart_titles(backend, with_page_context(backend, with_page_values(backend, hits)))
 
 
 # A statement read from the text layer is chunked as prose (1,200-character windows), so a chunk that continues a
@@ -1350,6 +1350,69 @@ def with_page_values(store, hits, limit=SAME_PAGE_LIMIT):
             if added >= limit:
                 break
     return out
+
+
+_CHART_READERS = {"qwen3vl", "paidvl", "vlm"}
+_TITLE_UNIT = re.compile(r"^#{1,4}\s+(?P<title>[^\n|]{4,90})\n+[ \t]*(?P<unit>(?:thousands|millions|billions|trillions|percent|dollars)"
+                         r"[^\n|]{0,60})$", re.I | re.M)
+
+
+def chart_titles(payloads):
+    """chunk_id -> chart title for a page's unnamed chart tables.
+
+    The vision reader writes a page of several charts as tables that start with the unit only ("Thousands of barrels
+    per day") and, in a text chunk, the charts' titles with their units ("## Net crude oil production / Thousands of
+    barrels per day"). When the tables' units and the titles' units are the same list in the same order, each table is
+    its title's; otherwise nothing is named (Chevron 2022 p35: 1,440, 279 and 7,677 carried no product)."""
+    squash = lambda text: re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()           # noqa: E731
+    tables = []
+    for payload in payloads:
+        first = next((line.strip() for line in str(payload.get("text") or "").splitlines() if line.strip()), "")
+        if (payload.get("content_type") == "table" and str(payload.get("reader") or "").lower() in _CHART_READERS
+                and first and not first.startswith(("|", "#", "[")) and re.match(r"(?i)thousands|millions|billions|trillions|percent|dollars", first)):
+            tables.append((payload["chunk_id"], squash(first)))
+    titles = [(m["title"].strip(), squash(m["unit"])) for payload in payloads
+              if payload.get("content_type") != "page_description" for m in _TITLE_UNIT.finditer(str(payload.get("text") or ""))]
+    if len(tables) < 2 or [unit for _, unit in tables] != [unit for _, unit in titles]:
+        return {}
+    return {chunk_id: title for (chunk_id, _), (title, _) in zip(tables, titles)}
+
+
+def with_chart_titles(store, hits):
+    """Each unnamed chart table hit gets its chart's title at the top (``chart_titles``), at query time."""
+    cache = {}
+    for hit in hits:
+        doc_id, page = (hit.get("metadata") or {}).get("doc_id"), hit.get("page")
+        if (hit.get("content_type") != "table" or str(hit.get("reader") or "").lower() not in _CHART_READERS
+                or doc_id is None or page is None):
+            continue
+        key = (doc_id, int(page))
+        if key not in cache:
+            cache[key] = chart_titles(store.page_payloads(doc_id, page))
+        title = cache[key].get(hit["chunk_id"])
+        if title:
+            hit["chart_title"] = title
+            hit["text"] = f"Chart: {title}\n{hit['text']}"
+            hit["preview"] = re.sub(r"\s+", " ", hit["text"])[:500]
+    return hits
+
+
+def page_hits(pages, hits, root=None):
+    """Every chunk of the given (doc_id, page) pairs not already in ``hits``, in reading order, with page context.
+
+    A statement page is often several chunks: the one with the title ranks high ("CONSOLIDATED STATEMENTS OF
+    OPERATIONS") and the table with the figures (Fox's "Revenues 14,913") does not. Read-only; no search."""
+    if not pages:
+        return []
+    store = ChromaStore(Path(root or os.getenv("RAG_VLM_DIR", DEFAULT_ROOT)))
+    have = {hit["chunk_id"] for hit in hits}
+    out = []
+    for doc_id, page in pages:
+        for payload in store.page_payloads(doc_id, page):
+            if payload["chunk_id"] not in have and payload.get("content_type") != "page_description":
+                have.add(payload["chunk_id"])
+                out.append(chunk_schema.evidence_hit(payload, rrf_score=0.0, paths=["vlm_text", "statement_page"]))
+    return with_chart_titles(store, with_page_context(store, out))
 
 
 _serving: dict = {}

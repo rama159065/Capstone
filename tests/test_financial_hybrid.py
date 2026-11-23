@@ -149,11 +149,11 @@ def test_planner_enables_visual_search_for_chart_questions_with_the_hybrid(monke
 def test_agent_dispatches_to_the_hybrid(monkeypatch):
     seen = {}
     monkeypatch.setenv("RAG_BACKEND", "financial_hybrid")
-    monkeypatch.setattr(fh, "retrieve_for_agent", lambda *a, **k: seen.update(args=a, kwargs=k) or ["hit"])
+    monkeypatch.setattr(fh, "retrieve_for_agent", lambda *a, **k: seen.update(args=a, kwargs=k) or [{"chunk_id": "hit"}])
     config = agent.AgentConfig(query="q", ticker="CVX", year=2022, source_type=None, top_k=4, dense_top_k=4, bm25_top_k=4,
                                retrieval_mode="hybrid", embedding_provider="hashing", hash_dimensions=16,
                                max_context_chars=6000, self_consistency_samples=1, visual=True)
-    assert agent.retrieve_evidence(config) == ["hit"]
+    assert agent.retrieve_evidence(config) == [{"chunk_id": "hit"}]
     assert seen["kwargs"]["visual"] is True and seen["kwargs"]["ticker"] == "CVX"
 
 

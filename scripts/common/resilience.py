@@ -113,7 +113,8 @@ class Calls:
             raise CallFailure("deadline_exceeded") from exc
         except Exception as exc:
             event["error_type"] = type(exc).__name__
-            raise CallFailure(type(exc).__name__) from exc
+            # A failure inside a nested call keeps its own reason ("HTTPError", "capacity_exceeded").
+            raise CallFailure(str(exc) if isinstance(exc, CallFailure) else type(exc).__name__) from exc
         finally:
             event["elapsed_ms"] = round((time.monotonic() - started) * 1000)
             emit("call.completed", name=name, **event)

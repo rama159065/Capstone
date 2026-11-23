@@ -12,6 +12,12 @@ clarifier's parser, the same way ``financial_tools.normalize_plan`` validates th
 * ``fund`` -> the fund agent (``agent_mutual_fund``): a mutual fund's N-PORT holdings, linked to the holdings'
   annual reports. Only when fund data is loaded and the question names a loaded fund or asks about fund holdings;
   without fund data this route never exists, so every other route is unchanged;
+* ``shareholder_returns`` -> the shareholder-returns agent (``financial_shareholder_returns``): dividends plus
+  buybacks per company for one fiscal year, ranked, from the statements of cash flows. Chosen when the question asks
+  what was returned to shareholders (``returns_signal``) for named companies or a sector;
+* ``dividend_income`` -> the dividend-income agent (``financial_dividend_income``): the user's share counts times
+  each company's dividends declared per share. Chosen when the question gives a share count and asks about
+  dividends (``holdings_signal``);
 * ``report`` -> a handoff to the deterministic report pipeline, which runs only after the user confirms;
 * ``out_of_scope`` -> refused, but only when the question names no company, measure or known intent.
 
@@ -23,19 +29,26 @@ from __future__ import annotations
 
 from typing import Any
 
-ROUTES = ("lookup", "comparison", "trend", "sector_trend", "fund", "report", "out_of_scope")
+ROUTES = ("lookup", "comparison", "trend", "sector_trend", "fund", "shareholder_returns", "dividend_income", "report",
+          "out_of_scope")
 FLOW_OF = {"lookup": "agentic_graph", "comparison": "agentic_graph", "trend": "trend_graph",
-           "sector_trend": "sector_trend_graph", "fund": "fund_graph", "report": "report_handoff",
+           "sector_trend": "sector_trend_graph", "fund": "fund_graph", "shareholder_returns": "shareholder_returns_graph",
+           "dividend_income": "dividend_income_graph", "report": "report_handoff",
            "out_of_scope": "refuse"}
 ALIASES = {"qa": "lookup", "figure": "lookup", "fact": "lookup", "explain": "lookup", "explanation": "lookup",
            "question": "lookup", "annual_report_qa": "lookup", "compare": "comparison", "trend_analysis": "trend",
            "growth": "trend", "time_series": "trend", "sector": "sector_trend", "sector_analysis": "sector_trend",
            "industry_trend": "sector_trend", "mutual_fund": "fund", "fund_holdings": "fund", "etf": "fund",
            "holdings": "fund", "full_report": "report", "report_generation": "report",
+           "shareholder_return": "shareholder_returns", "capital_returns": "shareholder_returns",
+           "returns": "shareholder_returns", "buybacks": "shareholder_returns", "dividends": "dividend_income",
+           "dividend_calculator": "dividend_income", "dividend": "dividend_income", "income": "dividend_income",
            "refuse": "out_of_scope", "off_topic": "out_of_scope", "unsupported": "out_of_scope"}
 RULE_ROUTE = {"report": "report", "comparison": "comparison", "trend": "trend", "sector_trend": "sector_trend",
-              "fund": "fund", "figure": "lookup", "explain": "lookup"}
-EXPLICIT = ("report", "comparison", "trend", "sector_trend", "fund")   # the parser's reading wins over the LLM's
+              "fund": "fund", "shareholder_returns": "shareholder_returns", "dividend_income": "dividend_income",
+              "figure": "lookup", "explain": "lookup"}
+EXPLICIT = ("report", "comparison", "trend", "sector_trend", "fund", "shareholder_returns", "dividend_income")
+ACTION_ROUTES = ("shareholder_returns", "dividend_income")         # only when the question's own words ask for them   # the parser's reading wins over the LLM's
 OUT_OF_SCOPE_ANSWER = ("This copilot answers questions about the companies' annual reports. The question names no "
                        "company, measure or report topic, so it was not routed to an agent.")
 
@@ -67,6 +80,13 @@ def rule_route(query: str, clarifier, ticker: str | None = None, sector: str | N
         intent = "sector_trend"
     if intent != "report" and fund_question(query):
         intent = "fund"                    # names a loaded fund or asks about fund holdings (needs fund data)
+    elif intent != "report":
+        from scripts.agents.financial_dividend_income import holdings_signal
+        from scripts.agents.financial_shareholder_returns import returns_signal
+        if holdings_signal(query):
+            intent = "dividend_income"     # a share count and dividends: the user's dividend income
+        elif returns_signal(query):
+            intent = "shareholder_returns" # what was returned to shareholders: dividends plus buybacks
     signals = {"intent": intent, "companies": companies, "metric": slots.metric, "years": slots.years,
                "sectors": sectors}
     return RULE_ROUTE.get(intent, "lookup"), signals
@@ -87,7 +107,8 @@ def decide(raw: dict | None, query: str, clarifier, trend_plan: dict, *, ticker:
     elif rule in EXPLICIT and llm != rule:
         route, decided_by = rule, "rules"
         adjustments.append(f"rules overrode {llm!r}: the question reads as a {rule} (intent {signals['intent']!r})")
-    elif llm == "report":
+    elif llm == "report" and rule != "report":       # the rules agreeing is the explicit request (hosted Qwen3-8B
+                                                     # and the rules both said "report"; it used to be downgraded)
         route, decided_by = "lookup", "rules"
         adjustments.append("downgraded 'report' to 'lookup': a report needs an explicit request (generate/full report)")
     elif llm == "out_of_scope" and (signals["companies"] or signals["metric"] or signals["intent"]):
@@ -98,6 +119,10 @@ def decide(raw: dict | None, query: str, clarifier, trend_plan: dict, *, ticker:
     if route == "fund" and decided_by == "llm" and rule != "fund":
         # No fund data, or the question names no fund and no fund holdings: the rules decide.
         adjustments.append(f"fund route not possible (no loaded fund named): rules chose {rule!r}")
+        route, decided_by = rule, "rules"
+    if route in ACTION_ROUTES and decided_by == "llm" and rule != route:
+        # These agents act on the user's own numbers or rank companies: only when the question's words ask for it.
+        adjustments.append(f"{route} not asked for in the question's words: rules chose {rule!r}")
         route, decided_by = rule, "rules"
     if route == "sector_trend" and decided_by == "llm" and not (sector_plan or {}).get("feasible"):
         # The LLM saw a sector question the parser didn't: without a buildable plan, the rules decide.

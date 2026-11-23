@@ -88,6 +88,18 @@ STATEMENT_FIGURES_INSTRUCTION = (
     "prior-year figure elsewhere in the evidence is not the reported figure):\n{figures}\n"
     "Use these figures for the measure asked and cite their chunk IDs."
 )
+STATEMENT_CHANGES_INSTRUCTION = (
+    "Changes computed in code from these figures (state them as given; do not round to a whole percent):\n{changes}"
+)
+MARGIN_INSTRUCTION = (
+    "{name}'s {metric} for fiscal {year}, computed in code from its income statement: {expression} = {value}%. "
+    "Rows: {rows}. State this percentage and both rows, and cite their chunk IDs."
+)
+SUBJECT_INSTRUCTION = (
+    "The question is about '{subject}' only. Use figures from the table or paragraph about '{subject}' and the column of "
+    "the fiscal year asked; a company total or another segment's figure does not answer it. If the evidence does not "
+    "state it, say so."
+)
 CALCULATOR_INSTRUCTION = (
     "Calculator: enabled. For any arithmetic write CALC[expression] using only numbers copied from the evidence, "
     "for example CALC[(254,453 - 237,710) / 237,710 * 100]. The calculator replaces it with the result."
@@ -99,8 +111,12 @@ REPAIR_INSTRUCTION = (
 SUPPORT_SYSTEM = (
     "You are a strict fact checker for answers about company annual reports. "
     "A claim is supported only if the cited evidence states it: the company, period, figure and unit must match. "
+    "The figure must be the measure asked: not a segment, region, product, parent company or other row that shares its "
+    "name, not another year's column, and not a chart's axis label. "
     "Reasonable rounding is fine; inference, outside knowledge and advice are not. Figures listed under Calculator "
-    "results were computed in code from figures in the evidence, so a claim that reports one correctly is supported. "
+    "results were computed in code from figures in the evidence, so a claim that reports one correctly is supported, and so is a "
+    "claim that a figure is higher or lower than another, rose, fell or trended up or down when the figures are in the "
+    "evidence. "
     "Support check JSON only."
 )
 SUPPORT_HUMAN = (
@@ -118,7 +134,9 @@ ROUTER_SYSTEM = (
     "lookup (a figure, fact or explanation for one company and period), comparison (two or more companies), "
     "trend (one measure for one company across several fiscal years), sector_trend (one measure across the "
     "companies of one sector, such as healthcare or banking, over several fiscal years), fund (a mutual fund's or "
-    "ETF's holdings, or which funds hold a company), report (an explicit "
+    "ETF's holdings, or which funds hold a company), shareholder_returns (how much cash companies returned to "
+    "shareholders in dividends and share repurchases, or which returned the most), dividend_income (the dividends on "
+    "a number of shares the user holds), report (an explicit "
     "request to generate a full financial report), out_of_scope (nothing to do with company annual reports). Also choose the tools a "
     "lookup or comparison needs: coverage_lookup, text_search, visual_search, calculator."
 )

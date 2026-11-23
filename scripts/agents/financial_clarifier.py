@@ -43,7 +43,7 @@ import uuid
 from scripts.common.paths import ROOT  # noqa: E402 - repo root
 from scripts.common.companies import (  # noqa: E402
     ALIASES as COMPANY_ALIASES, AMBIGUOUS_TICKERS, BANKING, NAMES as COMPANY_NAMES, SECTOR_NAMES,
-    SECTOR_OF as COMPANY_SECTORS, normalize_ticker)
+    SECTOR_OF as COMPANY_SECTORS, fiscal_label, normalize_ticker)
 MANIFESTS = (ROOT / "data/raw/financial_report_qa/edgar/pdf_manifest.jsonl",
              ROOT / "data/raw/financial_report_qa/pdf_manifest.jsonl",
              ROOT / "data/raw/financial_report_qa/annual_reports/pdf_manifest.jsonl")   # sector corpus, once downloaded
@@ -156,7 +156,7 @@ def indexed_filings(path):
 
 
 def load_directory(paths=None):
-    """ticker -> sorted fiscal years with a filing in the corpus.
+    """ticker -> sorted fiscal years with a filing in the corpus, as the company names them (``companies.fiscal_label``).
 
     By default the filings the served indexes hold, because only those can be answered: a manifest also lists
     filings that are downloaded but not (yet) ingested. Without an index state file (Chroma default) the corpus
@@ -168,7 +168,7 @@ def load_directory(paths=None):
         for state in index_state_files():
             if state.exists():
                 for ticker, year in indexed_filings(state):
-                    years.setdefault(ticker, set()).add(year)
+                    years.setdefault(ticker, set()).add(fiscal_label(ticker, year))
         if years and os.getenv("COVERAGE_SOURCE", "index").lower() != "corpus":
             return {ticker: sorted(values) for ticker, values in sorted(years.items())}
     for path in (corpus_manifests() if paths is None else paths):
@@ -176,7 +176,8 @@ def load_directory(paths=None):
             for line in Path(path).read_text(encoding="utf-8").splitlines():
                 if line.strip():
                     row = json.loads(line)
-                    years.setdefault(row["ticker"].upper(), set()).add(int(row["year"]))
+                    ticker = row["ticker"].upper()
+                    years.setdefault(ticker, set()).add(fiscal_label(ticker, int(row["year"])))
     return {ticker: sorted(values) for ticker, values in sorted(years.items())}
 
 
@@ -250,7 +251,11 @@ class Clarifier:
     def years_in(text):
         years = [int(y) for y in re.findall(r"(?<!\d)(20[0-4]\d)(?!\d)", text)]           # 2024, FY2024
         years += [2000 + int(y) for y in re.findall(r"\bfy\s?'?(\d{2})(?!\d)", text, re.I)]  # FY24
-        span = re.search(r"(?<!\d)(20[0-4]\d)\s*(?:-|–|to|through|until)\s*(?:fy\s?)?(20[0-4]\d)(?!\d)", text, re.I)
+        # "2022-2025", "FY2022 to FY2025", "fiscal 2023 to fiscal 2026", "between 2022 and 2025"
+        span = (re.search(r"(?<!\d)(20[0-4]\d)\s*(?:-|–|—|to|through|thru|until|till)\s*(?:the\s+)?(?:fiscal\s*)?(?:years?\s*)?"
+                          r"(?:fy\s?)?(20[0-4]\d)(?!\d)", text, re.I)
+                or re.search(r"\bbetween\s+(?:fiscal\s*)?(?:years?\s*)?(?:fy\s?)?(20[0-4]\d)\s+and\s+(?:fiscal\s*)?(?:years?\s*)?"
+                             r"(?:fy\s?)?(20[0-4]\d)(?!\d)", text, re.I))
         if span:
             years += list(range(int(span.group(1)), int(span.group(2)) + 1))
         return sorted(set(years))
@@ -265,6 +270,15 @@ class Clarifier:
                 if match and (best is None or len(phrase) > best[1]):
                     best = (metric, len(phrase))
         return best[0] if best else None
+
+    def subject_in(self, text):
+        """The words that narrow the measure to a segment, product or region ("data center" revenue), or None."""
+        from scripts.agents.financial_checks import subject
+        from scripts.agents.financial_sector_trend import SECTOR_ALIASES
+        metric = self.metric_in(text)
+        aliases = [a for words in ALIASES.values() for a in words] + list(NAMES.values())
+        return subject(text, metric, METRICS.get(metric, []), aliases,
+                       [p for phrases in SECTOR_ALIASES.values() for p in phrases], self.companies_in(text))
 
     @staticmethod
     def sectors_in(text):
@@ -334,6 +348,13 @@ class Clarifier:
             conversation.pending = []
             return self.result(conversation, "passthrough", action="answer", resolved_query=text,
                                ticker=None, year=None, original=text, route_hint="fund")
+        action = self.action_route(text)
+        if action:
+            # Shareholder returns and dividend income plan their own companies, year and holdings, and say what they
+            # can't cover; a follow-up question would only drop the sector or the share counts.
+            conversation.pending = []
+            return self.result(conversation, "passthrough", action="answer", resolved_query=text,
+                               ticker=ticker, year=year, original=text, route_hint=action)
         if RESET.match(text):
             self.restart(conversation, "")
             return self.ask(conversation, "Sure, what would you like to know?", [])
@@ -392,6 +413,15 @@ class Clarifier:
     def fund_question(text):
         from scripts.agents.financial_router import fund_question
         return fund_question(text)
+
+    @staticmethod
+    def action_route(text):
+        """'dividend_income' or 'shareholder_returns' when the question's words ask for that agent, else None."""
+        from scripts.agents.financial_dividend_income import holdings_signal
+        from scripts.agents.financial_shareholder_returns import returns_signal
+        if REPORT.search(text):
+            return None
+        return "dividend_income" if holdings_signal(text) else "shareholder_returns" if returns_signal(text) else None
 
     def restart(self, conversation, text):
         conversation.__dict__.update(Conversation(conversation.conversation_id, original_query=text).__dict__)

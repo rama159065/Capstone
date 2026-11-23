@@ -28,6 +28,11 @@ GENERIC_NAME_WORDS = {"fund", "funds", "index", "the", "trust", "portfolio", "sh
                       "admiral", "institutional", "class", "of", "and", "&", "s"}
 
 
+# Figures cached by an older row reader are not reused: reader 1 cached Walmart's net sales (706,413) as its revenue
+# (713,163) and one column for two years of JPMorgan.
+READER_VERSION = 2
+
+
 def usd_millions(value: float | None) -> str:
     return "n/a" if value is None else f"USD {value / 1e6:,.1f} million"
 
@@ -186,6 +191,7 @@ class FundStore:
 
     # ------------------------------------------------------------------ company_figures cache
     def cached_figure(self, ticker: str, fiscal_year: int, metric: str) -> dict[str, Any] | None:
+        metric = f"{metric} (reader {READER_VERSION})"
         try:
             with self.read() as db:
                 row = db.execute("SELECT value, value_text, unit, chunk_id, page, method FROM company_figures WHERE "
@@ -201,6 +207,7 @@ class FundStore:
         """Cache a verified figure (status ok, with its chunk). A read-only database is not an error."""
         if point.get("status") != "ok" or point.get("value") is None or not point.get("chunk_id"):
             return False
+        metric = f"{metric} (reader {READER_VERSION})"
         try:
             with sqlite3.connect(self.path) as db:
                 db.execute("INSERT OR REPLACE INTO company_figures VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",

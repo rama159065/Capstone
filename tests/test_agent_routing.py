@@ -100,8 +100,9 @@ def test_comparison_runs_one_filtered_search_per_company(monkeypatch):
     calls = searches(monkeypatch, lambda c, n: [hit(c.ticker, c.year, n)])
     result = run(config("Compare Costco and Walmart revenue in 2025"))
     # The question's search for each company, then (revenue is a statement measure) its income statement search.
-    assert [(t, y) for t, y, _, _ in calls] == [("COST", 2025), ("WMT", 2025)] * 2
-    assert calls[2][2] == "Costco revenue fiscal year 2025"
+    # No row was read from these prose hits, so each statement is searched twice more: other words, then its rows.
+    assert [(t, y) for t, y, _, _ in calls] == [("COST", 2025), ("WMT", 2025)] * 4
+    assert calls[2][2] == "Costco consolidated statements of income operations revenue fiscal year 2025"
     run_info = result["agent_run"]
     assert [c["tool"] for c in run_info["tool_calls"]][:5] == ["coverage_lookup", "text_search", "text_search",
                                                                 "statement_search", "statement_search"]
@@ -110,8 +111,8 @@ def test_comparison_runs_one_filtered_search_per_company(monkeypatch):
 
 
 def test_missing_company_triggers_one_broadened_retry(monkeypatch):
-    # Walmart finds nothing on either first-attempt search (the question's and the income statement's: calls 2 and 4).
-    calls = searches(monkeypatch, lambda c, n: [] if (c.ticker == "WMT" and n in (2, 4)) else [hit(c.ticker, c.year, n)])
+    # Walmart finds nothing on the first attempt's searches (the question's and the income statement's, twice).
+    calls = searches(monkeypatch, lambda c, n: [] if (c.ticker == "WMT" and n in (2, 4, 6, 8)) else [hit(c.ticker, c.year, n)])
     result = run(config("What was Costco and Walmart net income in 2025?"))
     run_info = result["agent_run"]
     assert run_info["retrieval_attempts"] == 2 and run_info["path"].count("retrieve_step") == 2
