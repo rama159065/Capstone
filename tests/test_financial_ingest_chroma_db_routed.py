@@ -113,7 +113,7 @@ def test_cross_check_and_signature():
     assert vi.cross_check(table("120,580"), OCR_TEXT)["unverified"] == ["120,580"]
     assert vi.cross_check(table("120,500"), "too short")["share"] is None                         # nothing to check
     args = vi.build_parser().parse_args(["ingest", "--vlm", "routed", "--qwen-reader", "mock", "--paid-threshold", "0.2"])
-    assert vi.vlm_signature(args).startswith("routed-v5:qwen=mock-v1:ocr=ocr:") and "threshold=0.2" in vi.vlm_signature(args)
+    assert vi.vlm_signature(args).startswith("routed-v6:qwen=mock-v1:ocr=ocr:") and "threshold=0.2" in vi.vlm_signature(args)
     assert ":skip=" not in vi.vlm_signature(args)
     skipping = vi.build_parser().parse_args(["ingest", "--vlm", "routed", "--qwen-reader", "mock",
                                              "--skip-routes", "qwen3VL,paidVL"])
@@ -126,12 +126,28 @@ def test_cross_check_and_signature():
 def test_skipped_routes_load_no_model_and_keep_a_usable_text_layer(tmp_path, corpus, monkeypatch):
     real = page_audit.route
     monkeypatch.setattr(page_audit, "route", lambda page: {2: "qwen3VL", 3: "paidVL"}.get(page["page"], real(page)))
-    ocr, broken = Reader("ocr", OCR_TEXT), Broken()
-    reader = vi.RoutedReader(lambda: broken, broken.signature, ocr=ocr, describe=False, skip_routes=("qwen3VL", "paidVL"))
-    _, by_page = run(tmp_path, corpus, reader)
-    assert broken.calls == 0 and reader._qwen is None and ocr.calls == 0     # no model, no OCR for skipped pages
-    assert {m["reader"] for m in by_page.values()} == {"pdfParser"}          # text layers only (the test chart's is
-    assert 3 not in by_page                                                   # too short); garbled: left for later
+    ocr, broken = Reader("ocr", CIPHER_TABLE + "\n\n" + OCR_TEXT), Broken()   # the OCR reader's native table of a
+    reader = vi.RoutedReader(lambda: broken, broken.signature, ocr=ocr, describe=False,   # garbled page: the cipher
+                             skip_routes=("qwen3VL", "paidVL"))
+    ingest, by_page = run(tmp_path, corpus, reader)
+    assert broken.calls == 0 and reader._qwen is None                         # no model for skipped pages
+    assert by_page[1]["reader"] == "pdfParser" and 2 not in by_page           # usable layer kept (the chart's is too
+    assert by_page[3]["reader"] == "ocr" and ocr.calls == 1                   # short); garbled: OCR now, not empty
+    assert by_page[3]["escalation"] == "skipped_route_unreadable_layer"
+    page3 = ingest.store.collection.get(where={"page": 3}, include=["documents"])["documents"]
+    assert any("391,035" in text for text in page3) and not any("bAaaAdc" in text for text in page3)
+
+
+CIPHER_TABLE = ("| \x04/)2.6\x01bAaaAdc\x01 | dg\x01\x044+/2\x01V\x01 |\n--- | ---\n"
+                "| \x04.)43/\x01bAaaAdc\x01 | dg\x01 \x042+-4 \x01V\x01 Ac\x01 /-/0 )\x01i]Z\x01MiAaAiAZh\x01AckZhiZY\x01 |\n"
+                "| \x041)046\x01bAaaAdc | \x01id\x01je?gVYZ\x01VcY\x01gZAc[dgXZ\x01i]ZAg\x01ZcZg?n\x01YZaAkZgn\x01hnhiZbh |")
+
+
+def test_readable_blocks_drops_only_unreadable_native_tables():
+    good_table = "Segment | 2025\n--- | ---\nUpstream | 391,035"
+    reading = "\n\n".join([CIPHER_TABLE, good_table, "www.example.com\n91\nHelpful Links"])
+    assert vi.readable_blocks(reading) == "\n\n".join([good_table, "www.example.com\n91\nHelpful Links"])
+    assert vi.readable_blocks("C B>AA>DCH\nPARTPART 20242024") == "C B>AA>DCH\nPARTPART 20242024"   # OCR text: kept
 
 
 RICH_OCR = ("Segment results in millions | Upstream 391,035 | Downstream 120,500 | Chemicals 8,250 | "

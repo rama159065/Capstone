@@ -382,3 +382,43 @@ def test_bm25_searches_a_filings_rowid_block_with_the_same_ranking(tmp_path):
     index._spans = None
     assert index.spans()["edgar_ars_JPM_2023"][5] is False
     assert "JPM_2023_extra" in index.search("net income", 10, "JPM", 2023)
+
+
+class PageStore:
+    def __init__(self, payloads):
+        self.payloads, self.calls = payloads, 0
+
+    def page_payloads(self, doc_id, page):
+        self.calls += 1
+        return self.payloads
+
+
+def _hit(text, index, content_type="text"):
+    return {"chunk_id": f"annual_report_edgar_ars_BAC_2024_p0135_vlm{index}", "text": text, "page": 135,
+            "content_type": content_type, "metadata": {"doc_id": "edgar_ars_BAC_2024", "chunk_index": index}}
+
+
+def test_a_table_continuation_chunk_gets_its_pages_header():
+    # BAC 2024 p.135: chunk 1 starts at "Income before income taxes" with no years and no scale.
+    first = ("Bank of America Corporation and Subsidiaries\nConsolidated Statement of Income\n"
+             "(In millions, except per share information) 2024 2023 2022\nNet interest income $ 56,060 $ 56,931 $ 52,462")
+    second = "Income before income taxes 29,254 28,342 30,969\nNet income $ 27,132 $ 26,515 $ 27,528"
+    store = PageStore([{"chunk_index": 0, "text": first}, {"chunk_index": 1, "text": second}])
+    hits = vi.with_page_context(store, [_hit(second, 1), _hit(first, 0), _hit("Risk factors, no figures.", 2)])
+    assert hits[0]["text"].startswith(vi.CONTEXT_MARK)
+    assert "(In millions, except per share information) 2024 2023 2022" in hits[0]["page_context"]
+    assert "page_context" not in hits[1] and "page_context" not in hits[2]      # has its own header; no figures
+    from scripts.agents import financial_sector_trend as st
+    assert st.label_match([hits[0]], "net income", 2024)["value"] == "27,132"
+    assert store.calls == 1                                                     # one lookup per page
+
+
+def test_a_pro_forma_header_is_marked_so_its_rows_are_not_read_as_reported():
+    first = ("Note 2 Acquisitions\nThe pro forma information is not indicative of future results.\n"
+             "Year ended December 31, (in millions) 2023 2022")
+    second = "Net income 48,665 41,980"
+    store = PageStore([{"chunk_index": 0, "text": first}, {"chunk_index": 1, "text": second}])
+    hit = vi.with_page_context(store, [_hit(second, 1)])[0]
+    assert "(pro forma table)" in hit["page_context"]
+    from scripts.agents import financial_sector_trend as st
+    assert st.label_match([hit], "net income", 2023) is None

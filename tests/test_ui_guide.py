@@ -207,3 +207,9 @@ def fund_table_script():
                        "points": [point(2024, "100"), point(2025, "140")]}],
         "weighted_growth_pct": 40.0, "covered_weight": 7.5, "asked_weight": 8.5,
         "excluded": [{"company": "Acme Widgets Ltd", "weight": 1.0, "reason": "not in the corpus"}]})
+
+
+def test_dollar_amounts_are_not_read_as_maths():
+    from scripts.ui import api_streamlit_app as ui
+    assert ui.plain_dollars("was $275,235 million and $680,985 million") == "was \\$275,235 million and \\$680,985 million"
+    assert ui.plain_dollars("already \\$5") == "already \\$5" and ui.plain_dollars(None) == ""

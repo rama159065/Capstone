@@ -222,3 +222,20 @@ def test_auditor_questions_search_with_the_filings_term():
     assert expanded.endswith("independent registered public accounting firm")
     assert tools.expand_query(expanded) == expanded                      # added once
     assert tools.expand_query("What was Costco's revenue in 2025?") == "What was Costco's revenue in 2025?"
+
+
+CASH_FLOWS = ("Consolidated Statements of Cash Flows (in millions)\nYear ended 2025 2024 2023\nFinancing activities\n"
+              "Treasury stock repurchased (91.7) (69.5) (23.1)\nCommon stock repurchased (18,830) (9,898) (3,122)\n"
+              "Dividends paid (14,783) (13,463) (13,562)\nNet cash used in financing activities (1) (2) (3)")
+
+
+def test_dividends_and_buybacks_are_read_from_the_cash_flow_row_in_code(monkeypatch):
+    # "What dividends did JPMorgan pay?" had no code-read figure: only income-statement and balance-sheet rows were read.
+    monkeypatch.setattr(agent, "retrieve_evidence", lambda run_config: [hit(CHUNK, CASH_FLOWS)])
+    llm = ScriptedLLM(answers=[f"Costco paid dividends of 14,783 million in fiscal 2025 [{CHUNK}]."], verdicts=[True])
+    result = agent.agentic_graph_prompt(llm, config("What dividends did Costco pay in fiscal 2025?"))
+    answers = [p for p in llm.prompts if "Answer with citations." in p]
+    assert "Statement figures read in code" in answers[0] and f"14,783 millions [{CHUNK}]" in answers[0]
+    assert result["support_check"]["verdict"] == "supported"
+    calls = [c for c in result["agent_run"]["tool_calls"] if c["tool"] == "statement_search"]
+    assert calls and "statement of cash flows" in calls[0]["query"]

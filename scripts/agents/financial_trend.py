@@ -42,6 +42,9 @@ def trend_plan(query: str, ticker: str | None, year: int | None, clarifier, max_
         problems.append("a trend needs exactly one company" if companies else "no company named")
     if not metric:
         problems.append("no measure named (for example revenue or net income)")
+    narrowed = clarifier.subject_in(query) if hasattr(clarifier, "subject_in") else None
+    if narrowed:
+        problems.append(f"the question asks for '{narrowed}', not the company's own {metric}")
     available = directory.get(company, []) if company else []
     if company and directory and company not in directory:
         problems.append(f"{name(company)} is not in the index")
@@ -75,7 +78,10 @@ def trend_plan(query: str, ticker: str | None, year: int | None, clarifier, max_
 
 def year_query(plan: dict, year: int, metric_phrases: list[str], broadened: bool = False) -> str:
     """The search for one fiscal year; a retry adds the measure's synonyms and statement names."""
-    query = f"{plan.get('company_name') or plan.get('company')} {plan.get('metric')} fiscal year {year}"
+    from scripts.agents.financial_sector_trend import STATEMENT_NAMES
+    statement = None if broadened else STATEMENT_NAMES.get(plan.get("metric"))      # the retry searches other words
+    words = " ".join(w for w in (statement, plan.get("metric")) if w)
+    query = f"{plan.get('company_name') or plan.get('company')} {words} fiscal year {year}"
     if broadened:
         extra = [p for p in dict.fromkeys(metric_phrases) if p != plan.get("metric")][:4]
         query += " " + " ".join([*extra, "consolidated statements", "annual report"])
@@ -114,6 +120,9 @@ def validate_point(raw: dict | None, hits: list[dict[str, Any]], year: int) -> d
         return {**point, "status": "wrong_chunk"}
     if abs(value) not in tools.evidence_numbers([hit]):
         return {**point, "status": "not_in_evidence"}
+    for key in ("columns", "consolidated"):                # a statement row read in code: its other years' columns
+        if key in raw:
+            point[key] = raw[key]
     return {**point, "value": value, "page": hit.get("page"), "status": "ok"}
 
 
@@ -169,6 +178,43 @@ def summarize(plan: dict, points: list[dict[str, Any]]) -> dict[str, Any]:
         "chart": [{"year": p["year"], "value": p["value"], "unit": p["unit"]} for p in ok],
         "calculations": calculations,
     }
+
+
+def answer_text(trend: dict) -> str:
+    """The trend answer, written from the verified series and the computed changes: no LLM writes it, so it can't drop
+    the changes or the CAGR, and there is no claim for the support judge to check (the figures are checked in code)."""
+    ok = [p for p in trend.get("points", []) if p.get("status") == "ok"]
+    name, metric = trend.get("company_name") or trend.get("company"), trend.get("metric")
+    unit = ok[0].get("unit") or ""
+    same_unit = all((p.get("unit") or "") == unit for p in ok)
+    lines = []
+    if len(ok) >= 2:
+        first, last = ok[0], ok[-1]
+        head = (f"{name}'s {metric} went from {first['value_text']} in FY{first['year']} to {last['value_text']} in "
+                f"FY{last['year']}" + (f" ({unit})" if unit and same_unit else ""))
+        total = last["value"] - first["value"]
+        if trend.get("cagr") is not None:
+            head += f", a compound annual growth rate of {trend['cagr']:.2f}%"
+        lines += [head + ("." if total else ": no change."), ""]
+    else:
+        lines += [f"Only one fiscal year of {name}'s {metric} could be verified, so no change is computed.", ""]
+    changes = {c["to"]: c for c in trend.get("changes", [])}
+    for p in ok:
+        line = f"- FY{p['year']}: {p['value_text']}" + (f" {p['unit']}" if p.get("unit") else "")
+        change = changes.get(p["year"])
+        if change and change.get("status") == "ok":
+            pct = "" if change.get("pct_change") is None else f", {change['pct_change']:+.2f}%"
+            line += f" ({_fmt_signed(change['change'])}{pct} on FY{change['from']})"
+        if p.get("reported_in"):
+            line += f", as printed in the FY{p['reported_in']} report"
+        lines.append(f"{line} [{p['chunk_id']}].")
+    if trend.get("missing"):
+        lines += ["", "Not verified, so no figure is given: " + ", ".join(trend["missing"]) + "."]
+    return "\n".join(lines)
+
+
+def _fmt_signed(value: float) -> str:
+    return f"{value:+,.4f}".rstrip("0").rstrip(".")
 
 
 def series_text(trend: dict) -> str:

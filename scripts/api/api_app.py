@@ -164,6 +164,8 @@ class FinancialChatRequest(ChatRequest):
         "trend_graph",
         "sector_trend_graph",
         "fund_graph",
+        "shareholder_returns_graph",
+        "dividend_income_graph",
         "router",
     ] = Field("agentic_graph", description=(
         "Financial QA workflow to execute. agentic_graph: the Q&A agent (planner, per-company searches, calculator, "
@@ -171,9 +173,12 @@ class FinancialChatRequest(ChatRequest):
         "CAGR computed in code). sector_trend_graph: the sector trend agent (one measure across one sector's "
         "companies, year by year, over a fixed panel; totals, changes and CAGR computed in code). fund_graph: the "
         "fund agent (a mutual fund's SEC N-PORT holdings as cited rows, linked to the holdings' annual reports; needs "
-        "loaded fund data). router: a supervisor that sends each question to the Q&A agent, the trend agent, the "
-        "sector trend agent, the fund agent (when fund data is loaded), a report handoff or a refusal. The others are "
-        "single-prompt baselines."))
+        "loaded fund data). shareholder_returns_graph: dividends plus share repurchases per company for one fiscal "
+        "year, from the statements of cash flows, ranked in code. dividend_income_graph: the user's share counts "
+        "times each company's verified dividends declared per share. router: a supervisor that sends each question "
+        "to the Q&A agent, the trend agent, the sector trend agent, the fund agent (when fund data is loaded), the "
+        "shareholder-returns or dividend-income agent, a report handoff or a refusal. The others are single-prompt "
+        "baselines."))
     retrieval_mode: Literal["hybrid", "dense", "bm25"] = Field(
         "hybrid", description="hybrid (default): dense + BM25 fused by RRF, on Qdrant or Chroma; "
                               "dense or bm25: one retriever only (for ablations)."
@@ -351,6 +356,18 @@ class FinancialChatResponse(ChatResponse):
                     "year) and the ones left out with the reason; per year the sector total in USD millions, its "
                     "change, the median company change and how many companies grew; the CAGRs; every company's "
                     "verified figures with their chunks.",
+    )
+    shareholder_returns: dict[str, Any] | None = Field(
+        default=None,
+        description="Shareholder-returns route: the fiscal year, every company's dividends paid and share repurchases "
+                    "(each verified in its cash-flow chunk), the total in USD millions, the ranking, each company's "
+                    "share of the total and the companies left out with the reason.",
+    )
+    dividend_income: dict[str, Any] | None = Field(
+        default=None,
+        description="Dividend-income route: per holding the user's share count, the company's verified dividends "
+                    "declared per share (with its chunk) and shares x dividend per share; the total; holdings left "
+                    "out with the reason.",
     )
     mutual_fund: dict[str, Any] | None = Field(
         default=None,
@@ -886,6 +903,17 @@ def _citation_grounding(result: dict[str, Any]) -> dict[str, Any]:
             "evidence_count": 0,
             "cited_chunk_ids": [],
             "reason": "No sector trend was computed: too few companies had a verified figure for every year.",
+        }
+        return result
+    if result.get("final_status") == "insufficient_evidence" and (result.get("shareholder_returns")
+                                                                  or result.get("dividend_income")):
+        # The shareholder-returns or dividend-income agent could not verify the figures its table needs: its
+        # message says which; nothing was computed, so there is no answer to ground.
+        result["grounding"] = {
+            "status": "not_applicable",
+            "evidence_count": 0,
+            "cited_chunk_ids": [],
+            "reason": "Nothing was computed: the figures the calculation needs could not be verified in the filings.",
         }
         return result
 

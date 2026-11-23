@@ -16,10 +16,13 @@ and checks that each operand appears in the retrieved evidence.
 from __future__ import annotations
 
 import ast
+import itertools
 import operator
 import os
 import re
 from typing import Any
+
+from scripts.common.companies import fiscal_label
 
 TOOLS = {
     "coverage_lookup": "Check which companies and fiscal years the served index holds; skip searches it can't answer.",
@@ -52,8 +55,15 @@ def plan_targets(query: str, ticker: str | None, year: int | None, clarifier) ->
     """One search per company x year the question names (a request's ticker/year win over the text)."""
     companies = [ticker.upper()] if ticker else clarifier.companies_in(query)
     years = [year] if year else clarifier.years_in(query)
-    if len(years) > 3:                  # long spans: one search per company, the query carries the years
-        years = []
+    if len(years) > 3 and (len(companies) != 1 or len(years) > MAX_TARGETS):
+        years = []                      # long spans: one search per company, the query carries the years
+    directory = getattr(clarifier, "directory", None) or {}
+    if re.search(r"\byears?\s+(?:that\s+)?end(?:ed|ing|s)?\s+(?:in|on)\b", query, re.I) and not year:
+        # "its fiscal year ending in 2026": Home Depot names that year fiscal 2025.
+        return [{"ticker": c, "year": fiscal_label(c, y)} for c in (companies or [None]) for y in (years or [None])][:MAX_TARGETS]
+    if not years and len(companies) == 1 and directory.get(companies[0]):
+        # No year named: the latest report first, then any year (an older report may be the only one that says it).
+        return [{"ticker": companies[0], "year": directory[companies[0]][-1]}, {"ticker": companies[0], "year": None}]
     targets = [{"ticker": c, "year": y} for c in (companies or [None]) for y in (years or [None])]
     return targets[:MAX_TARGETS]
 
@@ -220,6 +230,7 @@ NOT_FIGURES = re.compile(
     r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?\b"
     r"|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b"
     r"|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}/\d{1,2}/\d{2,4}\b"
+    r"|\b\d+(?:st|nd|rd|th)\b(?:[- ]percentile)?"
     r"|\b(?:pages?|pp?\.)\s*\d+(?:\s*(?:-|–|,|and|to)\s*\d+)*", re.I)
 SCALES = (1.0, 1e3, 1e-3, 1e6, 1e-6, 1e9, 1e-9)             # "$254.5 billion" vs "254,453" (millions)
 VERDICTS = ("supported", "partially_supported", "unsupported", "unverified")
@@ -229,6 +240,112 @@ def _matches(value: float, decimals: int, known: set[float]) -> bool:
     """True when some known figure equals ``value`` at the precision the answer printed, in any unit scale."""
     tolerance = 0.5 * 10 ** -decimals
     return any(abs(value * scale - k) <= tolerance * scale + 1e-9 for k in known for scale in SCALES)
+
+
+_TIMES = re.compile(r"(?:[*×x]|\\?times|multiplied by)\s*100\b|\b100\s*[*×]")
+MAX_DERIVED_FIGURES = 14
+
+
+def derived_figures(answer: str, known: set[float]) -> list[tuple[float, str]]:
+    """Differences and percent changes the answer states between two of its own grounded figures, recomputed in code:
+    "from 8,553 to 12,296, an increase of 3,743 (43.76%)" -> 3,743 and 43.76. Only results the answer prints, at the
+    precision it prints them, are returned, each with its expression (shown to the judge as a calculator result)."""
+    text = NOT_FIGURES.sub(" ", CHUNK_ID_TOKEN.sub(" ", CALC_TOKEN.sub(" ", answer)))
+    printed = []
+    for match in NUMBER.finditer(text):
+        raw = match.group(0).rstrip(",")
+        value = float(raw.replace(",", ""))
+        if "," not in raw and "." not in raw and (1990 <= value <= 2049 or value <= 10):
+            continue
+        after = text[match.end():match.end() + 9].lower()
+        printed.append((value, len(raw.split(".")[1]) if "." in raw else 0,
+                        after.lstrip().startswith(("%", "percent"))))
+    amounts = list(dict.fromkeys(v for v, d, pct in printed if not pct and _matches(v, d, known)))[:MAX_DERIVED_FIGURES]
+    out = []
+    for value, decimals, pct in dict.fromkeys(printed):
+        if _matches(value, decimals, known):
+            continue
+        tolerance = 0.5 * 10 ** -decimals + 1e-9
+        for a, b in itertools.permutations(amounts, 2):
+            # A percent the model cut instead of rounded (43.7 for 43.76) is still that change; 43.77 is not.
+            exact = abs(a - b) / abs(b) * 100 if b else None
+            if pct and exact is not None and (abs(exact - value) <= tolerance
+                                              or (decimals and 0 <= exact - value < 10 ** -decimals)):
+                out.append((value, f"({a:,g} - {b:,g}) / {b:,g} * 100 = {(a - b) / b * 100:,.2f}%"))
+                break
+            if not pct and value and abs(abs(a - b) - value) <= tolerance:
+                out.append((value, f"{a:,g} - {b:,g} = {a - b:,g}"))
+                break
+    return out
+
+
+_UP = re.compile(r"\b(upward|increas\w*|rose|rising|grew|grow\w*|higher)\b", re.I)
+_DOWN = re.compile(r"\b(downward|decreas\w*|fell|falling|declin\w*|lower)\b", re.I)
+
+
+def exact_changes(answer: str, known: set[float], ungrounded: list[str]) -> list[str]:
+    """For each ungrounded percent close to the change between two of the answer's own grounded figures: that change,
+    worked out in code ("(12,296 - 8,553) / 8,553 * 100 = 43.76%"), for the repair to copy."""
+    text = NOT_FIGURES.sub(" ", CHUNK_ID_TOKEN.sub(" ", CALC_TOKEN.sub(" ", answer)))
+    amounts = list(dict.fromkeys(
+        float(n.rstrip(",").replace(",", "")) for n in NUMBER.findall(text)
+        if "," in n.rstrip(",") and _matches(float(n.rstrip(",").replace(",", "")), 0, known)))[:MAX_DERIVED_FIGURES]
+    out = []
+    for raw in ungrounded:
+        value = float(raw.replace(",", ""))
+        for a, b in itertools.permutations(amounts, 2):
+            if "." in raw and b and abs(abs(a - b) / abs(b) * 100 - value) <= 0.6:
+                out.append(f"({a:,g} - {b:,g}) / {b:,g} * 100 = {(a - b) / b * 100:,.2f}%, not {raw}%")
+                break
+    return out
+
+
+def correct_changes(answer: str, known: set[float]) -> tuple[str, list[dict[str, Any]]]:
+    """A percent the model worked out itself and got wrong in the last decimals ("43.77%" between 8,553 and 12,296) is
+    replaced by the one computed in code and recorded as a calculation. Further off than 0.05 points, it is left for the
+    figure check to reject."""
+    records = []
+    for match in list(re.finditer(r"(?<![\d.,])(\d{1,3}\.\d{1,4})(?=\s*%)", answer)):
+        raw = match.group(1)
+        if _matches(float(raw), len(raw.split(".")[1]), known | {v for v, _ in derived_figures(answer, known)}):
+            continue
+        for text in exact_changes(answer, known, [raw]):
+            expression, exact = text.split(", not ")[0].rstrip("%").rsplit(" = ", 1)
+            if abs(abs(float(exact)) - float(raw)) <= 0.05:
+                answer = answer.replace(f"{raw}%", f"{exact.lstrip('-')}%")
+                records.append({"expression": expression, "value": float(exact), "grounded": True, "kind": "corrected_change"})
+    return answer, records
+
+
+def direction_follows(claim: str, answer: str, known: set[float]) -> bool:
+    """A claim with no figure of its own ("a consistent upward trend from 2022 to 2025") that the answer's grounded
+    figures, in the order it gives them, show in code: each higher (or each lower) than the one before."""
+    up, down = bool(_UP.search(claim)), bool(_DOWN.search(claim))
+    if up == down or any(not 1990 <= float(n.rstrip(",").replace(",", "")) <= 2049 for n in NUMBER.findall(claim)):
+        return False
+    text = NOT_FIGURES.sub(" ", CHUNK_ID_TOKEN.sub(" ", CALC_TOKEN.sub(" ", answer)))
+    values = []
+    for raw in NUMBER.findall(text):
+        raw = raw.rstrip(",")
+        value = float(raw.replace(",", ""))
+        if "," in raw and _matches(value, 0, known) and value not in values:
+            values.append(value)
+    pairs = list(zip(values, values[1:]))
+    return len(values) >= 2 and all((b > a) if up else (b < a) for a, b in pairs)
+
+
+def states(answer: str, value_text: str) -> bool:
+    """The answer gives this figure, exactly or rounded in another unit ("$45.8 billion" for 45,754 in millions)."""
+    digits = re.sub(r"[^\d.]", "", value_text or "")
+    if not digits or value_text.strip("()$ ") in answer:
+        return True
+    text = CHUNK_ID_TOKEN.sub(" ", answer)
+    for raw in NUMBER.findall(text):
+        raw = raw.rstrip(",")
+        if "," in raw or "." in raw:
+            if _matches(float(raw.replace(",", "")), len(raw.split(".")[1]) if "." in raw else 0, {float(digits)}):
+                return True
+    return False
 
 
 def numeric_grounding(answer: str, cited: list[dict[str, Any]], calculations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -242,10 +359,14 @@ def numeric_grounding(answer: str, cited: list[dict[str, Any]], calculations: li
     known = evidence_numbers(cited) | calculated
     confirmed = confirmed_numbers(cited) | calculated
     text = NOT_FIGURES.sub(" ", CHUNK_ID_TOKEN.sub(" ", CALC_TOKEN.sub(" ", answer)))
+    known |= {value for value, _ in derived_figures(answer, known)}
+    confirmed |= {value for value, _ in derived_figures(answer, confirmed)}
     checked, ungrounded, unverified = 0, [], []
-    for raw in NUMBER.findall(text):
-        raw = raw.rstrip(",")                                 # "revenue was 61,160, up 9%" -> "61,160"
+    for match in NUMBER.finditer(text):
+        raw = match.group(0).rstrip(",")                      # "revenue was 61,160, up 9%" -> "61,160"
         value = float(raw.replace(",", ""))
+        if value == 100 and _TIMES.search(text[max(0, match.start() - 8):match.end() + 8]):
+            continue                                          # "(a - b) / b x 100": the formula's own constant
         if ("," not in raw and "." not in raw and 1990 <= value <= 2049) or (value <= 10 and value == int(value)):
             continue
         checked += 1

@@ -132,7 +132,7 @@ def test_label_match_reads_the_column_of_the_asked_year():
     assert sector.label_match(hits, "employees", 2024) is None                   # no statement label for it
     prose = hit("ABBV", 2024, "Net revenues decreased 3% in 2024 compared with 2023 due to Humira erosion.")
     assert sector.label_match([prose], "revenue", 2024) is None
-    table = hit("ABT", 2024, "In millions\n| | 2024 | 2023 |\n|---|---|---|\n| Total revenues | 41,950 | 40,109 |")
+    table = hit("ABT", 2024, "In millions\n| | 2024 | 2023 |\n|---|---|---|\n| Total revenues | 41,950 | 40,109 |\n| Cost of products | 18,000 | 17,900 |")
     assert sector.label_match([table], "revenue", 2023)["value"] == "40,109"
     ragged = hit("ABT", 2024, "2024 2023 2022\nNet sales 41,950 40,109")       # 2 figures under 3 years
     assert sector.label_match([ragged], "revenue", 2024) is None
@@ -212,7 +212,7 @@ def test_sector_graph_reads_every_company_year_and_answers_from_the_table(monkey
 def test_a_missing_row_gets_a_broadened_search_before_any_llm_call(monkeypatch):
     def respond(c, n):
         if c.ticker == "AMGN" and c.year == 2023:
-            if "consolidated statements" in c.query:                       # the broadened retry finds the statement
+            if "annual report" in c.query:                                 # the broadened retry finds the statement
                 return [hit("AMGN", 2023)]
             return [hit("AMGN", 2023, "Amgen discussed its pipeline and biosimilars in fiscal 2023.", page=12)]
         return [hit(c.ticker, c.year)]
@@ -224,24 +224,42 @@ def test_a_missing_row_gets_a_broadened_search_before_any_llm_call(monkeypatch):
     point = next(p for p in amgn["points"] if p["year"] == 2023)
     assert amgn["in_panel"] and point["value_text"] == "28,190" and point["method"] == "label"
     assert llm.series_calls == 0                                           # code read it after the retry
-    assert len(calls) == 10 and calls[-1][3] == 6                          # 9 searches + 1 retry, twice as deep
+    assert len(calls) == 11 and calls[-2][3] == 6                          # 9 searches + 2 for the retry
     assert result["agent_run"]["evidence_check"]["retried"] == 1
     assert result["agent_run"]["steps"] <= 10
 
 
 @pytest.mark.parametrize("text, status", [
-    ("Amgen's total revenues were 28,190 million in fiscal 2023, up from the year before.", "ok"),
-    ("Amgen employed 26,700 staff at the end of fiscal 2023.\nRevenue grew in every region.", "not_on_metric_line"),
+    ("Amgen's total revenues were 33,424 million in fiscal 2024, up from the year before.", "ok"),
+    ("Amgen employed 28,000 staff at the end of fiscal 2024.\nRevenue grew in every region.", "not_on_metric_line"),
 ])
 def test_the_llm_is_the_last_resort_and_its_figure_must_sit_on_a_line_naming_the_measure(monkeypatch, text, status):
-    searches(monkeypatch, lambda c, n: [hit(c.ticker, c.year, text, page=12)] if (c.ticker, c.year) == ("AMGN", 2023)
+    searches(monkeypatch, lambda c, n: [hit(c.ticker, c.year, text, page=12)] if (c.ticker, c.year) == ("AMGN", 2024)
              else [hit(c.ticker, c.year)])
     llm = CountingLLM()
     result = agent.financial_graph(llm, config(QUERY), "sector_trend_graph")
     amgn = next(c for c in result["sector_trend"]["companies"] if c["ticker"] == "AMGN")
-    point = next(p for p in amgn["points"] if p["year"] == 2023)
+    point = next(p for p in amgn["points"] if p["year"] == 2024)
     assert llm.series_calls == 1 and point["method"] == "llm" and point["status"] == status
     assert amgn["in_panel"] is (status == "ok")
+
+
+def test_an_unreadable_year_is_read_from_the_next_filings_column_of_it(monkeypatch):
+    searches(monkeypatch, lambda c, n: [hit(c.ticker, c.year, "garbled text layer", page=12)]
+             if (c.ticker, c.year) == ("AMGN", 2023) else [hit(c.ticker, c.year)])
+    llm = CountingLLM()
+    result = agent.financial_graph(llm, config(QUERY), "sector_trend_graph")
+    point = next(p for c in result["sector_trend"]["companies"] if c["ticker"] == "AMGN" for p in c["points"]
+                 if p["year"] == 2023)
+    assert point["value_text"] == "28,190" and point["method"] == "later_filing" and point["reported_in"] == 2024
+    assert llm.series_calls == 0 and "as printed in the FY2024 report" in result["answer"]
+
+
+def test_a_per_share_row_is_not_the_company_figure():
+    text = ("CONSOLIDATED STATEMENTS OF INCOME\n(in millions)\n2022 2021 2020\nNet income $ 7.04 $ 10.21 $ 4.74\n"
+            "Citigroup\ufffds net income $ 14,845 $ 21,952 $ 11,047")
+    assert sector.label_match([hit("C", 2022, text)], "net income", 2022)["value"] == "14,845"
+    assert sector.label_match([hit("C", 2022, text.rsplit("\n", 1)[0])], "net income", 2022) is None
 
 
 def test_a_flagged_chunk_is_dropped_and_the_sector_still_answers(monkeypatch):
@@ -433,3 +451,21 @@ def test_bank_net_income_rows_are_read_in_code(row, value):
     text = "Consolidated Statement of Income (in millions)\nYear ended December 31 2023 2022 2021\n" + row
     found = sector.label_match([{"chunk_id": "x", "text": text}], "net income", 2023)
     assert (found or {}).get("value") == value
+
+
+def test_label_match_skips_parent_only_segment_and_change_tables_and_prefers_the_consolidated_statement():
+    # Live check (Nov 2026): Bank of America's "Total assets 559,733" was Note 24's parent-company-only balance sheet,
+    # and Walmart's "Operating income 25,158" the Walmart U.S. segment table ranked above the consolidated statement.
+    parent = hit("BAC", 2024, "NOTE 24 Parent Company Information (Dollars in millions)\nDecember 31 2024 2023\n"
+                              "Total assets $ 559,733 $ 573,674")
+    assert sector.label_match([parent], "total assets", 2024) is None
+    change = hit("BAC", 2024, "All Other (Dollars in millions) 2024 2023 % Change\nTotal assets (1) 371,572 266,794 39")
+    assert sector.label_match([change], "total assets", 2024) is None
+    segment = hit("WMT", 2026, "Walmart U.S. Segment\nFiscal Years Ended January 31,\n(Amounts in millions) 2026 2025 2024\n"
+                               "Operating income $ 25,158 $ 23,882 $ 22,154", page=41)
+    assert sector.label_match([segment], "operating income", 2026) is None
+    ranked_below = hit("WMT", 2026, "(Dollar amounts in millions) 2026 2025 2024\nOperating income $ 25,158 $ 23,882 $ 22,154",
+                       page=41)
+    consolidated = hit("WMT", 2026, "Walmart Inc.\nConsolidated Statements of Income\n(Amounts in millions) 2026 2025 2024\n"
+                                    "Operating income 29,825 29,348 27,012", page=54)
+    assert sector.label_match([ranked_below, consolidated], "operating income", 2026)["value"] == "29,825"

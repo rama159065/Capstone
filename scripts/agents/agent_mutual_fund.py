@@ -28,7 +28,7 @@ from typing import Any
 
 from scripts.agents.tools_mutual_fund import (FundStore, alias_words, coverage_row, exposure_row, facts_row, flow_row,
                                               holder_rows, holding_rows, pct, report_for, return_rows, sector_rows)
-from scripts.common.companies import NAMES
+from scripts.common.companies import NAMES, filing_year, fiscal_label
 
 FUND_WORDS = re.compile(r"\b(mutual funds?|index funds?|funds?|etfs?)\b", re.I)
 HOLDING_WORDS = re.compile(r"\b(hold|holds|holding|holdings|held|portfolio|positions?|exposure|allocation|weights?|"
@@ -203,7 +203,8 @@ def lookup(plan: dict[str, Any], store: FundStore | None = None) -> dict[str, An
         table.update(ticker=plan["ticker"], company=NAMES.get(plan["ticker"], plan["ticker"]),
                      rows=[{"fund": h["series_name"].title(), "holdings as of": h["period_end"],
                             "% of net assets": round(h["pct_of_net_assets"], 4),
-                            "value (USD m)": round((h["value_usd"] or 0) / 1e6, 1)} for h in holders])
+                            "value (USD m)": round((h["value_usd"] or 0) / 1e6, 1), "chunk_id": row["chunk_id"]}
+                           for h, row in zip(holders, rows)])
         return {"evidence": rows, "table": table, "calls": [{"tool": "fund_lookup", "query": "holders",
                                                               "ticker": plan["ticker"], "rows": len(rows)}]}
     filing, accession = plan["filing"], plan["accession"]
@@ -218,8 +219,9 @@ def lookup(plan: dict[str, Any], store: FundStore | None = None) -> dict[str, An
         queries.append(f"top_holdings({plan['n']})")
         table["rows"] = [{"rank": h["rank"], "holding": h["issuer_name"], "ticker": h.get("ticker") or "-",
                           "% of net assets": round(h["pct_of_net_assets"], 4),
-                          "value (USD m)": round((h["value_usd"] or 0) / 1e6, 1), "match": h.get("method") or "-"}
-                         for h in holdings]
+                          "value (USD m)": round((h["value_usd"] or 0) / 1e6, 1), "match": h.get("method") or "-",
+                          "chunk_id": row["chunk_id"]}
+                         for h, row in zip(holdings, rows[-len(holdings):])]
         table["holdings"] = holdings
     if kind == "sector_mix":
         mix = store.sector_mix(accession)
@@ -257,12 +259,13 @@ def company_targets(table: dict[str, Any], directory: dict[str, list[int]]) -> l
             table["excluded"].append({"company": h["issuer_name"], "weight": h["pct_of_net_assets"],
                                       "reason": "not in the corpus"})
             continue
-        report = report_for(ticker, table["period_end"], directory.get(ticker) or [])     # indexed filings only
+        # Indexed filings only; the directory holds fiscal years as the company names them, the report its filing year.
+        report = report_for(ticker, table["period_end"], [filing_year(ticker, y) for y in directory.get(ticker) or []])
         if not report:
             table["excluded"].append({"company": f"{NAMES.get(ticker, ticker)} ({ticker})", "weight": h["pct_of_net_assets"],
                                       "reason": f"no indexed annual report filed by {table['period_end']}"})
             continue
-        targets.append({"ticker": ticker, "year": report["year"], "weight": h["pct_of_net_assets"], "report": report})
+        targets.append({"ticker": ticker, "year": fiscal_label(ticker, report["year"]), "weight": h["pct_of_net_assets"], "report": report})
     return targets
 
 
@@ -305,6 +308,8 @@ def growth(table: dict[str, Any], figures: dict[str, dict[int, dict[str, Any]]])
                              "value": table["weighted_growth_pct"], "grounded": True, "label": "weighted growth"})
         calculations.append({"expression": " + ".join(f"{c['weight']:g}" for c in used), "value": round(covered, 4),
                              "grounded": True, "label": "covered weight"})
+        calculations.append({"expression": " + ".join(f"{h['pct_of_net_assets'] or 0:g}" for h in table.get("holdings") or []),
+                             "value": round(asked, 4), "grounded": True, "label": "weight asked about"})
     table.update(covered_weight=round(covered, 4), asked_weight=round(asked, 4),
                  coverage_share=round(covered / asked, 4) if asked else 0.0)
     return calculations
@@ -312,6 +317,73 @@ def growth(table: dict[str, Any], figures: dict[str, dict[int, dict[str, Any]]])
 
 def low_coverage(table: dict[str, Any]) -> bool:
     return table.get("kind") in ("holdings_growth", "holdings_text") and table.get("coverage_share", 1) < MIN_COVERAGE
+
+
+# ---------------------------------------------------------------------------- answers written in code
+CODED_KINDS = ("top_holdings", "holdings_growth", "holders")
+# The caveat every fund answer must carry; it is the copilot's own, so no row states it and no judge needs to.
+CAVEAT = re.compile(r"\bholdings?\b[^.]{0,40}\bchange\b", re.I)
+
+
+def uncited_rows(answer: str, evidence: list[dict[str, Any]]) -> list[str]:
+    """Holding rows whose weight and company the answer gives without citing them (the model cited one of three)."""
+    ids = []
+    for hit in evidence:
+        weight = re.search(r"\b(\d+\.\d{2}%) of net assets", str(hit.get("text") or ""))
+        ticker = str(hit.get("ticker") or "")
+        if (hit.get("source_type") == "nport" and ticker and weight and weight.group(1) in answer
+                and (f"({ticker})" in answer or NAMES.get(ticker, ticker) in answer)
+                and str(hit.get("chunk_id")) not in answer):
+            ids.append(str(hit["chunk_id"]))
+    return ids
+
+
+GROWTH_WORDS = re.compile(r"\b(grow(?:s|n|th|ing)?|grew|change[sd]?|increase[sd]?|decrease[sd]?|trend)\b", re.I)
+
+
+def answer_text(table: dict[str, Any], query: str = "") -> str | None:
+    """Top holdings and holdings growth, written from the cited rows and the computed growth: no LLM writes them, so no
+    value can be left out (the LLM's top-10 list dropped every USD value) and there is nothing for a judge to check."""
+    if table.get("kind") not in CODED_KINDS or not table.get("rows"):
+        return None
+    asked = re.sub(re.escape(table.get("fund") or "\0"), " ", query, flags=re.I)       # "Vanguard Growth Index Fund"
+    asked = re.sub(r"\bgrowth\s+(?:index|fund|etf)\b", " ", asked, flags=re.I)
+    if table["kind"] == "holdings_growth" and not GROWTH_WORDS.search(asked):
+        return None                  # "how much is in NVIDIA, and what revenue did it report": not the growth table
+    if table["kind"] == "holders":
+        lines = [f"Loaded funds holding {table.get('company')} ({table.get('ticker')}), largest weight first (Form N-PORT, "
+                 "holdings change over time):", ""]
+        return "\n".join(lines + [f"- {r['fund']}: {r['% of net assets']:.2f}% of net assets, USD {r['value (USD m)']:,.1f} "
+                                  f"million, as of {r['holdings as of']} [{r['chunk_id']}]." for r in table["rows"]])
+    when = f"as of {table['period_end']} (Form N-PORT, holdings change over time)"
+    by_ticker = {r["ticker"]: r for r in table["rows"]}
+    if table["kind"] == "top_holdings":
+        lines = [f"Top {len(table['rows'])} equity holdings of {table['fund']} {when}:", ""]
+        for r in table["rows"]:
+            name = f"{NAMES[r['ticker']]} ({r['ticker']})" if r["ticker"] in NAMES else r["holding"]
+            lines.append(f"- {r['rank']}. {name}: {r['% of net assets']:.2f}% of net assets, "
+                         f"USD {r['value (USD m)']:,.1f} million [{r['chunk_id']}].")
+        return "\n".join(lines)
+    metric = table.get("metric") or "the measure"
+    grown = [c for c in table.get("companies") or [] if c.get("growth_pct") is not None]
+    if not grown:
+        return None
+    lines = [f"{metric.capitalize()} growth of the top {len(table['rows'])} equity holdings of {table['fund']} {when}, "
+             "from each company's annual report:", ""]
+    for c in grown:
+        before, now = c["points"]
+        cited = " ".join(f"[{i}]" for i in dict.fromkeys(str(p["chunk_id"]) for p in (now, before)))
+        row = by_ticker.get(c["ticker"]) or {}
+        holding = f" [{row['chunk_id']}]" if row.get("chunk_id") else ""
+        lines.append(f"- {NAMES.get(c['ticker'], c['ticker'])} ({c['ticker']}), {pct(c['weight'])} of net assets{holding}: "
+                     f"FY{before['year']} {before['value_text']} to FY{now['year']} {now['value_text']} "
+                     f"{now.get('unit') or ''}".rstrip() + f", {c['growth_pct']:+.2f}% {cited}.")
+    lines += ["", f"Weighted growth over the covered holdings: {table['weighted_growth_pct']:+.2f}%; they are "
+              f"{pct(table.get('covered_weight'))} of net assets, of the {pct(table.get('asked_weight'))} the top "
+              "holdings make up."]
+    if table.get("excluded"):
+        lines.append("Not used: " + "; ".join(f"{e['company']}: {e['reason']}" for e in table["excluded"]) + ".")
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------- prompt text

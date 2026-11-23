@@ -28,6 +28,13 @@ def hit(ticker, year, text=None, page=40):
             "preview": "revenue", "metadata": {"chunk_id": chunk_id}}
 
 
+def row_hit(ticker, year, page=41):
+    """That year's income statement: the row the trend agent reads in code."""
+    return hit(ticker, year, page=page, text=(
+        "CONSOLIDATED STATEMENTS OF INCOME\n(in millions)\n" + f"{year} {year - 1}\n"
+        f"Net sales 1,000 900\nTotal revenue {REVENUE[year]} {REVENUE.get(year - 1, '195,929')}"))
+
+
 @pytest.fixture(autouse=True)
 def isolated(monkeypatch):
     monkeypatch.setattr(fc, "default_clarifier", lambda: fc.Clarifier(directory=DIRECTORY))
@@ -146,7 +153,7 @@ def test_changes_and_cagr_are_computed_in_code():
 # ----------------------------------------------------------------------------- graphs
 
 def test_router_sends_a_trend_question_to_the_trend_agent(monkeypatch):
-    calls = searches(monkeypatch)
+    calls = searches(monkeypatch, lambda c, n: [row_hit(c.ticker, c.year)])
     result = agent.router_graph_prompt(agent.MockLLM(), config("How did Costco revenue change over the years?"))
     assert result["technique"] == "router" and result["route"]["route"] == "trend"
     assert [(t, y) for t, y, _, _ in calls] == [("COST", 2022), ("COST", 2023), ("COST", 2024), ("COST", 2025)]
@@ -168,17 +175,16 @@ def test_router_keeps_lookups_and_comparisons_on_the_qa_agent(monkeypatch):
 
 
 def test_trend_retries_a_year_whose_figure_was_not_verified(monkeypatch):
-    calls = searches(monkeypatch)
-
-    def series(joined):        # the first extraction for FY2023 cites nothing; later ones use the mock
-        series.seen = getattr(series, "seen", 0) + ("Fiscal year: 2023" in joined)
-        return {"value": None} if "Fiscal year: 2023" in joined and series.seen == 1 else None
-
-    result = agent.trend_graph_prompt(ScriptedLLM(series=series), config("Costco revenue trend 2022-2024"))
+    # FY2023's first search finds no statement row; the broadened one does. No LLM reads a figure.
+    calls = searches(monkeypatch, lambda c, n: [hit(c.ticker, c.year, "Costco opened warehouses.")]
+                     if c.year == 2023 and "annual report" not in c.query else [row_hit(c.ticker, c.year)])
+    result = agent.trend_graph_prompt(ScriptedLLM(series=lambda joined: {"value": None}),
+                                      config("Costco revenue trend 2022-2024"))
     run_info = result["agent_run"]
     assert run_info["retrieval_attempts"] == 2 and run_info["path"].count("trend_fetch_step") == 2
     retry = calls[-1]
-    assert retry[:2] == ("COST", 2023) and "consolidated statements" in retry[2] and retry[3] == 2 * calls[0][3]
+    assert retry[:2] == ("COST", 2023) and calls[-2][:2] == ("COST", 2023)       # other words, then the statement's rows
+    assert "annual report" in calls[-2][2] and calls[-2][3] == 2 * calls[0][3] and "cost of sales" in retry[2]
     assert [p["status"] for p in result["trend"]["points"]] == ["ok", "ok", "ok"]
     assert run_info["steps"] <= 10
 
@@ -192,18 +198,37 @@ def test_trend_budget_skips_the_retry_and_names_the_missing_year(monkeypatch):
     assert result["trend"]["missing"] == ["COST 2023"] and result["trend"]["verified_points"] == 2
 
 
-def test_trend_answer_figures_are_checked_against_series_and_calculations(monkeypatch):
+def test_trend_answer_is_written_in_code_with_every_change_and_the_cagr(monkeypatch):
+    searches(monkeypatch, lambda c, n: [row_hit(c.ticker, c.year)])
+    llm = ScriptedLLM(answer=lambda joined: pytest.fail("no LLM writes a trend answer"))
+    result = agent.trend_graph_prompt(llm, config("Costco revenue trend 2022-2024"))
+    for text in ("226,954", "242,290", "254,453", "+6.76%", "+5.02%", "5.89%"):
+        assert text in result["answer"]
+    support = result["support_check"]
+    assert support["method"] == "code_table" and support["verdict"] == "supported" and support["numeric"]["grounded"]
+
+
+@pytest.mark.parametrize("text", ["from fiscal 2023 to fiscal 2026", "FY2023-FY2026", "between fiscal 2023 and 2026",
+                                  "2023 through fiscal year 2026", "FY2023 to FY2026"])
+def test_year_spans_include_the_years_between(text):
+    assert fc.Clarifier.years_in(f"How did Walmart revenue trend {text}?") == [2023, 2024, 2025, 2026]
+
+
+def test_a_trend_of_a_segment_is_not_answered_with_the_company_total(monkeypatch):
     searches(monkeypatch)
+    result = agent.router_graph_prompt(agent.MockLLM(), config("How did Costco membership fee revenue trend from 2022 to 2024?"))
+    assert result["route"]["route"] != "trend" and "membership fee" in str(result["route"]["adjustments"])
 
-    def answer(joined):
-        ids = sorted(set(__import__("re").findall(r"\[(annual_report_[^\]]+)\]", joined)))
-        return (f"Costco revenue rose from 226,954 in FY2022 to 254,453 in FY2024 [{ids[0]}] [{ids[-1]}], "
-                "a CAGR of 5.89%, and 999,999 in another year.")
 
-    result = agent.trend_graph_prompt(ScriptedLLM(answer=answer), config("Costco revenue trend 2022-2024"))
-    numeric = result["support_check"]["numeric"]
-    assert numeric["ungrounded"] == ["999,999"]                              # 5.89 is the computed CAGR: accepted
-    assert result["support_check"]["verdict"] != "supported"
+def test_a_year_another_filing_contradicts_is_not_used():
+    from scripts.agents import financial_sector_trend as sector
+    points = {2023: {"year": 2023, "status": "ok", "value": 29241.0, "unit": "millions", "consolidated": True,
+                     "columns": {2023: "29,241", 2022: "27,114"}},
+              2024: {"year": 2024, "status": "ok", "value": 20881.0, "unit": "millions", "consolidated": False,
+                     "columns": {2024: "20,881", 2023: "18,610"}}}
+    assert sector.prior_conflicts(points) == {2024}                    # Capital One's Domestic Card row
+    points[2024] = {**points[2024], "value": 31208.0, "consolidated": True, "columns": {2024: "31,208", 2023: "29,241"}}
+    assert sector.prior_conflicts(points) == set()
 
 
 def test_trend_graph_answers_a_single_year_question_as_a_lookup(monkeypatch):

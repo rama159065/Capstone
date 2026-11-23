@@ -444,12 +444,14 @@ def vlm_targets(pages, mode, limit=0):
     return targets[:limit] if limit else targets
 
 
-ROUTE_VERSION = 5          # v2: pdfParser+colpali tables/pictures with few text-layer figures are OCR-checked
+ROUTE_VERSION = 6          # v2: pdfParser+colpali tables/pictures with few text-layer figures are OCR-checked
                            # v3: "chart" pages with 600+ words are text pages (page_audit.TEXT_PAGE_WORDS)
                            # v4: paid replies cut off by their token budget are retried (v3 kept Qwen for them), so
                            #     filings finished under v3 run again; cached readings are reused
                            # v5: a paidVL reading much shorter than the page's OCR text (a text page whose verbatim copy
                            #     the paid model refused) keeps the OCR text, plus the reading's figures
+                           # v6: on a page whose text layer is unusable the OCR reading drops its native-table blocks
+                           #     that are not text (readable_blocks); cached readings are reused
 SKIPPABLE_ROUTES = ("qwen3VL", "paidVL")
 SHORT_READING_SHARE = .25   # a paidVL reading shorter than this share of the page's OCR text left most of the page out
 SHORT_READING_MIN_OCR = 800 # ... checked only when OCR found at least this many characters (a real page of text)
@@ -482,7 +484,8 @@ class RoutedReader:
 
     The Qwen3-VL model loads only when the first page needs it. ``paid`` is None when no paid model is configured.
     ``skip_routes`` (qwen3VL, paidVL) leaves those pages to a later run: they keep their text layer if it is usable,
-    so a CPU-only machine can index everything OCR can read and Qwen3-VL fills in the rest later (cached OCR reused).
+    and are OCR'd if it is not (``unusable_layer``: garbled or outlined), so a CPU-only machine can index everything OCR
+    can read and Qwen3-VL fills in the rest later (cached OCR reused).
     """
 
     def __init__(self, qwen_factory, qwen_signature, ocr=None, paid=None, threshold=.10, paid_limit=0, describe=True,
@@ -546,6 +549,27 @@ def cross_check(markdown, reference):
     return {"unverified": unverified, "figures": len(figures), "share": len(unverified) / len(figures) if figures else 0.0}
 
 
+def unusable_layer(page):
+    """The text layer can't be indexed at all (garbled or glyphs drawn as outlines): a page on a skipped route is
+    OCR'd now rather than left empty until the model run."""
+    return bool(page.get("garbled")) or page.get("page_type") == "outlined_text"
+
+
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+_TABLE_RULE = re.compile(r"^---( \| ---)*$", re.M)
+
+
+def readable_blocks(markdown):
+    """An OCR reading of a page whose text layer is unusable, without its unreadable native tables. The OCR reader
+    puts the page's native tables (``fi.table_markdown``) before the OCR text, and on such a page those tables are the
+    cipher again (Con Edison 2023, Citi 2025: "bAaaAdc\\x01"). Only table blocks are dropped; the OCR text (one block,
+    lines joined by newlines) is always kept. Applied when the reading is used, so cached readings stay valid."""
+    def unreadable_table(block):
+        return bool(_TABLE_RULE.search(block)) and (len(_CONTROL_CHARS.findall(block)) > .02 * len(block)
+                                                    or fi.unreadable_layer(block) or fi.non_ascii_garbage(block))
+    return "\n\n".join(block for block in markdown.split("\n\n") if not unreadable_table(block))
+
+
 def prefetch_plan(reader, pages, limit=0):
     """The readings a filing will certainly need, by lane: gpu (Qwen3-VL transcriptions and descriptions), paid (the
     paid model, with --paid-first), ocr (CPU). Conditional readings (Qwen after a doubtful paid reading, the paid model
@@ -562,6 +586,9 @@ def prefetch_plan(reader, pages, limit=0):
     for page, route in routed:
         if reader.describe and page["page_type"] in DESCRIBE_TYPES and route in DESCRIBE_ROUTES:
             plan["gpu"].append(("describe", page))
+        if route in reader.skip_routes and unusable_layer(page):
+            plan["ocr"].append(("ocr", page))                       # unreadable layer: OCR now, the model later
+            continue
         if route in reader.skip_routes or route in ("none", "pdfParser"):
             continue
         if route == "ocr" or (route in ("qwen3VL", "paidVL") and page["page"] not in allowed):
@@ -639,7 +666,8 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                     loaded[name][page["page"]] = row_
                 print(json.dumps({"doc_id": doc_id, "page": page["page"], "reader": name, "chars": len(text),
                                   "seconds": row_["seconds"]}), flush=True)
-            return loaded[name][page["page"]]["markdown"]
+            markdown = loaded[name][page["page"]]["markdown"]
+            return readable_blocks(markdown) if name == "ocr" and unusable_layer(page) else markdown
 
         def try_read(name, page, doc=None):
             """A model reading, or "" when the model fails. A failure is tried once per filing run (the prefetch
@@ -681,6 +709,8 @@ def routed_filing(reader, cache, row, pdf, pages, limit=0):
                                             "page": page}
             if route == "none":
                 entries[number] = {**base, "skip": True}
+            elif route in reader.skip_routes and unusable_layer(page):
+                entries[number] = ocr_entry(page, base, "skipped_route_unreadable_layer")   # else the page is empty
             elif route == "pdfParser" or route in reader.skip_routes:
                 continue                                            # native text (if usable), chunked by vlm_records
             elif route == "pdfParser+colpali":
@@ -1225,7 +1255,66 @@ def retrieve(query, top_k=5, ticker=None, year=None, sector=None, *, root=DEFAUL
     vector = embedder([query])[0] if hybrid.uses(mode, "dense") else None
     hits = [chunk_schema.evidence_hit(p, rrf_score=score, paths=["vlm_text"], ranks=ranks)
             for score, p, ranks in backend.search(vector, query, top_k, ticker, year, sector, mode=mode)]
-    return with_page_values(backend, hits)
+    return with_chart_titles(backend, with_page_context(backend, with_page_values(backend, hits)))
+
+
+# A statement read from the text layer is chunked as prose (1,200-character windows), so a chunk that continues a
+# table often starts with figure rows and no header: on the 41 bank filings of the 509-filing index, 465 of 715
+# "Net income" rows had no year header in their chunk (which column is 2025?) and 252 no scale. The header sits in an
+# earlier chunk of the same page; it is carried to the top of the chunk at query time (no re-ingest needed).
+_CTX_YEAR = re.compile(r"(?<!\d)(20[0-4]\d)(?!\d)")
+_CTX_FIGURE = re.compile(r"\d{1,3}(?:,\d{3})+|\d+\.\d+")
+_CTX_PRO_FORMA = re.compile(r"\bpro\s+forma\b", re.I)
+CONTEXT_MARK = "[Page context, carried from earlier on this page]"
+
+
+def _year_header(line):
+    """A line naming two or more fiscal years and no figures: a table's column header."""
+    return len(set(_CTX_YEAR.findall(line))) >= 2 and not _CTX_FIGURE.search(_CTX_YEAR.sub(" ", line))
+
+
+def page_context(store, hit, cache=None):
+    """The header a table-continuation chunk lacks: the page title, a pro forma marker if that table is pro forma,
+    and the last year-header line of the earlier chunks on its page. None when the chunk needs nothing."""
+    if hit.get("content_type") == "page_description":
+        return None
+    lines = [line for line in str(hit.get("text") or "").splitlines() if line.strip()]
+    first_row = next((i for i, line in enumerate(lines) if _CTX_FIGURE.search(line) and not _year_header(line)), None)
+    if first_row is None or any(_year_header(line) for line in lines[:first_row]):
+        return None
+    meta = hit.get("metadata") or {}
+    doc_id, page, index = meta.get("doc_id"), hit.get("page"), meta.get("chunk_index")
+    if doc_id is None or page is None or index is None:
+        return None
+    key = (doc_id, int(page))
+    if cache is None or key not in cache:
+        payloads = store.page_payloads(doc_id, page)
+        if cache is not None:
+            cache[key] = payloads
+    else:
+        payloads = cache[key]
+    earlier = [p for p in payloads if int(p.get("chunk_index") or 0) < int(index)]
+    before = [line for p in earlier for line in str(p.get("text") or "").splitlines() if line.strip()]
+    header_at = next((i for i in range(len(before) - 1, -1, -1) if _year_header(before[i])), None)
+    if header_at is None:
+        return None
+    title = before[0].strip()
+    parts = [title] if title and title != before[header_at].strip() else []
+    if any(_CTX_PRO_FORMA.search(line) for line in before[max(0, header_at - 8):header_at]):
+        parts.append("(pro forma table)")
+    return "\n".join([*parts, before[header_at].strip()])
+
+
+def with_page_context(store, hits):
+    """Each table-continuation hit gets its page's title and column header at the top (``page_context``)."""
+    cache = {}
+    for hit in hits:
+        context = page_context(store, hit, cache)
+        if context:
+            hit["page_context"] = context
+            hit["text"] = f"{CONTEXT_MARK}\n{context}\n{hit['text']}"
+            hit["preview"] = re.sub(r"\s+", " ", hit["text"])[:500]
+    return hits
 
 
 SAME_PAGE_LIMIT = 3     # value chunks added after one page_description hit
@@ -1261,6 +1350,69 @@ def with_page_values(store, hits, limit=SAME_PAGE_LIMIT):
             if added >= limit:
                 break
     return out
+
+
+_CHART_READERS = {"qwen3vl", "paidvl", "vlm"}
+_TITLE_UNIT = re.compile(r"^#{1,4}\s+(?P<title>[^\n|]{4,90})\n+[ \t]*(?P<unit>(?:thousands|millions|billions|trillions|percent|dollars)"
+                         r"[^\n|]{0,60})$", re.I | re.M)
+
+
+def chart_titles(payloads):
+    """chunk_id -> chart title for a page's unnamed chart tables.
+
+    The vision reader writes a page of several charts as tables that start with the unit only ("Thousands of barrels
+    per day") and, in a text chunk, the charts' titles with their units ("## Net crude oil production / Thousands of
+    barrels per day"). When the tables' units and the titles' units are the same list in the same order, each table is
+    its title's; otherwise nothing is named (Chevron 2022 p35: 1,440, 279 and 7,677 carried no product)."""
+    squash = lambda text: re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()           # noqa: E731
+    tables = []
+    for payload in payloads:
+        first = next((line.strip() for line in str(payload.get("text") or "").splitlines() if line.strip()), "")
+        if (payload.get("content_type") == "table" and str(payload.get("reader") or "").lower() in _CHART_READERS
+                and first and not first.startswith(("|", "#", "[")) and re.match(r"(?i)thousands|millions|billions|trillions|percent|dollars", first)):
+            tables.append((payload["chunk_id"], squash(first)))
+    titles = [(m["title"].strip(), squash(m["unit"])) for payload in payloads
+              if payload.get("content_type") != "page_description" for m in _TITLE_UNIT.finditer(str(payload.get("text") or ""))]
+    if len(tables) < 2 or [unit for _, unit in tables] != [unit for _, unit in titles]:
+        return {}
+    return {chunk_id: title for (chunk_id, _), (title, _) in zip(tables, titles)}
+
+
+def with_chart_titles(store, hits):
+    """Each unnamed chart table hit gets its chart's title at the top (``chart_titles``), at query time."""
+    cache = {}
+    for hit in hits:
+        doc_id, page = (hit.get("metadata") or {}).get("doc_id"), hit.get("page")
+        if (hit.get("content_type") != "table" or str(hit.get("reader") or "").lower() not in _CHART_READERS
+                or doc_id is None or page is None):
+            continue
+        key = (doc_id, int(page))
+        if key not in cache:
+            cache[key] = chart_titles(store.page_payloads(doc_id, page))
+        title = cache[key].get(hit["chunk_id"])
+        if title:
+            hit["chart_title"] = title
+            hit["text"] = f"Chart: {title}\n{hit['text']}"
+            hit["preview"] = re.sub(r"\s+", " ", hit["text"])[:500]
+    return hits
+
+
+def page_hits(pages, hits, root=None):
+    """Every chunk of the given (doc_id, page) pairs not already in ``hits``, in reading order, with page context.
+
+    A statement page is often several chunks: the one with the title ranks high ("CONSOLIDATED STATEMENTS OF
+    OPERATIONS") and the table with the figures (Fox's "Revenues 14,913") does not. Read-only; no search."""
+    if not pages:
+        return []
+    store = ChromaStore(Path(root or os.getenv("RAG_VLM_DIR", DEFAULT_ROOT)))
+    have = {hit["chunk_id"] for hit in hits}
+    out = []
+    for doc_id, page in pages:
+        for payload in store.page_payloads(doc_id, page):
+            if payload["chunk_id"] not in have and payload.get("content_type") != "page_description":
+                have.add(payload["chunk_id"])
+                out.append(chunk_schema.evidence_hit(payload, rrf_score=0.0, paths=["vlm_text", "statement_page"]))
+    return with_chart_titles(store, with_page_context(store, out))
 
 
 _serving: dict = {}

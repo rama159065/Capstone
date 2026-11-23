@@ -341,6 +341,25 @@ SECTOR_OF = {ticker: entry[1] for ticker, entry in COMPANIES.items()}
 ALIASES = {ticker: entry[2] for ticker, entry in COMPANIES.items()}
 
 
+# Fiscal years named for the year they start in. The corpus labels a filing with the year its fiscal year ends; Home
+# Depot and Lowe's call the year that ended in January/February 2026 "fiscal 2025" (their filings print "fiscal 2025"
+# in every statement), while Walmart, TJX, NVIDIA and Salesforce call it fiscal 2026. Checked on every filing of the
+# index whose year ends in January or February.
+NAMED_BY_START_YEAR = frozenset(("HD", "LOW"))
+
+
+def fiscal_label(ticker: str | None, filing_year: int) -> int:
+    """The fiscal year as the company names it, from the corpus's filing year."""
+    return filing_year - 1 if str(ticker or "").upper() in NAMED_BY_START_YEAR else filing_year
+
+
+def filing_year(ticker: str | None, fiscal_year: int | None) -> int | None:
+    """The corpus's filing year for a fiscal year as the company names it (None stays None)."""
+    if fiscal_year is None:
+        return None
+    return fiscal_year + 1 if str(ticker or "").upper() in NAMED_BY_START_YEAR else fiscal_year
+
+
 def normalize_ticker(ticker: str | None) -> str:
     """'brk.b' / 'BRK B' -> 'BRK-B' (the corpus spelling)."""
     return "-".join((ticker or "").strip().upper().replace(".", " ").replace("-", " ").split())

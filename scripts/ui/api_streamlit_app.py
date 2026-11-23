@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 import sys
 import time
@@ -403,7 +404,7 @@ def render_result(result: dict[str, Any]) -> None:
 
     answer = result.get("answer")
     if answer:
-        st.markdown(answer)
+        st.markdown(plain_dollars(answer))
     else:
         coverage = result.get("coverage") or {}
         reason = coverage.get("message") or coverage.get("reason") or result.get("explanation")
@@ -423,6 +424,8 @@ def render_result(result: dict[str, Any]) -> None:
 
     render_trend(result.get("trend") or {})
     render_sector_trend(result.get("sector_trend") or {})
+    render_shareholder_returns(result.get("shareholder_returns") or {})
+    render_dividend_income(result.get("dividend_income") or {})
     render_mutual_fund(result.get("mutual_fund") or {})
 
     agent_run = result.get("agent_run")
@@ -513,8 +516,8 @@ def render_trend(trend: dict[str, Any]) -> None:
                           x="fiscal year", y="value")
         if trend.get("missing"):
             st.caption("Not verified: " + ", ".join(trend["missing"]) + ". No figure is shown for these years.")
-        st.caption("Each figure was copied by the model and kept only if that year's filing states it; "
-                   "changes and CAGR are computed in code.")
+        st.caption("Each figure is read in code from that year's statement row (else copied by the model and kept only "
+                   "if the filing states it on the measure's line); changes and CAGR are computed in code.")
 
 
 def pct(value: float | None) -> str | None:
@@ -552,6 +555,51 @@ def render_sector_trend(table: dict[str, Any]) -> None:
         st.caption("Each figure is read from that company's filing for that year (statement row, else the model) and "
                    "kept only if the filing states it; totals, changes and CAGR are computed in code over companies "
                    "verified in every year.")
+
+
+def render_shareholder_returns(table: dict[str, Any]) -> None:
+    """The shareholder-returns agent's ranking: dividends + repurchases per company, from the cash-flow statements."""
+    companies = table.get("companies") or []
+    if not companies:
+        return
+    with st.expander(f"Shareholder returns FY{table.get('year')}"
+                     + (f": {table['sector']}" if table.get("sector") else ""), expanded=True):
+        ranked = sorted((c for c in companies if c.get("ranked")), key=lambda c: c["rank"])
+        st.caption(f"{len(ranked)} of {len(table.get('planned') or [])} companies read could be ranked. "
+                   "USD millions, cash paid in the fiscal year.")
+        st.dataframe([{"rank": c["rank"], "company": f"{c['company']} ({c['ticker']})",
+                       "dividends (USD m)": c["dividends"]["millions"], "repurchases (USD m)": c["buybacks"]["millions"],
+                       "total (USD m)": c["total"], "share of total": pct(c.get("share_pct")),
+                       "dividends as reported": c["dividends"].get("value_text"),
+                       "repurchases as reported": c["buybacks"].get("value_text")} for c in ranked], width="stretch")
+        chart = table.get("chart") or []
+        if chart:
+            st.bar_chart([{"company": c["ticker"], "dividends": c["dividends"], "repurchases": c["buybacks"]}
+                          for c in chart], x="company", y=["dividends", "repurchases"])
+        if table.get("excluded"):
+            st.caption("Not ranked: " + "; ".join(f"{e['company']} ({e['reason']})" for e in table["excluded"]))
+        st.caption("Each figure is read from the company's statement of cash flows (row read in code, else the model, "
+                   "kept only if the chunk prints it next to the measure); totals, ranking and shares are computed "
+                   "in code.")
+
+
+def render_dividend_income(table: dict[str, Any]) -> None:
+    """The dividend-income agent's calculation: shares x dividends declared per share, per holding."""
+    holdings = table.get("holdings") or []
+    if not holdings:
+        return
+    title = "Dividend income" + (f": ${table['total']:,.2f}" if table.get("total") is not None else "")
+    with st.expander(title, expanded=True):
+        st.dataframe([{"company": f"{h['company']} ({h['ticker']})", "fiscal year": f"FY{h['year']}",
+                       "shares (your input)": h["shares"],
+                       "dividends per share (filing)": h["dps"].get("value_text") if h["dps"].get("status") == "ok"
+                       else h["dps"].get("status"),
+                       "income (USD)": None if h["income"] is None else round(h["income"], 2),
+                       "source chunk": h["dps"].get("chunk_id")} for h in holdings], width="stretch")
+        if table.get("excluded"):
+            st.caption("Not calculated: " + "; ".join(f"{e['company']} ({e['reason']})" for e in table["excluded"]))
+        st.caption("Dividends declared per share for each company's fiscal year, before tax; the share counts are "
+                   "yours, the per-share figures come from the filings, the products are computed in code.")
 
 
 def render_turn(turn: dict[str, Any]) -> None:
@@ -593,6 +641,12 @@ def answer_options(turn: dict[str, Any], key: str) -> None:
                     st.rerun()
     if turn.get("questions"):
         st.caption("Or type your own answer. Say 'continue' to answer as asked, or 'start over' for a new question.")
+
+
+def plain_dollars(text: str) -> str:
+    """Markdown with its dollar signs kept: Streamlit reads the text between two of them as maths, so
+    "$275,235 million, while Walmart's was $680,985 million" lost both signs and changed font."""
+    return re.sub(r"(?<!\\)\$", r"\\$", str(text or ""))
 
 
 def option_index(options: list[str], value: str) -> int:
@@ -644,12 +698,15 @@ def sidebar() -> dict[str, Any]:
                 st.sidebar.warning("Year must be numeric; ignoring filter.")
     demo = st.sidebar.expander("Demo settings", expanded=SHOW_ADVANCED)
     settings["technique"] = demo.selectbox(
-        "Technique", ["router", "agentic_graph", "trend_graph", "sector_trend_graph", "fund_graph", "baseline_rag", "structured_few_shot", "decomposition",
-                      "self_consistency"],
+        "Technique", ["router", "agentic_graph", "trend_graph", "sector_trend_graph", "fund_graph",
+                      "shareholder_returns_graph", "dividend_income_graph", "baseline_rag", "structured_few_shot",
+                      "decomposition", "self_consistency"],
         help="router (default) sends each question to the Q&A agent, the trend agent, the sector trend agent or "
              "the report handoff; agentic_graph is the Q&A agent alone; trend_graph is the multi-year trend agent; "
              "sector_trend_graph is the sector trend agent; fund_graph is the mutual fund agent (needs loaded "
-             "N-PORT data; the router uses it for fund questions); the others are "
+             "N-PORT data; the router uses it for fund questions); shareholder_returns_graph ranks companies by "
+             "dividends plus buybacks; dividend_income_graph multiplies your share counts by the dividends per "
+             "share in the filings; the others are "
              "single-prompt baselines for comparison.")
 
     settings.update({
@@ -715,7 +772,7 @@ def main() -> None:
                 if position == len(messages) - 1:
                     answer_options(message["turn"], key=f"q{position}")
             else:
-                st.markdown(message["content"])
+                st.markdown(plain_dollars(message["content"]))
                 if message.get("result"):
                     render_result(message["result"])
 
@@ -726,7 +783,7 @@ def main() -> None:
 
     st.session_state["messages"].append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.markdown(prompt)
+        st.markdown(plain_dollars(prompt))
 
     if conversational:
         with st.chat_message("assistant"):
