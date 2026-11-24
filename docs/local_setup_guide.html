@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Local setup guide: run the Financial Report Copilot on your own PC</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}.cb{position:relative}.cb button{position:absolute;top:.5rem;right:.5rem;font:12px Segoe UI,Arial;padding:.25rem .6rem;border:1px solid #64748b;border-radius:4px;background:#1e293b;color:#e2e8f0;cursor:pointer}.cb pre{padding-right:4.5rem}@media print{.cb button{display:none}}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
+<h1>Local setup guide: run the Financial Report Copilot on your own PC</h1>
+<p>For team members. It sets up the code, the Chroma collection from Google Drive, FastAPI, Streamlit, retrieval (RAG) and the agents that call the hosted LLM.</p>
+<p><strong>Tested on 24 November 2026</strong> on Windows 11, in a fresh clone from GitHub with its own copy of the collection (on spare ports, on the main PC): clone, package install, unpacking, counts, model download, FastAPI, Streamlit in a browser, all seven agents and the guardrails. Seven answers compared with the main setup were identical word for word. Not tested: the Drive download from a second person's account, installing Git and uv with winget, a different PC, macOS and Linux.</p>
+<p><strong>Contents:</strong> <a href="#1-at-a-glance">1. At a glance</a> · <a href="#2-what-you-need-from-the-project-owner">2. What you need from the project owner</a> · <a href="#3-install-the-tools-and-the-code">3. Install the tools and the code</a> · <a href="#4-download-the-collection-from-google-drive">4. Download the collection from Google Drive</a> · <a href="#5-check-unpack-and-verify">5. Check, unpack and verify</a> · <a href="#6-models-key-and-certificate">6. Models, key and certificate</a> · <a href="#7-start-fastapi-and-streamlit">7. Start FastAPI and Streamlit</a> · <a href="#8-test-it-end-to-end">8. Test it end to end</a> · <a href="#9-rules-for-the-team">9. Rules for the team</a> · <a href="#10-if-something-goes-wrong">10. If something goes wrong</a> · <a href="#11-macos-and-linux-not-tested">11. macOS and Linux (not tested)</a> · <a href="#12-checklist">12. Checklist</a></p>
+<h2 id="1-at-a-glance">1. At a glance</h2>
+<table><thead><tr><th>Question</th><th>Answer</th></tr></thead><tbody><tr><td>How long?</td><td><strong>About 1 hour</strong> with a 50 to 100 Mbit/s connection, <strong>1½ hours</strong> with 20 Mbit/s, <strong>2¼ hours</strong> with 10 Mbit/s. Allow an extra hour if Git, Drive or the network needs fixing</td></tr><tr><td>What takes longest?</td><td>Downloading the 6.2 GB collection. Everything else is about 45 min</td></tr><tr><td>PC</td><td>Windows 10 or 11, 16 GB of memory advised (8 GB minimum), <strong>15 GB free disk</strong> during setup, about 9 GB after. No GPU</td></tr><tr><td>Accounts</td><td>Access to the GitHub repository, and to the two files on Google Drive</td></tr><tr><td>Private items</td><td>The hosted LLM key and the certificate <code>llm_ca.crt</code>, sent by the project owner</td></tr><tr><td>Software</td><td>Git and uv. uv installs Python 3.12 and all packages</td></tr><tr><td>What you get</td><td>Streamlit at <code>http://127.0.0.1:8501</code>, FastAPI at <code>http://127.0.0.1:8000/docs</code></td></tr></tbody></table>
+<pre class="mermaid">flowchart LR
+  D[&quot;Google Drive&lt;br&gt;chroma_db_final.tar&lt;br&gt;mutual_fund_data.zip&quot;] --&gt;|&quot;download once&quot;| C[(&quot;Your PC&lt;br&gt;indexes/rag_home/indexes&quot;)]
+  U[&quot;Browser&quot;] --&gt; S[&quot;Streamlit 8501&quot;] --&gt; A[&quot;FastAPI 8000&lt;br&gt;router + 7 agents&quot;]
+  A --&gt;|&quot;retrieval: Chroma + BM25 + reranker&quot;| C
+  A --&gt;|&quot;routing, answers, critic&quot;| L[&quot;Hosted Qwen3-8B&quot;]</pre>
+<h3>Time, step by step</h3>
+<table><thead><tr><th>Step</th><th>Time</th><th>Measured?</th></tr></thead><tbody><tr><td>2. Get access and files from the owner</td><td>10 min (plus waiting for a reply)</td><td>estimate</td></tr><tr><td>3. Install Git and uv, clone, install packages</td><td>10–15 min</td><td>clone 51 s, packages 3 min 55 s measured</td></tr><tr><td>4. Download the collection, 6.2 GB</td><td>100 Mbit/s: 8–10 min · 50: 17–20 min · 20: 42–50 min · 10: 85–100 min</td><td>calculated</td></tr><tr><td>5. Check, unpack, verify</td><td>5 min</td><td>unpacking 2 min 26 s measured</td></tr><tr><td>6. Models, key, certificate</td><td>5 min</td><td>models 76 s measured</td></tr><tr><td>7. Start FastAPI and Streamlit</td><td>3 min</td><td>11 s to start, then 1–2 min of warm-up</td></tr><tr><td>8. Test every agent</td><td>10 min</td><td>answers measured below</td></tr><tr><td><strong>Total</strong></td><td><strong>100 Mbit/s: about 55 min · 50: 1 h 5 min · 20: 1½ h · 10: 2¼ h</strong></td><td>sum of the steps</td></tr><tr><td>Each later start</td><td><strong>2–3 min</strong></td><td></td></tr></tbody></table>
+<h2 id="2-what-you-need-from-the-project-owner">2. What you need from the project owner</h2>
+<p><strong>Owner, once, before anyone starts</strong></p>
+<ol><li>Invite each person to the GitHub repository.</li><li>On Google Drive, share only these two files as <strong>Viewer</strong> with each person's Google account: <code>capstone_rag/chroma_db_final.tar</code> and <code>capstone_rag/mutual_fund_data.zip</code>.</li><li>Send the hosted LLM key and <code>llm_ca.crt</code> through a private channel, never through Drive, GitHub or a group chat.</li></ol>
+<table><thead><tr><th>File on Drive</th><th>Size</th><th>SHA-256</th></tr></thead><tbody><tr><td><code>chroma_db_final.tar</code></td><td>6,208,133,120 bytes</td><td><code>ced4026117699e68e27ad5c0577d906185a56c131d91b80bf8cf42bd41fa9592</code></td></tr><tr><td><code>mutual_fund_data.zip</code></td><td>975,377 bytes</td><td><code>62d6ec530d63a65172539cd59f927425cd24c0f7440fc188c005741486b29cda</code></td></tr></tbody></table>
+<blockquote>Use these two files only. Don't use <code>indexes/chroma_db_broken</code> or <code>chroma_db_smoke</code>, and don't download the folder <code>indexes/chroma_db</code> from the browser: Drive splits a folder into many zips.</blockquote>
+<h2 id="3-install-the-tools-and-the-code">3. Install the tools and the code</h2>
+<p>Open <strong>PowerShell</strong>. Use a short folder such as <code>C:\capstone</code>: some file names are long, and Windows limits full paths to 260 characters.</p>
+<div class="cb"><button type="button">Copy</button><pre><code>winget install --id Git.Git -e
+winget install --id astral-sh.uv -e</code></pre></div>
+<p>Close PowerShell, open it again, then:</p>
+<div class="cb"><button type="button">Copy</button><pre><code>git -c core.longpaths=true clone REPO_URL C:\capstone
+cd C:\capstone
+git switch master
+uv sync --python 3.12</code></pre></div>
+<p>Replace <code>REPO_URL</code> with the address from the owner. <code>uv sync</code> downloads about 530 MB of packages at the exact versions in <code>uv.lock</code>, and Python 3.12 if you don't have it.</p>
+<p><strong>Check:</strong></p>
+<div class="cb"><button type="button">Copy</button><pre><code>.venv\Scripts\python.exe -c &quot;import chromadb, torch, streamlit, langgraph; print(&#x27;ok&#x27;, chromadb.__version__)&quot;</code></pre></div>
+<p>Expect <code>ok 1.5.9</code>. This version must match, because the collection was built with it.</p>
+<h2 id="4-download-the-collection-from-google-drive">4. Download the collection from Google Drive</h2>
+<p>Pick one way. Save both files in <code>C:\capstone_downloads</code>.</p>
+<table><thead><tr><th>Way</th><th>When</th><th>Notes</th></tr></thead><tbody><tr><td><strong>A. Browser</strong></td><td>Default</td><td>Open the shared link, click Download, then <strong>Download anyway</strong> (the file is too large for a virus scan)</td></tr><tr><td><strong>B. Google Drive for desktop</strong></td><td>Browser download stops or restarts</td><td>This is how the main PC got it: 6.2 GB copied in about 12 min, checksum correct</td></tr><tr><td><strong>C. Six 1 GB parts</strong></td><td>Slow or unstable connection</td><td>Ask the owner to share the folder <code>capstone_rag/chroma_parts</code></td></tr></tbody></table>
+<p><strong>B, with Drive for desktop:</strong> in drive.google.com, right-click the shared file → Organise → Add shortcut → My Drive. Then, if Drive is on <code>G:</code>, copy it from wherever the shortcut appears:</p>
+<div class="cb"><button type="button">Copy</button><pre><code>New-Item -ItemType Directory -Force C:\capstone_downloads
+Copy-Item &quot;G:\My Drive\chroma_db_final.tar&quot; C:\capstone_downloads\</code></pre></div>
+<p><strong>C, join the parts:</strong></p>
+<div class="cb"><button type="button">Copy</button><pre><code>cd C:\capstone_downloads
+cmd /c &quot;copy /b chroma_db_final.tar.part00+chroma_db_final.tar.part01+chroma_db_final.tar.part02+chroma_db_final.tar.part03+chroma_db_final.tar.part04+chroma_db_final.tar.part05 chroma_db_final.tar&quot;</code></pre></div>
+<p>If the download stays at 0 bytes, see section 10: on the main PC, McAfee blocked Google's download servers.</p>
+<h2 id="5-check-unpack-and-verify">5. Check, unpack and verify</h2>
+<p><strong>Checksums must match</strong> section 2. If one doesn't, download that file again.</p>
+<div class="cb"><button type="button">Copy</button><pre><code>cd C:\capstone
+(Get-FileHash C:\capstone_downloads\chroma_db_final.tar -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash C:\capstone_downloads\mutual_fund_data.zip -Algorithm SHA256).Hash.ToLower()</code></pre></div>
+<p><strong>Unpack</strong> (about 2½ min). Don't run an application on these folders while unpacking.</p>
+<div class="cb"><button type="button">Copy</button><pre><code>New-Item -ItemType Directory -Force indexes\rag_home\indexes, indexes\rag_home\secrets, secrets | Out-Null
+C:\Windows\System32\tar.exe -xf C:\capstone_downloads\chroma_db_final.tar -C indexes\rag_home\indexes
+Expand-Archive C:\capstone_downloads\mutual_fund_data.zip -DestinationPath indexes\rag_home\indexes\mutual_fund</code></pre></div>
+<p>You should now have:</p>
+<div class="cb"><button type="button">Copy</button><pre><code>C:\capstone\indexes\rag_home\indexes\
+  chroma_db\            chroma\  pages\  vlm_ingest.sqlite3
+  mutual_fund\          chroma_mutual_fund\  raw_mutual_fund\  nport_mutual_fund.sqlite3</code></pre></div>
+<p><strong>Verify the collection</strong> (a few seconds, read-only):</p>
+<div class="cb"><button type="button">Copy</button><pre><code>.venv\Scripts\python.exe -c &quot;import sqlite3; r=&#x27;file:indexes/rag_home/indexes/chroma_db/&#x27;; q=lambda f,s: sqlite3.connect(r+f+&#x27;?mode=ro&#x27;,uri=True).execute(s).fetchone()[0]; print(&#x27;chunks&#x27;, q(&#x27;chroma/chroma.sqlite3&#x27;,&#x27;select count(*) from embeddings&#x27;), &#x27;bm25&#x27;, q(&#x27;chroma/bm25.sqlite3&#x27;,&#x27;select count(*) from chunks&#x27;), &#x27;filings&#x27;, q(&#x27;vlm_ingest.sqlite3&#x27;,&#x27;select count(distinct doc_id) from filings&#x27;))&quot;</code></pre></div>
+<p>Expect exactly <code>chunks 335699 bm25 335699 filings 509</code>. The app finds <code>chroma_db</code> by itself; no path setting is needed. After section 8 works, you can delete <code>C:\capstone_downloads</code> (6.2 GB).</p>
+<h2 id="6-models-key-and-certificate">6. Models, key and certificate</h2>
+<p><strong>Models</strong> (about 220 MB, once). They run on your CPU:</p>
+<div class="cb"><button type="button">Copy</button><pre><code>$env:HF_HUB_DISABLE_SYMLINKS_WARNING = &quot;1&quot;
+.venv\Scripts\python.exe -W ignore -c &quot;from huggingface_hub import snapshot_download as d; d(&#x27;BAAI/bge-small-en-v1.5&#x27;, max_workers=1, allow_patterns=[&#x27;*.json&#x27;,&#x27;*.txt&#x27;,&#x27;*.safetensors&#x27;,&#x27;1_Pooling/*&#x27;]); d(&#x27;cross-encoder/ms-marco-MiniLM-L-6-v2&#x27;, max_workers=1, local_dir=&#x27;indexes/rag_home/models/ms-marco-MiniLM-L-6-v2&#x27;, allow_patterns=[&#x27;*.json&#x27;,&#x27;*.txt&#x27;,&#x27;model.safetensors&#x27;]); print(&#x27;models ready&#x27;)&quot;</code></pre></div>
+<p>Keep <code>max_workers=1</code>: without it, the download failed on a Windows PC without Developer Mode (WinError 1314).</p>
+<p><strong>Certificate and key</strong> from the owner:</p>
+<div class="cb"><button type="button">Copy</button><pre><code>Copy-Item &quot;$HOME\Downloads\llm_ca.crt&quot; indexes\rag_home\secrets\llm_ca.crt
+notepad secrets\llm_api_key.txt      # paste the key, one line, save and close
+git status --short                   # must not list anything from secrets or indexes</code></pre></div>
+<p>Both folders are ignored by git. Never commit, share or post the key.</p>
+<h2 id="7-start-fastapi-and-streamlit">7. Start FastAPI and Streamlit</h2>
+<p>Use <strong>two PowerShell windows</strong> and keep both open.</p>
+<p><strong>Window 1: FastAPI</strong></p>
+<div class="cb"><button type="button">Copy</button><pre><code>cd C:\capstone
+$env:LLM_API_KEY = (Get-Content secrets\llm_api_key.txt -Raw).Trim()
+$env:LLM_API_BASE = &quot;https://103.42.50.41:1032/v1&quot;
+$env:LLM_MODEL = &quot;Qwen/Qwen3-8B&quot;
+$env:LLM_MAX_TOKENS = &quot;1024&quot;
+$env:DEFAULT_LLM_PROVIDER = &quot;hosted&quot;
+$env:HF_HUB_OFFLINE = &quot;1&quot;
+$env:LANGSMITH_TRACING = &quot;false&quot;
+$env:RAG_REQUEST_TIMEOUT_SECONDS = &quot;180&quot;
+$env:RAG_HTTP_TIMEOUT_SECONDS = &quot;90&quot;
+$env:OMP_NUM_THREADS = &quot;4&quot;
+.venv\Scripts\python.exe -m uvicorn scripts.api.api_app:app --host 127.0.0.1 --port 8000</code></pre></div>
+<p>Wait for <code>Application startup complete</code>, then <strong>wait 1–2 minutes</strong> while the index warms up. A question asked during the warm-up can fail once with <code>not_grounded</code>; ask it again.</p>
+<p><strong>Window 2: Streamlit</strong></p>
+<div class="cb"><button type="button">Copy</button><pre><code>cd C:\capstone
+$env:API_BASE_URL = &quot;http://127.0.0.1:8000&quot;
+$env:DEFAULT_LLM_PROVIDER = &quot;hosted&quot;
+.venv\Scripts\python.exe -m streamlit run scripts\ui\api_streamlit_app.py --server.port 8501 --server.address 127.0.0.1</code></pre></div>
+<p>Open <code>http://127.0.0.1:8501</code>. FastAPI's own page is <code>http://127.0.0.1:8000/docs</code>.</p>
+<p><strong>Health check</strong> (third window):</p>
+<div class="cb"><button type="button">Copy</button><pre><code>Invoke-RestMethod http://127.0.0.1:8000/health | ConvertTo-Json -Depth 5</code></pre></div>
+<table><thead><tr><th>Field</th><th>Expect</th></tr></thead><tbody><tr><td><code>runtime.financial_backend</code></td><td><code>financial_vlm</code></td></tr><tr><td><code>runtime.vlm_index_ready</code></td><td><code>true</code></td></tr><tr><td><code>runtime.reranker</code>, <code>runtime.ca_cert</code></td><td><code>true</code></td></tr><tr><td><code>defaults.llm_provider</code></td><td><code>hosted</code></td></tr><tr><td><code>langsmith.api_key_set</code></td><td><code>false</code> (tracing is off)</td></tr></tbody></table>
+<p><code>runtime.index_ready</code> is <code>false</code> here; that is the Qdrant index, which isn't used.</p>
+<p><strong>Stop:</strong> press Ctrl+C in both windows.</p>
+<h2 id="8-test-it-end-to-end">8. Test it end to end</h2>
+<p><strong>Retrieval only</strong> (no LLM call):</p>
+<div class="cb"><button type="button">Copy</button><pre><code>$b = @{ query = &quot;What was AbbVie&#x27;s revenue for fiscal 2025?&quot;; ticker = &quot;ABBV&quot;; year = 2025 } | ConvertTo-Json
+(Invoke-RestMethod http://127.0.0.1:8000/retrieve/financial_report_qa -Method Post -Body $b -ContentType &quot;application/json&quot;) | ConvertTo-Json -Depth 4</code></pre></div>
+<p><strong>All agents</strong>, typed into Streamlit. Times are from the test clone:</p>
+<table><thead><tr><th>Ask</th><th>Agent</th><th>Expect</th><th>Time</th></tr></thead><tbody><tr><td>What was AbbVie's revenue for fiscal 2025?</td><td>Q&amp;A</td><td>$61,160 million, cited</td><td>8–21 s</td></tr><tr><td>How did JPMorgan's net income change from 2022 to 2025?</td><td>Trend</td><td>37,676 → 57,048 million, CAGR 14.83%</td><td>16–22 s</td></tr><tr><td>How has oil and gas sector revenue changed from 2022 to 2025?</td><td>Sector trend</td><td>Table for 5 companies</td><td>90–100 s</td></tr><tr><td>What are the top 10 holdings of the Vanguard 500 Index Fund?</td><td>Mutual fund</td><td>NVIDIA first, 7.51%</td><td>3 s</td></tr><tr><td>How much cash did JPMorgan return to shareholders in 2024?</td><td>Shareholder returns</td><td>$33,613 million</td><td>7 s</td></tr><tr><td>If I owned 200 JPMorgan shares in 2024, how much dividend income would I have received?</td><td>Dividend income</td><td>$960.00</td><td>5 s</td></tr><tr><td>Generate a full financial report for Apple 2024, then "yes"</td><td>Report</td><td>8-page report, PDF in <code>output\pdf</code></td><td>3 s</td></tr><tr><td>Should I buy Apple stock?</td><td>Guardrails</td><td>Refused</td><td>under 1 s</td></tr></tbody></table>
+<p>More questions with expected answers: <a href="agent_user_guide.html">agent_user_guide.html</a>.</p>
+<p><strong>Optional, no LLM key needed:</strong> the offline tests, about 2 min.</p>
+<div class="cb"><button type="button">Copy</button><pre><code>.venv\Scripts\python.exe -m pytest tests -q --basetemp C:\capstone\tmp\pt</code></pre></div>
+<h2 id="9-rules-for-the-team">9. Rules for the team</h2>
+<ul><li><strong>One question at a time across the team.</strong> The hosted LLM allows one active request per key. If two people ask together, one waits or gets HTTP 429. Agree on slots, especially during the demo.</li><li>Without using the LLM, you can check retrieval with <code>/retrieve</code>, or set <code>$env:DEFAULT_LLM_PROVIDER = &quot;mock&quot;</code> before starting FastAPI. Mock answers aren't real answers.</li><li><strong>Run only one FastAPI on a collection.</strong> Chroma isn't safe with two processes on one folder.</li><li><strong>Don't run ingestion commands</strong> on <code>chroma_db</code>. Work on a copy if you need to change it.</li><li>LangSmith is off. Turn it on only when agreed, because the free plan has 5,000 traces a month.</li><li>To update the code later: <code>git pull</code>, then <code>uv sync --python 3.12</code>, then restart both windows. The collection stays.</li></ul>
+<h2 id="10-if-something-goes-wrong">10. If something goes wrong</h2>
+<table><thead><tr><th>What you see</th><th>Cause</th><th>Fix</th></tr></thead><tbody><tr><td>Drive download stays at 0 bytes, or a stuck <code>.crdownload</code></td><td>Security software or the network blocks Google's download servers (McAfee did on the main PC)</td><td>Pause or remove it, use another network, or use way B</td></tr><tr><td>"Too many users have viewed or downloaded this file"</td><td>Google's limit on a shared file</td><td>Wait, add a shortcut and use Drive for desktop, or get the file on a USB drive</td></tr><tr><td>Checksum differs</td><td>Incomplete download</td><td>Download again; don't unpack it</td></tr><tr><td><code>Filename too long</code></td><td>Long folder path</td><td>Clone into <code>C:\capstone</code> with <code>-c core.longpaths=true</code></td></tr><tr><td><code>uv</code> or <code>git</code> not recognised</td><td>PowerShell was open during the install</td><td>Open a new window</td></tr><tr><td><code>WinError 1314</code> in section 6</td><td>Symbolic links not allowed</td><td>Use the command as written, with <code>max_workers=1</code></td></tr><tr><td>Counts differ in section 5</td><td>Wrong file or interrupted unpacking</td><td>Delete <code>indexes\rag_home\indexes\chroma_db</code> and unpack again</td></tr><tr><td>First answer is <code>not_grounded</code></td><td>Index still warming up</td><td>Wait a minute and ask again</td></tr><tr><td><code>vlm_index_ready</code> is <code>false</code></td><td>Folder in the wrong place</td><td>It must be <code>indexes\rag_home\indexes\chroma_db\vlm_ingest.sqlite3</code></td></tr><tr><td><code>ca_cert</code> is <code>false</code>, or a certificate error</td><td>Certificate missing</td><td>Copy it to <code>indexes\rag_home\secrets\llm_ca.crt</code> and restart FastAPI</td></tr><tr><td>HTTP 401 from the LLM</td><td>Wrong or empty key</td><td>Check <code>secrets\llm_api_key.txt</code>, restart window 1</td></tr><tr><td>HTTP 429 or long waits</td><td>Someone else is using the key</td><td>Ask again later</td></tr><tr><td>LLM connection times out</td><td>Your network blocks port 1032</td><td>Try another network</td></tr><tr><td>Fund questions say no data</td><td>Fund zip not unpacked</td><td>Repeat the <code>Expand-Archive</code> line, restart FastAPI</td></tr><tr><td>Port already in use</td><td>Another program on 8000 or 8501</td><td>Use other ports, and set <code>API_BASE_URL</code> to match</td></tr><tr><td>Streamlit can't reach the API</td><td>Window 1 closed or other port</td><td>Check <code>/health</code></td></tr><tr><td>PC becomes slow</td><td>FastAPI uses about 2 GB, Streamlit about 0.6 GB</td><td>Close other programs</td></tr></tbody></table>
+<h2 id="11-macos-and-linux-not-tested">11. macOS and Linux (not tested)</h2>
+<p>The same steps, with these differences: install uv from <code>https://docs.astral.sh/uv</code>; use <code>.venv/bin/python</code> instead of <code>.venv\Scripts\python.exe</code>; <code>export NAME=value</code> instead of <code>$env:NAME = &quot;value&quot;</code>; <code>shasum -a 256</code> for checksums; <code>tar -xf</code> and <code>unzip</code>. Chroma's files were built on Linux and work on Windows, so they should work there too.</p>
+<h2 id="12-checklist">12. Checklist</h2>
+<table><thead><tr><th>Done?</th><th>Step</th></tr></thead><tbody><tr><td>☐</td><td>Repository access, two Drive files, key and certificate received</td></tr><tr><td>☐</td><td>Clone and <code>uv sync</code> finished; check prints <code>ok 1.5.9</code></td></tr><tr><td>☐</td><td>Both checksums match</td></tr><tr><td>☐</td><td><code>chunks 335699 bm25 335699 filings 509</code></td></tr><tr><td>☐</td><td><code>models ready</code></td></tr><tr><td>☐</td><td><code>/health</code> values match section 7</td></tr><tr><td>☐</td><td>AbbVie question returns $61,160 million with a citation</td></tr><tr><td>☐</td><td>All eight rows in section 8 pass</td></tr><tr><td>☐</td><td><code>git status</code> shows nothing from <code>secrets</code> or <code>indexes</code></td></tr></tbody></table>
+<script>
+document.querySelectorAll(".cb button").forEach(b => b.onclick = async () => {
+  const text = b.nextElementSibling.textContent;
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) { const a = document.createElement("textarea"); a.value = text; document.body.append(a); a.select(); document.execCommand("copy"); a.remove(); }
+  b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1500);
+});
+</script>
+</body></html>
