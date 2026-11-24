@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Running the copilot in Docker on the local PC</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
+pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
+blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
+<h1>Running the copilot in Docker on the local PC</h1>
+<p>Date: 24 November 2026. Branch <code>financial-report-only</code>.</p>
+<p><strong>Status: plan, not yet built or run.</strong> The compose file below was checked with <code>docker compose config</code>, and the pinned CPU wheels were confirmed to exist. No image was built, no container was started, and no repository file other than this document and its HTML copy was added. Times marked <em>estimate</em> are not measured.</p>
+<p><strong>Goal:</strong> run FastAPI and Streamlit in Docker on this PC, with the index built for the local apps, without touching the collections or the apps already running on ports 8001 and 8501.</p>
+<p><strong>Contents:</strong> <a href="#1-summary">1. Summary</a> · <a href="#2-what-was-found-on-this-pc">2. What was found on this PC</a> · <a href="#3-why-the-existing-compose-file-is-not-used-as-it-is">3. Why the existing compose file is not used as it is</a> · <a href="#4-rules-this-plan-keeps">4. Rules this plan keeps</a> · <a href="#5-files-to-add">5. Files to add</a> · <a href="#6-before-you-start">6. Before you start</a> · <a href="#7-steps">7. Steps</a> · <a href="#8-time">8. Time</a> · <a href="#9-regression-checks">9. Regression checks</a> · <a href="#10-risks">10. Risks</a> · <a href="#11-troubleshooting">11. Troubleshooting</a> · <a href="#12-undo">12. Undo</a></p>
+<h2 id="1-summary">1. Summary</h2>
+<table><thead><tr><th>Question</th><th>Answer</th></tr></thead><tbody><tr><td>Application code to change</td><td>None</td></tr><tr><td>Existing files to change</td><td>None. Three new files in the repository, plus one Windows settings file</td></tr><tr><td>Index used</td><td>A verified <strong>copy</strong> of <code>indexes/rag_home/indexes/chroma_db_colab</code> (5.8 GB, 335,699 chunks, 509 filings)</td></tr><tr><td>Ports</td><td>UI <code>127.0.0.1:8511</code>, API <code>127.0.0.1:8010</code>. The local apps keep 8501 and 8001</td></tr><tr><td>First time, until usable</td><td>1 to 1½ hours (<em>estimate</em>)</td></tr><tr><td>First time, with all regression checks</td><td>2 to 2½ hours (<em>estimate</em>)</td></tr><tr><td>Later starts</td><td>2 to 3 minutes (<em>estimate</em>)</td></tr><tr><td>Disk</td><td>15 to 20 GB (<em>estimate</em>); 141 GB was free</td></tr><tr><td>Memory</td><td>About 4 GB for Docker (<em>estimate</em>); only 1.7 GB of 15.7 GB was free</td></tr><tr><td>LangSmith</td><td>Off by default; used only when <code>LANGSMITH_ENABLED</code> is <code>true</code></td></tr><tr><td>Main risks</td><td>Memory, and one LLM request at a time per key</td></tr><tr><td>When</td><td>After the dry run of 24 November; Docker has never been set up on this PC</td></tr></tbody></table>
+<pre class="mermaid">flowchart LR
+  subgraph Host[&quot;Local apps, unchanged&quot;]
+    UI1[&quot;Streamlit 8501&quot;] --&gt; API1[&quot;FastAPI 8001&quot;] --&gt; C1[(&quot;chroma_db_colab&lt;br&gt;original&quot;)]
+  end
+  subgraph Docker[&quot;Docker project: copilot-local&quot;]
+    UI2[&quot;ui, 8511&quot;] --&gt; API2[&quot;api, 8010&quot;] --&gt; C2[(&quot;volume rag_data&lt;br&gt;copy&quot;)]
+  end
+  C1 -. &quot;read-only, once: seed&quot; .-&gt; C2
+  API1 --&gt; LLM[&quot;Hosted Qwen3-8B&lt;br&gt;one request at a time&quot;]
+  API2 --&gt; LLM</pre>
+<h2 id="2-what-was-found-on-this-pc">2. What was found on this PC</h2>
+<table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody><tr><td>Docker Desktop</td><td>4.99.0 installed, Docker 29.9.3, Compose 5.7.0, WSL 2 engine, <strong>not running</strong>, auto-start off</td></tr><tr><td>WSL</td><td>3.0.5; required Windows features enabled on 13 November and the PC restarted since; <strong>no Linux distribution and no Docker data disk yet</strong></td></tr><tr><td>CPU, memory, disk</td><td>i7-11800H, 8 cores / 16 threads; 15.7 GB, 1.7 GB free; NVMe SSD, 141 GB free</td></tr><tr><td>Memory used</td><td>Local API about 2.0 GB committed, Streamlit about 0.6 GB; VS Code about 2.9 GB in use</td></tr><tr><td>Local apps</td><td>API 127.0.0.1:8001 (<code>financial_vlm</code>, profile <code>local</code>, reranker on), Streamlit 127.0.0.1:8501</td></tr><tr><td>Served index</td><td><code>chroma.sqlite3</code> 4.4 GB, <code>bm25.sqlite3</code> 0.6 GB, vectors, page files; collection <code>annual_reports_vlm</code>; built with local <code>BAAI/bge-small-en-v1.5</code></td></tr><tr><td>SQLite journal</td><td><code>delete</code> mode, no journal or WAL file open</td></tr><tr><td>Fund data</td><td>5.9 MB in <code>indexes/rag_home/indexes/mutual_fund</code></td></tr><tr><td>Models needed</td><td>bge-small (Hugging Face cache), <code>ms-marco-MiniLM-L-6-v2</code> reranker (88 MB)</td></tr><tr><td>Local versions</td><td>Python 3.12.7, chromadb 1.5.9, torch 2.14.1, torchvision 0.29.1, transformers 4.57.6, sentence-transformers 5.7.0, langgraph 1.2.14, langchain 1.4.4, fastapi 0.162.0, streamlit 1.66.1, numpy 2.5.4: all equal to <code>uv.lock</code></td></tr></tbody></table>
+<h2 id="3-why-the-existing-compose-file-is-not-used-as-it-is">3. Why the existing compose file is not used as it is</h2>
+<table><thead><tr><th>Finding</th><th>What would happen</th><th>Fix in this plan</th></tr></thead><tbody><tr><td><code>docker-compose.yml</code> mounts <code>indexes/rag_home</code> and <code>indexes</code> read-write</td><td>Two processes would open the live Chroma folder. Chroma is not safe for that, SQLite locks are unreliable across a Windows mount, and Chroma writes when it opens: <code>chroma.sqlite3</code> was last modified at 02:52 on 24 November, when the local API started</td><td>Serve a copy in a Docker volume; mount the original read-only for the copy only</td></tr><tr><td>Conversation state is in the same folder</td><td>Both apps would write one <code>conversations.sqlite3</code></td><td>State lives in the Docker volume</td></tr><tr><td>Ports 8000 and 8501</td><td>8501 is taken by the local Streamlit</td><td>8010 and 8511</td></tr><tr><td>Expects a folder named <code>chroma_db</code></td><td>The index is <code>chroma_db_colab</code>, so no evidence would be found</td><td><code>RAG_VLM_DIR</code> set explicitly</td></tr><tr><td>Profile <code>server</code> embeds questions with the hosted API</td><td>Needs the embedding key; differs from local</td><td><code>RAG_EMBEDDING_PROVIDER=local</code>, bge-small copied into the volume</td></tr><tr><td>Reranker is read from <code>RAG_HOME/models</code></td><td>Not there, so no rerank and different answers</td><td>Copied into the volume at that path</td></tr><tr><td><code>Dockerfile</code> pins only chromadb exactly</td><td>Newer packages could change behaviour</td><td>Every package pinned to <code>uv.lock</code></td></tr><tr><td><code>.env</code> is required and missing</td><td>Compose stops with an error</td><td>Settings in the new compose file; LLM key as a Docker secret</td></tr><tr><td>PDFs are excluded from the image</td><td>The Apple 2024 report fails</td><td>That one PDF mounted read-only</td></tr><tr><td><code>secrets/</code> is not in <code>.dockerignore</code></td><td>Keys are sent in the build context, though not copied into the image</td><td>Own ignore file that excludes them</td></tr><tr><td>Qdrant starts and is required</td><td>Not needed for the Chroma backend; uses memory</td><td>Left out</td></tr><tr><td><code>deploy/*.sh</code> have Windows line endings in this checkout</td><td>They could fail in a Linux container</td><td>Not used; steps are inline in the compose file</td></tr></tbody></table>
+<h2 id="4-rules-this-plan-keeps">4. Rules this plan keeps</h2>
+<ol><li>No collection is modified: <code>chroma_db_colab</code>, <code>chroma_db_bge</code>, <code>chroma_db_fix</code>, <code>chroma_db_cvx_test</code> and Drive's copy stay as they are. Only <code>chroma_db_colab</code> and <code>mutual_fund</code> are read, through read-only mounts.</li><li>The API and UI containers never mount an index folder of the host.</li><li>Local FastAPI and Streamlit are not stopped, restarted or reconfigured.</li><li>The LLM and LangSmith keys stay in the gitignored <code>secrets/</code> folder. They are not in the image, the compose file or <code>.env</code>.</li><li>Both ports listen on 127.0.0.1 only, so nothing is reachable from the network.</li><li>Containers have CPU and memory limits and do not restart by themselves.</li><li>LangSmith is off unless <code>LANGSMITH_ENABLED</code> is exactly <code>true</code> (section 7.1). It is meant for the demo, or for a few runs for a technical document.</li></ol>
+<h2 id="5-files-to-add">5. Files to add</h2>
+<table><thead><tr><th>File</th><th>Purpose</th></tr></thead><tbody><tr><td><code>docker-compose.local.yml</code></td><td>Project <code>copilot-local</code>: <code>seed</code>, <code>api</code>, <code>ui</code></td></tr><tr><td><code>deploy/Dockerfile.local</code></td><td>Image with pinned versions and CPU-only torch</td></tr><tr><td><code>deploy/Dockerfile.local.dockerignore</code></td><td>Keeps secrets, indexes and PDFs out of the build</td></tr><tr><td><code>%USERPROFILE%\.wslconfig</code></td><td>Limits the Docker virtual machine. Outside the repository</td></tr></tbody></table>
+<h3>5.1 docker-compose.local.yml</h3>
+<p>Checked with <code>docker compose config</code>; not run.</p>
+<pre><code># Local Docker copy of the copilot, next to the normal local apps (8001 / 8501).
+# It serves its OWN copy of the index (volume rag_data). The originals are mounted read-only, and only by &quot;seed&quot;.
+name: copilot-local
+
+x-app: &amp;app
+  image: annual-report-copilot:local
+  restart: &quot;no&quot;
+  user: &quot;1000:1000&quot;
+
+services:
+  seed:                                   # one-off: docker compose -f docker-compose.local.yml run --rm seed
+    &lt;&lt;: *app
+    profiles: [&quot;seed&quot;]
+    user: &quot;0:0&quot;
+    network_mode: none
+    volumes:
+      - type: bind
+        source: ./indexes/rag_home/indexes/chroma_db_colab
+        target: /src/indexes/chroma_db_colab
+        read_only: true
+      - type: bind
+        source: ./indexes/rag_home/indexes/mutual_fund
+        target: /src/indexes/mutual_fund
+        read_only: true
+      - type: bind
+        source: ./indexes/models/ms-marco-MiniLM-L-6-v2
+        target: /src/models/ms-marco-MiniLM-L-6-v2
+        read_only: true
+      - type: bind
+        source: ${USERPROFILE}/.cache/huggingface/hub/models--BAAI--bge-small-en-v1.5
+        target: /src/cache/hf/hub/models--BAAI--bge-small-en-v1.5
+        read_only: true
+      - rag_data:/dst
+      - output:/out
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        if [ -e /dst/indexes ]; then echo &quot;this volume already holds a copy: nothing done&quot;; exit 1; fi
+        if find /src -name &#x27;*-journal&#x27; -o -name &#x27;*-wal&#x27; | grep -q .; then echo &quot;the source is being written: retry later&quot;; exit 1; fi
+        cp -a /src/indexes /src/models /src/cache /dst/
+        mkdir -p /dst/state
+        cd /src &amp;&amp; find indexes models cache -type f -exec sha256sum {} + | sort -k2 &gt; /dst/source.sha256
+        cd /dst &amp;&amp; sha256sum -c --quiet source.sha256
+        python - &lt;&lt;&#x27;PY&#x27;
+        import sqlite3
+        root = &quot;/dst/indexes/chroma_db_colab/&quot;
+        n = sqlite3.connect(root + &quot;chroma/chroma.sqlite3&quot;).execute(&quot;select count(*) from embeddings&quot;).fetchone()[0]
+        f = sqlite3.connect(root + &quot;vlm_ingest.sqlite3&quot;).execute(&quot;select count(distinct doc_id) from filings&quot;).fetchone()[0]
+        print(&quot;chunks&quot;, n, &quot;filings&quot;, f)
+        assert (n, f) == (335699, 509)
+        PY
+        chown -R 1000:1000 /dst /out
+        echo &quot;seed verified&quot;
+
+  api:
+    &lt;&lt;: *app
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.local
+    command:
+      - sh
+      - -c
+      - |
+        export LLM_API_KEY=&quot;$$(tr -d &#x27;\r\n&#x27; &lt; /run/secrets/llm_api_key)&quot;
+        if [ &quot;$${LANGSMITH_ENABLED:-false}&quot; = &quot;true&quot; ] &amp;&amp; [ -s /run/secrets/langsmith_api_key ]; then
+          export LANGSMITH_API_KEY=&quot;$$(tr -d &#x27;\r\n&#x27; &lt; /run/secrets/langsmith_api_key)&quot;; echo &quot;LangSmith: on, for questions that ask for it&quot;
+        else
+          unset LANGSMITH_API_KEY LANGCHAIN_API_KEY; echo &quot;LangSmith: off&quot;
+        fi
+        export LANGSMITH_TRACING=false LANGCHAIN_TRACING_V2=false
+        exec uvicorn scripts.api.api_app:app --host 0.0.0.0 --port 8000 --workers 1
+    environment:
+      RAG_PROFILE: server
+      RAG_HOME: /app/rag_home
+      RAG_BACKEND: financial_vlm
+      RAG_VLM_DIR: /app/rag_home/indexes/chroma_db_colab
+      RAG_EMBEDDING_PROVIDER: local
+      HF_HOME: /app/rag_home/cache/hf
+      HF_HUB_OFFLINE: &quot;1&quot;
+      OMP_NUM_THREADS: &quot;4&quot;
+      DEFAULT_LLM_PROVIDER: hosted
+      LLM_API_BASE: https://103.42.50.41:1032/v1
+      LLM_MODEL: Qwen/Qwen3-8B
+      LLM_MAX_TOKENS: &quot;1024&quot;
+      LLM_CA_CERT: /run/certs/llm_ca.crt
+      RAG_REQUEST_TIMEOUT_SECONDS: &quot;180&quot;
+      RAG_HTTP_TIMEOUT_SECONDS: &quot;90&quot;
+      RATE_LIMIT_PER_MINUTE: &quot;1000&quot;
+      LANGSMITH_ENABLED: ${LANGSMITH_ENABLED:-false}        # exactly &quot;true&quot; = the key is loaded; anything else = off
+      LANGSMITH_ENDPOINT: https://api.smith.langchain.com
+      LANGSMITH_PROJECT: annual-report-copilot
+    secrets: [llm_api_key, langsmith_api_key]
+    volumes:
+      - rag_data:/app/rag_home
+      - output:/app/output
+      - type: bind
+        source: ./secrets/llm_ca.crt
+        target: /run/certs/llm_ca.crt
+        read_only: true
+      - type: bind
+        source: ./data/raw/financial_report_qa/pdfs/NASDAQ_AAPL_2024.pdf
+        target: /app/data/raw/financial_report_qa/pdfs/NASDAQ_AAPL_2024.pdf
+        read_only: true
+    ports: [&quot;127.0.0.1:8010:8000&quot;]
+    cpus: 4
+    mem_limit: 3g
+    healthcheck:
+      test: [&quot;CMD&quot;, &quot;curl&quot;, &quot;-fsS&quot;, &quot;http://127.0.0.1:8000/health&quot;]
+      interval: 30s
+      timeout: 10s
+      start_period: 180s
+      retries: 5
+
+  ui:
+    &lt;&lt;: *app
+    command:
+      - sh
+      - -c
+      - |
+        if [ &quot;$${LANGSMITH_ENABLED:-false}&quot; = &quot;true&quot; ] &amp;&amp; [ -s /run/secrets/langsmith_api_key ]; then
+          export LANGSMITH_API_KEY=&quot;$$(tr -d &#x27;\r\n&#x27; &lt; /run/secrets/langsmith_api_key)&quot;; echo &quot;LangSmith: on, for questions that ask for it&quot;
+        else
+          unset LANGSMITH_API_KEY LANGCHAIN_API_KEY; echo &quot;LangSmith: off&quot;
+        fi
+        export LANGSMITH_TRACING=false LANGCHAIN_TRACING_V2=false
+        exec streamlit run scripts/ui/api_streamlit_app.py --server.address 0.0.0.0 --server.port 8501 \
+          --server.headless true --browser.gatherUsageStats false
+    environment:
+      RAG_PROFILE: server
+      API_BASE_URL: http://api:8000
+      DEFAULT_LLM_PROVIDER: hosted
+      API_TIMEOUT_SECONDS: &quot;300&quot;
+      LANGSMITH_ENABLED: ${LANGSMITH_ENABLED:-false}
+      LANGSMITH_ENDPOINT: https://api.smith.langchain.com
+      LANGSMITH_PROJECT: annual-report-copilot
+    secrets: [langsmith_api_key]
+    ports: [&quot;127.0.0.1:8511:8501&quot;]
+    cpus: 2
+    mem_limit: 1g
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: [&quot;CMD&quot;, &quot;curl&quot;, &quot;-fsS&quot;, &quot;http://127.0.0.1:8501/_stcore/health&quot;]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+secrets:
+  llm_api_key:
+    file: ./secrets/llm_api_key.txt
+  langsmith_api_key:
+    file: ./secrets/langsmith_api_key.txt
+
+volumes:
+  rag_data:
+  output:</code></pre>
+<h3>5.2 deploy/Dockerfile.local</h3>
+<p>Not built.</p>
+<pre><code># Local test image: the same layers as ../Dockerfile, with every package at its uv.lock version and CPU-only torch.
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HOME=/tmp/app-home
+
+RUN apt-get update &amp;&amp; apt-get install -y --no-install-recommends libgl1 libglib2.0-0 curl
+
+WORKDIR /app
+COPY pyproject.toml uv.lock deploy/requirements_from_pyproject.py /tmp/build/
+RUN cd /tmp/build \
+ &amp;&amp; pip install uv==0.12.23 \
+ &amp;&amp; uv export --frozen --no-dev --no-hashes --no-emit-project -q &gt; lock.txt \
+ &amp;&amp; python requirements_from_pyproject.py pyproject.toml &gt; requirements.txt \
+ &amp;&amp; pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1 torchvision==0.29.1 \
+ &amp;&amp; pip install -r requirements.txt -c lock.txt \
+ &amp;&amp; pip check
+
+COPY scripts ./scripts
+COPY configs ./configs
+COPY deploy ./deploy
+COPY data ./data
+COPY pyproject.toml ./
+
+RUN mkdir -p /app/rag_home /app/output /tmp/app-home &amp;&amp; chmod -R a+rwX /app/rag_home /app/output /tmp/app-home
+EXPOSE 8000 8501</code></pre>
+<p>Torch and torchvision come from the CPU-only wheel index; versions 2.14.1 and 0.29.1 exist there for Python 3.12 on Linux. <code>pip check</code> fails the build if packages conflict. After a <code>uv lock</code>, update these two versions to match.</p>
+<h3>5.3 deploy/Dockerfile.local.dockerignore</h3>
+<p>Docker uses this file instead of <code>.dockerignore</code> for this Dockerfile only.</p>
+<pre><code># Keep the image to code + small committed data. Indexes, PDFs and outputs are mounted at run time.
+.git
+.gitignore
+.venv
+venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ipynb_checkpoints
+.env
+.env.*
+!.env.example
+
+indexes
+output
+eval
+tmp
+snapshots
+notebooks
+docs
+tests
+*.pptx
+*.ipynb
+*.jpeg
+
+# Large raw data: PDFs and EDGAR side files (the manifests stay)
+data/processed
+**/*.pdf
+data/raw/financial_report_qa/edgar/10k
+data/raw/financial_report_qa/edgar/proxy
+data/raw/financial_report_qa/edgar/submissions
+data/raw/financial_report_qa/edgar/companyfacts
+data/raw/mutualFund
+
+# Keys and certificates never enter the build context
+secrets
+**/*.crt
+**/*_api_key.txt</code></pre>
+<h3>5.4 %USERPROFILE%\.wslconfig</h3>
+<pre><code>[wsl2]
+memory=4GB
+processors=4
+swap=4GB
+
+[experimental]
+autoMemoryReclaim=gradual</code></pre>
+<p>It applies to every WSL distribution, but this PC has none besides the one Docker will create. Check that the file does not exist before creating it (it did not on 24 November).</p>
+<h2 id="6-before-you-start">6. Before you start</h2>
+<ol><li>Finish the dry run first, and commit or back up open work.</li><li>Plug the laptop in and keep it awake; sleep interrupts the copy and the timing.</li><li>Free about 3 GB of memory: close PowerPoint, unused VS Code windows and browser tabs.</li><li>Leave the local API and Streamlit running, and do not restart them until section 9 is done. A restart makes Chroma touch <code>chroma.sqlite3</code>, which would make the hash check fail for a reason unrelated to Docker.</li><li>Do not ask questions in the local app while the Docker copy is being tested (one LLM request at a time).</li><li>Record the starting state:</li></ol>
+<pre><code>Get-ChildItem indexes\rag_home\indexes -Recurse -File | Get-FileHash -Algorithm SHA256 |
+  Select-Object Hash, Path | Export-Csv output\eval\docker_hash_before.csv -NoTypeInformation
+git status --short
+Invoke-RestMethod http://127.0.0.1:8001/health | ConvertTo-Json -Depth 5
+(Invoke-WebRequest http://127.0.0.1:8501 -UseBasicParsing).StatusCode</code></pre>
+<h2 id="7-steps">7. Steps</h2>
+<pre><code># 1. Create the three files of section 5 and .wslconfig, then start Docker Desktop and wait for &quot;Engine running&quot;
+docker info
+
+# 2. Build (12-25 min the first time)
+docker compose -f docker-compose.local.yml build api
+
+# 3. Copy the index into the Docker volume and verify it (5-15 min)
+docker compose -f docker-compose.local.yml run --rm seed
+
+# 4. Start the API and the UI
+docker compose -f docker-compose.local.yml up -d api ui
+docker compose -f docker-compose.local.yml ps
+
+# 5. Check
+Invoke-RestMethod http://127.0.0.1:8010/health | ConvertTo-Json -Depth 5
+# then open http://127.0.0.1:8511</code></pre>
+<p><code>seed</code> refuses to run if the volume already holds a copy or if the source is being written, compares every copied file with the SHA-256 of its source, and checks 335,699 chunks and 509 filings.</p>
+<p>In <code>/health</code>, expect <code>profile</code> server, <code>financial_backend</code> financial_vlm, <code>vlm_index_ready</code> true, <code>reranker</code> true and <code>ca_cert</code> true.</p>
+<h3>Daily use</h3>
+<table><thead><tr><th>Action</th><th>Command</th></tr></thead><tbody><tr><td>Start</td><td>Start Docker Desktop, then <code>docker compose -f docker-compose.local.yml up -d api ui</code></td></tr><tr><td>Stop</td><td><code>docker compose -f docker-compose.local.yml stop</code>, then quit Docker Desktop to give the memory back</td></tr><tr><td>Logs</td><td><code>docker compose -f docker-compose.local.yml logs -f api</code></td></tr><tr><td>Memory and CPU</td><td><code>docker stats</code></td></tr><tr><td>Code changed</td><td><code>build api</code> again (1–3 min, cached), then <code>up -d api ui</code></td></tr><tr><td>Index changed</td><td>Remove the Docker copy with <code>down -v</code> (this deletes the Docker volumes only, including its reports and conversations), then run <code>seed</code> again. Update the expected counts in <code>seed</code> if they changed</td></tr></tbody></table>
+<h3>7.1 LangSmith: only when the value is <code>true</code></h3>
+<table><thead><tr><th><code>LANGSMITH_ENABLED</code></th><th>What happens</th></tr></thead><tbody><tr><td>Not set, <code>false</code>, or anything else (<code>TRUE</code>, <code>1</code>, <code>yes</code>)</td><td><strong>Off.</strong> The key isn't loaded into FastAPI or Streamlit, so nothing is sent, even if someone switches on "LangSmith tracing" in Streamlit</td></tr><tr><td><code>true</code></td><td>The key is loaded. <strong>Only</strong> questions asked with "LangSmith tracing" switched on (Streamlit, Demo settings) are sent; one question is one trace</td></tr></tbody></table>
+<p><code>LANGSMITH_TRACING</code> is fixed to <code>false</code> in both containers, so there is no way to trace everything by accident. The switch is part of the container start command; no application code changes. Tested on 24 November 2026 outside Docker: the real start commands of both containers with a fake key, for every value in the table; nothing was sent.</p>
+<pre><code># On, for the demo or a few runs for a document
+$env:LANGSMITH_ENABLED = &quot;true&quot;
+docker compose -f docker-compose.local.yml up -d api ui
+
+# Off again
+Remove-Item Env:LANGSMITH_ENABLED
+docker compose -f docker-compose.local.yml up -d api ui</code></pre>
+<p><code>up -d</code> recreates the two containers with the new value (1–2 min). Check it: <code>/health</code> shows <code>langsmith.api_key_set</code> <code>false</code> when off and <code>true</code> when on, and the container log's first line says <code>LangSmith: off</code> or <code>LangSmith: on</code>.</p>
+<p>Use it only for the demo or for technical documents: the free plan has 5,000 traces a month, kept for 14 days. Keep it off for the regression checks in section 9.</p>
+<h2 id="8-time">8. Time</h2>
+<table><thead><tr><th>Step</th><th>Time</th><th>Basis</th></tr></thead><tbody><tr><td>Create the files</td><td>20–30 min</td><td>estimate</td></tr><tr><td>First Docker start</td><td>5–10 min</td><td>estimate</td></tr><tr><td>Build the image (about 2 GB download)</td><td>12–25 min</td><td>estimate, depends on the network</td></tr><tr><td>Copy and verify the index, 5.8 GB</td><td>5–15 min</td><td>estimate</td></tr><tr><td>Start and smoke test</td><td>about 10 min</td><td>estimate</td></tr><tr><td><strong>Usable</strong></td><td><strong>about 1–1½ h</strong></td><td></td></tr><tr><td>Retrieval comparison, then all 113 questions</td><td>40–60 min</td><td>the 113 questions took 25 min on the local API (measured 24 November)</td></tr><tr><td>Offline tests and final hashes</td><td>about 10 min</td><td>tests take about 2 min (measured)</td></tr><tr><td><strong>Total</strong></td><td><strong>about 2–2½ h</strong></td><td></td></tr></tbody></table>
+<h2 id="9-regression-checks">9. Regression checks</h2>
+<p>Zero differences can't be promised: Linux and Windows maths can reorder near-ties. Each gate must pass before the Docker copy is relied on.</p>
+<table><thead><tr><th>Gate</th><th>How</th><th>Pass rule</th></tr></thead><tbody><tr><td>Collections untouched</td><td>Repeat the hashes of section 6 and compare</td><td>Identical</td></tr><tr><td>Copy is exact</td><td><code>seed</code> output</td><td><code>seed verified</code></td></tr><tr><td>Code untouched</td><td><code>git status --short</code>; <code>.venv\Scripts\python.exe -m pytest tests --basetemp tmp/pt</code></td><td>Only the new files; all 723 tests pass</td></tr><tr><td>Key and certificate handling</td><td><code>docker history</code> and a search of the image for the key</td><td>No key in any layer</td></tr><tr><td>Retrieval parity</td><td>The same 113 questions to <code>/retrieve/financial_report_qa</code> on 8001 and 8010</td><td>Same top chunks; every difference explained</td></tr><tr><td>Answer parity</td><td>86 fixed and 27 agent questions against 8010</td><td>At least 71/86 and 26/27; every changed question reviewed</td></tr><tr><td>Speed</td><td>Same run</td><td>Median near 10.9 s, 95th percentile near 23.7 s</td></tr><tr><td>LangSmith off by default</td><td><code>/health</code> on 8010; switch on tracing in Streamlit and ask one question</td><td><code>api_key_set</code> false, response says <code>missing_LANGSMITH_API_KEY</code>, no new trace</td></tr><tr><td>Local apps healthy</td><td><code>/health</code> on 8001 and the page on 8501, before, during and after</td><td>No change</td></tr><tr><td>Browser</td><td>One question per agent on 8511, and the Apple 2024 report</td><td>Works, with citations</td></tr></tbody></table>
+<p>The comparison tools are in <code>output/eval/deck_eval</code> (gitignored): <code>run_agent.py</code>, <code>analyse.py</code>, <code>agentq_score.py</code>. <code>run_agent.py</code> has the API address fixed at 8001, so it needs a copy or a setting for 8010.</p>
+<pre><code>Get-ChildItem indexes\rag_home\indexes -Recurse -File | Get-FileHash -Algorithm SHA256 |
+  Select-Object Hash, Path | Export-Csv output\eval\docker_hash_after.csv -NoTypeInformation
+Compare-Object (Import-Csv output\eval\docker_hash_before.csv) (Import-Csv output\eval\docker_hash_after.csv) -Property Hash, Path
+# no output = nothing changed</code></pre>
+<h2 id="10-risks">10. Risks</h2>
+<table><thead><tr><th>Risk</th><th>Effect</th><th>What to do</th></tr></thead><tbody><tr><td>Memory</td><td>Local apps slow down from paging</td><td>Free 3 GB first; the limits are 4 GB for the virtual machine, 3 GB for <code>api</code>, 1 GB for <code>ui</code>; stop Docker when not in use</td></tr><tr><td>One LLM request at a time per key</td><td>Questions asked in both apps at once wait or fail (HTTP 429)</td><td>Use one app at a time. The queue works within one process, not between the two</td></tr><tr><td>First Docker start fails</td><td>No engine</td><td>Restart Windows, then <code>wsl --update</code>; the local apps are not involved</td></tr><tr><td>Linux and Windows differences</td><td>A few rankings or answers differ</td><td>Gates in section 9</td></tr><tr><td>Older copy</td><td>The Docker index doesn't follow later changes</td><td>Seed again</td></tr><tr><td>First question is slow</td><td>Models load</td><td>Ask one warm-up question</td></tr><tr><td>Network</td><td>The endpoint is reached through Docker's network</td><td>Check <code>/health</code>, then one question; the certificate is the same file as local</td></tr><tr><td>Deadline</td><td>Setup trouble near submission on 25 November</td><td>Keep the local apps as the demo path</td></tr></tbody></table>
+<h2 id="11-troubleshooting">11. Troubleshooting</h2>
+<table><thead><tr><th>Symptom</th><th>Likely cause</th><th>Action</th></tr></thead><tbody><tr><td><code>failed to connect to the docker API</code></td><td>Docker Desktop isn't running</td><td>Start it and wait</td></tr><tr><td>Port already allocated</td><td>Something uses 8010 or 8511</td><td>Change the left-hand port in the compose file</td></tr><tr><td><code>this volume already holds a copy</code></td><td><code>seed</code> already ran</td><td>Nothing to do, or see "Index changed"</td></tr><tr><td><code>the source is being written</code></td><td>An ingest is running</td><td>Wait for it to finish</td></tr><tr><td><code>api</code> is unhealthy</td><td>Index or model not found</td><td><code>logs api</code>; check <code>RAG_VLM_DIR</code> and that <code>seed</code> finished</td></tr><tr><td><code>api</code> exits with code 137</td><td>Memory limit reached</td><td>Raise <code>mem_limit</code> to 3500m and the WSL memory to 5 GB</td></tr><tr><td>LLM certificate error</td><td>Certificate not mounted</td><td>Check <code>secrets/llm_ca.crt</code></td></tr><tr><td>HTTP 429</td><td>Both apps asking at once</td><td>Use one app</td></tr><tr><td>No trace in LangSmith</td><td>The switch is off, or tracing wasn't on for that question</td><td>Set <code>LANGSMITH_ENABLED</code> to exactly <code>true</code>, run <code>up -d</code>, switch on tracing and ask again</td></tr><tr><td>Answers without evidence</td><td>Wrong backend or folder</td><td>Check <code>financial_backend</code> and <code>vlm_index_ready</code> in <code>/health</code></td></tr></tbody></table>
+<h2 id="12-undo">12. Undo</h2>
+<pre><code>docker compose -f docker-compose.local.yml --profile seed down        # removes containers, keeps the Docker copy
+docker compose -f docker-compose.local.yml --profile seed down -v     # also deletes the Docker copy, never the originals
+docker image rm annual-report-copilot:local</code></pre>
+<p>Then quit Docker Desktop and delete the three files and <code>.wslconfig</code>. The collections and the local apps aren't involved in any of these steps.</p>
+</body></html>

@@ -1,396 +1,210 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>  RAG_PROFILE=gcp</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Deploying the Financial Report Copilot on Google Cloud for an end-to-end demo</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
 h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
 table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
 th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
 pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
 pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
 blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
-<!DOCTYPE html>
+<h1>Deploying the Financial Report Copilot on Google Cloud for an end-to-end demo</h1>
+<p>Updated 24 November 2026 (first written 13 November). It covers Streamlit, FastAPI, the finished Chroma collection and the hosted Qwen3-8B on one Google Cloud VM: whether the free account is enough, how long it takes, what it costs, and the steps.</p>
+<p><strong>Status: plan, not yet deployed.</strong> Nothing has been created on Google Cloud. The compose override in section 5 was checked with <code>docker compose config</code>; no image has been built. Prices and trial rules were read on 24 November 2026 (section 12). Times are estimates unless marked measured.</p>
+<p><strong>Contents:</strong> <a href="#1-summary">1. Summary</a> · <a href="#2-is-the-free-account-enough">2. Is the free account enough?</a> · <a href="#3-cost">3. Cost</a> · <a href="#4-what-runs-where">4. What runs where</a> · <a href="#5-changes-required">5. Changes required</a> · <a href="#6-time">6. Time</a> · <a href="#7-steps">7. Steps</a> · <a href="#8-end-to-end-tests">8. End-to-end tests</a> · <a href="#9-will-it-affect-the-local-pc-or-the-collections">9. Will it affect the local PC or the collections?</a> · <a href="#10-risks">10. Risks</a> · <a href="#11-after-the-demo">11. After the demo</a> · <a href="#12-sources-and-what-isn-t-verified">12. Sources and what isn't verified</a></p>
+<h2 id="1-summary">1. Summary</h2>
+<table><thead><tr><th>Question</th><th>Answer</th></tr></thead><tbody><tr><td>Is the free account enough?</td><td><strong>Yes, with the $300 / 90-day Free Trial credit</strong>, if you are eligible. <strong>No, with the always-free tier alone</strong>: its <code>e2-micro</code> VM is too small</td></tr><tr><td>Extra cost for the demo</td><td><strong>$0 out of pocket on the trial.</strong> It uses about <strong>$4</strong> of the credit for 24 hours of VM time over 3 days, or <strong>$25</strong> for a week running day and night</td></tr><tr><td>Cost without the trial</td><td>The same amounts, billed to your card</td></tr><tr><td>Sign-up needs</td><td>A credit card or another payment method. A temporary hold of $0–1 may appear; it isn't a charge</td></tr><tr><td>Deploy, first time</td><td><strong>About 2¼ h</strong> to a working private demo, <strong>+25 min</strong> for a public HTTPS address</td></tr><tr><td>Deploy and test end to end</td><td><strong>About 4 h</strong></td></tr><tr><td>Each later code change</td><td>10–15 min to redeploy, plus about 15 min of smoke tests</td></tr><tr><td>VM</td><td><code>e2-standard-4</code> (4 vCPU, 16 GB), 50 GB disk, Ubuntu 24.04</td></tr><tr><td>Application code to change</td><td>None. Three new deployment files (section 5)</td></tr><tr><td>Region</td><td>**<code>us-central1</code> (Iowa), zone <code>us-central1-a</code>**: the same Google Cloud region as LangSmith's US service, and the cheapest used here</td></tr><tr><td>Go / no-go check</td><td>Can a VM **in <code>us-central1</code><strong> reach the hosted LLM, whose address is registered in India? Test it on the VM </strong>before** building anything</td></tr><tr><td>Expected response time</td><td>About 13–14 s median, against 10.9 s measured on the PC, because each LLM call crosses from the US to India (estimate, section 3.4)</td></tr><tr><td>LangSmith</td><td>Off by default; used only when <code>LANGSMITH_ENABLED</code> is <code>true</code> (section 7.7)</td></tr><tr><td>Original collections</td><td>Only read. The VM works on its own copy</td></tr></tbody></table>
+<p><strong>Recommendation:</strong> keep the local apps as the demo path for 24 and 25 November. Deploy on Google Cloud only if a public link is required, and not in the hours before the dry run: account verification, the LLM check and the first image build are all untested.</p>
+<h2 id="2-is-the-free-account-enough">2. Is the free account enough?</h2>
+<p>Google Cloud has two separate offers.</p>
+<table><thead><tr><th></th><th>Free Trial</th><th>Always-free tier</th></tr></thead><tbody><tr><td>What you get</td><td>$300 credit for 90 days</td><td>1 <code>e2-micro</code> VM in three US regions, 30 GB standard disk, 5 GB Cloud Storage (US regions), 1 GB of outbound data a month</td></tr><tr><td>Memory</td><td>Any size the quota allows</td><td>1 GB, two shared vCPUs</td></tr><tr><td>Enough for this app?</td><td><strong>Yes</strong></td><td><strong>No.</strong> The API alone commits about 2 GB (measured on the PC) and the index is 5.8 GB</td></tr><tr><td>Charged?</td><td>Never while it stays a trial account</td><td>No, within the limits</td></tr></tbody></table>
+<p><strong>Trial rules that matter here</strong></p>
+<table><thead><tr><th>Rule</th><th>Effect on this project</th></tr></thead><tbody><tr><td>Only for people who have never paid for Google Cloud, Google Maps Platform or Firebase, and never had the trial</td><td>Check each team member's account; one eligible account is enough</td></tr><tr><td>No GPUs</td><td>None needed: the LLM is hosted, and embeddings and reranking run on CPU</td></tr><tr><td>No quota increases</td><td>Use one small VM; choose another US zone (<code>us-central1-b</code>, <code>-c</code>, <code>-f</code>) or <code>us-east1</code> if the CPU quota or capacity refuses it</td></tr><tr><td>No Marketplace, no Windows Server images</td><td>Not used</td></tr><tr><td>Credit can't pay for the Gemini platform (sign-ups from 16 November 2026) or the Gemini API</td><td>Not used; answers come from the Track B endpoint</td></tr><tr><td>Ends when $300 is spent or 90 days pass</td><td>Resources stop, and after a 30-day grace period they are deleted. Nothing is billed unless you upgrade</td></tr><tr><td><strong>Upgrading to a paid account</strong></td><td>From then on, usage beyond the credit is billed to the card. <strong>Don't upgrade for this demo</strong></td></tr></tbody></table>
+<h2 id="3-cost">3. Cost</h2>
+<h3>3.1 Unit prices</h3>
+<table><thead><tr><th>Item</th><th><code>us-central1</code> (Iowa)</th></tr></thead><tbody><tr><td><code>e2-standard-4</code> (4 vCPU, 16 GB)</td><td>$0.1340 / hour</td></tr><tr><td><code>e2-standard-2</code> (2 vCPU, 8 GB)</td><td>$0.0670 / hour</td></tr><tr><td>Balanced disk</td><td>$0.10 / GiB-month</td></tr><tr><td>External IPv4, in use</td><td>$0.005 / hour</td></tr><tr><td>Static IPv4, reserved but not in use</td><td>$0.01 / hour</td></tr><tr><td>Cloud Storage, standard, 6 GB</td><td>about $0.12 / month; 5 GB-months are free in this region</td></tr><tr><td>Data uploaded to Google Cloud</td><td>free</td></tr><tr><td>Data out to the internet</td><td>about $0.12 / GiB; the first 1 GB a month from North America is free</td></tr></tbody></table>
+<p>All from Google's own pages (section 12) except the outbound price, which is approximate. Confirm in the pricing calculator before creating anything.</p>
+<h3>3.2 Total for a demo (compute + 50 GB disk + IP)</h3>
+<table><thead><tr><th>Scenario</th><th>e2-standard-4 (advised)</th><th>e2-standard-2</th><th>Paid by you on the trial</th></tr></thead><tbody><tr><td><strong>Test and demo: 24 VM-hours over 3 days, stopped in between</strong></td><td><strong>$4.3</strong></td><td>$2.7</td><td><strong>$0</strong></td></tr><tr><td>7 days, day and night</td><td>$24.5</td><td>$13.2</td><td>$0</td></tr><tr><td>14 days, day and night</td><td>$49.0</td><td>$26.5</td><td>$0</td></tr><tr><td>90 days, day and night</td><td>$315</td><td>$170</td><td><strong>The credit runs out</strong> with <code>e2-standard-4</code>; stop the VM when unused</td></tr></tbody></table>
+<p>Add under $1 for the bucket and the data sent out.</p>
+<h3>3.3 Possible extra costs</h3>
+<table><thead><tr><th>Item</th><th>Needed?</th><th>Cost</th></tr></thead><tbody><tr><td>Hosted LLM (Qwen3-8B)</td><td>Yes</td><td>Track B quota</td></tr><tr><td>Query embeddings and reranker</td><td>Yes</td><td>Free: they run on the VM</td></tr><tr><td>Index build</td><td><strong>Already done</strong> (509 filings, 335,699 chunks)</td><td>$0</td></tr><tr><td>Colab, to copy the index from Drive</td><td>Yes, about 30 min, no GPU</td><td>$0 beyond the Drive storage the index already uses</td></tr><tr><td>Domain name</td><td>No</td><td><code>sslip.io</code> is free; your own domain is about $10–15 a year</td></tr><tr><td>HTTPS certificate</td><td>Only for a public address</td><td>Free (Let's Encrypt)</td></tr><tr><td>LangSmith</td><td>No; only when <code>LANGSMITH_ENABLED</code> is <code>true</code>, for the demo or technical documents</td><td>Free plan: 5,000 traces a month, kept 14 days. One question is one trace</td></tr><tr><td>GPU, Vertex AI, Cloud SQL, load balancer, Cloud Run, Artifact Registry</td><td>No</td><td>Not used</td></tr><tr><td>Taxes</td><td>Depends on the country</td><td>Only on real charges</td></tr></tbody></table>
+<p><strong>What would cost money by accident:</strong> upgrading to a paid account, leaving the VM running for months, or keeping a static IP and disk after deleting the VM. Section 11 removes everything. Set a budget alert of $20; it warns but doesn't stop spending.</p>
+<h3>3.4 Region: why <code>us-central1</code>, and what it costs in speed</h3>
+<p>Checked on 24 November 2026:</p>
+<table><thead><tr><th>Question</th><th>Finding</th></tr></thead><tbody><tr><td>Where is LangSmith US?</td><td>Google Cloud <code>us-central1</code> (Iowa), API <code>https://api.smith.langchain.com</code>. Other LangSmith regions have their own addresses</td></tr><tr><td>Which one does this project use?</td><td>The US one: no <code>LANGSMITH_ENDPOINT</code> is set, so the default is used. The project's key worked there on 20 November</td></tr><tr><td>Can an account move between LangSmith regions?</td><td>Not supported, so staying on the US endpoint is right</td></tr><tr><td>Where is the hosted LLM?</td><td>Its address block (103.42.50.0–103.42.51.255) is registered in <strong>India</strong> (APNIC). From the PC a connection takes 25 ms (measured)</td></tr><tr><td>Price and free tier</td><td><code>us-central1</code> is the cheaper region of the two compared, with 5 GB of free Cloud Storage and 1 GB of free outbound data</td></tr></tbody></table>
+<table><thead><tr><th>Path</th><th>Effect of a US VM</th></tr></thead><tbody><tr><td>VM → LangSmith</td><td>Same region. Traces are sent in the background, so tracing shouldn't delay answers in any region</td></tr><tr><td>VM → hosted LLM</td><td>About 250 ms per round trip instead of 25 ms (estimate). The client opens a new connection for each call, about 3 round trips, so <strong>about +0.7 s per call</strong></td></tr><tr><td>A Q&amp;A question (3.7 calls on average)</td><td>About <strong>+2.5 s</strong>: median about 13–14 s instead of 10.9 s (estimate)</td></tr><tr><td>A sector question (5.2 calls)</td><td>About +3.5 s on 70 s (estimate)</td></tr><tr><td>Viewer in India → VM</td><td>About 0.25 s more per click (estimate)</td></tr></tbody></table>
+<p>So LangSmith's region is a good fit but doesn't speed up answers; the LLM's location is what users feel. The US region is still fine for the demo. If the delay matters more than cost, Mumbai (<code>asia-south1</code>) is the alternative, at about 20% more.</p>
+<p><strong>Size and platform</strong></p>
+<ul><li><strong>Size:</strong> <code>e2-standard-4</code> is advised because sector questions search up to 32 company-years and rerank on CPU. <code>e2-standard-2</code> should hold the app, but sector answers (70 s median on the PC, measured) could come close to the 180 s request limit.</li><li><strong>Cloud Run isn't suitable:</strong> each copy would load the models and a 5.8 GB index, and rate limits and conversation state are kept per process.</li></ul>
+<h2 id="4-what-runs-where">4. What runs where</h2>
+<pre class="mermaid">flowchart LR
+  Drive[&quot;Google Drive&lt;br&gt;chroma_db, fund zip&quot;] --&gt;|&quot;Colab: export&quot;| B[&quot;Cloud Storage bucket&quot;]
+  B --&gt;|&quot;rsync, once&quot;| D
+  U[&quot;Browser&quot;] --&gt;|&quot;HTTPS + login&lt;br&gt;or SSH tunnel&quot;| C
+  subgraph VM[&quot;Compute Engine VM, us-central1-a&quot;]
+    C[&quot;caddy 443&lt;br&gt;optional&quot;] --&gt; S[&quot;ui: Streamlit 8501&quot;]
+    S --&gt; A[&quot;api: FastAPI 8000&lt;br&gt;router + 7 agents&quot;]
+    A --&gt; D[(&quot;RAG_HOME&lt;br&gt;Chroma, BM25, funds&quot;)]
+    A --&gt; M[&quot;bge-small, reranker&lt;br&gt;CPU&quot;]
+  end
+  A --&gt;|&quot;HTTPS, private CA&lt;br&gt;US to India&quot;| L[&quot;Hosted Qwen3-8B&quot;]
+  A -. &quot;only when LANGSMITH_ENABLED is true&quot; .-&gt; LS[&quot;LangSmith US&lt;br&gt;us-central1&quot;]</pre>
+<table><thead><tr><th>Part</th><th>Where</th><th>Open to the internet?</th></tr></thead><tbody><tr><td><code>caddy</code></td><td>VM container, only with the <code>https</code> profile</td><td>80 and 443</td></tr><tr><td><code>ui</code> (Streamlit)</td><td>VM container, 8501</td><td>No (localhost only)</td></tr><tr><td><code>api</code> (FastAPI, agents, guardrails)</td><td>VM container, 8000</td><td>No; <code>/api/*</code> through Caddy with the API token</td></tr><tr><td>Chroma, BM25, fund data</td><td>VM disk, <code>/srv/capstone</code></td><td>No</td></tr><tr><td>Qdrant</td><td>Not started: the main backend is Chroma</td><td>—</td></tr><tr><td>Qwen3-8B</td><td>Track B endpoint, port 1032, address registered in India</td><td>Called by <code>api</code></td></tr><tr><td>LangSmith</td><td>US service, Google Cloud <code>us-central1</code></td><td>Not contacted unless <code>LANGSMITH_ENABLED</code> is <code>true</code>; then only for questions that ask for tracing</td></tr></tbody></table>
+<h2 id="5-changes-required">5. Changes required</h2>
+<table><thead><tr><th>Change</th><th>Why</th><th>Where</th></tr></thead><tbody><tr><td><code>docker-compose.gcp.yml</code> (new)</td><td>Serve Chroma without Qdrant, local embeddings, reranker, longer timeouts, writable reports folder, Apple PDF</td><td>Below</td></tr><tr><td><code>deploy/Dockerfile.local</code> and its <code>.dockerignore</code> (new)</td><td>Same package versions as tested, instead of unpinned ones</td><td><a href="docker_setup.html">docker_setup.md</a> sections 5.2 and 5.3</td></tr><tr><td><code>.env</code> on the VM</td><td>Endpoint, key, token, paths</td><td>Section 7.4; never in git</td></tr><tr><td><code>secrets/llm_ca.crt</code> on the VM</td><td>Private certificate of the LLM endpoint</td><td>Copied by you; never in git or the bucket</td></tr><tr><td>Push the three new files to the branch the VM clones</td><td>The VM clones the repository</td><td>Not done yet. Files can also be copied to the VM instead</td></tr></tbody></table>
+<p>The override was checked with <code>docker compose config</code>, including the <code>https</code> profile; it has not been run.</p>
+<pre><code># Google Cloud VM, Chroma only: docker compose -f docker-compose.yml -f docker-compose.gcp.yml ...
+x-build: &amp;build
+  context: .
+  dockerfile: deploy/Dockerfile.local      # every package at its uv.lock version (docs/docker_setup.md 5.2 and 5.3)
 
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Deploying the Annual Report Copilot on Google Cloud</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#1f2933;line-height:1.55;background:#fff}
-h1{border-bottom:3px solid #2563eb;padding-bottom:.3rem}h2{margin-top:2.2rem;color:#1e3a8a;border-bottom:1px solid #e2e8f0}h3{color:#1e40af}
-table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem;display:block;overflow-x:auto}th,td{border:1px solid #cbd5e1;padding:.4rem .6rem;text-align:left;vertical-align:top}
-th{background:#eff6ff}tr:nth-child(even) td{background:#f8fafc}code{background:#f1f5f9;padding:0 .25rem;border-radius:3px;font-size:.88em}
-pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow-x:auto;border-radius:6px}pre code{background:none;color:inherit}
-pre.mermaid{background:#fff;color:#1f2933;border:1px solid #e2e8f0;text-align:center}
-blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;padding:.6rem 1rem}hr{border:0;border-top:1px solid #e2e8f0;margin:2rem 0}</style><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true});</script></head><body>
-<h1>Deploying the Annual Report Copilot on Google Cloud</h1>
-<p>Written 13 November 2026. This page covers how long a Google Cloud deployment takes, which components and services it needs, and what it costs to run for 15 days. The settings, paths and scripts behind it are in <a href="deployment.html">deployment.md</a> §7 (storage layout and the <code>gcp</code> profile).</p>
-<h2>Summary</h2>
-<table>
-<thead>
-<tr>
-  <th></th>
-  <th>Full corpus (1,004 filings)</th>
-  <th><code>min500</code> (509 filings)</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>Hands-on setup on Google Cloud (index already built)</td>
-  <td>~2–3 h the first time, ~30 min for redeploys</td>
-  <td>same</td>
-</tr>
-<tr>
-  <td>End to end, including the one-off index build on Colab</td>
-  <td>1–2 days</td>
-  <td>1–2 days (most of it Qwen3-VL GPU time)</td>
-</tr>
-<tr>
-  <td>Google Cloud cost for 15 days</td>
-  <td><strong>≈ $55</strong></td>
-  <td><strong>≈ $29</strong></td>
-</tr>
-<tr>
-  <td>Plus the one-off index build (Colab Pro + Drive)</td>
-  <td>+ $12 → <strong>≈ $67</strong></td>
-  <td>+ $12 → <strong>≈ $41</strong></td>
-</tr>
-<tr>
-  <td>LLM</td>
-  <td>Track B quota</td>
-  <td>Track B quota</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Where the prices come from:</strong></p>
-<ul>
-<li>VM and storage prices are third-party list prices for <code>us-central1</code>, taken from <a href="deployment.html">deployment.md</a> §5–6.</li>
-<li>The static IP charge was added here, and everything was scaled from 14 to 15 days.</li>
-<li>Check the Google Cloud pricing calculator for your region before creating anything.</li>
-</ul>
-<pre><code>Colab: build into /content/rag ──after each sector──► Drive (MyDrive/capstone_rag) ──cell 12 / cp.export_to_gcs──► gs://bucket
-GCP VM: sh deploy/sync_from_gcs.sh  (bucket ──gcloud storage rsync──► RAG_HOME_DIR, Qdrant restore, docker compose up)
-</code></pre>
-<h2>1. Time to deploy</h2>
-<h3>1.1 Build the index (one-off, on Colab)</h3>
-<p>This is the slow part.</p>
-<table>
-<thead>
-<tr>
-  <th>Step</th>
-  <th>min500 (509 filings)</th>
-  <th>Full (1,004)</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>Download the PDFs from EDGAR to Drive</td>
-  <td>~15–30 min</td>
-  <td>~30–60 min</td>
-</tr>
-<tr>
-  <td>Page audit (optional, CPU)</td>
-  <td>~3–4 h</td>
-  <td>~6–8 h</td>
-</tr>
-<tr>
-  <td>Pipeline 1 (Chroma): text layer + OCR</td>
-  <td>~2.5–3.5 h</td>
-  <td>~5–8 h</td>
-</tr>
-<tr>
-  <td>Pipeline 1: Qwen3-VL pages + chart descriptions (~2.5k pages)</td>
-  <td>~10–28 GPU-hours on a T4 (less on an L4)</td>
-  <td>about 2×</td>
-</tr>
-<tr>
-  <td>Pipeline 2 (Qdrant): text + ColPali (only if you deploy it)</td>
-  <td>~4–7 h</td>
-  <td>~8–15 h</td>
-</tr>
-</tbody>
-</table>
-<p>These times are estimates from measurements on a few filings. The first full sector gives the real numbers (<code>cp.status</code>).</p>
-<h3>1.2 Set up on Google Cloud</h3>
-<table>
-<thead>
-<tr>
-  <th>#</th>
-  <th>Step</th>
-  <th>Time</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>1</td>
-  <td>Create a project, attach billing, create the bucket</td>
-  <td>~15 min</td>
-</tr>
-<tr>
-  <td>2</td>
-  <td>Copy Drive → bucket: cell 12 of either ingest notebook, or <code>cp.export_to_gcs</code></td>
-  <td>~10–20 min</td>
-</tr>
-<tr>
-  <td>3</td>
-  <td>Create the VM, persistent disk, static IP and firewall rules (22, 80, 443)</td>
-  <td>~15 min</td>
-</tr>
-<tr>
-  <td>4</td>
-  <td>Install Docker; clone the repo; write <code>.env</code>; put the CA certificate in <code>secrets/</code></td>
-  <td>~20 min</td>
-</tr>
-<tr>
-  <td>5</td>
-  <td>First <code>docker compose build</code> (Python + CPU torch)</td>
-  <td>~10–15 min</td>
-</tr>
-<tr>
-  <td>6</td>
-  <td><code>sh deploy/sync_from_gcs.sh</code>: pull the indexes, restore Qdrant, start the stack</td>
-  <td>~10–20 min</td>
-</tr>
-<tr>
-  <td>7</td>
-  <td>HTTPS via Caddy + <code>sslip.io</code>, then smoke tests (health and the three agents)</td>
-  <td>~20–30 min</td>
-</tr>
-<tr>
-  <td></td>
-  <td><strong>Total, first time</strong></td>
-  <td><strong>~2–3 h</strong>; later redeploys ~30 min</td>
-</tr>
-</tbody>
-</table>
-<h2>2. Components and services</h2>
-<h3>2.1 Google Cloud</h3>
-<table>
-<thead>
-<tr>
-  <th>Service</th>
-  <th>What for</th>
-  <th>Setting</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>Compute Engine VM</td>
-  <td>Runs the stack</td>
-  <td><code>e2-standard-4</code> (4 vCPU / 16 GB) for full; <code>e2-standard-2</code> (2 vCPU / 8 GB) for min500; Ubuntu 24.04 LTS</td>
-</tr>
-<tr>
-  <td>Persistent disk (balanced SSD)</td>
-  <td><code>RAG_HOME_DIR</code> (indexes, state), Docker images, model cache</td>
-  <td>100 GB full / 50 GB min500</td>
-</tr>
-<tr>
-  <td>Static external IP</td>
-  <td>A stable address for HTTPS</td>
-  <td>1 IPv4</td>
-</tr>
-<tr>
-  <td>VPC firewall rules</td>
-  <td>Only 22 (SSH, your IP), 80 and 443 are open; 8000, 8501 and 6333 stay closed</td>
-  <td>—</td>
-</tr>
-<tr>
-  <td>Cloud Storage bucket</td>
-  <td>Index copies from Colab: <code>indexes/chroma_db</code> and <code>snapshots/qdrant_db</code></td>
-  <td>~5–20 GB, same region as the VM</td>
-</tr>
-<tr>
-  <td>Default service account</td>
-  <td>Lets the VM read the bucket, with no keys on the server</td>
-  <td>Storage read access</td>
-</tr>
-</tbody>
-</table>
-<h3>2.2 On the VM (Docker Compose)</h3>
-<p>One image serves both <code>api</code> and <code>ui</code>.</p>
-<table>
-<thead>
-<tr>
-  <th>Container</th>
-  <th>Role</th>
-  <th>Port</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td><code>caddy</code> (<code>https</code> profile)</td>
-  <td>HTTPS (Let's Encrypt) and a basic-auth login in front of the UI</td>
-  <td>80, 443 (public)</td>
-</tr>
-<tr>
-  <td><code>ui</code></td>
-  <td>Streamlit</td>
-  <td>8501 (localhost only)</td>
-</tr>
-<tr>
-  <td><code>api</code></td>
-  <td>FastAPI with the agent flows (router, Q&amp;A, trend, sector trend, and the fund agent when fund data is present). Query embeddings (bge-small through the shared API with the <code>gcp</code> profile, or local; MiniLM for MiniLM indexes) and the reranker run on CPU here; Pipeline 1's Chroma index and the optional mutual fund data (<code>indexes/mutual_fund/</code>) are read from disk</td>
-  <td>8000 (localhost only)</td>
-</tr>
-<tr>
-  <td><code>qdrant</code></td>
-  <td>Pipeline 2 collections (<code>annual_reports_text</code>, <code>annual_reports_visual</code>)</td>
-  <td>6333 (internal)</td>
-</tr>
-</tbody>
-</table>
-<h3>2.3 Outside Google Cloud</h3>
-<table>
-<thead>
-<tr>
-  <th>Service</th>
-  <th>Role</th>
-  <th>Cost</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>Track B LLM endpoint (Qwen3-8B)</td>
-  <td>All answers and the critic's fact-checking judge</td>
-  <td>team quota</td>
-</tr>
-<tr>
-  <td>Colab Pro + Google Drive 100 GB</td>
-  <td>Index build, and its long-term copy</td>
-  <td>$9.99 + $1.99 per month</td>
-</tr>
-<tr>
-  <td>GitHub</td>
-  <td>The code the VM clones</td>
-  <td>free</td>
-</tr>
-<tr>
-  <td>LangSmith (optional)</td>
-  <td>Traces</td>
-  <td>free tier</td>
-</tr>
-<tr>
-  <td><code>sslip.io</code> hostname</td>
-  <td>HTTPS without buying a domain (own domain ~$10–15/year)</td>
-  <td>free</td>
-</tr>
-<tr>
-  <td>Hugging Face Hub</td>
-  <td>Model downloads on first start, then cached</td>
-  <td>free</td>
-</tr>
-<tr>
-  <td>Track B embedding API (<code>bge-small-en-v1.5</code>)</td>
-  <td>Query embeddings for bge-small indexes and fund cards (<code>RAG_EMBEDDING_PROVIDER=hosted</code>, the <code>gcp</code> default); falls back to the local model</td>
-  <td>team key</td>
-</tr>
-<tr>
-  <td>SEC EDGAR (optional)</td>
-  <td>N-PORT filings for the mutual fund layer, fetched on the VM (<code>SEC_USER_AGENT</code> with a contact e-mail)</td>
-  <td>free</td>
-</tr>
-</tbody>
-</table>
-<h2>3. Cost for 15 days</h2>
-<table>
-<thead>
-<tr>
-  <th>Item</th>
-  <th>Full corpus</th>
-  <th>min500</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>VM compute (24 h × 15 days = 360 h)</td>
-  <td>e2-standard-4: 0.134 × 360 ≈ <strong>$48</strong></td>
-  <td>e2-standard-2: 0.067 × 360 ≈ <strong>$24</strong></td>
-</tr>
-<tr>
-  <td>Persistent disk</td>
-  <td>100 GB ≈ <strong>$5</strong></td>
-  <td>50 GB ≈ <strong>$2.5</strong></td>
-</tr>
-<tr>
-  <td>Static IP (in use)</td>
-  <td>≈ $0.005/h ≈ <strong>$2</strong></td>
-  <td>≈ <strong>$2</strong></td>
-</tr>
-<tr>
-  <td>Cloud Storage bucket</td>
-  <td>15–20 GB ≈ <strong>$0.20</strong></td>
-  <td>~8 GB ≈ <strong>$0.10</strong></td>
-</tr>
-<tr>
-  <td>Network egress (a demo's traffic)</td>
-  <td>&lt; <strong>$1</strong></td>
-  <td>&lt; <strong>$1</strong></td>
-</tr>
-<tr>
-  <td><strong>Google Cloud for 15 days</strong></td>
-  <td><strong>≈ $55</strong></td>
-  <td><strong>≈ $29</strong></td>
-</tr>
-<tr>
-  <td>One-off index build: Colab Pro + Drive</td>
-  <td>$12</td>
-  <td>$12</td>
-</tr>
-<tr>
-  <td>LLM</td>
-  <td>Track B quota</td>
-  <td>Track B quota</td>
-</tr>
-<tr>
-  <td><strong>Total</strong></td>
-  <td><strong>≈ $67</strong></td>
-  <td><strong>≈ $41</strong></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Optional:</strong> a paid vision model for Pipeline 1's <code>paidVL</code> pages adds about <strong>$1–$39</strong> for min500, depending on the model. This is pending the mentor's decision (<a href="chart_reading.html">chart_reading.md</a>).</p>
-<h3>3.1 Paying less</h3>
-<ul>
-<li><strong>Run the VM only when needed.</strong> A stopped VM costs no compute, but the disk and the IP are still charged. Running 8 hours a day cuts the compute line to about a third.</li>
-<li><strong>Use the free trial.</strong> New Google Cloud accounts get free trial credit, which would likely cover all of this; check the current terms when you sign up.</li>
-<li><strong>Choose min500.</strong> It halves the VM size and the disk.</li>
-<li><strong>Delete everything after grading:</strong> the VM <strong>and</strong> its disk, the static IP and the bucket. Otherwise billing continues.</li>
-</ul>
-<h2>4. Step-by-step commands</h2>
-<p><strong>On Colab, after ingestion:</strong> run cell 12 of <code>colab_ingest_chroma_db.ipynb</code> or <code>colab_ingest_qdrant_db.ipynb</code>, or:</p>
-<pre><code class="language-bash">python -m scripts.rag.colab_pipeline export --pipeline vlm_chroma --bucket gs://capstone-rag-&lt;name&gt;
-</code></pre>
-<p>This authenticates, creates the bucket if needed, and copies both indexes from Drive.</p>
-<p><strong>On the VM:</strong></p>
-<pre><code class="language-bash"># once: Docker Engine + Compose plugin, then the code
-git clone &lt;repo-url&gt; ~/capstone &amp;&amp; cd ~/capstone
-cp .env.example .env &amp;&amp; chmod 600 .env
-#   RAG_PROFILE=gcp
-#   RAG_GCS_BUCKET=gs://capstone-rag-&lt;name&gt;
-#   RAG_HOME_DIR=/srv/capstone          (on the persistent disk)
-#   LLM_API_BASE / LLM_API_KEY / LLM_MODEL, API_AUTH_TOKEN, DOMAIN=&lt;ip&gt;.sslip.io, BASIC_AUTH_HASH
-mkdir -p secrets &amp;&amp; cp &lt;path&gt;/llm_ca.crt secrets/llm_ca.crt
-sudo mkdir -p /srv/capstone &amp;&amp; sudo chown -R $USER /srv/capstone
+services:
+  qdrant:
+    profiles: [&quot;qdrant&quot;]                   # not needed: the main backend is Chroma
+  api:
+    build: *build
+    depends_on: !reset []
+    command:
+      - sh
+      - -c
+      - |
+        if [ &quot;$${LANGSMITH_ENABLED:-false}&quot; = &quot;true&quot; ] &amp;&amp; [ -s /app/rag_home/secrets/langsmith_api_key.txt ]; then
+          export LANGSMITH_API_KEY=&quot;$$(tr -d &#x27;\r\n&#x27; &lt; /app/rag_home/secrets/langsmith_api_key.txt)&quot;; echo &quot;LangSmith: on, for questions that ask for it&quot;
+        else
+          unset LANGSMITH_API_KEY LANGCHAIN_API_KEY; echo &quot;LangSmith: off&quot;
+        fi
+        export LANGSMITH_TRACING=false LANGCHAIN_TRACING_V2=false
+        exec uvicorn scripts.api.api_app:app --host 0.0.0.0 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips &quot;*&quot;
+    mem_limit: 8g
+    environment:
+      RAG_BACKEND: financial_vlm
+      RAG_EMBEDDING_PROVIDER: local        # bge-small on the VM: no embedding key, same as the tested setup
+      RAG_RERANKER_MODEL: cross-encoder/ms-marco-MiniLM-L-6-v2
+      HF_HOME: /app/indexes/hf_cache       # models download once, on the first question
+      RAG_REQUEST_TIMEOUT_SECONDS: &quot;180&quot;
+      RAG_HTTP_TIMEOUT_SECONDS: &quot;90&quot;
+      OMP_NUM_THREADS: &quot;4&quot;
+      LANGSMITH_ENABLED: ${LANGSMITH_ENABLED:-false}   # exactly &quot;true&quot; = the key is loaded; anything else = off
+      LANGSMITH_TRACING: &quot;false&quot;           # never trace everything (free plan)
+      LANGSMITH_ENDPOINT: https://api.smith.langchain.com   # LangSmith US, Google Cloud us-central1
+    volumes:
+      - ./output:/app/output               # reports; the image&#x27;s own folder is not writable by the app user
+      - ./data/raw/financial_report_qa/pdfs/NASDAQ_AAPL_2024.pdf:/app/data/raw/financial_report_qa/pdfs/NASDAQ_AAPL_2024.pdf:ro
+  ui:
+    build: *build
+    command:
+      - sh
+      - -c
+      - |
+        if [ &quot;$${LANGSMITH_ENABLED:-false}&quot; = &quot;true&quot; ] &amp;&amp; [ -s /app/rag_home/secrets/langsmith_api_key.txt ]; then
+          export LANGSMITH_API_KEY=&quot;$$(tr -d &#x27;\r\n&#x27; &lt; /app/rag_home/secrets/langsmith_api_key.txt)&quot;; echo &quot;LangSmith: on, for questions that ask for it&quot;
+        else
+          unset LANGSMITH_API_KEY LANGCHAIN_API_KEY; echo &quot;LangSmith: off&quot;
+        fi
+        export LANGSMITH_TRACING=false LANGCHAIN_TRACING_V2=false
+        exec streamlit run scripts/ui/api_streamlit_app.py --server.address 0.0.0.0 --server.port 8501 \
+          --server.headless true --browser.gatherUsageStats false
+    mem_limit: 2g
+    environment:
+      API_TIMEOUT_SECONDS: &quot;300&quot;
+      LANGSMITH_ENABLED: ${LANGSMITH_ENABLED:-false}
+      LANGSMITH_TRACING: &quot;false&quot;
+      LANGSMITH_ENDPOINT: https://api.smith.langchain.com</code></pre>
+<p><strong>Problems it fixes in the existing setup</strong></p>
+<table><thead><tr><th>Finding</th><th>Effect without the fix</th></tr></thead><tbody><tr><td>The <code>gcp</code> profile embeds questions with the hosted API</td><td>Needs the embedding key; falls back only if the local model loads</td></tr><tr><td>No reranker under <code>RAG_HOME/models</code> on the VM</td><td>No rerank, so answers differ from the tested setup</td></tr><tr><td>PDFs are left out of the image, and <code>/app/output</code> isn't writable</td><td>The Apple 2024 report fails</td></tr><tr><td><code>sync_from_gcs.sh</code> starts and restores Qdrant</td><td>Extra memory and time for a backend that isn't used; the steps below don't call it</td></tr><tr><td><code>.env.example</code> shows LLM port 1034</td><td>The tested endpoint is port <strong>1032</strong></td></tr><tr><td>Default request timeout is 60 s</td><td>Sector questions (70 s median, 80.8 s slowest, measured) would time out</td></tr></tbody></table>
+<p>The deployment scripts have Windows line endings only in the PC checkout; git stores Linux endings, so a clone on the VM is fine.</p>
+<h2 id="6-time">6. Time</h2>
+<table><thead><tr><th>#</th><th>Step</th><th>Time</th></tr></thead><tbody><tr><td>1</td><td>Create the account and project, set the budget alert</td><td>15 min (longer if the bank asks for verification)</td></tr><tr><td>2</td><td>Create the VM in <code>us-central1-a</code></td><td>10 min</td></tr><tr><td>3</td><td><strong>Go / no-go on the VM:</strong> reach the hosted LLM</td><td>5 min</td></tr><tr><td>4</td><td>Bucket in <code>us-central1</code>, and export the index from Drive on Colab</td><td>30 min</td></tr><tr><td>5</td><td>Docker, code, <code>.env</code>, certificate</td><td>20 min</td></tr><tr><td>6</td><td>Build the image</td><td>12–20 min</td></tr><tr><td>7</td><td>Copy 5.8 GB from the bucket and verify</td><td>10 min</td></tr><tr><td>8</td><td>Start, load models, first question</td><td>10 min</td></tr><tr><td>9</td><td>Smoke test through an SSH tunnel</td><td>15 min</td></tr><tr><td></td><td><strong>Private demo ready</strong></td><td><strong>about 2¼ h</strong></td></tr><tr><td>10</td><td>Public HTTPS address with a login</td><td>20–30 min</td></tr><tr><td>11</td><td>86 fixed questions (17 min of answers on the PC, measured) and the agent questions</td><td>30–45 min</td></tr><tr><td>12</td><td>Browser test: one question per agent, the report, refusals</td><td>20 min</td></tr><tr><td>13</td><td>Compare with local, fix settings, rerun</td><td>10–15 min</td></tr><tr><td></td><td><strong>Deployed and tested end to end</strong></td><td><strong>about 4 h</strong></td></tr><tr><td></td><td>Redeploy after a code change (<code>git pull</code>, build, <code>up -d</code>)</td><td>10–15 min</td></tr><tr><td></td><td>Start a stopped VM</td><td>3–5 min</td></tr></tbody></table>
+<p>Uploading the index from the PC instead of Drive also works; it is 5.8 GB, so about 40 min at 20 Mbit/s or 8 min at 100 Mbit/s.</p>
+<h2 id="7-steps">7. Steps</h2>
+<p>Replace the names in capitals. Commands run in <strong>Cloud Shell</strong> (free, in the browser) unless the step says otherwise, so nothing has to be installed on the PC. <code>gcloud</code> isn't installed there.</p>
+<h3>7.1 Project and VM</h3>
+<p>Create the trial account and a project in the console, set a $20 budget alert, then in Cloud Shell upload <code>llm_ca.crt</code> (menu: Upload):</p>
+<pre><code>gcloud config set project PROJECT_ID
+gcloud config set compute/region us-central1
+gcloud config set compute/zone us-central1-a
+gcloud services enable compute.googleapis.com storage.googleapis.com
 
-<h1>pull both indexes from the bucket, restore Qdrant, start the stack</h1>
-<p>sh deploy/sync_from_gcs.sh
-docker compose --profile https up -d</p>
-<h1>mutual fund data: sync_from_gcs.sh already pulled gs://&lt;bucket&gt;/indexes/mutual_fund when cp.export_to_gcs put it</h1>
-<h1>there (from MyDrive/capstone_rag/mutual_fund_data.zip, made on the PC with <code>colab_pipeline pack-funds</code>).</h1>
-<h1>Not in the bucket? Build it on the VM instead (a few MB, about a minute; deployment.md §7.4):</h1>
-<p>docker compose run --rm -e SEC_USER_AGENT=&quot;capstone-research you@example.com&quot; api python -m scripts.downloads.download_mutual_fund latest
-docker compose run --rm api python -m scripts.rag.nport_mutual_fund load --xml /app/rag_home/indexes/mutual_fund/raw_mutual_fund
-docker compose run --rm api python -m scripts.rag.cards_mutual_fund build --embedding-provider hosted   # or local
-docker compose restart api</p>
-<h1>check</h1>
-<p>curl -fsS http://127.0.0.1:8000/health      # profile gcp, both index folders, reranker / ca_cert flags
-curl -fsS http://127.0.0.1:8000/mutual_fund/funds   # 404 until fund data is loaded
-</code></pre></p>
-<p><strong>After grading:</strong></p>
-<pre><code class="language-bash">docker compose down
-# then delete the VM, its disk, the static IP and the bucket in the console (or with gcloud)
-</code></pre>
-<h2>5. Not verified yet</h2>
-<ul>
-<li><strong>Docker image:</strong> not built yet, because Docker isn't installed on the development PC. The first build on the VM is the real check.</li>
-<li><strong>Index copy scripts:</strong> the <code>gcloud</code> steps (<code>cp.export_to_gcs</code>, <code>deploy/sync_from_gcs.sh</code>) haven't been run against a real bucket. Their syntax and the commands they build are tested.</li>
-<li><strong>Qwen3-VL and ColPali at full scale:</strong> neither has run on a Colab GPU yet, so the GPU-hour estimates are uncertain.</li>
-<li><strong>Mutual fund data in containers:</strong> the build commands above were run locally (14 November 2026), not yet inside the image. The shared embedding API's private CA must be in <code>secrets/embedding_ca.crt</code> for <code>--embedding-provider hosted</code>.</li>
-<li><strong>Prices:</strong> these are list prices. Some LLM and Colab prices change on 1 December and 1 January.</li>
-</ul>
-<p><strong>Do a dry run first.</strong> Before the full sync, deploy 1–2 sectors end to end (about an hour) to confirm the build, the sync and the restore.</p>
-</body></html>
+gcloud compute instances create copilot --machine-type=e2-standard-4 \
+  --image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud \
+  --boot-disk-size=50GB --boot-disk-type=pd-balanced --scopes=storage-ro --tags=copilot
 
+gcloud compute scp llm_ca.crt copilot:~
+gcloud compute ssh copilot</code></pre>
+<h3>7.2 Go / no-go check, on the VM</h3>
+<p>Cloud Shell may run in another region, so test from the VM itself:</p>
+<pre><code>read -rs LLM_KEY      # paste the key; it isn&#x27;t shown or stored
+for i in 1 2 3; do
+curl -sS -m 30 -o /tmp/llm.json -w &#x27;llm %{http_code} connect %{time_connect}s tls %{time_appconnect}s total %{time_total}s\n&#x27; --cacert ~/llm_ca.crt \
+  -H &quot;Authorization: Bearer $LLM_KEY&quot; -H &#x27;Content-Type: application/json&#x27; \
+  -d &#x27;{&quot;model&quot;:&quot;Qwen/Qwen3-8B&quot;,&quot;messages&quot;:[{&quot;role&quot;:&quot;user&quot;,&quot;content&quot;:&quot;Say OK&quot;}],&quot;max_tokens&quot;:8,&quot;chat_template_kwargs&quot;:{&quot;enable_thinking&quot;:false}}&#x27; \
+  https://103.42.50.41:1032/v1/chat/completions
+done
+unset LLM_KEY</code></pre>
+<table><thead><tr><th>Result</th><th>Meaning</th></tr></thead><tbody><tr><td><code>llm 200</code></td><td><strong>Go</strong></td></tr><tr><td>LLM <code>total</code> above about 5 s</td><td>Works, but slow: consider Mumbai</td></tr><tr><td>LLM times out or is refused</td><td><strong>Stop.</strong> The endpoint doesn't accept this US address. Ask the coordinator to allow the VM's IP, or use the local demo. Remove the VM; the cost so far is a few cents</td></tr><tr><td>LLM 401</td><td>Wrong key</td></tr></tbody></table>
+<h3>7.3 Bucket and index</h3>
+<p>In Cloud Shell:</p>
+<pre><code>gcloud storage buckets create gs://BUCKET --location=us-central1 --uniform-bucket-level-access
+SA=$(gcloud compute instances describe copilot --format=&#x27;value(serviceAccounts[0].email)&#x27;)
+gcloud storage buckets add-iam-policy-binding gs://BUCKET --member=&quot;serviceAccount:$SA&quot; --role=roles/storage.objectViewer</code></pre>
+<p>On Colab (no GPU), with Drive mounted and the code unpacked as in the ingest notebooks:</p>
+<pre><code>python -m scripts.rag.colab_pipeline export --pipeline vlm_chroma --bucket gs://BUCKET</code></pre>
+<p>It copies <code>MyDrive/capstone_rag/indexes/chroma_db</code> and the fund zip when present, and only reads Drive. If the fund zip isn't on Drive, upload the folder <code>indexes/rag_home/indexes/mutual_fund</code> (5.9 MB) to <code>gs://BUCKET/indexes/mutual_fund</code>.</p>
+<h3>7.4 On the VM: Docker, code, settings</h3>
+<pre><code>curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker &quot;$USER&quot;                     # then log out and connect again
+git clone REPO_URL ~/capstone &amp;&amp; cd ~/capstone     # private repository: use a read-only deploy key
+mkdir -p secrets indexes/hf_cache output &amp;&amp; cp ~/llm_ca.crt secrets/     # only this file, until LangSmith is needed (7.7)
+sudo mkdir -p /srv/capstone/indexes/chroma_db /srv/capstone/indexes/mutual_fund /srv/capstone/state /srv/capstone/models
+cp .env.example .env &amp;&amp; chmod 600 .env &amp;&amp; nano .env</code></pre>
+<table><thead><tr><th><code>.env</code> setting</th><th>Value</th></tr></thead><tbody><tr><td><code>RAG_PROFILE</code></td><td><code>gcp</code></td></tr><tr><td><code>RAG_HOME_DIR</code></td><td><code>/srv/capstone</code></td></tr><tr><td><code>LLM_API_BASE</code>, <code>LLM_MODEL</code></td><td><code>https://103.42.50.41:1032/v1</code>, <code>Qwen/Qwen3-8B</code></td></tr><tr><td><code>LLM_API_KEY</code></td><td>The hosted LLM key, typed on the VM only</td></tr><tr><td><code>LLM_MAX_TOKENS</code></td><td><code>1024</code></td></tr><tr><td><code>DEFAULT_LLM_PROVIDER</code></td><td><code>hosted</code></td></tr><tr><td><code>API_AUTH_TOKEN</code></td><td>A long random value</td></tr><tr><td><code>ANSWER_CACHE_SECONDS</code></td><td><code>0</code> while testing, <code>600</code> for the demo</td></tr><tr><td><code>LANGSMITH_ENABLED</code></td><td><code>false</code>. Set to exactly <code>true</code> only for the demo or technical documents (section 7.7)</td></tr><tr><td><code>LANGSMITH_TRACING</code>, <code>LANGSMITH_API_KEY</code></td><td><code>false</code> and <strong>empty</strong>. The key is never put in <code>.env</code></td></tr><tr><td><code>LANGSMITH_PROJECT</code></td><td><code>annual-report-copilot</code></td></tr><tr><td><code>DOMAIN</code>, <code>BASIC_AUTH_USER</code>, <code>BASIC_AUTH_HASH</code></td><td>Only for HTTPS. Put the hash in <strong>single quotes</strong>, because it contains <code>$</code></td></tr></tbody></table>
+<h3>7.5 Index, build, start</h3>
+<pre><code>gcloud storage rsync -r gs://BUCKET/indexes/chroma_db   /srv/capstone/indexes/chroma_db
+gcloud storage rsync -r gs://BUCKET/indexes/mutual_fund /srv/capstone/indexes/mutual_fund
+sudo chown -R 1000:1000 /srv/capstone indexes output
+
+alias dc=&#x27;docker compose -f docker-compose.yml -f docker-compose.gcp.yml&#x27;
+dc build api
+dc run --rm --no-deps api python -c &quot;
+import sqlite3
+r=&#x27;/app/rag_home/indexes/chroma_db/&#x27;
+print(sqlite3.connect(r+&#x27;chroma/chroma.sqlite3&#x27;).execute(&#x27;select count(*) from embeddings&#x27;).fetchone(),
+      sqlite3.connect(r+&#x27;vlm_ingest.sqlite3&#x27;).execute(&#x27;select count(distinct doc_id) from filings&#x27;).fetchone())&quot;
+# expect (335699,) (509,)
+dc up -d api ui &amp;&amp; dc ps
+curl -fsS http://127.0.0.1:8000/health</code></pre>
+<p>In <code>/health</code> expect <code>profile</code> gcp, <code>financial_backend</code> financial_vlm, <code>vlm_index_ready</code> true, <code>reranker</code> true and <code>ca_cert</code> true. If the copy step needs write access, run <code>gcloud storage rsync</code> before the <code>chown</code>, or with <code>sudo</code>.</p>
+<h3>7.6 Open the demo</h3>
+<p><strong>Private, recommended for testing.</strong> No open ports, no domain. In Cloud Shell:</p>
+<pre><code>gcloud compute ssh copilot -- -L 8080:localhost:8501
+# then Cloud Shell: Web Preview on port 8080</code></pre>
+<p>If Streamlit doesn't load in Web Preview, install the Google Cloud CLI on the PC and use the same command with <code>-L 8511:localhost:8501</code>, then open <code>http://127.0.0.1:8511</code>.</p>
+<p><strong>Public HTTPS, for reviewers.</strong> Reserve a static IP in <code>us-central1</code> and attach it, then:</p>
+<pre><code>gcloud compute firewall-rules create copilot-https --allow=tcp:80,tcp:443 --target-tags=copilot   # Cloud Shell
+docker run --rm caddy:2.8 caddy hash-password --plaintext &#x27;PASSWORD&#x27;                              # VM: BASIC_AUTH_HASH
+# .env: DOMAIN=IP-WITH-DASHES.sslip.io
+dc --profile https up -d</code></pre>
+<p>Open <code>https://IP-WITH-DASHES.sslip.io</code> and log in.</p>
+<h3>7.7 LangSmith: only when the value is <code>true</code></h3>
+<table><thead><tr><th><code>LANGSMITH_ENABLED</code> in <code>.env</code></th><th>What happens</th></tr></thead><tbody><tr><td>Missing, <code>false</code>, or anything else (<code>TRUE</code>, <code>1</code>, <code>yes</code>)</td><td><strong>Off.</strong> The key isn't loaded into FastAPI or Streamlit, so nothing is sent, even if someone switches on "LangSmith tracing" in Streamlit, or a key was left in <code>.env</code></td></tr><tr><td><code>true</code></td><td>The key is loaded from <code>secrets/langsmith_api_key.txt</code>. <strong>Only</strong> questions asked with "LangSmith tracing" switched on are sent; one question is one trace</td></tr></tbody></table>
+<p><code>LANGSMITH_TRACING</code> is fixed to <code>false</code> in both containers, so everything can't be traced by accident. The switch is in the container start command (section 5); no application code changes. Tested on 24 November 2026 outside Docker: the real start commands of both containers with a fake key, for every value in the table; nothing was sent.</p>
+<p><strong>Turn it on, for the demo or for a few runs for a technical document:</strong></p>
+<ol><li>Put the key on the VM once, as <code>~/capstone/secrets/langsmith_api_key.txt</code>: <code>(umask 077; read -rs K; printf %s &quot;$K&quot; &gt; secrets/langsmith_api_key.txt); sudo chown 1000:1000 secrets/langsmith_api_key.txt</code></li><li>Set <code>LANGSMITH_ENABLED=true</code> in <code>.env</code> and run <code>dc up -d api ui</code>.</li><li>Check that <code>/health</code> shows <code>langsmith.api_key_set</code> <code>true</code>, and <code>curl -sS -o /dev/null -w &#x27;%{http_code}\n&#x27; https://api.smith.langchain.com/info</code> prints 200.</li><li>In Streamlit's "Demo settings", switch on <strong>LangSmith tracing</strong>, ask the question, then switch it off.</li><li>Open <code>https://smith.langchain.com</code>, project <code>annual-report-copilot</code>.</li></ol>
+<p><strong>Turn it off:</strong> set <code>LANGSMITH_ENABLED=false</code>, run <code>dc up -d api ui</code>, and check that <code>api_key_set</code> is <code>false</code>. Turning it on or off takes 1–2 min.</p>
+<p>The free plan has 5,000 traces a month, kept for 14 days. Keep it off for the build, the smoke tests and the 113-question run. A traced question sends the question, the retrieved excerpts and the answer to LangSmith in the US; the excerpts come from public SEC filings, and keys are never sent. If the LangSmith account is in another region, change <code>LANGSMITH_ENDPOINT</code> in the override.</p>
+<h2 id="8-end-to-end-tests">8. End-to-end tests</h2>
+<table><thead><tr><th>Test</th><th>How</th><th>Pass rule</th></tr></thead><tbody><tr><td>Index</td><td>The count command in 7.5</td><td>335,699 chunks, 509 filings</td></tr><tr><td>Same index as local</td><td>SHA-256 of <code>bm25.sqlite3</code> and <code>data_level0.bin</code> on both sides</td><td>Equal (<code>chroma.sqlite3</code> changes when it is opened, so compare its counts)</td></tr><tr><td>Health</td><td><code>/health</code></td><td>Values in 7.5</td></tr><tr><td>Access</td><td>Without login and without token</td><td>Refused; ports 8000 and 8501 unreachable from outside</td></tr><tr><td>Seven agents in the browser</td><td>One question each: Q&amp;A, trend, sector, fund, shareholder returns, dividend income, Apple 2024 report</td><td>Cited answer or report</td></tr><tr><td>Guardrails</td><td>Advice, forecast and prompt-injection questions</td><td>Refused, no figure</td></tr><tr><td>86 fixed questions</td><td><code>dc exec api python -m scripts.evaluation.evaluate_agent_api --technique router</code></td><td>At least 71 of 86 (local result), changed answers reviewed</td></tr><tr><td>27 agent questions</td><td>The user guide's questions, by hand or with the local script</td><td>At least 26 of 27</td></tr><tr><td>Response time</td><td>Same runs</td><td>Expect about 13–14 s median from the US; local is 10.9 s, 95th percentile 23.7 s</td></tr><tr><td>LangSmith off by default</td><td><code>/health</code>; switch on tracing in Streamlit and ask one question</td><td><code>api_key_set</code> false, response says <code>missing_LANGSMITH_API_KEY</code>, no new trace</td></tr><tr><td>LangSmith on, only before the demo</td><td>Section 7.7, one question</td><td>One trace in the US project; a question without the toggle adds none</td></tr><tr><td>Restart</td><td><code>dc restart api</code>, stop and start the VM</td><td>Comes back healthy</td></tr><tr><td>Local unaffected</td><td>Local <code>/health</code> and Streamlit</td><td>No change</td></tr></tbody></table>
+<p>Don't ask questions locally while the VM tests run: the LLM key allows one request at a time, so both would wait or fail with HTTP 429.</p>
+<h2 id="9-will-it-affect-the-local-pc-or-the-collections">9. Will it affect the local PC or the collections?</h2>
+<ul><li>The local FastAPI, Streamlit and collections aren't used by any step. Drive's <code>chroma_db</code> is only read.</li><li>The VM serves its own copy in <code>/srv/capstone</code>. Later index changes need a new export and rsync.</li><li>The only shared resource is the LLM key.</li><li>Answers may differ slightly: Linux and Windows maths can reorder near-ties, and the VM's CPU is different. Section 8 measures this.</li></ul>
+<h2 id="10-risks">10. Risks</h2>
+<table><thead><tr><th>Risk</th><th>What to do</th></tr></thead><tbody><tr><td>The LLM endpoint refuses US or Google Cloud addresses</td><td>Check on the VM first (7.2); fall back to the local demo</td></tr><tr><td>LLM calls are slower from the US</td><td>Expected +2.5 s a question; measured in 7.2 before anything is built</td></tr><tr><td>LangSmith free limit</td><td>Off unless <code>LANGSMITH_ENABLED</code> is <code>true</code>, and then only questions that ask for tracing</td></tr><tr><td>Trial sign-up or card verification is slow or refused</td><td>Start early; another eligible team member can host it</td></tr><tr><td>Quota or capacity refuses the VM</td><td>Try another US zone, <code>us-east1</code>, or <code>e2-standard-2</code></td></tr><tr><td>First image build fails</td><td>Build problems don't affect local; fix and rebuild</td></tr><tr><td>Sector answers are slower on 4 vCPU</td><td>Timeouts are raised to 180 s (API) and 300 s (UI); use a warm-up question</td></tr><tr><td>Two users at once</td><td>Questions queue, because the key allows one at a time</td></tr><tr><td>Keys on the VM</td><td><code>.env</code> with mode 600, only <code>llm_ca.crt</code> in <code>secrets/</code> (and the LangSmith key when needed); delete the VM after grading</td></tr><tr><td>Forgotten resources</td><td>Budget alert, and section 11</td></tr></tbody></table>
+<h2 id="11-after-the-demo">11. After the demo</h2>
+<p>Stop the VM when it isn't used; the disk, and a static IP at the higher unused rate, still cost a little:</p>
+<pre><code>gcloud compute instances stop copilot --zone=us-central1-a</code></pre>
+<p>When grading is over, remove the VM with its disk, the firewall rule, the static IP and the bucket in the console, or shut down the whole project. Confirm in Billing that nothing is left. The original index stays on Drive and on the PC.</p>
+<h2 id="12-sources-and-what-isn-t-verified">12. Sources and what isn't verified</h2>
+<table><thead><tr><th>Source (read 24 November 2026)</th><th>Used for</th></tr></thead><tbody><tr><td><a href="https://docs.cloud.google.com/free/docs/free-cloud-features">Free cloud features and trial offer</a></td><td>Trial rules, eligibility, always-free limits</td></tr><tr><td><a href="https://cloud.google.com/products/compute/pricing/general-purpose">General-purpose machine pricing</a></td><td>E2 prices, Iowa</td></tr><tr><td><a href="https://docs.langchain.com/langsmith/cloud">LangSmith cloud regions</a> and <a href="https://docs.langchain.com/langsmith/regions-faq">regions FAQ</a></td><td>LangSmith US is Google Cloud <code>us-central1</code>; no moves between regions</td></tr><tr><td><a href="https://docs.langchain.com/langsmith/usage-and-billing">LangSmith usage and billing</a></td><td>5,000 traces a month, 14 days</td></tr><tr><td>APNIC registry (RDAP) for the LLM address, and connection times measured on the PC</td><td>LLM location and speed</td></tr><tr><td><a href="https://cloud.google.com/vpc/network-pricing">Network pricing</a></td><td>External IP</td></tr><tr><td><a href="https://cloud.google.com/compute/disks-image-pricing">Disk pricing</a></td><td>Balanced disk, Iowa</td></tr><tr><td><a href="https://cloud.google.com/storage/pricing">Storage pricing</a></td><td>Bucket</td></tr><tr><td><a href="https://gcloud-compute.com/e2-standard-4.html">gcloud-compute.com</a> (third party)</td><td>Mumbai, as the alternative</td></tr></tbody></table>
+<p><strong>Not verified</strong></p>
+<ul><li>Whether a <code>us-central1</code> VM can reach the LLM endpoint, and how fast. The US-to-India times are estimates until 7.2 is run. An address registered in India may still be served from elsewhere.</li><li>LangSmith tracing from the VM.</li><li>The Docker image on Linux, the override at run time, and every <code>gcloud</code> command against a real project.</li><li>Streamlit through Cloud Shell Web Preview.</li><li>The trial's CPU quota in <code>us-central1</code>.</li><li>The bandwidth and speed figures; step times are estimates.</li><li>Whether Drive's <code>chroma_db</code> still equals the local <code>chroma_db_colab</code>; the checks in section 8 confirm it.</li></ul>
+<p><strong>Larger setups:</strong> the full corpus of 1,004 filings isn't built. It would need a new Colab build and about twice the disk. The wider options, storage layout and the <code>gcp</code> profile are in <a href="deployment.html">deployment.md</a>.</p>
 </body></html>
