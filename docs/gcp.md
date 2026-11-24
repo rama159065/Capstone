@@ -15,6 +15,7 @@ Updated 24 November 2026 (first written 13 November). It covers Streamlit, FastA
 | Deploy, first time | **About 2¼ h** to a working private demo, **+25 min** for a public HTTPS address |
 | Deploy and test end to end | **About 4 h** |
 | Each later code change | 10–15 min to redeploy, plus about 15 min of smoke tests |
+| Google Cloud services | **9 required**, 3 optional (section 4.1). No GPU, database, Kubernetes or Vertex AI |
 | VM | `e2-standard-4` (4 vCPU, 16 GB), 50 GB disk, Ubuntu 24.04 |
 | Application code to change | None. Three new deployment files (section 5) |
 | Region | **`us-central1` (Iowa), zone `us-central1-a`**: the same Google Cloud region as LangSmith's US service, and the cheapest used here |
@@ -117,7 +118,7 @@ So LangSmith's region is a good fit but doesn't speed up answers; the LLM's loca
 **Size and platform**
 
 - **Size:** `e2-standard-4` is advised because sector questions search up to 32 company-years and rerank on CPU. `e2-standard-2` should hold the app, but sector answers (70 s median on the PC, measured) could come close to the 180 s request limit.
-- **Cloud Run isn't suitable:** each copy would load the models and a 5.8 GB index, and rate limits and conversation state are kept per process.
+- **Cloud Run isn't suitable:** see section 4.1.
 
 ## 4. What runs where
 
@@ -145,6 +146,78 @@ flowchart LR
 | Qdrant | Not started: the main backend is Chroma | — |
 | Qwen3-8B | Track B endpoint, port 1032, address registered in India | Called by `api` |
 | LangSmith | US service, Google Cloud `us-central1` | Not contacted unless `LANGSMITH_ENABLED` is `true`; then only for questions that ask for tracing |
+
+### 4.1 Google Cloud services used
+
+**Required for deployment and testing**
+
+| # | Service | What it does here | Setting | Cost |
+|---|---|---|---|---|
+| 1 | **Resource Manager** (project) | Holds everything for the demo, so it can all be removed together | One project | Free |
+| 2 | **Cloud Billing** (Free Trial account, budget alert) | Pays from the $300 credit and warns about spending | Budget alert at $20 | Free |
+| 3 | **IAM** (service account) | Lets the VM read the bucket without a key file | VM's default service account, `roles/storage.objectViewer` on this bucket only | Free |
+| 4 | **Cloud Shell** | Runs every `gcloud` command and opens the private demo (Web Preview), from the browser | No installation | Free, 5 GB of storage |
+| 5 | **Compute Engine** (VM) | Runs Docker with FastAPI, the router and seven agents, guardrails, Streamlit, bge-small and the reranker | `e2-standard-4`, `us-central1-a`, Ubuntu 24.04 | $0.1340 / hour |
+| 6 | **Persistent Disk** (part of Compute Engine) | Chroma, BM25 and fund data (`/srv/capstone`), Docker image, model cache, conversation state, reports | 50 GB balanced | $0.10 / GiB-month |
+| 7 | **Virtual Private Cloud** (default network, firewall, external IP) | Reaches the LLM, accepts SSH and, if public, HTTPS | SSH; 80 and 443 only for public access. 8000, 8501 and 6333 stay closed | IP $0.005 / hour in use |
+| 8 | **Cloud Storage** | Carries the index from Drive to the VM | One private bucket in `us-central1`, about 6 GB | About $0.12 / month, 5 GB-months free |
+| 9 | **Google Cloud Observability** (Cloud Logging, Cloud Monitoring) | Audit logs, VM start-up log, and VM CPU, disk and network charts during the tests | Default, no agent installed | Free within the limits (50 GiB of logs a month) |
+
+**Optional**
+
+| Service | Use it when | Cost |
+|---|---|---|
+| **Static external IP** (VPC) | Reviewers need an HTTPS address that stays the same | $0.005 / hour in use, $0.01 / hour reserved but unused |
+| **Secret Manager** | You prefer not to keep the LLM and LangSmith keys in files on the VM. Needs an extra step to load them; not part of this plan | Free for 6 active secret versions and 10,000 reads a month |
+| **Snapshots** (Compute Engine) | You want a copy of the disk before a risky change | Small, by size; delete afterwards |
+
+**APIs to switch on:** `compute.googleapis.com` and `storage.googleapis.com` (section 7.1). Logging, Monitoring and IAM need nothing for this plan.
+
+**Who needs which access:** one project owner creates everything; testers need only the login of the demo page, not Google Cloud access.
+
+**Not used, and why**
+
+| Service | Reason |
+|---|---|
+| Cloud Run, App Engine | Short-lived copies would reload the models and a 5.8 GB index; limits and state are kept per process |
+| Google Kubernetes Engine | One VM with Docker Compose is enough |
+| Vertex AI, Gemini API, GPUs | The LLM is the hosted Qwen3-8B; embeddings and reranking run on CPU. The trial can't add GPUs, and the credit can't pay for these APIs |
+| Cloud SQL, Firestore, Memorystore, a managed vector database | Chroma and SQLite are files on the VM's disk |
+| Cloud Load Balancing, Cloud CDN, Cloud DNS | Caddy handles HTTPS on the VM, and `sslip.io` gives the name |
+| Artifact Registry, Cloud Build | The image is built on the VM |
+| Marketplace | Not available on the trial, and not needed |
+
+### 4.2 Services outside Google Cloud
+
+| Service | Used for | When |
+|---|---|---|
+| Hosted Qwen3-8B (Track B) | Answers, routing and the critic | Every question |
+| LangSmith US | Traces | Only when `LANGSMITH_ENABLED` is `true` |
+| Google Drive and Colab | Source of the index copy | Once |
+| GitHub | Code | Deploy and redeploy |
+| Docker Hub, Debian, PyPI, PyTorch wheels | Image build | Build |
+| Hugging Face Hub | bge-small and the reranker | First start, then cached |
+| Let's Encrypt, `sslip.io` | HTTPS | Only for public access |
+
+### 4.3 Which service each end-to-end test uses
+
+| Test stage | Google Cloud services | Outside | What it proves |
+|---|---|---|---|
+| Go / no-go (7.2) | Compute Engine, VPC, Cloud Shell | Hosted LLM | A US VM can reach the LLM, and how fast |
+| Index copy (7.3, 7.5) | Cloud Storage, IAM, Persistent Disk | Drive, Colab | 335,699 chunks and 509 filings arrived |
+| Build and start (7.5) | Compute Engine, Persistent Disk | Docker Hub, PyPI, Hugging Face | The image works on Linux |
+| Health (7.5) | Compute Engine | — | Right index, reranker and certificate |
+| Retrieval | Compute Engine, Persistent Disk | — | Chroma, BM25 and the reranker return the same evidence as local |
+| Seven agents, guardrails, report | Compute Engine, Persistent Disk | Hosted LLM | Streamlit → FastAPI → agents → RAG → LLM, end to end |
+| 86 + 27 questions | Compute Engine, Cloud Monitoring | Hosted LLM | Accuracy, response times, CPU load |
+| Private access | Cloud Shell, VPC (SSH) | — | The demo opens with no public port |
+| Public access | VPC firewall, static IP | Let's Encrypt, `sslip.io` | HTTPS and login work; other ports are closed |
+| Restart | Compute Engine, Persistent Disk | — | Stop and start keeps the index and state |
+| Tracing | Compute Engine, VPC | LangSmith | Off by default; one trace per chosen question |
+| Cost | Cloud Billing | — | Spending matches section 3 |
+| Clean-up | All | — | Nothing is left running |
+
+Application logs stay on the VM (`dc logs api`), and memory use is read with `docker stats`.
 
 ## 5. Changes required
 
@@ -463,7 +536,7 @@ When grading is over, remove the VM with its disk, the firewall rule, the static
 
 | Source (read 24 November 2026) | Used for |
 |---|---|
-| [Free cloud features and trial offer](https://docs.cloud.google.com/free/docs/free-cloud-features) | Trial rules, eligibility, always-free limits |
+| [Free cloud features and trial offer](https://docs.cloud.google.com/free/docs/free-cloud-features) | Trial rules, eligibility, always-free limits (VM, storage, logging, Cloud Shell, Secret Manager) |
 | [General-purpose machine pricing](https://cloud.google.com/products/compute/pricing/general-purpose) | E2 prices, Iowa |
 | [LangSmith cloud regions](https://docs.langchain.com/langsmith/cloud) and [regions FAQ](https://docs.langchain.com/langsmith/regions-faq) | LangSmith US is Google Cloud `us-central1`; no moves between regions |
 | [LangSmith usage and billing](https://docs.langchain.com/langsmith/usage-and-billing) | 5,000 traces a month, 14 days |
