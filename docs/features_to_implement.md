@@ -412,13 +412,14 @@ The clarifier suggests the right metric when the asked one doesn't apply. Its `m
 
 | ID | Feature | Status | Details |
 |---|---|---|---|
-| U0 | Feature guide | **Done** (10 Nov) | "What can I ask?": one clickable example per working capability, built from `/companies` so every example is answerable; a live coverage line (filings, companies, sectors, years); a test-mode notice with the mock LLM; "How to read an answer" (statuses, support check, Agent run). `tests/test_ui_guide.py` |
-| U1 | Citation panel | Extend | Each citation shows company, year, page and section, and opens the PDF page image (rendered on demand) |
+| U0 | Feature guide | **Done** (10 Nov) | "What can I ask?": one clickable example per working capability, built from `/companies` so every example is answerable; a live coverage line (filings, companies, sectors, years); a test-mode notice with the mock LLM; "How to read an answer" (statuses, support check, the *Thought for N s* dropdown). `tests/test_ui_guide.py` |
+| U1 | Citation panel | Partly done | **Done:** numbered citations [1] [2] in the answer, listed under it and in the *Sources* tab by company, fiscal year (the company's own name for it) and page (`ui_thinking.source_label`). **To do:** the section, and opening the PDF page image (rendered on demand) |
 | U2 | Comparison and trend views | New | `st.dataframe` table + `st.bar_chart` / `st.line_chart` from `ComparisonTable` / `TrendAnswer`; a download-CSV button |
-| U3 | Answer card | New | Status badge, the answer, calculations shown with formulas, an "approximate" tag for chart values, the disclaimer |
+| U3 | Answer card | Partly done | **Done:** status, agent, critic-verdict and figures-verified badges above the answer (`render_badges`). **To do:** calculations shown with formulas, an "approximate" tag for chart values, the disclaimer |
 | U4 | Human review | New | Pending items with Approve / Reject and a comment → `POST /review/{id}` |
 | U5 | Feedback | New | Thumbs up/down + reason, stored with the request ID (for the error analysis) |
 | U6 | Evaluation dashboard page | New | Reads `eval/*/summary.json`: accuracy by category, recall@k, the taxonomy chart, latency; used in the demo |
+| U7 | Chat and thinking view | **Done** | Right-aligned question bubbles, a live *Thinking…* line with a timer while the agents work (input disabled), the answer typed out, the guide in the sidebar once the chat starts, a navy and teal theme (`scripts/ui/.streamlit/config.toml`, `chat.css`). One collapsed **Thought for N s** dropdown replaces the five expanders: *Steps* (timeline of `agent_run`), *Agent graph* (Mermaid, path taken highlighted), *Sources*, *Checks*, *Raw* (`scripts/ui/ui_thinking.py`). UI only: the API has no per-step times or streaming, so the steps appear when the answer does. `tests/test_ui_thinking.py`, `tests/test_ui_guide.py` |
 
 ---
 

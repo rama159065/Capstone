@@ -120,6 +120,13 @@ Deployment settings are all environment variables (`.env.example`):
 
 `GET /companies` lists tickers, names, sectors and covered years from the clarifier's directory. That directory is the corpus manifests (plus `RAG_CORPUS_DIR`) **and** the filings whose `text` stage is complete in the served index's `ingest.sqlite3` / `vlm_ingest.sqlite3`, so a server holding only a restored index still knows its coverage. Streamlit builds its ticker/year pickers from it.
 
+### Streamlit UI (`scripts/ui/api_streamlit_app.py`)
+- A chat: the question is a right-aligned bubble (`scripts/ui/chat.css`, which targets the `st-key-user-msg-N` container). While the request runs, the reply shows a live *Thinking…* expander with a timer and the input is disabled (`submit_mode="disable"`). The answer is then typed out under badges and one collapsed **Thought for N s** dropdown.
+- The dropdown is `scripts/ui/ui_thinking.py`, with five tabs: Steps (a timeline built from `agent_run`), Agent graph (Mermaid, with the path taken highlighted), Sources (numbered citations labelled company · FY · page), Checks and Raw. It is UI only: the API has no per-step times, so the steps appear together with the answer.
+- `STEP_INFO`, `NODE_LABELS` and the edge lists mirror `financial_graph`. `tests/test_ui_thinking.py` fails when a node or edge is added without them.
+- `ui_thinking` and `ui_mutual_fund` import Streamlit inside their render functions, because tests swap the module.
+- The theme is in `scripts/ui/.streamlit/config.toml`, which Streamlit reads relative to the entrypoint.
+
 ### Deployment (`Dockerfile`, `docker-compose.yml`, `deploy/`)
 - **One CPU-only image for both services:** torch comes from the CPU wheel index; `deploy/requirements_from_pyproject.py` drops torch and JupyterLab from the pyproject list. Compose runs it as `api` (uvicorn, 1 worker, `--proxy-headers`) and `ui` (Streamlit), next to `qdrant`, with an optional `https` profile (Caddy + basic auth, `deploy/Caddyfile`).
 - **Profiles and storage:** `RAG_PROFILE=local|colab|server|gcp`. Colab is detected; otherwise the default is local.

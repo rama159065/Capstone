@@ -15,7 +15,7 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
 <li>The critic is two checks: citation IDs must be retrieved IDs, and a <strong>support check</strong> (every figure must appear in a cited chunk; an LLM judge decides claim by claim). With a hosted LLM, the generated answer is shown only when both pass; otherwise the response falls back to cited excerpts.</li>
 <li>Loops are <strong>budget-aware</strong>: a loop runs only if the rest of the run still fits <code>AGENT_MAX_STEPS</code> (default 10), so the cap shortens a run instead of failing it.</li>
 <li><strong>Five agent flows share these guards, critic and governance</strong> (sections 7a and 7c): <code>agentic_graph</code> (the Q&amp;A agent), <code>trend_graph</code> (multi-year trend agent), <code>sector_trend_graph</code> (one measure across a sector), <code>fund_graph</code> (mutual fund holdings, linked to the holdings' annual reports) and <code>router</code> (a supervisor that sends each question to one of them, a report handoff or a refusal). The fund route exists only when fund data is loaded. Streamlit uses <code>router</code> by default. Each flow is a <strong>multi-agent flow</strong>: input guard, supervisor/planner, executor, extractor, answer and critic agents hand work to each other inside one bounded graph (section 7b).</li>
-<li>Each response carries <code>agent_run</code>: the node path, every tool call, retrieval attempts, repairs and calculations. Streamlit shows it under <strong>Agent run</strong>.</li>
+<li>Each response carries <code>agent_run</code>: the node path, every tool call, retrieval attempts, repairs and calculations. Streamlit shows it in the <strong>Thought for N s</strong> dropdown above each answer: a step timeline and a flowchart of the path taken.</li>
 </ul>
 <hr />
 <h2>1. Entry points</h2>
@@ -1263,8 +1263,8 @@ blockquote{border-left:4px solid #f59e0b;background:#fffbeb;margin:1rem 0;paddin
   <td>Citation status, <code>method</code> (<code>llm_support_check</code>, <code>source_excerpts</code> or <code>mock</code>), <code>semantic_answer_verified</code></td>
 </tr>
 <tr>
-  <td>Streamlit <strong>Agent run</strong> expander</td>
-  <td>The path, tools, attempts and a tool-call table</td>
+  <td>Streamlit <strong>Thought for N s</strong> dropdown</td>
+  <td>One dropdown above each answer (<code>scripts/ui/ui_thinking.py</code>). Tabs: <em>Steps</em> (a timeline of the path, each step with its summary and tool calls), <em>Agent graph</em> (a Mermaid flowchart with the path taken highlighted and loops counted), <em>Sources</em>, <em>Checks</em> (guardrails, critic, citations, grounding, output filter, human review) and <em>Raw</em> (the response)</td>
 </tr>
 <tr>
   <td>Streamlit <strong>What can I ask?</strong> and <strong>How to read an answer</strong></td>

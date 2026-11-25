@@ -39,6 +39,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.common.companies import NAMES as COMPANY_NAMES, SECTOR_NAMES  # noqa: E402 - after the repo is on sys.path
 from scripts.ui.ui_mutual_fund import render_mutual_fund  # noqa: E402
+from scripts.ui.ui_thinking import ROUTE_NAMES, cite_numbers, evidence_rows, render_thinking, source_label, thinking_label  # noqa: E402
 from scripts.observability import langsmith_utils  # noqa: E402
 
 
@@ -83,6 +84,12 @@ CAPABILITIES: tuple[tuple[str, str, str, str], ...] = (
      "for human review."),
 )
 DEFAULT_QUERY = "What drove revenue growth in the latest annual report?"
+USER_AVATAR = ":material/person:"
+ASSISTANT_AVATAR = ":material/query_stats:"
+CHAT_CSS = Path(__file__).with_name("chat.css")       # the user's messages as right-aligned bubbles
+WORKING_TEXT = "Checking the question, searching the filings and verifying every figure"
+TYPEWRITER_SECONDS = 2.0
+FAILED_STATUSES = {"error", "tool_error", "step_limit"}
 
 
 def api_headers() -> dict[str, str]:
@@ -228,10 +235,27 @@ STATUS_HELP = {
     "refused": "Blocked by a guardrail: advice, prompt injection or an unsafe request.",
     "report_handoff": "The router read this as a full-report request: confirm it in the chat to run the report pipeline.",
 }
+# The status badge above each answer: (label, color, icon).
+STATUS_BADGES = {
+    "answered": ("Answered", "green", ":material/check_circle:"),
+    "evidence_only": ("Cited excerpts only", "blue", ":material/format_quote:"),
+    "pending_human_review": ("Needs human review", "orange", ":material/rate_review:"),
+    "not_available": ("Not in the filings", "gray", ":material/search_off:"),
+    "insufficient_evidence": ("Not enough evidence", "gray", ":material/search_off:"),
+    "not_grounded": ("Withheld: citations failed", "orange", ":material/gpp_maybe:"),
+    "refused": ("Refused by guardrails", "red", ":material/block:"),
+    "report_handoff": ("Report request", "violet", ":material/description:"),
+    "step_limit": ("Step limit reached", "orange", ":material/timer_off:"),
+    "tool_error": ("Service error", "red", ":material/error:"),
+    "error": ("Error", "red", ":material/error:"),
+}
+VERDICT_COLORS = {"supported": "green", "partially_supported": "orange", "unsupported": "red", "unverified": "gray"}
 READING_TIPS = (
-    "**Critic support check**: *supported* means the cited pages state every claim and every figure.",
-    "**Agent run**: the steps the agent took, the tools it used, and any retry or repair.",
-    "**Evidence** and **Citations**: the exact chunks and pages the answer relies on.",
+    "**Thought for … s** (click it, above the answer): the steps the agent took, a flowchart of its path, the "
+    "sources, every check and the raw response.",
+    "**Badges**: the outcome, the agent that answered and the critic's verdict; *supported* means the cited pages "
+    "state every claim and every figure.",
+    "**[1] [2] …** in the answer: the numbered sources listed under it (company, fiscal year and page).",
 )
 
 
@@ -295,7 +319,7 @@ def example_questions(companies: list[dict[str, Any]], funds: list[dict[str, Any
     if len(years) > 1:
         examples.append({"group": "Companies", "capability": "Growth with a checked calculation",
                          "question": f"How much did {first_name}'s revenue grow from {years[-2]} to {years[-1]}?",
-                         "look_for": "Agent run: one search per year, then the calculator"})
+                         "look_for": "Thinking steps: one search per year, then the calculator"})
     if len(years) > 2:
         examples.append({"group": "Companies", "capability": "Multi-year trend",
                          "question": f"How did {first_name}'s revenue trend from {years[0]} to {years[-1]}?",
@@ -305,7 +329,7 @@ def example_questions(companies: list[dict[str, Any]], funds: list[dict[str, Any
         peer = short_name(peers[0]["ticker"], companies)
         examples.append({"group": "Companies", "capability": "Comparison across companies",
                          "question": f"Compare {first_name} and {peer} revenue in {latest}",
-                         "look_for": "Agent run: one filtered search per company"})
+                         "look_for": "Thinking steps: one filtered search per company"})
         examples.append({"group": "Companies", "capability": "Follow-up questions",
                          "question": f"Compare {first_name} and {peer} revenue",
                          "look_for": "It asks which year, with options to click"})
@@ -345,8 +369,10 @@ def example_questions(companies: list[dict[str, Any]], funds: list[dict[str, Any
     return examples
 
 
-def render_guide(companies: list[dict[str, Any]], expanded: bool, funds: list[dict[str, Any]] | None = None) -> None:
-    """'What can I ask?' with clickable examples grouped by topic, plus how to read an answer."""
+def render_guide(companies: list[dict[str, Any]], expanded: bool, funds: list[dict[str, Any]] | None = None,
+                 compact: bool = False) -> None:
+    """'What can I ask?' with clickable examples grouped by topic, plus how to read an answer. ``compact`` is the
+    narrow sidebar version shown once the chat has started: one button per example, the hint as its tooltip."""
     with st.expander("What can I ask?", expanded=expanded):
         st.caption("Click an example to send it, or type your own question below.")
         examples = example_questions(companies, funds, report_profiles() if companies else [])
@@ -354,11 +380,16 @@ def render_guide(companies: list[dict[str, Any]], expanded: bool, funds: list[di
         for index, example in enumerate(examples):
             if example.get("group") and example["group"] != group:
                 group = example["group"]
-                st.markdown(f"##### {group}")
-            left, right = st.columns([2, 3])
-            left.markdown(f"**{example['capability']}**  \n<small>{example['look_for']}</small>",
-                          unsafe_allow_html=True)
-            if right.button(example["question"], key=f"example-{index}", width="stretch"):
+                st.markdown(f"**{group}**" if compact else f"##### {group}")
+            if compact:
+                clicked = st.button(example["question"], key=f"example-{index}", width="stretch",
+                                    help=f"{example['capability']}: {example['look_for']}")
+            else:
+                left, right = st.columns([2, 3])
+                left.markdown(f"**{example['capability']}**  \n<small>{example['look_for']}</small>",
+                              unsafe_allow_html=True)
+                clicked = right.button(example["question"], key=f"example-{index}", width="stretch")
+            if clicked:
                 st.session_state["queued_prompt"] = example["question"]
                 st.rerun()
     with st.expander("How to read an answer", expanded=False):
@@ -391,36 +422,61 @@ def build_payload(query: str, settings: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def render_result(result: dict[str, Any]) -> None:
-    status = result.get("final_status", "unknown")
-    if status in {"refused", "error"}:
-        st.error(status)
-    elif status in {"pending_human_review", "not_available", "not_grounded"}:
-        st.warning(status)
-    elif status == "report_handoff":
-        st.info(status)
-    else:
-        st.success(status)
+def render_badges(result: dict[str, Any]) -> None:
+    """The outcome, the agent that answered, the critic's verdict and the figure check, as one row of badges."""
+    status = str(result.get("final_status") or "unknown")
+    label, color, icon = STATUS_BADGES.get(status, (status.replace("_", " ").capitalize(), "gray", ":material/info:"))
+    route = (result.get("route") or {}).get("route")
+    support = result.get("support_check") or {}
+    verdict = support.get("verdict")
+    numeric = support.get("numeric") or {}
+    checked = int(numeric.get("checked") or 0)
+    with st.container(horizontal=True, gap="small"):
+        st.badge(label, color=color, icon=icon, help=STATUS_HELP.get(status))
+        if route:
+            name = ROUTE_NAMES.get(route, route)
+            st.badge(name[:1].upper() + name[1:], color="primary", icon=":material/alt_route:",
+                     help="The agent the router chose for this question.")
+        if verdict:
+            st.badge(f"Critic: {verdict.replace('_', ' ')}", color=VERDICT_COLORS.get(verdict, "gray"),
+                     icon=":material/rule:", help="Supported means the cited pages state every claim and every figure.")
+        if checked:
+            found = checked - len(numeric.get("ungrounded") or [])
+            st.badge(f"{found}/{checked} figures verified", color="green" if found == checked else "orange",
+                     icon=":material/fact_check:", help="Figures found in a cited page or computed by the calculator.")
+        if (result.get("grounding") or {}).get("method") == "mock":
+            st.badge("Mock judge", color="gray", icon=":material/science:",
+                     help="Test mode: the mock LLM stands in for the critic's judge.")
+        if result.get("cache") == "hit":
+            st.badge("From cache", color="gray", icon=":material/bolt:", help="The API reused the answer to the same request.")
 
-    answer = result.get("answer")
+
+def typewriter(text: str, seconds: float = TYPEWRITER_SECONDS):
+    """The answer word by word for ``st.write_stream``, in at most ``seconds``. It has passed every check already:
+    this only paces the display."""
+    tokens = re.split(r"(\s+)", text)
+    delay = min(0.03, seconds / max(1, len(tokens)))
+    for token in tokens:
+        yield token
+        time.sleep(delay)
+
+
+def render_result(result: dict[str, Any], *, answer: str | None = None, cited: list[str] | None = None,
+                  animate: bool = False) -> None:
+    """The answer card: badges, the answer with numbered citations (typed out when ``animate``), the agents'
+    tables and the numbered sources."""
+    if answer is None:
+        answer, cited = cite_numbers(str(result.get("answer") or ""))
+    render_badges(result)
     if answer:
-        st.markdown(plain_dollars(answer))
+        if animate:
+            st.write_stream(typewriter(plain_dollars(answer)))
+        else:
+            st.markdown(plain_dollars(answer))
     else:
         coverage = result.get("coverage") or {}
         reason = coverage.get("message") or coverage.get("reason") or result.get("explanation")
         st.markdown(f"No answer was returned. {reason}" if reason else "No answer was returned.")
-
-    support = result.get("support_check") or {}
-    if support:
-        numeric = support.get("numeric") or {}
-        claims = support.get("claims") or []
-        summary = (f"Critic support check: **{support.get('verdict')}** · "
-                   f"{sum(1 for c in claims if c.get('supported') is True)}/{len(claims)} claims supported · "
-                   f"{numeric.get('checked', 0) - len(numeric.get('ungrounded') or [])}/{numeric.get('checked', 0)} "
-                   "figures found in cited evidence")
-        if (result.get("grounding") or {}).get("method") == "mock":
-            summary += " (mock judge)"
-        st.caption(summary)
 
     render_trend(result.get("trend") or {})
     render_sector_trend(result.get("sector_trend") or {})
@@ -428,71 +484,26 @@ def render_result(result: dict[str, Any]) -> None:
     render_dividend_income(result.get("dividend_income") or {})
     render_mutual_fund(result.get("mutual_fund") or {})
 
-    agent_run = result.get("agent_run")
-    if agent_run:
-        with st.expander(f"Agent run: {agent_run.get('steps')}/{agent_run.get('max_steps')} steps", expanded=False):
-            st.markdown(" → ".join(f"`{name.removesuffix('_step')}`" for name in agent_run.get("path", [])))
-            route = result.get("route") or {}
-            if route:
-                st.caption(f"Router: **{route.get('route')}** → {route.get('flow')} (decided by {route.get('decided_by')}; "
-                           f"LLM said {route.get('llm_route')!r}, rules said {route.get('rule_route')!r})")
-                if route.get("adjustments"):
-                    st.caption("Router adjustments: " + "; ".join(route["adjustments"]))
-            plan = result.get("plan") or {}
-            st.caption(f"Planner ({plan.get('planner', '?')}) tools: {', '.join(plan.get('tools') or [])} · "
-                       f"retrieval attempts: {agent_run.get('retrieval_attempts')} · repairs: {agent_run.get('repairs')}")
-            if plan.get("adjustments"):
-                st.caption("Rule adjustments: " + "; ".join(plan["adjustments"]))
-            st.dataframe([{key: json.dumps(value) if isinstance(value, (list, dict)) else value
-                           for key, value in call.items()} for call in agent_run.get("tool_calls") or []],
-                         width="stretch")
-            if agent_run.get("calculations"):
-                st.json(agent_run["calculations"], expanded=False)
+    if cited:
+        rows = {str(row.get("chunk_id")): row for row in evidence_rows(result)}
+        st.caption("**Sources**  \n" + "  \n".join(f":blue-badge[{number}] {source_label(chunk_id, rows.get(chunk_id))}"
+                                                  for number, chunk_id in enumerate(cited, start=1)))
 
-    with st.expander("Citations and Human Review", expanded=True):
-        st.json(
-            {
-                "citation_check": result.get("citation_check"),
-                "support_check": result.get("support_check"),
-                "grounding": result.get("grounding"),
-                "human_review": result.get("human_review"),
-                "langsmith": result.get("langsmith"),
-            },
-            expanded=False,
-        )
 
-    evidence = result.get("evidence") or result.get("evidence_preview") or []
-    with st.expander("Evidence", expanded=False):
-        if not evidence:
-            st.info("No evidence returned.")
-        for row in evidence:
-            st.markdown(f"**{row.get('chunk_id')}**")
-            st.write(
-                {
-                    "title": row.get("title"),
-                    "source_type": row.get("source_type"),
-                    "page": row.get("page"),
-                    "source_url": row.get("source_url"),
-                    "image_path": row.get("image_path"),
-                }
-            )
-            st.caption(row.get("preview") or "")
-
-    with st.expander("Guardrails and Trace", expanded=False):
-        st.json(
-            {
-                "security": result.get("security"),
-                "plain_text": result.get("plain_text"),
-                "plan": result.get("plan"),
-                "evidence_guard": result.get("evidence_guard"),
-                "output_filter": result.get("output_filter"),
-                "orchestration": result.get("orchestration"),
-            },
-            expanded=False,
-        )
-
-    with st.expander("Raw API response", expanded=False):
-        st.code(json.dumps(result, ensure_ascii=False, indent=2), language="json")
+def render_answer(result: dict[str, Any], *, turn: dict[str, Any] | None = None, elapsed: float | None = None,
+                  animate: bool = False) -> None:
+    """One answer: the collapsed "Thought for N s" dropdown on top (steps, agent graph, sources, checks, raw
+    response), then the answer card."""
+    answer, cited = cite_numbers(str(result.get("answer") or ""))
+    failed = result.get("final_status") in FAILED_STATUSES
+    with st.expander(thinking_label(result, elapsed), type="compact", expanded=False,
+                     icon=":material/error:" if failed else ":material/psychology:"):
+        render_thinking(result, turn=turn, elapsed=elapsed, cited=cited)
+    if turn and turn.get("resolved_query") and turn.get("resolved_query") != turn.get("original"):
+        st.caption(f"Answering: {turn['resolved_query']}")
+    for note in (turn or {}).get("assumptions") or []:
+        st.caption(f"Assumption: {note}")
+    render_result(result, answer=answer, cited=cited, animate=animate)
 
 
 def render_trend(trend: dict[str, Any]) -> None:
@@ -602,26 +613,67 @@ def render_dividend_income(table: dict[str, Any]) -> None:
                    "yours, the per-share figures come from the filings, the products are computed in code.")
 
 
-def render_turn(turn: dict[str, Any]) -> None:
+def render_turn(turn: dict[str, Any], *, elapsed: float | None = None, animate: bool = False) -> None:
     """Render one /conversation response: questions, an answer, or a report outcome."""
     status = turn.get("status")
     if status == "needs_clarification":
-        st.info(turn.get("message") or "I need a few more details.")
+        st.info(turn.get("message") or "I need a few more details.", icon=":material/help:")
     elif status == "answered":
-        if turn.get("resolved_query") and turn.get("resolved_query") != turn.get("original"):
-            st.caption(f"Answering: {turn['resolved_query']}")
-        for note in turn.get("assumptions") or []:
-            st.caption(f"Assumption: {note}")
-        render_result(turn.get("result") or {})
+        render_answer(turn.get("result") or {}, turn=turn, elapsed=elapsed, animate=animate)
     elif status == "report_generated":
-        st.success(turn.get("message"))
+        st.success(turn.get("message"), icon=":material/description:")
         manifest = turn.get("report_manifest") or {}
         for item in manifest.get("artifacts", []):
             st.write(item.get("path") or item)
     elif status in {"report_unavailable", "report_failed", "cancelled"}:
         (st.error if status == "report_failed" else st.warning)(turn.get("message"))
+    elif status == "error" or turn.get("final_status") == "error":
+        render_error(turn)
     else:
-        render_result(turn)
+        render_answer(turn, elapsed=elapsed, animate=animate)
+
+
+def render_error(failure: dict[str, Any]) -> None:
+    st.error(failure.get("error") or failure.get("answer") or "The copilot service returned an error.",
+             icon=":material/error:", title="Couldn't get an answer")
+
+
+def render_user(content: str, position: int) -> None:
+    """The user's message; the keyed container lets chat.css draw it as a right-aligned bubble."""
+    with st.chat_message("user", avatar=USER_AVATAR):
+        with st.container(key=f"user-msg-{position}"):
+            st.markdown(plain_dollars(content))
+
+
+def render_message(message: dict[str, Any], position: int, *, last: bool, animate: bool = False) -> None:
+    """One assistant message (from the history or just received): a /conversation turn or a /chat result."""
+    elapsed = message.get("elapsed")
+    if message.get("turn"):
+        render_turn(message["turn"], elapsed=elapsed, animate=animate)
+        if last:
+            answer_options(message["turn"], key=f"q{position}")
+    elif message.get("result"):
+        render_turn(message["result"], elapsed=elapsed, animate=animate)
+    else:
+        st.markdown(plain_dollars(message.get("content") or ""))
+
+
+def ask(prompt: str, settings: dict[str, Any]) -> dict[str, Any]:
+    """The assistant message for a prompt: a /conversation turn (clarifying questions on) or a /chat result."""
+    if settings["clarify"]:
+        try:
+            payload = {**build_payload(prompt, settings), "clarify": True,
+                       "conversation_id": st.session_state.get("conversation_id")}
+            turn = post_json(settings["api_base"], "/conversation/financial_report_qa", payload)
+            st.session_state["conversation_id"] = turn.get("conversation_id")
+        except Exception as exc:  # noqa: BLE001 - display safe UI error.
+            turn = {"status": "error", "final_status": "error", "answer": str(exc), "error": str(exc)}
+        return {"role": "assistant", "content": turn.get("message") or "", "turn": turn}
+    try:
+        result = post_json(settings["api_base"], f"/chat/{DOMAIN}", build_payload(prompt, settings))
+    except Exception as exc:  # noqa: BLE001 - display safe UI error.
+        result = {"final_status": "error", "answer": str(exc), "error": str(exc)}
+    return {"role": "assistant", "content": result.get("answer") or "No answer returned.", "result": result}
 
 
 def answer_options(turn: dict[str, Any], key: str) -> None:
@@ -746,15 +798,21 @@ def sidebar() -> dict[str, Any]:
 
 def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="📊", layout="wide")
-    st.title(APP_TITLE)
-    st.markdown(APP_TAGLINE)
+    st.html(CHAT_CSS)
     st.session_state.setdefault("messages", [])
+    messages = st.session_state["messages"]
 
     settings = sidebar()
+    # Read first (the input stays pinned to the bottom), so a new question already gets the chat layout.
+    prompt = (st.chat_input("Ask about a company, a sector trend, a mutual fund or a full report...",
+                            submit_mode="disable")
+              or st.session_state.pop("queued_prompt", None))
+    chatting = bool(messages or prompt)
     companies = covered_companies(settings["api_base"])
     funds = served_funds(settings["api_base"]) if companies else []
-    messages = st.session_state["messages"]
-    if not messages:                                        # the overview, until the conversation starts
+    st.title(APP_TITLE)
+    if not chatting:                                        # the overview, until the conversation starts
+        st.markdown(APP_TAGLINE)
         render_capabilities(funds_available=bool(funds))
     coverage = coverage_summary(companies)
     fund_text = fund_summary(funds)
@@ -764,55 +822,35 @@ def main() -> None:
         st.caption(":orange[Test mode: answers come from the mock LLM, so their wording is placeholder text. "
                    "Retrieval, citations, guardrails and the agent steps are real.]")
 
-    render_guide(companies, expanded=not messages, funds=funds)
+    if chatting:                                            # the chat has the page: the guide moves to the sidebar
+        with st.sidebar:
+            render_guide(companies, expanded=False, funds=funds, compact=True)
+    else:
+        render_guide(companies, expanded=True, funds=funds)
     for position, message in enumerate(messages):
-        with st.chat_message(message["role"]):
-            if message.get("turn"):
-                render_turn(message["turn"])
-                if position == len(messages) - 1:
-                    answer_options(message["turn"], key=f"q{position}")
-            else:
-                st.markdown(plain_dollars(message["content"]))
-                if message.get("result"):
-                    render_result(message["result"])
+        if message["role"] == "user":
+            render_user(message["content"], position)
+            continue
+        with st.chat_message("assistant", avatar=ASSISTANT_AVATAR):
+            render_message(message, position, last=position == len(messages) - 1 and not prompt)
 
-    prompt = st.chat_input("Ask about a company, a sector trend, a mutual fund or a full report...") or st.session_state.pop("queued_prompt", None)
     if not prompt:
         return
-    conversational = settings["clarify"]
-
-    st.session_state["messages"].append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(plain_dollars(prompt))
-
-    if conversational:
-        with st.chat_message("assistant"):
-            with st.spinner("Checking the question..."):
-                try:
-                    payload = {**build_payload(prompt, settings), "clarify": True,
-                               "conversation_id": st.session_state.get("conversation_id")}
-                    turn = post_json(settings["api_base"], "/conversation/financial_report_qa", payload)
-                    st.session_state["conversation_id"] = turn.get("conversation_id")
-                except Exception as exc:  # noqa: BLE001 - display safe UI error.
-                    turn = {"status": "error", "final_status": "error", "answer": str(exc), "error": str(exc)}
-            render_turn(turn)
-            # Same key the history loop gives this message on the next run, so a click is not lost.
-            answer_options(turn, key=f"q{len(messages)}")
-        messages.append({"role": "assistant", "content": turn.get("message") or "", "turn": turn})
-        return
-
-    with st.chat_message("assistant"):
-        with st.spinner("Reading the filings..."):
-            try:
-                payload = build_payload(prompt, settings)
-                result = post_json(settings["api_base"], f"/chat/{DOMAIN}", payload)
-                answer = result.get("answer") or "No answer returned."
-            except Exception as exc:  # noqa: BLE001 - display safe UI error.
-                result = {"final_status": "error", "answer": str(exc), "error": str(exc)}
-                answer = result["answer"]
-        render_result(result)
-
-    st.session_state["messages"].append({"role": "assistant", "content": answer, "result": result})
+    messages.append({"role": "user", "content": prompt})
+    render_user(prompt, len(messages) - 1)
+    with st.chat_message("assistant", avatar=ASSISTANT_AVATAR):
+        slot = st.empty()
+        with slot.container():
+            with st.expander(":shimmer[Thinking…]", type="compact", icon="spinner", expanded=True):
+                st.caption("Input guardrails → router → specialist agent → critic → governance")
+                started = time.monotonic()
+                with st.spinner(WORKING_TEXT, show_time=True):
+                    message = ask(prompt, settings)
+        message["elapsed"] = round(time.monotonic() - started, 1)
+        with slot.container():                              # the thinking view gives way to the answer
+            # Same position the history loop gives this message on the next run, so an option click is not lost.
+            render_message(message, len(messages), last=True, animate=True)
+    messages.append(message)
 
 
 if __name__ == "__main__":

@@ -78,12 +78,14 @@ LangSmith key is set, `langsmith.api_key_set: true` with `tracing_all_requests: 
 | `sector_trend_graph` | Sector trend agent | One measure across a sector's companies, year by year |
 | `fund_graph` | Fund agent | A mutual fund's holdings, sector mix, returns or net assets |
 
-**What an answer shows**: a status badge (`answered`, `evidence_only`, `pending_human_review`, `not_available`,
-`refused`), the answer with `[chunk_id]` citations (the ID names the filing and page, for example
-`annual_report_edgar_ars_JPM_2025_p0198_vlm0` is JPM's FY2025 report, page 198), an **Agent run** panel (the steps
-taken, the router's decision, the plan, every tool call and calculation), **Citations and Human Review** (citation
-check, support check, review triggers) and **Evidence** (the retrieved chunks). If the clarifier needs something, it
-asks with buttons (a company list, years, Yes/No).
+**What an answer shows**: while the agents work, a live *Thinking…* line with a running timer. Then a collapsed
+**Thought for N s** dropdown (tabs: *Steps*, a timeline of the router's decision, the plan, every search, tool call and
+calculation; *Agent graph*, a flowchart of the path taken; *Sources*; *Checks*, the guardrails, critic support check,
+citation check, grounding policy and human review; *Raw*, the response), badges (the status such as `answered`,
+`evidence_only`, `pending_human_review`, `not_available` or `refused`, the agent that answered and the critic's verdict)
+and the answer with numbered citations [1] [2], listed under it by company, fiscal year and page (the chunk ID
+`annual_report_edgar_ars_JPM_2025_p0198_vlm0`, for example, is JPM's FY2025 report, page 198). If the clarifier needs
+something, it asks with buttons (a company list, years, Yes/No).
 
 ## 4. The request path
 

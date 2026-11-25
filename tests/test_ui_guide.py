@@ -213,3 +213,78 @@ def test_dollar_amounts_are_not_read_as_maths():
     from scripts.ui import api_streamlit_app as ui
     assert ui.plain_dollars("was $275,235 million and $680,985 million") == "was \\$275,235 million and \\$680,985 million"
     assert ui.plain_dollars("already \\$5") == "already \\$5" and ui.plain_dollars(None) == ""
+
+
+CITED = ["annual_report_edgar_ars_COST_2024_p0041_text0", "annual_report_edgar_ars_COST_2025_p0041_text0"]
+TREND_ANSWER = {
+    "domain": "financial_report_qa", "final_status": "answered", "technique": "router",
+    "query": "How did Costco revenue trend from 2024 to 2025?",
+    "answer": f"Costco's total revenue rose from $254,453 million in fiscal 2024 [{CITED[0]}] to $275,235 million "
+              f"in fiscal 2025 [{CITED[1]}], up 8.17%.",
+    "route": {"route": "trend", "decided_by": "rules", "llm_route": "lookup", "rule_route": "trend"},
+    "agent_run": {"path": ["security_step", "plain_text_step", "route_step", "trend_fetch_step", "trend_series_step",
+                           "answer_step", "critic_step", "governance_step"], "steps": 8, "max_steps": 10,
+                  "tool_calls": [{"tool": "coverage_lookup", "searchable": ["COST FY2024", "COST FY2025"]},
+                                 {"tool": "text_search", "target": "COST FY2024", "hits": 1, "new": 1, "ms": 120},
+                                 {"tool": "text_search", "target": "COST FY2025", "hits": 1, "new": 1, "ms": 95},
+                                 {"tool": "series_extract", "target": "COST FY2024", "method": "label"},
+                                 {"tool": "series_extract", "target": "COST FY2025", "method": "label"},
+                                 {"tool": "trend_calculator", "verified_years": 2, "cagr": 8.17}]},
+    "trend": {"company": "COST", "company_name": "Costco", "metric": "revenue", "cagr": 8.17, "missing": [],
+              "points": [{"year": 2024, "value": 254453.0, "value_text": "254,453", "unit": "millions", "status": "ok",
+                          "page": 41, "chunk_id": CITED[0]},
+                         {"year": 2025, "value": 275235.0, "value_text": "275,235", "unit": "millions", "status": "ok",
+                          "page": 41, "chunk_id": CITED[1]}],
+              "changes": [{"from": 2024, "to": 2025, "pct_change": 8.17, "status": "ok"}],
+              "chart": [{"year": 2024, "value": 254453.0}, {"year": 2025, "value": 275235.0}]},
+    "security": {"decision": "allow", "risk_labels": []}, "plain_text": {"allowed": True, "risk_level": "low"},
+    "evidence_guard": {"safe": True}, "output_filter": {"decision": "allow", "risk_labels": []},
+    "human_review": {"required": False, "status": "auto_approved", "triggers": []},
+    "support_check": {"verdict": "supported", "method": "code_table", "numeric": {"checked": 3, "ungrounded": []}},
+    "citation_check": {"valid": True, "cited_chunk_ids": CITED, "missing_chunk_ids": []},
+    "grounding": {"status": "grounded", "evidence_count": 2, "cited_chunk_ids": CITED, "reason": "Citations matched."},
+    "evidence_chunk_ids": CITED,
+    "evidence_preview": [{"chunk_id": chunk, "ticker": "COST", "year": year, "page": 41, "preview": "Total revenue"}
+                         for chunk, year in zip(CITED, (2024, 2025))],
+    "trace": [{"node": "financial_workflow", "status": "ok", "elapsed_ms": 2900}],
+}
+
+
+def test_an_answer_has_one_thinking_dropdown_badges_and_numbered_sources(monkeypatch):
+    real_streamlit(monkeypatch)
+    from streamlit.testing.v1 import AppTest
+    monkeypatch.setenv("API_BASE_URL", "http://127.0.0.1:9")        # nothing listens; the answer is in the history
+    monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "mock")
+    app = AppTest.from_file(str(Path(ui.__file__).resolve()), default_timeout=60)
+    app.session_state["messages"] = [
+        {"role": "user", "content": TREND_ANSWER["query"]},
+        {"role": "assistant", "content": TREND_ANSWER["answer"], "result": TREND_ANSWER, "elapsed": 3.2}]
+    app.run()
+    assert not app.exception
+    labels = [e.label for e in app.main.expander]
+    assert [label for label in labels if label.startswith("Thought for")] == [
+        "Thought for 3.2 s · 8 steps · 2 searches · critic: supported"]
+    assert not [label for label in labels                            # the five old panels are one dropdown now
+                if label.startswith(("Agent run", "Citations", "Evidence", "Guardrails", "Raw API"))]
+    assert "Trend: Costco revenue · CAGR 8.17%" in labels and "What can I ask?" not in labels
+    assert "What can I ask?" in [e.label for e in app.sidebar.expander]     # the guide moves aside once chatting
+    assert [t.label for t in app.tabs] == [":material/timeline: Steps", ":material/account_tree: Agent graph",
+                                          ":material/library_books: Sources (2)", ":material/verified_user: Checks",
+                                          ":material/data_object: Raw"]
+    answer = next(m.value for m in app.markdown if "Costco's total revenue" in m.value)
+    assert ":blue-badge[1]" in answer and ":blue-badge[2]" in answer and "annual_report_" not in answer
+    assert ":green-badge[:material/check_circle: Answered]" in [m.value for m in app.markdown]
+    source = f"{ui.COMPANY_NAMES['COST']} · FY2024 annual report · p. 41"
+    assert any(source in c.value for c in app.caption)
+
+
+def test_every_material_icon_the_ui_uses_exists(monkeypatch):
+    real_streamlit(monkeypatch)
+    import re
+    from streamlit.string_util import validate_icon_or_emoji
+    from scripts.ui import ui_thinking
+    icons = {icon for module in (ui, ui_thinking)
+             for icon in re.findall(r":material/[a-z0-9_]+:", Path(module.__file__).read_text(encoding="utf-8"))}
+    assert len(icons) > 30
+    for icon in sorted(icons):
+        validate_icon_or_emoji(icon)                    # raises for a name Streamlit doesn't know

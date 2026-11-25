@@ -9,7 +9,7 @@ How a question travels from Streamlit to an answer: which agents and tools run, 
 - The critic is two checks: citation IDs must be retrieved IDs, and a **support check** (every figure must appear in a cited chunk; an LLM judge decides claim by claim). With a hosted LLM, the generated answer is shown only when both pass; otherwise the response falls back to cited excerpts.
 - Loops are **budget-aware**: a loop runs only if the rest of the run still fits `AGENT_MAX_STEPS` (default 10), so the cap shortens a run instead of failing it.
 - **Five agent flows share these guards, critic and governance** (sections 7a and 7c): `agentic_graph` (the Q&A agent), `trend_graph` (multi-year trend agent), `sector_trend_graph` (one measure across a sector), `fund_graph` (mutual fund holdings, linked to the holdings' annual reports) and `router` (a supervisor that sends each question to one of them, a report handoff or a refusal). The fund route exists only when fund data is loaded. Streamlit uses `router` by default. Each flow is a **multi-agent flow**: input guard, supervisor/planner, executor, extractor, answer and critic agents hand work to each other inside one bounded graph (section 7b).
-- Each response carries `agent_run`: the node path, every tool call, retrieval attempts, repairs and calculations. Streamlit shows it under **Agent run**.
+- Each response carries `agent_run`: the node path, every tool call, retrieval attempts, repairs and calculations. Streamlit shows it in the **Thought for N s** dropdown above each answer: a step timeline and a flowchart of the path taken.
 
 ---
 
@@ -499,7 +499,7 @@ The five other Track B domains (procurement, travel and expense, competitive res
 | Response `support_check` | Verdict, each claim with the judge's reason, figures checked and any missing |
 | Response `mutual_fund` | Fund route: fund, holdings date, accession, lookup kind, the rows shown, corpus coverage, linked company figures, weighted growth and what was not used |
 | Response `grounding` | Citation status, `method` (`llm_support_check`, `source_excerpts` or `mock`), `semantic_answer_verified` |
-| Streamlit **Agent run** expander | The path, tools, attempts and a tool-call table |
+| Streamlit **Thought for N s** dropdown | One dropdown above each answer ([ui_thinking.py](../scripts/ui/ui_thinking.py)). Tabs: *Steps* (a timeline of the path, each step with its summary and tool calls), *Agent graph* (a Mermaid flowchart with the path taken highlighted and loops counted), *Sources*, *Checks* (guardrails, critic, citations, grounding, output filter, human review) and *Raw* (the response) |
 | Streamlit **What can I ask?** and **How to read an answer** | Clickable examples built from the indexed companies (cited answer, growth, comparison, follow-up, risks, not available, guardrails), the coverage line, and what each status means |
 | `trace` / `trace_id` | Timed spans from `common/resilience.Calls` |
 | LangSmith (optional) | `LANGSMITH_API_KEY` + `enable_langsmith`; each graph node is a run |
