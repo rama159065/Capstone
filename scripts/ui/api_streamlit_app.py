@@ -743,19 +743,27 @@ def sidebar() -> dict[str, Any]:
         st.rerun()
     return settings
 
+def render_chips(companies, funds) -> None:
+    """Four small suggestion buttons under the launch input box."""
+    examples = example_questions(companies, funds, report_profiles() if companies else [])[:4]
+    for column, example in zip(st.columns(max(len(examples), 1)), examples):
+        if column.button(example["capability"], key=f"chip-{example['question']}",help=example["question"], width="stretch"):
+            st.session_state["queued_prompt"] = example["question"]
+            st.rerun()
 
 def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="📊", layout="wide")
     st.title(APP_TITLE)
-    st.markdown(APP_TAGLINE)
+    launch_box = None
+    if not st.session_state.get("messages"):
+        st.markdown(f"<p class='launch-sub'>{APP_TAGLINE}</p>",unsafe_allow_html=True)
+        launch_box = st.container() # the input box is placed here later
     st.session_state.setdefault("messages", [])
 
     settings = sidebar()
     companies = covered_companies(settings["api_base"])
     funds = served_funds(settings["api_base"]) if companies else []
     messages = st.session_state["messages"]
-    if not messages:                                        # the overview, until the conversation starts
-        render_capabilities(funds_available=bool(funds))
     coverage = coverage_summary(companies)
     fund_text = fund_summary(funds)
     st.caption((f"Coverage: **{coverage}** of SEC annual reports" + (f" · **{fund_text}**" if fund_text else "") + "."
@@ -764,7 +772,7 @@ def main() -> None:
         st.caption(":orange[Test mode: answers come from the mock LLM, so their wording is placeholder text. "
                    "Retrieval, citations, guardrails and the agent steps are real.]")
 
-    render_guide(companies, expanded=not messages, funds=funds)
+    render_guide(companies, expanded=False, funds=funds)
     for position, message in enumerate(messages):
         with st.chat_message(message["role"]):
             if message.get("turn"):
@@ -776,7 +784,15 @@ def main() -> None:
                 if message.get("result"):
                     render_result(message["result"])
 
-    prompt = st.chat_input("Ask about a company, a sector trend, a mutual fund or a full report...") or st.session_state.pop("queued_prompt", None)
+    placeholder = "Ask about a company, a sector trend, a mutual fund or a full report..."
+    if launch_box is not None:
+        with launch_box:
+            prompt = st.chat_input(placeholder)  # inside a container = inline, mid-page
+            render_chips(companies, funds)
+    else:
+        prompt = st.chat_input(placeholder)  # normal chat: pinned to the bottom
+    prompt = prompt or st.session_state.pop("queued_prompt", None)
+
     if not prompt:
         return
     conversational = settings["clarify"]
@@ -799,6 +815,8 @@ def main() -> None:
             # Same key the history loop gives this message on the next run, so a click is not lost.
             answer_options(turn, key=f"q{len(messages)}")
         messages.append({"role": "assistant", "content": turn.get("message") or "", "turn": turn})
+        if launch_box is not None:
+            st.rerun()
         return
 
     with st.chat_message("assistant"):
@@ -813,7 +831,8 @@ def main() -> None:
         render_result(result)
 
     st.session_state["messages"].append({"role": "assistant", "content": answer, "result": result})
-
+    if launch_box is not None:
+        st.rerun()
 
 if __name__ == "__main__":
     main()
