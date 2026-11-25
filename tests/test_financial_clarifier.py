@@ -86,6 +86,45 @@ def test_follow_up_keeps_context(talk):
     assert new["questions"][0]["slot"] == "intent"                       # a new subject, not Apple's revenue
 
 
+def test_another_measure_keeps_company_and_year(talk):
+    talk("What was Visa's revenue in fiscal 2025?")
+    assert talk("and for 2024?")["resolved_query"] == "What was Visa's revenue for FY2024?"
+    out = talk("What about net income?")
+    assert out["resolved_query"] == "What was Visa's net income for FY2024?" and (out["ticker"], out["year"]) == ("V", 2024)
+    assert talk("and Mastercard?")["resolved_query"] == "What was Mastercard's net income for FY2024?"
+    assert talk("And what was their revenue in 2025?")["resolved_query"] == "What was Mastercard's revenue for FY2025?"
+    assert talk("Net income?")["resolved_query"] == "What was Mastercard's net income for FY2025?"
+
+
+def test_another_measure_keeps_the_kind_of_question(talk):
+    talk("Compare Visa and Mastercard revenue in 2025")
+    assert talk("what about net income?")["resolved_query"] == "Compare net income for Visa and Mastercard in FY2025."
+    talk("How did Chevron's revenue trend from 2022 to 2025?")
+    out = talk("what about net income?")
+    assert out["resolved_query"] == "How did Chevron's net income change across FY2022–FY2025?"
+    assert talk("what about revenue in 2024?")["resolved_query"] == "What was Chevron's revenue for FY2024?"
+    talk("How did healthcare revenue trend from 2022 to 2025?")
+    assert talk("what about net income?")["resolved_query"] == (
+        "How did the Healthcare sector's net income trend across FY2022–FY2025?")
+
+
+@pytest.mark.parametrize("message", [
+    "What about Infosys revenue?", "what about infosys revenue?", "and the data center revenue?",
+    "How about net income for the bank next door?"])
+def test_another_measure_is_never_answered_for_the_previous_company(talk, message):
+    talk("What was Visa's revenue in fiscal 2025?")
+    out = talk(message)
+    assert out["status"] == "needs_clarification" and "V" not in out["slots"]["companies"]
+
+
+def test_segment_and_older_subject_are_not_carried_over(talk):
+    talk("What was Apple's iPhone net sales in 2024?")
+    assert talk("what about net income?")["status"] == "needs_clarification"
+    talk("What was Visa's revenue in fiscal 2025?")
+    talk("How much did Chevron return to shareholders in 2024?")
+    assert talk("what about net income?")["status"] == "needs_clarification"     # not Visa's
+
+
 def test_report_needs_confirmation(talk):
     assert talk("Generate a financial report for Apple")["questions"][0]["slot"] == "year"
     confirm = talk("FY2024")

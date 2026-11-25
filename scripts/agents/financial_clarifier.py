@@ -101,6 +101,8 @@ YES = re.compile(r"^\s*(y|yes|yeah|yep|ok|okay|sure|confirm(ed)?|go ahead|do it|
 NO = re.compile(r"^\s*(n|no|nope|cancel|stop|never ?mind)\s*[.!]*\s*$", re.I)
 CONTINUE = re.compile(r"^\s*(continue|skip|just answer|answer anyway|as is|run it)\b", re.I)
 FOLLOW_UP = re.compile(r"^\s*(and|also|what about|how about|same for|now|then)\b", re.I)
+FOLLOW_UP_FILLER = frozenset("""a about also and company fiscal for fy how in is it its now of on please same that the
+    their them then these they this those to from through until up was were what with year years s""".split())
 RESET = re.compile(r"^\s*(new question|start over|restart|reset)\b", re.I)
 LATEST = re.compile(r"\b(latest|most recent|last (fiscal )?year|this year|current year|recent)\b", re.I)
 ALL_YEARS = re.compile(r"\b(all( years)?|every year|all available)\b", re.I)
@@ -345,14 +347,14 @@ class Clarifier:
         if self.fund_question(text):
             # A fund question needs a fund, not a company and year: the fund agent resolves the fund and period itself
             # and says which fund it needs when the question is ambiguous. Only when fund data is loaded.
-            conversation.pending = []
+            self.restart(conversation, "")      # a later "what about net income?" must not go back to an older company
             return self.result(conversation, "passthrough", action="answer", resolved_query=text,
                                ticker=None, year=None, original=text, route_hint="fund")
         action = self.action_route(text)
         if action:
             # Shareholder returns and dividend income plan their own companies, year and holdings, and say what they
             # can't cover; a follow-up question would only drop the sector or the share counts.
-            conversation.pending = []
+            self.restart(conversation, "")
             return self.result(conversation, "passthrough", action="answer", resolved_query=text,
                                ticker=ticker, year=year, original=text, route_hint=action)
         if RESET.match(text):
@@ -380,6 +382,11 @@ class Clarifier:
         fresh = ((not conversation.pending and not follow_up) or switch
                  or parsed.intent is not None and (not conversation.pending or (new_subject and bool(parsed.metric or parsed.years))
                                                    or (len(text.split()) >= 5 and bool(parsed.metric))))
+        another = follow_up and self.another_measure(conversation, text, parsed)
+        if another:     # "what about net income?": same companies, years and kind of question, another measure
+            fresh = False
+            parsed.intent = ("figure" if slots.intent not in {"comparison", "trend", "sector_trend"}
+                             or (slots.intent == "trend" and len(parsed.years) == 1) else slots.intent)
         if not conversation.original_query or fresh:
             self.restart(conversation, text)
             slots = conversation.slots
@@ -408,6 +415,21 @@ class Clarifier:
             return self.ready(conversation, forced=bool(missing))
         conversation.turns += 1
         return self.ask(conversation, None, missing)
+
+    def another_measure(self, conversation, text, parsed):
+        """True when the message only names another measure (and perhaps years) for the companies or sector already
+        being discussed. Any other word (a company we don't know, a segment, "growth") makes it a new question, so it is
+        never answered for the previous company."""
+        slots = conversation.slots
+        if not parsed.metric or parsed.companies or parsed.sectors or not (slots.companies or slots.sectors):
+            return False
+        if self.subject_in(conversation.original_query):    # "U.S. Personal Banking net income": the segment isn't a slot
+            return False
+        rest = text.lower().replace("’", "'")
+        for phrase in sorted(METRICS[parsed.metric], key=len, reverse=True):
+            rest = re.sub(rf"(?<![a-z]){re.escape(phrase)}(?![a-z])", " ", rest)
+        rest = re.sub(r"\b(?:fy\s?)?20[0-4]\d\b|\bfy\s?'?\d{2}\b", " ", rest)
+        return set(re.findall(r"[^\W_]+", rest)) <= FOLLOW_UP_FILLER
 
     @staticmethod
     def fund_question(text):
