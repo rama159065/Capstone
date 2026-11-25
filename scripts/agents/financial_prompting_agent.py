@@ -1230,9 +1230,12 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         evidence, calls_log = [], list(state.get("tool_calls", []))
         seen: set = set()
         targets = plan.get("targets") or []
-        for target, fresh in zip(targets, run_searches([sector_job(plan, t, 1) for t in targets], seen, calls_log)):
+        found = run_searches([sector_job(plan, t, 1) for t in targets], seen, calls_log)
+        pages = statement_hits_all([(fresh, tools.target_label(t)) for t, fresh in zip(targets, found)],
+                                   plan.get("metric"), seen)
+        for fresh, more in zip(found, pages):
             evidence.extend(fresh)
-            evidence.extend(statement_hits(fresh, plan.get("metric"), tools.target_label(target), seen))
+            evidence.extend(more)
         return {"evidence": evidence, "retrieval_attempts": 1, "tool_calls": calls_log}
 
     def has_statement_row(metric: str | None) -> bool:
@@ -1252,8 +1255,23 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
     def statement_hits(hits: list[dict], metric: str | None, label: str, seen: set) -> list[dict]:
         """The rest of the statement pages among a target's hits (``sector_agent.statement_pages``): the chunk with the
         statement's title ranks high, the one with the figures often doesn't. Marks the pages' own hits too."""
+        return statement_hits_all([(hits, label)], metric, seen)[0]
+
+    def statement_hits_all(groups: list[tuple[list[dict], str]], metric: str | None, seen: set) -> list[list[dict]]:
+        """``statement_hits`` of several targets: the pages are read in parallel (a sector reads up to six for each of
+        50 company-years, ~0.13 s each), then chunks already ``seen`` are dropped in target order, as in a loop."""
         if not has_statement_row(metric):
-            return []
+            return [[] for _ in groups]
+        looked_up, _ = tools.fan_out(lambda group: statement_lookup(group[0], metric, group[1]), groups)
+        out = []
+        for (_, label), found in zip(groups, looked_up):
+            more = [h for h in found if h.get("chunk_id") not in seen]
+            seen.update(h.get("chunk_id") for h in more)
+            out.append([{**h, "target": label, "statement_page": True} for h in drop_flagged(more)[0]])
+        return out
+
+    def statement_lookup(hits: list[dict], metric: str | None, label: str) -> list[dict]:
+        """One target's statement-page chunks, before duplicates are dropped."""
         own = [h for h in hits if h.get("target") == label]
         pages = sector_agent.statement_pages(own, metric)
         for hit in (own[-6:] if not pages else []):
@@ -1267,9 +1285,7 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         for hit in own:
             if ((hit.get("metadata") or {}).get("doc_id"), hit.get("page")) in pages:
                 hit["statement_page"] = True
-        more = [h for h in statement_page_hits(pages, own) if h.get("chunk_id") not in seen]
-        seen.update(h.get("chunk_id") for h in more)
-        return [{**h, "target": label, "statement_page": True} for h in drop_flagged(more)[0]]
+        return statement_page_hits(pages, own)
 
     def reject_conflicts(points: list[dict], calls_log: list[dict], ticker: str) -> list[dict]:
         """Drop a figure that another year's filing contradicts (``sector_agent.prior_conflicts``)."""
@@ -1369,10 +1385,12 @@ def financial_graph(llm, config: AgentConfig, flow: str = "agentic_graph") -> di
         missing = [{"ticker": t, "year": y} for (t, y), point in found.items() if point.get("status") != "ok"]
         retried = len(missing)
         extra = [rows_job(plan, t) for t in missing] if sector_agent.rows_query(plan.get("metric")) else []
-        for target, fresh in zip([*missing, *(missing if extra else [])],
-                                 run_searches([*(sector_job(plan, t, 2) for t in missing), *extra], seen, calls_log)):
-            fresh = [*fresh, *statement_hits(fresh, plan.get("metric"), tools.target_label(target), seen)]
-            fresh, fresh_guard = drop_flagged(fresh)
+        retries = [*missing, *(missing if extra else [])]
+        fetched = run_searches([*(sector_job(plan, t, 2) for t in missing), *extra], seen, calls_log)
+        pages = statement_hits_all([(fresh, tools.target_label(t)) for t, fresh in zip(retries, fetched)],
+                                   plan.get("metric"), seen)
+        for fresh, more in zip(fetched, pages):
+            fresh, fresh_guard = drop_flagged([*fresh, *more])
             dropped += fresh_guard.get("dropped") or []
             evidence.extend(fresh)
         for target in missing:
