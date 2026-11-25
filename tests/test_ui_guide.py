@@ -101,7 +101,7 @@ def test_guide_renders_and_an_example_click_sends_it(monkeypatch):
     monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "mock")
     app = AppTest.from_file(str(Path(ui.__file__).resolve()), default_timeout=60).run()
     assert not app.exception
-    assert app.title[0].value == "Financial Report Copilot"
+    assert app.title[0].value == "SIMPLR - Financial Report Copilot"
     assert not [s for s in app.selectbox if s.label == "Domain"]            # financial only: no domain picker
     assert [e.label for e in app.expander][:2] == ["What can I ask?", "How to read an answer"]
     assert any("Test mode" in c.value for c in app.caption)

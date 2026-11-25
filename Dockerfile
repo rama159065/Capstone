@@ -29,6 +29,7 @@ COPY scripts ./scripts
 COPY configs ./configs
 COPY deploy ./deploy
 COPY data ./data
+COPY .streamlit ./.streamlit
 COPY pyproject.toml ./
 
 # Runs as any uid (compose passes the host user so bind-mounted indexes stay writable).

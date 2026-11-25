@@ -1,4 +1,4 @@
-"""Streamlit frontend of the Financial Report Copilot (financial_report_qa only).
+"""Streamlit frontend of the SIMPLR - Financial Report Copilot (financial_report_qa only).
 
 The API still serves the other domains (`/chat/{domain}`); this UI is the financial-report product only.
 
@@ -15,7 +15,7 @@ Deployment settings (environment variables, see .env.example):
     DEFAULT_LLM_PROVIDER    mock | hosted, preselected in the sidebar
     DEFAULT_EMBEDDING_PROVIDER  hashing | hosted
     UI_SHOW_ADVANCED        1 = open the "Demo settings" panel by default
-    UI_APP_TITLE            page heading (default "Financial Report Copilot")
+    UI_APP_TITLE            page heading (default "SIMPLR - Financial Report Copilot")
 """
 
 from __future__ import annotations
@@ -59,10 +59,8 @@ DEMO_DEFAULTS: dict[str, Any] = {
 }
 _COMPANIES: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 DOMAIN = "financial_report_qa"        # the only domain this UI serves
-APP_TITLE = os.getenv("UI_APP_TITLE", "").strip() or "Financial Report Copilot"
-APP_TAGLINE = ("Your cited analyst for SEC annual reports and mutual fund holdings: answer questions, compare peers, "
-               "track company and sector trends, look through fund portfolios and generate full reports. "
-               "Every figure is traced to its page in the filing and checked before you see it.")
+APP_TITLE = os.getenv("UI_APP_TITLE", "").strip() or "SIMPLR - Financial Report Copilot"
+APP_TAGLINE = ("Every filing analyzed. Every fund uncovered. Every figure verified to the page.")
 # Capability cards under the heading: (icon, title, what it does). "funds" is shown only when fund data is loaded.
 CAPABILITIES: tuple[tuple[str, str, str, str], ...] = (
     ("core", "📄", "Cited answers",
@@ -83,7 +81,16 @@ CAPABILITIES: tuple[tuple[str, str, str, str], ...] = (
      "for human review."),
 )
 DEFAULT_QUERY = "What drove revenue growth in the latest annual report?"
-
+LAUNCH_CSS = """
+<style>
+header[data-testid="stHeader"] {background: transparent;}
+footer {visibility: hidden;}
+[data-testid="stMainBlockContainer"] {max-width: 760px; padding-top: 12vh;}
+h1 {text-align: center; font-weight: 500; font-size: 2.6rem;}
+.launch-sub {text-align: center; color: #6B6A66; margin-bottom: 1.5rem;}
+[data-testid="stChatInput"] {border-radius: 18px; box-shadow: 0 2px 12px rgba(0,0,0,.06);}
+</style>
+"""
 
 def api_headers() -> dict[str, str]:
     return {"X-API-Key": API_AUTH_TOKEN} if API_AUTH_TOKEN else {}
@@ -745,9 +752,9 @@ def sidebar() -> dict[str, Any]:
 
 
 def main() -> None:
-    st.set_page_config(page_title=APP_TITLE, page_icon="📊", layout="wide")
+    st.set_page_config(page_title=APP_TITLE, page_icon="📊", layout="centered",initial_sidebar_state="collapsed")
     st.title(APP_TITLE)
-    st.markdown(APP_TAGLINE)
+    st.markdown(LAUNCH_CSS, unsafe_allow_html=True)
     st.session_state.setdefault("messages", [])
 
     settings = sidebar()
