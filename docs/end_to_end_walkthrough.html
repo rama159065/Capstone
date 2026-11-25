@@ -169,12 +169,14 @@ LangSmith key is set, <code>langsmith.api_key_set: true</code> with <code>tracin
 </tr>
 </tbody>
 </table>
-<p><strong>What an answer shows</strong>: a status badge (<code>answered</code>, <code>evidence_only</code>, <code>pending_human_review</code>, <code>not_available</code>,
-<code>refused</code>), the answer with <code>[chunk_id]</code> citations (the ID names the filing and page, for example
-<code>annual_report_edgar_ars_JPM_2025_p0198_vlm0</code> is JPM's FY2025 report, page 198), an <strong>Agent run</strong> panel (the steps
-taken, the router's decision, the plan, every tool call and calculation), <strong>Citations and Human Review</strong> (citation
-check, support check, review triggers) and <strong>Evidence</strong> (the retrieved chunks). If the clarifier needs something, it
-asks with buttons (a company list, years, Yes/No).</p>
+<p><strong>What an answer shows</strong>: while the agents work, a live <em>Thinking…</em> line with a running timer. Then a collapsed
+<strong>Thought for N s</strong> dropdown (tabs: <em>Steps</em>, a timeline of the router's decision, the plan, every search, tool call and
+calculation; <em>Agent graph</em>, a flowchart of the path taken; <em>Sources</em>; <em>Checks</em>, the guardrails, critic support check,
+citation check, grounding policy and human review; <em>Raw</em>, the response), badges (the status such as <code>answered</code>,
+<code>evidence_only</code>, <code>pending_human_review</code>, <code>not_available</code> or <code>refused</code>, the agent that answered and the critic's verdict)
+and the answer with numbered citations [1] [2], listed under it by company, fiscal year and page (the chunk ID
+<code>annual_report_edgar_ars_JPM_2025_p0198_vlm0</code>, for example, is JPM's FY2025 report, page 198). If the clarifier needs
+something, it asks with buttons (a company list, years, Yes/No).</p>
 <h2>4. The request path</h2>
 <pre class="mermaid">sequenceDiagram
     participant U as Streamlit
