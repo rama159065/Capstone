@@ -134,6 +134,7 @@ ASSISTANT_AVATAR = ":material/query_stats:"
 CHAT_CSS = Path(__file__).with_name("chat.css")       # the user's messages as right-aligned bubbles
 WORKING_TEXT = "Checking the question, searching the filings and verifying every figure"
 TYPEWRITER_SECONDS = 2.0
+TYPEWRITER_PIECES = 60      # at most this many pieces: thousands of tiny ones left long answers' pages stuck "running"
 FAILED_STATUSES = {"error", "tool_error", "step_limit"}
 
 
@@ -496,13 +497,16 @@ def render_badges(result: dict[str, Any]) -> None:
             st.badge("From cache", color="gray", icon=":material/bolt:", help="The API reused the answer to the same request.")
 
 
-def typewriter(text: str, seconds: float = TYPEWRITER_SECONDS):
-    """The answer word by word for ``st.write_stream``, in at most ``seconds``. It has passed every check already:
-    this only paces the display."""
+def typewriter(text: str, seconds: float = TYPEWRITER_SECONDS, pieces: int = TYPEWRITER_PIECES):
+    """The answer in at most ``pieces`` runs of whole words for ``st.write_stream``, in at most ``seconds``. It has
+    passed every check already: this only paces the display. A long withheld answer (15,000 characters of excerpts)
+    sent word by word, as ~4,600 pieces, left the page running and the chat box disabled."""
     tokens = re.split(r"(\s+)", text)
-    delay = min(0.03, seconds / max(1, len(tokens)))
-    for token in tokens:
-        yield token
+    size = max(1, -(-len(tokens) // pieces))                   # tokens per piece, rounded up
+    chunks = ["".join(tokens[i:i + size]) for i in range(0, len(tokens), size)]
+    delay = min(0.03, seconds / max(1, len(chunks)))
+    for chunk in chunks:
+        yield chunk
         time.sleep(delay)
 
 
@@ -666,16 +670,74 @@ def render_turn(turn: dict[str, Any], *, elapsed: float | None = None, animate: 
     elif status == "answered":
         render_answer(turn.get("result") or {}, turn=turn, elapsed=elapsed, animate=animate)
     elif status == "report_generated":
-        st.success(turn.get("message"), icon=":material/description:")
-        manifest = turn.get("report_manifest") or {}
-        for item in manifest.get("artifacts", []):
-            st.write(item.get("path") or item)
+        render_report(turn)
     elif status in {"report_unavailable", "report_failed", "cancelled"}:
         (st.error if status == "report_failed" else st.warning)(turn.get("message"))
     elif status == "error" or turn.get("final_status") == "error":
         render_error(turn)
     else:
         render_answer(turn, elapsed=elapsed, animate=animate)
+
+
+REVIEW_TEXT = {"completed": ("Approved and published: the visual review is recorded in the report's trace.", "success"),
+               "rejected": ("Rejected: the report stays unpublished.", "warning")}
+
+
+def get_bytes(api_base: str, path: str) -> bytes | None:
+    """A file from the API (report PDF or page image); None when it can't be fetched."""
+    try:
+        request = urllib.request.Request(f"{api_base.rstrip('/')}{path}", headers=api_headers())
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return response.read()
+    except Exception:  # noqa: BLE001 - the panel shows what it could fetch.
+        return None
+
+
+def render_report(turn: dict[str, Any]) -> None:
+    """A generated report: the PDF, its rendered pages and the human visual review (approve or reject).
+    Approval publishes it (the API records the review in the report's trace)."""
+    manifest = turn.get("report_manifest") or {}
+    report_id = turn.get("report_id") or manifest.get("trace_id")
+    if not report_id:
+        st.success(turn.get("message"), icon=":material/description:")
+        return
+    base, path = DEFAULT_API_BASE, f"/reports/{DOMAIN}/{report_id}"
+    review = turn.setdefault("review", {})            # kept on the message, so a rerun shows the decision
+    if review.get("status") in REVIEW_TEXT:
+        text, kind = REVIEW_TEXT[review["status"]]
+        st.success(turn.get("message", "").split(" It is pending")[0], icon=":material/description:")
+        getattr(st, kind)(text)
+    else:
+        st.success(turn.get("message"), icon=":material/description:")
+    pdf = get_bytes(base, f"{path}/pdf")
+    if pdf:
+        name = next((Path(str(a.get("path"))).name for a in manifest.get("artifacts", [])
+                     if str(a.get("path", "")).endswith(".pdf")), f"{report_id}.pdf")
+        st.download_button("Download PDF", pdf, file_name=name, mime="application/pdf",
+                           icon=":material/download:", key=f"pdf-{report_id}")
+    pages = int(manifest.get("pdf_pages") or 0)
+    with st.expander(f"Review the {pages} rendered pages", expanded=not review.get("status")):
+        columns = st.columns(2)
+        for page in range(1, pages + 1):
+            image = get_bytes(base, f"{path}/pages/{page}")
+            if image:
+                columns[(page - 1) % 2].image(image, caption=f"Page {page}")
+    if review.get("status"):
+        return
+    st.caption("Look at every page before approving: approval publishes the report and is recorded in its trace.")
+    left, right, _ = st.columns([2, 1, 3])
+    decision = ("approve" if left.button("Approve and publish", type="primary", key=f"approve-{report_id}",
+                                         icon=":material/check:") else
+                "reject" if right.button("Reject", key=f"reject-{report_id}", icon=":material/close:") else None)
+    if decision:
+        try:
+            outcome = _post_json(base, f"{path}/review", {"decision": decision})
+            review["status"] = outcome.get("status")
+        except Exception as exc:  # noqa: BLE001 - shown in the panel.
+            review["error"] = str(exc)
+        st.rerun()
+    if review.get("error"):
+        st.error(review["error"])
 
 
 def render_error(failure: dict[str, Any]) -> None:

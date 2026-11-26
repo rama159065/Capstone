@@ -27,11 +27,12 @@ from scripts.rag.retrieval_metrics import response_metrics
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.responses import JSONResponse
+from starlette.responses import FileResponse, JSONResponse
 
 from scripts.observability.langsmith_utils import (
     TRACE_HEADERS, default_project, request_tracing, run_traced, tracing_status,
 )
+from scripts.common.paths import ROOT
 from scripts.common.runtime_profile import apply_profile, describe as describe_runtime
 from scripts.agents.financial_clarifier import Clarifier, ConversationStore, name as company_name
 from scripts.common.agent_limits import max_steps
@@ -1151,9 +1152,80 @@ def run_financial_report(spec: dict[str, Any]) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001 - reported to the user, details in the report trace.
         logger.warning("report_generation_failed error_type=%s", type(exc).__name__)
         return {"status": "report_failed", "message": f"Report generation failed ({type(exc).__name__})."}
-    return {"status": "report_generated", "report_manifest": manifest, "message": (
+    return {"status": "report_generated", "report_id": manifest["trace_id"], "report_manifest": manifest, "message": (
         f"Report generated for {manifest['company']} FY{manifest['year']} ({manifest.get('pdf_pages')} pages, "
         f"{manifest.get('checks_passed')} reconciliation checks passed). It is pending visual review before publishing.")}
+
+
+REPORT_ROOT = ROOT / "output" / "pdf"           # where generate_financial_report writes <TICKER>_<YEAR>/<report_id>/
+
+
+def report_folder(report_id: str) -> tuple[Path, dict[str, Any]]:
+    """The folder and manifest of one generated report; 404 for an unknown or malformed id."""
+    try:
+        report_id = str(UUID(report_id))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Unknown report") from None
+    found = sorted(REPORT_ROOT.glob(f"*/{report_id}/manifest.json"))
+    if not found:
+        raise HTTPException(status_code=404, detail="Unknown report")
+    return found[0].parent, json.loads(found[0].read_text(encoding="utf-8"))
+
+
+class ReportReview(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    decision: Literal["approve", "reject"] = Field(
+        description="approve: a person looked at every rendered page, so the report is published; "
+                    "reject: it stays unpublished.")
+
+
+@app.get("/reports/financial_report_qa/{report_id}", summary="A generated report's status", tags=["Reports"],
+         response_model=ApiResponse, responses=API_ERROR_RESPONSES)
+def report_status(report_id: str) -> dict[str, Any]:
+    _, manifest = report_folder(report_id)
+    return {"report_id": report_id, "status": manifest.get("status"), "visual_review": manifest.get("visual_review"),
+            "pdf_pages": manifest.get("pdf_pages"), "company": manifest.get("company"), "year": manifest.get("year")}
+
+
+@app.get("/reports/financial_report_qa/{report_id}/pdf", summary="Download a generated report's PDF",
+         tags=["Reports"], responses=API_ERROR_RESPONSES)
+def report_pdf(report_id: str) -> FileResponse:
+    folder, _ = report_folder(report_id)
+    pdfs = sorted(folder.glob("*_financial_report.pdf"))
+    if not pdfs:
+        raise HTTPException(status_code=404, detail="Report PDF not found")
+    return FileResponse(pdfs[0], media_type="application/pdf", filename=pdfs[0].name)
+
+
+@app.get("/reports/financial_report_qa/{report_id}/pages/{page}", summary="One rendered page of a report (PNG)",
+         tags=["Reports"], responses=API_ERROR_RESPONSES)
+def report_page(report_id: str, page: int) -> FileResponse:
+    folder, _ = report_folder(report_id)
+    image = folder / "preview" / f"page_{page:02}.png"
+    if page < 1 or not image.is_file():
+        raise HTTPException(status_code=404, detail="Page not found")
+    return FileResponse(image, media_type="image/png")
+
+
+@app.post("/reports/financial_report_qa/{report_id}/review", summary="Approve or reject a generated report",
+          description=("The human visual review of a report the pipeline generated (`generated_pending_visual_review`). "
+                       "Approve records the review in the report's trace and marks it `completed` (published); "
+                       "approval fails if any file changed since generation. Reject marks it `rejected`."),
+          tags=["Reports"], response_model=ApiResponse, responses=API_ERROR_RESPONSES)
+def review_report(report_id: str, review: ReportReview) -> dict[str, Any]:
+    folder, manifest = report_folder(report_id)
+    if manifest.get("status") != "generated_pending_visual_review":
+        raise HTTPException(status_code=409, detail=f"Report is already {manifest.get('status')}")
+    from scripts.reports.generate_financial_report import record_visual_review, write_json
+    if review.decision == "approve":
+        try:
+            record_visual_review(folder / "manifest.json")
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from None
+    else:
+        write_json(folder / "manifest.json", {**manifest, "status": "rejected", "visual_review": "rejected"})
+    logger.info("report_review decision=%s", review.decision)
+    return report_status(report_id)
 
 
 @app.post(

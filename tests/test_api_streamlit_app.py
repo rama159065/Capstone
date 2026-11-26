@@ -21,3 +21,12 @@ def test_financial_payload_sends_the_chosen_sectors():
     assert ui.build_payload("q", settings())["sector"] is None
     assert ui.DOMAIN == "financial_report_qa" and not hasattr(ui, "DOMAINS")   # financial-only UI
     assert len(SECTOR_NAMES) == 13
+
+
+def test_typewriter_sends_long_answers_in_few_pieces_and_keeps_the_text():
+    long_text = "excerpt " * 4600 + "end"          # a withheld answer of many cited excerpts
+    pieces = list(ui.typewriter(long_text, seconds=0))
+    assert "".join(pieces) == long_text
+    assert len(pieces) <= ui.TYPEWRITER_PIECES
+    short = "Revenue was $1 million."
+    assert "".join(ui.typewriter(short, seconds=0)) == short
