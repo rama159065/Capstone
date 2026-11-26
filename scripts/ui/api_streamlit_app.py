@@ -116,6 +116,14 @@ LAUNCH_CSS = """<style>
     background: rgba(45, 212, 191, 0.10) !important; border: 1px solid rgba(45, 212, 191, 0.25);
     border-radius: 999px; padding: 0.1rem 0.55rem !important;}
 </style>"""
+# Wide chat layout from the first question: undoes LAUNCH_CSS straight away, even while the answer is loading.
+WIDE_CSS = """<style>
+html body [data-testid="stMainBlockContainer"] {max-width: none !important; padding-top: 6rem !important;
+    padding-bottom: 6rem !important;}
+html body .st-key-brand h1 {text-align: left !important; margin-left: 0 !important; font-size: 2.75rem !important;
+    font-weight: 700 !important;}
+html body .st-key-coverage p {text-align: left !important;}
+</style>"""
 # The FactFolio title in its teal-to-blue gradient on every page (launch and chat), sized to the word itself.
 # The sidebar's own heading is shown as a small, subtle label.
 TITLE_CSS = """<style>
@@ -951,6 +959,8 @@ def main() -> None:
     with head:                                              # drawn above the input box on the launch page
         if not chatting:                                    # launch page only: narrow and centred
             st.html(LAUNCH_CSS)
+        else:                                               # chatting: wide at once, from the first question
+            st.html(WIDE_CSS)
         st.title(APP_TITLE, anchor=False)
         if not chatting:
             st.markdown(f"<p class='launch-sub'>{LAUNCH_SUBTITLE}</p>", unsafe_allow_html=True)
