@@ -84,6 +84,14 @@ CAPABILITIES: tuple[tuple[str, str, str, str], ...] = (
      "for human review."),
 )
 DEFAULT_QUERY = "What drove revenue growth in the latest annual report?"
+# The launch page (before the first question): a short centred subtitle instead of the tagline and cards.
+LAUNCH_SUBTITLE = "Ask anything about SEC annual reports and fund holdings. Every figure is cited to its page."
+LAUNCH_CSS = """<style>
+[data-testid="stMainBlockContainer"] {max-width: 780px; padding-top: 10vh;}
+h1 {text-align: center;}
+.launch-sub {text-align: center; color: #6B6A66; font-size: 1.1rem; margin-bottom: 1.5rem;}
+</style>"""
+
 USER_AVATAR = ":material/person:"
 ASSISTANT_AVATAR = ":material/query_stats:"
 CHAT_CSS = Path(__file__).with_name("chat.css")       # the user's messages as right-aligned bubbles
@@ -796,6 +804,16 @@ def sidebar() -> dict[str, Any]:
     return settings
 
 
+def render_chips(companies: list[dict[str, Any]], funds: list[dict[str, Any]] | None) -> None:
+    """Four example questions as small buttons on the launch page; a click sends the question."""
+    examples = example_questions(companies, funds, report_profiles() if companies else [])[:4]
+    for column, example in zip(st.columns(max(len(examples), 1)), examples):
+        if column.button(example["capability"], key=f"chip-{example['question']}", help=example["question"],
+                         width="stretch"):
+            st.session_state["queued_prompt"] = example["question"]
+            st.rerun()
+
+
 def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="📊", layout="wide")
     st.html(CHAT_CSS)
@@ -803,17 +821,27 @@ def main() -> None:
     messages = st.session_state["messages"]
 
     settings = sidebar()
-    # Read first (the input stays pinned to the bottom), so a new question already gets the chat layout.
-    prompt = (st.chat_input("Ask about a company, a sector trend, a mutual fund or a full report...",
-                            submit_mode="disable")
-              or st.session_state.pop("queued_prompt", None))
+    # Read first, so a new question already gets the chat layout. On the empty launch page the input box sits
+    # in the page under the title; once chatting it is pinned to the bottom.
+    placeholder = "Ask about a company, a sector trend, a mutual fund or a full report..."
+    launch = not messages and "queued_prompt" not in st.session_state     # the empty launch page
+    head = st.container()                                   # the title and subtitle are drawn into this below
+    if launch:
+        prompt = st.container().chat_input(placeholder, submit_mode="disable")   # inline: under the title
+    else:
+        prompt = st.chat_input(placeholder, submit_mode="disable")              # pinned to the bottom
+    prompt = prompt or st.session_state.pop("queued_prompt", None)
     chatting = bool(messages or prompt)
     companies = covered_companies(settings["api_base"])
     funds = served_funds(settings["api_base"]) if companies else []
-    st.title(APP_TITLE)
-    if not chatting:                                        # the overview, until the conversation starts
-        st.markdown(APP_TAGLINE)
-        render_capabilities(funds_available=bool(funds))
+    with head:                                              # drawn above the input box on the launch page
+        if not chatting:                                    # launch page only: narrow and centred
+            st.html(LAUNCH_CSS)
+        st.title(APP_TITLE)
+        if not chatting:
+            st.markdown(f"<p class='launch-sub'>{LAUNCH_SUBTITLE}</p>", unsafe_allow_html=True)
+    if not chatting:                                        # four chips, under the input box
+        render_chips(companies, funds)
     coverage = coverage_summary(companies)
     fund_text = fund_summary(funds)
     st.caption((f"Coverage: **{coverage}** of SEC annual reports" + (f" · **{fund_text}**" if fund_text else "") + "."
@@ -826,7 +854,7 @@ def main() -> None:
         with st.sidebar:
             render_guide(companies, expanded=False, funds=funds, compact=True)
     else:
-        render_guide(companies, expanded=True, funds=funds)
+        render_guide(companies, expanded=False, funds=funds)
     for position, message in enumerate(messages):
         if message["role"] == "user":
             render_user(message["content"], position)
@@ -851,6 +879,8 @@ def main() -> None:
             # Same position the history loop gives this message on the next run, so an option click is not lost.
             render_message(message, len(messages), last=True, animate=True)
     messages.append(message)
+    if launch:                                              # redraw once: the input box moves to the bottom
+        st.rerun()
 
 
 if __name__ == "__main__":
