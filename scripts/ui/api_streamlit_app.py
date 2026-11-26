@@ -1,4 +1,4 @@
-"""Streamlit frontend of the Financial Report Copilot (financial_report_qa only).
+"""Streamlit frontend of FactFolio, the Financial Report Copilot (financial_report_qa only).
 
 The API still serves the other domains (`/chat/{domain}`); this UI is the financial-report product only.
 
@@ -15,7 +15,7 @@ Deployment settings (environment variables, see .env.example):
     DEFAULT_LLM_PROVIDER    mock | hosted, preselected in the sidebar
     DEFAULT_EMBEDDING_PROVIDER  hashing | hosted
     UI_SHOW_ADVANCED        1 = open the "Demo settings" panel by default
-    UI_APP_TITLE            page heading (default "Financial Report Copilot")
+    UI_APP_TITLE            page heading (default "FactFolio")
 """
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ DEMO_DEFAULTS: dict[str, Any] = {
 }
 _COMPANIES: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 DOMAIN = "financial_report_qa"        # the only domain this UI serves
-APP_TITLE = os.getenv("UI_APP_TITLE", "").strip() or "Financial Report Copilot"
+APP_TITLE = os.getenv("UI_APP_TITLE", "").strip() or "FactFolio"
 APP_TAGLINE = ("Your cited analyst for SEC annual reports and mutual fund holdings: answer questions, compare peers, "
                "track company and sector trends, look through fund portfolios and generate full reports. "
                "Every figure is traced to its page in the filing and checked before you see it.")
@@ -85,11 +85,48 @@ CAPABILITIES: tuple[tuple[str, str, str, str], ...] = (
 )
 DEFAULT_QUERY = "What drove revenue growth in the latest annual report?"
 # The launch page (before the first question): a short centred subtitle instead of the tagline and cards.
-LAUNCH_SUBTITLE = "Ask anything about SEC annual reports and fund holdings. Every figure is cited to its page."
+LAUNCH_SUBTITLE = "Facts from every filing and every fund, each one traced."
+LAUNCH_FOOTER = "Built by Team SIMPLR · IIT Kharagpur, 2026"
+# The footer on every page (launch and chat), pinned to the bottom edge of the window.
+FOOTER_HTML = ("<style>.app-footer {position: fixed; bottom: 0; left: 0; right: 0; text-align: center; "
+               "font-size: 0.75rem; color: #8A8984; margin: 0; padding: 0.45rem 0; z-index: 1000; "
+               "background: rgba(128, 128, 128, 0.06); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);}"
+               "</style>"
+               f"<p class='app-footer'>{LAUNCH_FOOTER}</p>")
 LAUNCH_CSS = """<style>
-[data-testid="stMainBlockContainer"] {max-width: 780px; padding-top: 10vh;}
-h1 {text-align: center;}
+[data-testid="stMainBlockContainer"] {max-width: 880px; padding-top: 10vh;}
+.st-key-brand h1 {text-align: center; margin-left: auto !important; margin-right: auto !important; font-size: 4rem !important; font-weight: 800 !important; letter-spacing: -0.03em;
+    background: linear-gradient(90deg, #2DD4BF, #60A5FA); -webkit-background-clip: text; background-clip: text;
+    color: transparent !important;}
+.st-key-brand h1 span {color: transparent !important;}
 .launch-sub {text-align: center; color: #6B6A66; font-size: 1.1rem; margin-bottom: 1.5rem;}
+.st-key-chips button {padding-left: 0.6rem !important; padding-right: 0.6rem !important;}
+.st-key-chips button p {white-space: nowrap;}
+.st-key-coverage p {text-align: center !important;}
+[data-testid="stMainBlockContainer"] {padding-bottom: 5rem !important;}
+[data-testid="stExpander"] h5 {font-size: 0.75rem !important; font-weight: 600 !important; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #8A8984 !important; margin: 1.25rem 0 0.25rem 0 !important; padding: 0 !important;}
+[data-testid="stExpander"] small {font-size: 0.8rem; color: #8A8984; line-height: 1.4;}
+[data-testid="stExpander"] .stButton button {justify-content: flex-start !important; text-align: left !important;}
+[data-testid="stExpander"] .stButton button p {white-space: normal !important; text-align: left !important;
+    font-size: 0.9rem !important;}
+[data-testid="stExpander"] .stButton button:hover {border-color: #2DD4BF !important; color: #2DD4BF !important;}
+[data-testid="stExpander"] li {font-size: 0.9rem !important; line-height: 1.55 !important; margin-bottom: 0.4rem;}
+[data-testid="stExpander"] li code {font-size: 0.75rem !important; color: #2DD4BF !important;
+    background: rgba(45, 212, 191, 0.10) !important; border: 1px solid rgba(45, 212, 191, 0.25);
+    border-radius: 999px; padding: 0.1rem 0.55rem !important;}
+</style>"""
+# The FactFolio title in its teal-to-blue gradient on every page (launch and chat), sized to the word itself.
+# The sidebar's own heading is shown as a small, subtle label.
+TITLE_CSS = """<style>
+.st-key-brand h1 {width: fit-content; margin-right: auto;
+    background: linear-gradient(90deg, #2DD4BF, #60A5FA); -webkit-background-clip: text; background-clip: text;
+    color: transparent !important;}
+.st-key-brand h1 span {color: transparent !important;}
+[data-testid="stSidebar"] h1 {font-size: 0.8rem !important; font-weight: 600 !important; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #8A8984 !important; padding: 0 !important; margin: 0 0 0.75rem 0 !important;}
+.st-key-coverage p {font-size: 0.8rem !important; color: #8A8984 !important; line-height: 1.5 !important;}
+.st-key-coverage strong {color: #B8B6AE !important; font-weight: 600 !important;}
 </style>"""
 
 USER_AVATAR = ":material/person:"
@@ -804,19 +841,34 @@ def sidebar() -> dict[str, Any]:
     return settings
 
 
+# Launch-page chips: (capability in example_questions, short label, icon). The first four the served data offers
+# are shown; "Scan a sector" stands in when there is no fund data. The full question shows on hover.
+CHIPS: tuple[tuple[str, str, str], ...] = (
+    ("Cited answer from one filing", "Find a figure", ":material/description:"),
+    ("Multi-year trend", "See a trend", ":material/trending_up:"),
+    ("Comparison across companies", "Compare firms", ":material/compare_arrows:"),
+    ("Fund holdings", "Explore a fund", ":material/pie_chart:"),
+    ("Sector trend", "Scan a sector", ":material/factory:"),
+)
+
+
 def render_chips(companies: list[dict[str, Any]], funds: list[dict[str, Any]] | None) -> None:
-    """Four example questions as small buttons on the launch page; a click sends the question."""
-    examples = example_questions(companies, funds, report_profiles() if companies else [])[:4]
-    for column, example in zip(st.columns(max(len(examples), 1)), examples):
-        if column.button(example["capability"], key=f"chip-{example['question']}", help=example["question"],
-                         width="stretch"):
-            st.session_state["queued_prompt"] = example["question"]
+    """Four short suggestion chips on the launch page (icon + verb); a click sends the example question."""
+    by_capability = {e["capability"]: e["question"]
+                     for e in example_questions(companies, funds, report_profiles() if companies else [])}
+    chips = [(label, icon, by_capability[cap]) for cap, label, icon in CHIPS if cap in by_capability][:4]
+    for column, (label, icon, question) in zip(st.container(key="chips").columns(max(len(chips), 1)), chips):
+        if column.button(label, icon=icon, key=f"chip-{label}", help=question, width="stretch"):
+            st.session_state["queued_prompt"] = question
             st.rerun()
 
 
 def main() -> None:
-    st.set_page_config(page_title=APP_TITLE, page_icon="📊", layout="wide")
+    st.set_page_config(page_title=APP_TITLE, page_icon="📊", layout="wide", initial_sidebar_state="collapsed")
     st.html(CHAT_CSS)
+    st.html(FOOTER_HTML)
+    st.html(TITLE_CSS)                                      # gradient FactFolio title on every page
+    # "Built by Team SIMPLR …" on every page
     st.session_state.setdefault("messages", [])
     messages = st.session_state["messages"]
 
@@ -825,7 +877,7 @@ def main() -> None:
     # in the page under the title; once chatting it is pinned to the bottom.
     placeholder = "Ask about a company, a sector trend, a mutual fund or a full report..."
     launch = not messages and "queued_prompt" not in st.session_state     # the empty launch page
-    head = st.container()                                   # the title and subtitle are drawn into this below
+    head = st.container(key="brand")                         # the title and subtitle are drawn into this below
     if launch:
         prompt = st.container().chat_input(placeholder, submit_mode="disable")   # inline: under the title
     else:
@@ -837,15 +889,16 @@ def main() -> None:
     with head:                                              # drawn above the input box on the launch page
         if not chatting:                                    # launch page only: narrow and centred
             st.html(LAUNCH_CSS)
-        st.title(APP_TITLE)
+        st.title(APP_TITLE, anchor=False)
         if not chatting:
             st.markdown(f"<p class='launch-sub'>{LAUNCH_SUBTITLE}</p>", unsafe_allow_html=True)
     if not chatting:                                        # four chips, under the input box
         render_chips(companies, funds)
     coverage = coverage_summary(companies)
     fund_text = fund_summary(funds)
-    st.caption((f"Coverage: **{coverage}** of SEC annual reports" + (f" · **{fund_text}**" if fund_text else "") + "."
-                if coverage else "Coverage: unknown (the API is not reachable)."))
+    with st.container(key="coverage"):                      # styled by .st-key-coverage (TITLE_CSS / LAUNCH_CSS)
+        st.caption((f"Coverage: **{coverage}** of SEC annual reports" + (f" · **{fund_text}**" if fund_text else "")
+                    + "." if coverage else "Coverage: unknown (the API is not reachable)."))
     if settings.get("llm_provider") == "mock":
         st.caption(":orange[Test mode: answers come from the mock LLM, so their wording is placeholder text. "
                    "Retrieval, citations, guardrails and the agent steps are real.]")
