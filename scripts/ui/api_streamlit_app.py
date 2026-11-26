@@ -85,7 +85,7 @@ CAPABILITIES: tuple[tuple[str, str, str, str], ...] = (
 )
 DEFAULT_QUERY = "What drove revenue growth in the latest annual report?"
 # The launch page (before the first question): a short centred subtitle instead of the tagline and cards.
-LAUNCH_SUBTITLE = "Facts from every filing and every fund, each one traced."
+LAUNCH_SUBTITLE = "Facts on every company. Insight into every portfolio."
 LAUNCH_FOOTER = "Built by Team SIMPLR · IIT Kharagpur, 2026"
 # The footer on every page (launch and chat), pinned to the bottom edge of the window.
 FOOTER_HTML = ("<style>.app-footer {position: fixed; bottom: 0; left: 0; right: 0; text-align: center; "
