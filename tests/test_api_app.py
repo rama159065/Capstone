@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+import json
 import scripts.api.api_app as api_app
 
 
@@ -345,3 +346,51 @@ def test_export_openapi_writes_spec_yaml_and_swagger(tmp_path):
     assert yaml.safe_load(files["yaml"].read_text(encoding="utf-8"))["paths"].keys() == spec["paths"].keys()
     page = files["html"].read_text(encoding="utf-8")
     assert "SwaggerUIBundle" in page and export_openapi.CDN in page and "</script>" not in page.split("const spec")[1].split("window.ui")[0]
+
+
+def _fake_report(tmp_path, monkeypatch):
+    import uuid as _uuid
+    report_id = str(_uuid.uuid4())
+    folder = tmp_path / "AAPL_2024" / report_id
+    (folder / "preview").mkdir(parents=True)
+    (folder / "aapl_fy2024_financial_report.pdf").write_bytes(b"%PDF-1.4 test")
+    (folder / "preview" / "page_01.png").write_bytes(b"\x89PNG test")
+    (folder / "manifest.json").write_text(json.dumps({
+        "status": "generated_pending_visual_review", "visual_review": "pending", "trace_id": report_id,
+        "company": "Apple Inc.", "year": 2024, "pdf_pages": 1}), encoding="utf-8")
+    monkeypatch.setattr(api_app, "REPORT_ROOT", tmp_path)
+    return report_id, folder
+
+
+def test_report_files_and_approval(tmp_path, monkeypatch):
+    from scripts.reports import generate_financial_report as reports
+    report_id, folder = _fake_report(tmp_path, monkeypatch)
+    approved = []
+
+    def record(path):
+        approved.append(path)
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        path.write_text(json.dumps({**manifest, "status": "completed", "visual_review": "passed"}), encoding="utf-8")
+    monkeypatch.setattr(reports, "record_visual_review", record)
+    client = TestClient(api_app.app)
+    base = f"/reports/financial_report_qa/{report_id}"
+    assert client.get(base).json()["status"] == "generated_pending_visual_review"
+    pdf = client.get(f"{base}/pdf")
+    assert pdf.status_code == 200 and pdf.headers["content-type"] == "application/pdf"
+    assert client.get(f"{base}/pages/1").content == b"\x89PNG test"
+    assert client.get(f"{base}/pages/2").status_code == 404
+    assert client.get("/reports/financial_report_qa/../../etc/pdf").status_code == 404
+    assert client.get("/reports/financial_report_qa/not-a-uuid").status_code == 404
+    assert client.post(f"{base}/review", json={"decision": "publish"}).status_code == 422
+    response = client.post(f"{base}/review", json={"decision": "approve"})
+    assert response.status_code == 200 and response.json()["status"] == "completed"
+    assert approved == [folder / "manifest.json"]
+    assert client.post(f"{base}/review", json={"decision": "approve"}).status_code == 409
+
+
+def test_report_rejection_keeps_it_unpublished(tmp_path, monkeypatch):
+    report_id, folder = _fake_report(tmp_path, monkeypatch)
+    client = TestClient(api_app.app)
+    response = client.post(f"/reports/financial_report_qa/{report_id}/review", json={"decision": "reject"})
+    assert response.json()["status"] == "rejected"
+    assert json.loads((folder / "manifest.json").read_text(encoding="utf-8"))["visual_review"] == "rejected"
